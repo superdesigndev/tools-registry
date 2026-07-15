@@ -67,7 +67,7 @@ async def test_github_login_creates_user_session_but_no_auto_org(gc):
     state = gc.cookies.get("treg_oauth_state")
     assert state
     cb = await gc.get(f"/auth/github/callback?code=abc&state={state}", follow_redirects=False)
-    assert cb.status_code == 302 and cb.headers["location"] == "/"
+    assert cb.status_code == 302 and cb.headers["location"] == "/app"
     assert gc.cookies.get("treg_session")  # session cookie set (secure omitted over http)
     me = await gc.get("/auth/me")
     assert me.status_code == 200 and me.json()["email"] == "octo@example.com"
@@ -184,7 +184,7 @@ async def test_google_login_creates_user_session_but_no_auto_org(goog):
     state = goog.cookies.get("treg_oauth_state")
     assert state
     cb = await goog.get(f"/auth/google/callback?code=abc&state={state}", follow_redirects=False)
-    assert cb.status_code == 302 and cb.headers["location"] == "/"
+    assert cb.status_code == 302 and cb.headers["location"] == "/app"
     assert goog.cookies.get("treg_session")
     me = await goog.get("/auth/me")
     assert me.status_code == 200 and me.json()["email"] == "guser@example.com"

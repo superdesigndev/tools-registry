@@ -112,7 +112,7 @@ def sent_invites(monkeypatch):
     from treg import email as email_mod
     sent = []
 
-    async def _capture(email, inviter, org_name, role, code, email_token, expires_at=""):
+    async def _capture(email, inviter, org_name, role, code, email_token, expires_at="", link_base=""):
         sent.append({"email": email, "code": code, "email_token": email_token})
         return True
 

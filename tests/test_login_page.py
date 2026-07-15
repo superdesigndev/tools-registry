@@ -63,7 +63,7 @@ async def _seed_user_org(email="pat@x.dev", team="Acme", slug="acme", tools=0):
 # ---- the page ------------------------------------------------------------------------------
 async def test_login_without_cli_redirects_to_dashboard(web):
     r = await web.get("/login", follow_redirects=False)
-    assert r.status_code == 302 and r.headers["location"] == "/"
+    assert r.status_code == 302 and r.headers["location"] == "/app"
 
 
 async def test_login_rejects_malformed_login_id(web):

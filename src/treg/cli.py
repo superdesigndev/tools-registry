@@ -16,6 +16,8 @@ from __future__ import annotations
 
 import argparse
 import base64
+import contextlib
+import itertools
 import getpass
 import json
 import os
@@ -384,6 +386,32 @@ def _tip(t: str) -> None:  # an amber aside
     print(f"  {_AM}✦ {t}{_R}")
 
 
+@contextlib.contextmanager
+def _spinner(msg: str):
+    """An animated braille spinner for slow steps (health runs, seeding). TTY-only: piped/agent
+    output gets one static line instead, so logs stay clean and deterministic."""
+    if not sys.stdout.isatty():
+        print(f"  … {msg}")
+        yield
+        return
+    stop = threading.Event()
+
+    def _spin() -> None:
+        for ch in itertools.cycle("⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"):
+            if stop.wait(0.08):
+                break
+            print(f"\r  {_A}{ch}{_R} {msg}…", end="", flush=True)
+
+    t = threading.Thread(target=_spin, daemon=True)
+    t.start()
+    try:
+        yield
+    finally:
+        stop.set()
+        t.join(timeout=0.3)
+        print("\r" + " " * (len(msg) + 6) + "\r", end="", flush=True)  # wipe the line
+
+
 def _show_calls(cfg: dict) -> None:
     with _client(cfg) as c:
         calls = c.get("/calls", params={"limit": 6}).json()
@@ -484,7 +512,7 @@ def _run_setup(cfg: dict, args) -> None:
     if scanned:
         _section("Verify — one batched health run")
         try:
-            with _client(cfg) as c:
+            with _spinner("checking each credential against its provider"), _client(cfg) as c:
                 hr = c.post("/health/run").json()
             rows = hr.get("all", []) if isinstance(hr, dict) else (hr if isinstance(hr, list) else [])
             ok = [r for r in rows if r.get("status") == "ok"]
@@ -2360,7 +2388,12 @@ def _write_bundle_files(dest: Path, files: dict) -> int:
 
 def cmd_health(args, cfg) -> None:
     with _client(cfg) as c:
-        _show(c.post("/health/run") if args.run else c.get("/health"))
+        if args.run:
+            with _spinner("running health checks against each provider"):
+                r = c.post("/health/run")
+            _show(r)
+        else:
+            _show(c.get("/health"))
 
 
 def cli_version() -> str:

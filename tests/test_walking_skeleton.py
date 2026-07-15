@@ -85,6 +85,13 @@ async def test_unknown_tool_404(clients: AsyncClient):
 
 
 async def test_dashboard_served_at_root(clients: AsyncClient):
-    r = await clients.get("/")  # open, no token — it's the login shell
+    # `/` is the marketing landing; the SPA (login shell + dashboard) lives at /app.
+    r = await clients.get("/")
+    assert r.status_code == 200
+    assert "tools-registry" in r.text and "Sign in" in r.text
+    r = await clients.get("/app")
     assert r.status_code == 200
     assert "tools-registry" in r.text and "<div id=\"app\">" in r.text
+    # deep links (invite flows etc.) carry query params and still reach the SPA at /
+    r = await clients.get("/?invite=x%40y.z")
+    assert r.status_code == 200 and "<div id=\"app\">" in r.text

@@ -47,15 +47,19 @@ These make the published app point at your boxes out of the box. Recommend gener
 - `src/treg/cli.py:2306` — base-url fallback = `https://treg.superdesign.dev` → suggest `http://localhost:8000`
 - `render.yaml` — points at your prod URL + DB; turn into a neutral example (or move to `docs/deploy/`)
 
-### A2. Vendor Vue locally (drop the only external runtime dependency)
-The dashboard is Vue 3 with **no build step** — good — but `src/treg/web/index.html:8` loads Vue from a
-CDN at runtime (`https://unpkg.com/vue@3/dist/vue.global.prod.js`). This is the **only** external resource
-the served web assets fetch (checked: no fonts, no other CDN). For a self-contained public app:
-1. Save `vue.global.prod.js` into `src/treg/web/` (vendored).
-2. Change the script tag to `<script src="/vue.global.prod.js"></script>` (served by FastAPI like the
-   other web assets — it's already force-included in the wheel via `pyproject`).
-3. `tutorial.html` uses the same pattern if it loads Vue — vendor it there too.
-Result: the dashboard needs no internet to boot, and there's no unpkg-availability / supply-chain trust.
+### A2. Vendor the external front-end resources (make the app self-contained)
+The dashboard/landing are Vue with **no build step** — good — but the served HTML fetches several
+resources from third-party CDNs at runtime. Full list (as of the re-sync from private `main`):
+- `src/treg/web/index.html` — Vue (`unpkg.com/vue@3`), Google Fonts (`fonts.googleapis.com` +
+  `fonts.gstatic.com`)
+- `src/treg/web/landing.html` — Google Fonts, and brand icons from `cdn.simpleicons.org`
+- `tutorial.html` — check for Vue/fonts too
+
+For a self-contained public app (no internet needed to boot, no CDN-availability / supply-chain trust):
+1. Vendor `vue.global.prod.js` into `src/treg/web/` and point the script tag at `/vue.global.prod.js`.
+2. Self-host the few fonts (download the woff2 files + a local `@font-face` CSS) instead of Google Fonts.
+3. Replace `cdn.simpleicons.org` icons with inline SVGs or a small vendored icon set.
+This is a "nice to have" for polish/robustness, not a blocker — but worth doing before a public launch.
 
 ### B. Privacy — real person / company in shipped assets
 - `src/treg/web/index.html` — `jason@superdesign.dev` (a real collaborator) → a neutral example address

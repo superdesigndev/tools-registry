@@ -63,10 +63,12 @@ async def send_otp(email: str, code: str, ttl_minutes: int = 10) -> bool:
 
 
 async def send_invite(email: str, inviter: str, org_name: str, role: str, code: str,
-                      email_token: str, expires_at: str = "") -> bool:
+                      email_token: str, expires_at: str = "", link_base: str = "") -> bool:
     s = get_settings()
     from urllib.parse import quote
-    base = s.public_url.rstrip("/")
+    # The link should open on the SAME deployment the inviter was using. The request origin
+    # (link_base) captures that; public_url is the fallback for callers without a request.
+    base = (link_base or s.public_url).rstrip("/")
     # The link carries `email_token`, NOT `code`: the token exists only in this email, so clicking
     # proves inbox access and /auth/invite-signin may sign the invitee in (POST-confirm, one-time).
     # The visible code below stays the out-of-band credential the admin also holds — join-only.

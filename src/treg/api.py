@@ -238,17 +238,26 @@ async def auth_github(request: Request, cli: str = ""):
 _AUTH_HEAD = (
     '<!doctype html><html><head><meta charset="utf-8">'
     '<meta name="viewport" content="width=device-width,initial-scale=1"><title>tools-registry</title>'
+    '<link rel="preconnect" href="https://fonts.googleapis.com">'
+    '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>'
+    '<link href="https://fonts.googleapis.com/css2?family=Geist+Pixel&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">'
     "<style>"
-    ":root{--bg:#211d16;--panel:#2a251d;--ink:#f0e9d9;--muted:#a99e88;--line:#3b352a;--accent:#e0703f;"
-    '--mono:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace}'
+    ':root{--bg:#151412;--panel:#1c1b19;--ink:#f2efe8;--muted:rgba(242,239,232,.55);'
+    '--line:rgba(255,255,255,.1);--accent:#19D0E8;'
+    '--mono:"DM Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace}'
     "html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:var(--mono)}"
+    "body{background:radial-gradient(90% 50% at 50% -10%,rgba(255,255,255,.04),transparent 60%),var(--bg)}"
     ".wrap{min-height:100%;display:flex;align-items:center;justify-content:center;padding:24px}"
-    ".card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:34px 40px;"
-    "max-width:440px;text-align:center;box-shadow:0 16px 44px rgba(0,0,0,.35)}"
+    ".card{background:linear-gradient(180deg,#201f1d,#171614);border:1px solid var(--line);border-radius:20px;"
+    "padding:34px 40px;max-width:440px;text-align:center;"
+    "box-shadow:rgba(255,255,255,.08) 0 1px 0 inset, 0 30px 70px rgba(0,0,0,.5)}"
     ".logo{color:var(--accent);font-size:15px;letter-spacing:.5px;margin-bottom:18px}"
     ".mark{font-size:34px;line-height:1;margin-bottom:14px}"
-    "h1{font-size:18px;margin:0 0 8px;font-weight:700}"
+    'h1{font-family:"Geist Pixel",var(--mono);font-size:22px;margin:0 0 8px;font-weight:400;letter-spacing:0}'
     "p{color:var(--muted);font-size:13.5px;line-height:1.55;margin:0}"
+    ".pbtn{display:inline-block;background:linear-gradient(180deg,#fdfcf7,#eae7de);color:#1c1b19;border:0;"
+    "border-radius:999px;padding:12px 24px;font:500 14px var(--mono);cursor:pointer;"
+    "box-shadow:rgba(178,168,165,.2) -1.3px -1.3px 2.5px 0, rgba(0,0,0,.4) 2px 2px 1.5px 0}"
     "</style></head>"
 )
 
@@ -270,7 +279,7 @@ def _finish_oauth_login(request: Request, user: User, st: tuple | None) -> Redir
     handshake goes through the SAME team picker as the other doors (instead of completing blind — which
     would leave the CLI guessing the org). The picker's POST /auth/cli/approve reads this same cookie."""
     login_id = st[0] if st is not None else None
-    dest = f"/login?cli={login_id}" if login_id else "/"
+    dest = f"/login?cli={login_id}" if login_id else "/app"
     resp = RedirectResponse(dest, status_code=302)
     resp.set_cookie(sess.COOKIE, sess.make(user.id, token_version=user.token_version), httponly=True,
                     samesite="lax", secure=_is_https(request), max_age=sess.TTL_SECONDS)
@@ -513,7 +522,7 @@ async def login_page(cli: str = "", treg_session: str = Cookie(default=""), db: 
     click ("Continue as …"), else offers every configured door — GitHub, Google, email one-time code.
     The email door is always present, so login works even with no OAuth app configured."""
     if not cli:
-        return RedirectResponse("/", status_code=302)  # a bare visit belongs on the dashboard
+        return RedirectResponse("/app", status_code=302)  # a bare visit belongs on the dashboard
     if not _LOGIN_ID_RE.fullmatch(cli):
         return _auth_page("Login failed", "Bad login link. Run <code>treg login</code> again.", ok=False, status=400)
     s = get_settings()
@@ -808,7 +817,7 @@ async def auth_invite_signin(
     if t:
         invite = await _live_invite_by_email_token(db, t)
         if invite is None:
-            return RedirectResponse(f"{base}/?invite_expired=1", status_code=303)
+            return RedirectResponse("/?invite_expired=1", status_code=303)
         org = await db.get(Org, invite.org_id)
         # Already signed in as someone ELSE? Warn — continuing replaces that browser session.
         switch_note = ""
@@ -824,10 +833,9 @@ async def auth_invite_signin(
             f'<h1>Join {_esc_html(org.name if org else "the team")}</h1>'
             f'<p><b>{_esc_html(invite.invited_by or "A teammate")}</b> invited '
             f'<b>{_esc_html(invite.email)}</b> as {_esc_html(invite.role)}.</p>{switch_note}'
-            f'<form method="post" action="{base}/auth/invite-signin" style="margin-top:18px">'
+            f'<form method="post" action="/auth/invite-signin" style="margin-top:18px">'
             f'<input type="hidden" name="t" value="{_esc_html(t.strip())}">'
-            f'<button type="submit" style="background:var(--accent);color:#fff;border:0;border-radius:9px;'
-            f'padding:12px 22px;font:600 14px var(--mono);cursor:pointer">'
+            f'<button type="submit" class="pbtn">'
             f'Continue as {_esc_html(invite.email)} →</button></form>'
             f"</div></div></body></html>"
         )
@@ -836,11 +844,11 @@ async def auth_invite_signin(
               ).scalar_one_or_none() if c else None
     if (invite is None or invite.status != "pending"
             or (invite.expires_at is not None and _as_naive(invite.expires_at) < _utcnow_naive())):
-        return RedirectResponse(f"{base}/?invite_expired=1", status_code=303)
+        return RedirectResponse("/?invite_expired=1", status_code=303)
     # Code path: same redirect whether or not the email already has an account — the code is a
     # convenience that prefills the sign-in email, never an authentication factor. A suspended
     # account is caught at the real login door, the only place the code path can mint a session.
-    return RedirectResponse(f"{base}/?invite={quote(invite.email)}", status_code=303)
+    return RedirectResponse(f"/?invite={quote(invite.email)}", status_code=303)
 
 
 @app.post("/auth/invite-signin")
@@ -853,7 +861,6 @@ async def auth_invite_signin_confirm(request: Request, db: AsyncSession = Depend
     accept several at once. Body is parsed by hand (urlencoded form) to avoid the python-multipart
     dependency FastAPI's Form() would pull in."""
     from urllib.parse import parse_qs
-    base = get_settings().public_url.rstrip("/")
     try:
         form = parse_qs((await request.body()).decode("utf-8", "replace"))
     except Exception:  # noqa: BLE001 — any junk body = no token
@@ -861,14 +868,14 @@ async def auth_invite_signin_confirm(request: Request, db: AsyncSession = Depend
     t = (form.get("t", [""])[0] or "").strip()
     invite = await _live_invite_by_email_token(db, t)
     if invite is None:  # consumed / expired / revoked / suspended org → the SPA's expired banner
-        return RedirectResponse(f"{base}/?invite_expired=1", status_code=303)
+        return RedirectResponse("/?invite_expired=1", status_code=303)
     user = await _find_or_create_user(db, invite.email)  # first click = registration (user only, no auto org)
     if user is None or user.suspended:  # a banned account may hold the link but must not get a session
         return _auth_page("Account suspended", "This account has been suspended.", ok=False, status=403)
     invite.email_token_hash = None  # consume: one sign-in per emailed link
     db.add(invite)
     await db.commit()
-    resp = RedirectResponse(f"{base}/?invite_org={invite.org_id}", status_code=303)
+    resp = RedirectResponse(f"/?invite_org={invite.org_id}", status_code=303)
     resp.set_cookie(sess.COOKIE, sess.make(user.id, token_version=user.token_version), httponly=True,
                     samesite="lax", secure=_is_https(request), max_age=sess.TTL_SECONDS)
     return resp
@@ -880,6 +887,17 @@ def _esc_html(s: str) -> str:
 
 
 @app.get("/", include_in_schema=False)
+async def landing(request: Request):
+    """Serve the marketing landing at the root. Any query string (invite links, OAuth returns,
+    tour deep-links) belongs to the SPA, so those requests fall through to the dashboard —
+    the landing is only the clean, parameterless front door."""
+    page = _WEB_DIR / "landing.html"
+    if page.exists() and not request.query_params:
+        return FileResponse(page, headers={"Cache-Control": "no-cache"})
+    return await dashboard()
+
+
+@app.get("/app", include_in_schema=False)
 async def dashboard():
     """Serve the single-file dashboard (same-origin, so it calls this API directly)."""
     index = _WEB_DIR / "index.html"
@@ -1574,7 +1592,8 @@ async def list_orgs(
 
 @app.post("/orgs/{org_id}/invites")
 async def create_invite(
-    org_id: int, body: InviteIn, caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session)
+    org_id: int, body: InviteIn, request: Request,
+    caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
 ) -> dict:
     _require_admin_of(org_id, caller)
     if body.role not in ("viewer", "member", "admin"):
@@ -1616,9 +1635,11 @@ async def create_invite(
     await db.commit()
     org = await db.get(Org, org_id)  # for the invite email's team name
     if not email.endswith("@" + demo_seed.DEMO_DOMAIN):  # don't email the onboarding's fake teammate domain
+        scheme = "https" if _is_https(request) else request.url.scheme
+        host = request.headers.get("host", "")
         await email_sender.send_invite(  # best-effort; the code is also returned for out-of-band relay
             email, caller.email, (org.name if org else email), body.role, code, email_token,
-            expires_at.isoformat()
+            expires_at.isoformat(), link_base=(f"{scheme}://{host}" if host else "")
         )
     return {"code": code, "email": email, "role": body.role, "org_id": org_id,
             "expires_at": expires_at.isoformat()}  # email_token deliberately NOT returned (inbox-only)
