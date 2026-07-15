@@ -1,0 +1,234 @@
+# tools-registry (treg)
+
+> A remote registry + credential-injecting proxy. Call your team's upstream APIs
+> (Stripe, PostHog, Google Search Console, Intercom, Render, …) through ONE endpoint
+> with **no API keys on your machine** - the registry injects the real secret
+> server-side. Built for humans (CLI + web dashboard) and for AI agents (Claude Code,
+> Codex, Gemini).
+
+tools-registry ("treg") turns a team's credentialed skills into shareable, callable
+tools. Any member's agent or a human calls an upstream API **without owning its
+credentials or rebuilding it**. The core mechanic is a proxy: the consumer makes the
+real upstream call through treg; treg swaps the tool reference for the real secret and
+injects it server-side, so the key never lands on the caller's machine. Every call is
+audited. Multi-tenant: a token = a (user, org) membership; resources are org-scoped.
+
+Base URL: {BASE}
+Repo: https://github.com/superdesigndev/tools-registry
+
+## The one thing an agent needs: call a tool
+
+Take the **real upstream URL** you'd normally call, prefix it with `{BASE}/call/`, and
+send your token. treg resolves the tool by host and injects the credential:
+
+    curl "{BASE}/call/https://api.stripe.com/v1/charges" \
+      -H "X-Treg-Token: $TREG_TOKEN"
+
+- The method, path, query string and body all pass through unchanged.
+- **Per-org token** (agents/CI): `X-Treg-Token` alone - the org is baked in.
+- **Identity token** (from `treg login`): also send `X-Treg-Org: <team-slug>`.
+- Equivalent by tool name: `{BASE}/call/<tool-name>/<path>` (e.g. `/call/stripe/v1/charges`).
+- The response is the upstream's, verbatim. On a proxy/auth problem treg returns a 4xx/5xx
+  with a JSON `detail`.
+- If a request **body** carries SQL/HTML and a hosting edge (Cloudflare/Render) 403s it before
+  treg sees it, base64-encode the body and add `X-Treg-Body-Encoding: base64` (also `gzip` or
+  `base64+gzip`); treg decodes it server-side, so the upstream still gets the real bytes. The
+  `treg` CLI does this automatically on a WAF 403 - you only need it over raw HTTP.
+
+That's the whole product. Everything below is discovery, auth, and management.
+
+## Discover what's registered
+
+- CLI: `treg tool ls` - names, hosts, bindings (which credential is injected where).
+- API: `GET {BASE}/tools` with your token → JSON list of `{name, base_url, host, bindings}`.
+- `GET {BASE}/meta` → `{public_url, github}` (unauthenticated; handy to confirm the base URL).
+
+## Two ways to use a tool: call an HTTP API, or run a CLI
+`treg call` is for **HTTP APIs** (the secret is injected server-side; nothing lands on your machine).
+`treg run` is for **command-line tools** (stripe, gh, vercel, gcloud, …): treg supplies the credential
+and runs the CLI, so you use it without owning or logging into it.
+
+    treg run stripe -- balance retrieve        # runs the `stripe` CLI with the org's key injected
+
+Two tiers (`treg run <tool> --local|--server -- <args>`):
+- **`--local`** (default) — the CLI runs on YOUR machine. An admin runs `sudo treg setup-local-run` once
+  (Linux AND macOS) so the CLI runs under a dedicated `treg-run` user and the key never touches your own
+  user; that setup also installs an egress allow-list so the CLI can reach only the registry + catalog API
+  hosts (a rogue CLI feature can't send the key elsewhere), and shared-key runs scrub the key from output.
+  You can run a tool whose key you own; a teammate's shared key needs the isolated runner (`TREG_RUN_PROOF`).
+- **`--server`** — the CLI runs on the registry server (only catalog-known CLIs are allowed there); output
+  is streamed back. Use it when the key must never reach your machine at all.
+
+**`treg shell`** — start a subshell where every registered CLI runs with the credential injected
+automatically: `treg shell start`, then use `stripe`, `gh`, … normally (no `treg run`); `exit` reverts it.
+`--server-for stripe,…` routes named tools to the server; `--ttl N` auto-closes after N minutes.
+
+A recipe-only skill that's just CLI instructions (e.g. `stripe-cli`) auto-becomes runnable — `treg upload`
+recognizes the catalog CLI and wires the credential, so `treg run` works with no `treg.json`.
+
+## Install the CLI
+
+    curl -fsSL {BASE}/install.sh | sh
+
+Installs the `treg` command (Python 3.12+) and points it at this server. Everything below is
+also doable over raw HTTP (see the call protocol) - the CLI is just a thin client.
+
+## Get a token
+
+Three human sign-in doors (email is the identity; the door just proves it):
+
+- **GitHub OAuth** - `treg login` (opens a browser).
+- **Email one-time code** - `treg login --email you@company.com` (a 6-digit code is emailed).
+- **Invite code** - `treg org join <code> --email you@company.com` (creates you + joins a team).
+
+Agents/CI use a **per-org token** directly: `treg login --token <token>`. Get one from
+`treg org create` / `treg org join` (returned once), or ask a team owner. The token goes
+in the `X-Treg-Token` header on every call. Never share the upstream key - share access.
+
+## CLI command reference (compact)
+
+    treg --version | version                      print the installed CLI version
+    treg update                                   upgrade the CLI in place (re-runs the installer)
+    treg login [--email E | --token T]            sign in (GitHub default · email OTP · agent token)
+    treg logout
+    treg onboard [--mode guided|quick]            guided first-run tutorial (seeds a demo team)
+
+    treg org create "Name"                        make a team, become owner
+    treg org ls | org use <slug>                  list / switch the active org
+    treg org invite <email> --role viewer|member|admin
+    treg org join <code> --email you@company.com  accept an invite (creates you if new)
+    treg org members | set-role <user_id> <role>  roster / change a role (owner)
+    treg org invites | revoke <invite_id>         pending invites (admin+)
+    treg org leave | delete <slug>                self-remove / delete (owner, confirm-by-name)
+
+    treg secret add <name> (--value V | --file F | --dir D) [--kind env|oauth|secret_file]
+    treg secret ls | rm <id> | update <id> …
+    treg tool add <name> --base-url URL (--secret <id> | --bind 'secret=<id>,name=<Header>,…')
+    treg add <name> --base-url URL [--secret <name|id>]   convenience shortcut for `tool add` above
+                                                          (`tool add` is the canonical command; `add`
+                                                          just resolves --secret by name + defaults to Bearer)
+    treg tool ls | rm <id> | update <id> …
+    treg call <tool> <path>  |  treg call <full-url>     proxy an HTTP call (named or agent-native)
+    treg calls [--limit N]                        the proxied-call audit log
+
+    treg run <tool> -- <cli args>                 run a vendor CLI (stripe/gh/vercel…) with the tool's
+                                                  credential injected — the CLI runs, you never hold the key
+                                                    --local  (default) run on THIS machine
+                                                    --server run on the registry server (catalog-known CLIs)
+    treg runs [--limit N]                         the CLI-run audit log (local + server, tagged where)
+    treg shell start [--server-for a,b] [--ttl N] a subshell where registered CLIs inject automatically
+    treg shell stop                               leave it (same as `exit`)
+    sudo treg setup-local-run [--run-proof V]     one-time admin setup (Linux + macOS): isolate --local
+      [--no-egress] [--refresh-egress]            runs under a dedicated treg-run user + egress allow-list
+
+    treg skill init --dir D | skill add --dir D | skill ls | skill rm <id>
+    treg skill install <name> [--all] [--dir D]   pull a shared skill's recipe into .claude/skills/
+    treg scan [env|skills] [--dir D]              read-only preview: list the keys & skills upload
+                                                  would register (nothing leaves the machine)
+    treg upload [env|skills] [--dir D] [--select a,b | --all] [--replace] [--llm …]
+                                                  bulk on-ramp: scan a .env AND/OR a skills folder,
+                                                  auto-register everything you pick (see Upload below)
+    treg oauth connect <name> --client-secret S --scopes <scope…>   mint an auto-refreshed OAuth cred
+    treg health [--run]                           validate every secret against its tool's health check
+    treg admin stats | orgs | users | grant <user_id> | …           super-admin (cross-tenant)
+
+## Roles (what a member may do)
+
+- **viewer** - call any tool + read the inventory. Nothing else.
+- **member** - + register secrets/tools/skills, edit/delete their OWN resources.
+- **admin**  - + invite/remove members, edit/delete ANY resource in the team.
+- **owner**  - + change roles, transfer ownership, delete the team.
+
+## Auth shapes (how a credential is injected)
+
+Chosen per tool binding - `{location: header|query, name, format, secret_field}`:
+
+- **env** - a static key/token, placed via `format` (e.g. `Authorization: Bearer {secret}`
+  in a header, or `?api_key={secret}` in the query).
+- **oauth** - an OAuth token blob; treg **auto-refreshes** the access token before it
+  expires (so calls never hit a 401). Mint the first token with the hosted browser-consent
+  flow: `treg oauth connect <name> --client-secret … --scopes …`.
+- **secret_file** - a JSON credential (service-account etc.); treg pulls one field
+  (`secret_field`, default `access_token`) and injects it.
+- **cli_auth** - a credential captured from a local CLI/keychain during setup.
+
+A tool can carry **several** bindings (e.g. an OAuth bearer + a developer-token header);
+treg applies every one on each call.
+
+## Skills (register a whole capability at once)
+
+A skill is a folder registered as one bundle - a recipe + its secrets + its tool(s):
+
+    my-skill/
+      SKILL.md     what it does (the recipe / how-to)
+      .secret/     credential files (values live here; gitignore it)
+      treg.json    the contract - REFERENCES to secrets, never the values
+
+`treg skill init --dir ./my-skill` scans `SKILL.md` + `.secret/` and drafts `treg.json`
+(guessing the base_url, finding the secrets). Review it, then `treg skill add --dir
+./my-skill` uploads recipe + secrets + tool atomically.
+
+A teammate installs any registered skill onto their machine with
+`treg skill install <name>` (or `--all`) - it writes the recipe to `.claude/skills/<name>/SKILL.md`.
+
+## Upload - the bulk on-ramp (`treg upload`; preview with `treg scan`)
+
+Instead of adding tools/skills one at a time, point treg at what you already have. Bare
+`treg upload` does **both** doors for the current dir; `treg upload env` / `treg upload
+skills` restrict it (`--dir` sets the location).
+
+- **env door** - scans a `.env`, matches each variable against a catalog of ~80 providers
+  (served at `GET /providers.json`), and registers the ones you pick as ready-to-call tools.
+  Detection reads NAMES only; the value loads just for the keys you confirm. Config vars
+  (`*_HOST`, `*_MODEL`) and app secrets (`SECRET_KEY`, `DATABASE_URL`, `*_WEBHOOK_SECRET`) are
+  excluded. A `CLIENT_ID`+`CLIENT_SECRET` pair is detected as OAuth (guided connect, not a
+  broken bearer). Basic pairs and query-param keys are handled too.
+- **skills door** - scans a directory of skills; for each it uses an existing `treg.json` or
+  BUILDS one from the skill's script (base_url + the env var it reads), registering API skills
+  as tools and knowledge skills as recipe-only bundles - the whole library in one pass.
+- Idempotent: re-run any time (skips what's already registered, or `--replace` to update).
+- `--select a,b` picks by name · `--all` takes everything · `treg scan` previews (no network,
+  no values) · `--llm --llm-token <key>` resolves unknown keys via an OpenAI-compatible model.
+- Non-interactive (agent/CI) runs refuse without `--all`/`--select`, so nothing is imported
+  unattended by accident.
+
+## For AI agents (Claude Code / Codex / Gemini)
+
+1. You do NOT hunt for API keys. Take the upstream request you'd make, prefix its URL with
+   `{BASE}/call/`, add `X-Treg-Token: <token>` (and `X-Treg-Org: <slug>` for an identity
+   token), and send it.
+2. Discover available tools with `treg tool ls` or `GET {BASE}/tools`.
+3. Prefer a **per-org token** for an agent (scoped to one team), not a human identity token.
+4. The registry records who called what - calls are attributed to the token's user.
+
+Example (an agent calling Intercom with no key on its box):
+
+    curl "{BASE}/call/https://api.intercom.io/me" -H "X-Treg-Token: $TREG_TOKEN"
+
+## Docs & tutorials (links)
+
+- [Interactive tutorial]({BASE}/tutorial): the whole registry hands-on - teams, roles,
+  the proxy, tools, skills, auth shapes, admin. Command + expected output per step, plus
+  reference panels; deep-link a panel with `#concepts` `#roles` `#auth` `#skills`.
+- Two focused tutorials, plain markdown (also interactive cards in the dashboard Help → Tutorial):
+  [Import & shell]({BASE}/tutorial-import-shell.md) - turn the CLIs on a machine into team tools
+  (`treg scan/upload clis`), shell mode (`treg shell`), and the local-run security sandbox; and
+  [Team access control]({BASE}/tutorial-access.md) - which tools each member may use + the
+  local-run on/off dial.
+- [The official Claude skill]({BASE}/skill.md): the 3-persona (consumer/creator/admin) skill —
+  save it to `~/.claude/skills/tools-registry/SKILL.md` (install.sh does this automatically).
+- [Web dashboard]({BASE}/): sign in and manage everything in the browser (tools, secrets,
+  invites, Try-it, activity, admin). It also has a guided first-run and a screenshot tour.
+- [README](https://github.com/superdesigndev/tools-registry/blob/main/README.md): overview,
+  quickstart, architecture.
+- [USAGE / CLI reference](https://github.com/superdesigndev/tools-registry/blob/main/USAGE.md):
+  every command with examples.
+- [Design docs](https://github.com/superdesigndev/tools-registry/tree/main/docs/context):
+  per-subsystem fragments (proxy, auth/secrets, API, CLI, dashboard, multi-tenancy).
+
+## Notes
+
+- Currently self-hosted; the base URL may change (moving to Render). Always read the live
+  `{BASE}/meta` for the current `public_url`, and re-fetch this file at `{BASE}/llms.txt`.
+- Registered upstreams grow over time - treat `treg tool ls` / `GET /tools` as the source
+  of truth, not this file.

@@ -1,0 +1,19 @@
+# gitleaks config for tools-registry.
+# We run gitleaks in CI (see .github/workflows/ci.yml) so no real secret can be committed. The entries
+# below allowlist the handful of OBVIOUSLY-FAKE placeholder strings the code and tests use on purpose
+# (redaction fixtures + the sandbox demo values) so they don't trip the scanner.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Fake, non-secret placeholders used by tests and the demo sandbox"
+regexes = [
+  '''sk_live_DEMO0000PLACEHOLDER''',      # src/treg/sandbox.py — demo starter (credential to nothing)
+  '''phx_DEMO0000PLACEHOLDER''',          # src/treg/sandbox.py — demo starter (credential to nothing)
+  '''sk_live_ABCDEFGHIJKLMNOP1234''',     # tests/test_localrun.py — proves output redaction masks a key
+  '''sk_test_123''',                      # tests/*.py — generic fake test key
+]
+paths = [
+  '''\.env\.example$''',                  # placeholder values only, by design
+]

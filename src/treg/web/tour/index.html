@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>tools-registry — Dashboard tour</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
+<script src="tour.js"></script>
+<style>
+  :root{ --bg:#211d16;--panel:#2a251d;--panel2:#332d23;--ink:#f0e9d9;--muted:#a99e88;--line:#3b352a;
+    --accent:#e0703f;--onAccent:#231c14;--green:#7fae72;--amber:#d0a24a;--red:#e08a7a;--teal:#5f9ea0;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+  [data-theme="light"]{ --bg:#f7f3ea;--panel:#fffdf8;--panel2:#f0eadc;--ink:#201c15;--muted:#877e6c;
+    --line:#e3dac7;--accent:#b8461f;--onAccent:#fff;--green:#3f6f3f;--amber:#a8720a;--red:#a5382b;--teal:#4a7d80;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--mono);font-size:14px;line-height:1.5}
+  a{color:var(--accent);text-decoration:none}
+  code{background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:12px}
+  .top{display:flex;align-items:center;gap:14px;padding:13px 22px;border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:20}
+  .top .brand{font-weight:700;letter-spacing:-.3px} .top .sub{color:var(--muted);font-size:12px;font-family:var(--sans)} .top .spacer{flex:1}
+  .btn{background:var(--panel2);border:1px solid var(--line);color:var(--ink);padding:6px 12px;border-radius:8px;font-family:var(--mono);font-size:12.5px;cursor:pointer}
+  .btn:hover{border-color:var(--accent)} .btn:disabled{opacity:.45;cursor:not-allowed}
+  .wrap{display:grid;grid-template-columns:270px 1fr;min-height:calc(100vh - 56px)}
+  nav.side{border-right:1px solid var(--line);padding:12px 10px;overflow:auto;max-height:calc(100vh - 56px);position:sticky;top:56px}
+  .part{font-size:10px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin:14px 8px 5px}
+  .step{display:block;width:100%;text-align:left;background:none;border:0;color:var(--ink);padding:7px 9px;border-radius:7px;cursor:pointer;font-size:12px;border-left:2px solid transparent}
+  .step:hover{background:var(--panel2)} .step.active{background:var(--panel2);border-left-color:var(--accent);color:var(--accent);font-weight:600}
+  .step .n{color:var(--muted);margin-right:8px;font-variant-numeric:tabular-nums} .step.active .n{color:var(--accent)}
+  main{padding:26px 34px;max-width:1120px}
+  .crumbs{color:var(--muted);font-size:11px;margin-bottom:4px}
+  h2.title{margin:0 0 8px;font-size:23px;letter-spacing:-.3px}
+  .persona{display:inline-block;font-size:11px;padding:2px 9px;border-radius:999px;border:1px solid var(--line);margin-bottom:14px}
+  .persona.tom{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 45%,var(--line))}
+  .persona.bob{color:var(--green);border-color:color-mix(in srgb,var(--green) 45%,var(--line))}
+  .persona.alice{color:var(--amber);border-color:color-mix(in srgb,var(--amber) 45%,var(--line))}
+  .persona.sys{color:var(--muted)}
+  .explain{font-family:var(--sans);font-size:14px;color:var(--muted);margin:2px 0 16px;max-width:820px}
+  /* the matted screenshot */
+  .mat{border-radius:16px;padding:min(5vw,44px);display:flex;justify-content:center;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08);transition:background .3s}
+  .mat img{width:100%;max-width:1000px;height:auto;border-radius:9px;box-shadow:0 18px 50px rgba(0,0,0,.38),0 3px 10px rgba(0,0,0,.25);display:block}
+  .notice{border-left:3px solid var(--amber);background:color-mix(in srgb,var(--amber) 9%,transparent);padding:11px 14px;border-radius:0 8px 8px 0;margin:18px 0;font-size:13px;font-family:var(--sans);max-width:900px} .notice b{color:var(--amber)}
+  .foot{display:flex;gap:10px;align-items:center;margin-top:22px;max-width:900px} .foot .pos{color:var(--muted);font-size:12px;margin:0 auto}
+  @media(max-width:820px){.wrap{grid-template-columns:1fr}nav.side{position:static;max-height:none;border-right:0;border-bottom:1px solid var(--line)}}
+</style>
+</head>
+<body>
+<header class="top">
+  <span class="brand">▚ tools-registry</span>
+  <span class="sub">Dashboard tour — everything you can do in the web UI</span>
+  <span class="spacer"></span>
+  <a class="btn" href="https://treg.ngrok.app/tutorial">CLI tutorial →</a>
+  <button class="btn" id="themeBtn">◐</button>
+</header>
+
+<div class="wrap">
+  <nav class="side" id="nav"></nav>
+  <main>
+    <div class="crumbs" id="crumbs"></div>
+    <h2 class="title" id="title"></h2>
+    <span class="persona" id="persona"></span>
+    <div class="explain" id="explain"></div>
+    <div class="mat" id="mat"><img id="img" alt=""/></div>
+    <div class="notice" id="notice"></div>
+    <div class="foot">
+      <button class="btn" id="prev">← Prev</button>
+      <span class="pos" id="pos"></span>
+      <button class="btn" id="next">Next →</button>
+    </div>
+  </main>
+</div>
+
+<script>
+const T=window.TREG_TOUR, PERSONA=T.personas, COLORS=T.colors, STEPS=T.steps;
+
+
+const nav = document.getElementById('nav'), $ = id => document.getElementById(id);
+let lastPart = null, partIdx = -1;
+STEPS.forEach((s,i)=>{
+  if(s.part!==lastPart){ const p=document.createElement('div'); p.className='part'; p.textContent=s.part; nav.appendChild(p); lastPart=s.part; }
+  const b=document.createElement('button'); b.className='step'; b.dataset.i=i;
+  b.innerHTML=`<span class="n">${String(i+1).padStart(2,'0')}</span>${s.title}`;
+  b.onclick=()=>go(i); nav.appendChild(b);
+});
+// map each part to a colour
+const parts=[...new Set(STEPS.map(s=>s.part))];
+function matColor(part){ return `var(${COLORS[parts.indexOf(part)%COLORS.length]})`; }
+
+let cur=0;
+function go(i){
+  cur=Math.max(0,Math.min(STEPS.length-1,i)); const s=STEPS[cur];
+  $('crumbs').textContent=s.part;
+  $('title').textContent=s.title;
+  const per=$('persona'); per.className='persona '+s.who; per.textContent=PERSONA[s.who]||s.who;
+  $('explain').innerHTML=s.explain;
+  $('img').src='./img/'+s.img;
+  $('mat').style.background=matColor(s.part);
+  $('notice').innerHTML='<b>What to notice:</b> '+s.notice;
+  $('pos').textContent=`Step ${cur+1} of ${STEPS.length}`;
+  $('prev').disabled=cur===0; $('next').disabled=cur===STEPS.length-1;
+  [...nav.querySelectorAll('button.step')].forEach(b=>b.classList.toggle('active',+b.dataset.i===cur));
+  const act=nav.querySelector('button.step.active'); if(act) act.scrollIntoView({block:'nearest'});
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+$('prev').onclick=()=>go(cur-1); $('next').onclick=()=>go(cur+1);
+document.addEventListener('keydown',e=>{ if(e.key==='ArrowRight')go(cur+1); if(e.key==='ArrowLeft')go(cur-1); });
+$('themeBtn').onclick=()=>{ const el=document.documentElement; el.dataset.theme = el.dataset.theme==='dark'?'light':'dark'; };
+go(0);
+</script>
+</body>
+</html>

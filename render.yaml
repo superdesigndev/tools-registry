@@ -1,0 +1,57 @@
+# Render Blueprint — deploys treg as one web service (API + dashboard + landing + tutorial +
+# /llms.txt + /install.sh) backed by a managed Postgres. See docs/context/ops/deploy.md.
+#
+# The app is a single FastAPI service: `python -m treg` honors $PORT (Render routes + health-checks
+# it). Web assets ship in the wheel via pyproject `force-include src/treg/web`, so a plain
+# `pip install .` bundles everything — no separate frontend build.
+#
+# Secrets (Fernet key, OAuth, Resend, admin/session tokens) are NOT in this file — they are set once
+# in the Render dashboard (sync:false below marks them as dashboard-managed). The Postgres URL is
+# auto-wired via fromDatabase; config.py rewrites postgres:// → postgresql+asyncpg:// at load.
+
+databases:
+  - name: treg-db
+    databaseName: treg
+    region: oregon
+    plan: basic-256mb        # smallest paid tier with persistence; bump later if needed
+
+services:
+  - type: web
+    name: treg
+    runtime: python
+    region: oregon
+    plan: starter
+    branch: main
+    buildCommand: pip install .
+    startCommand: python -m treg
+    healthCheckPath: /meta
+    autoDeploy: true
+    envVars:
+      # Postgres — auto-injected from the managed DB above (config.py adds the asyncpg driver).
+      - key: TREG_DATABASE_URL
+        fromDatabase:
+          name: treg-db
+          property: connectionString
+      # Public base URL — drives the OAuth callback, /meta, /llms.txt, /install.sh, all {BASE} links.
+      - key: TREG_PUBLIC_URL
+        value: https://treg.superdesign.dev
+      # Never return OTP codes in prod responses (account-takeover vector); email them via Resend.
+      - key: TREG_EMAIL_DEV_MODE
+        value: "false"
+      - key: TREG_EMAIL_FROM
+        value: tools-registry <no-reply@treg.superdesign.dev>
+      - key: PYTHON_VERSION
+        value: "3.12.7"
+      # Dashboard-managed secrets (paste values in Render; sync:false keeps them out of git).
+      - key: TREG_SECRET_KEY        # Fernet key — MUST equal local .env verbatim (irreplaceable).
+        sync: false
+      - key: TREG_SESSION_SECRET
+        sync: false
+      - key: TREG_ADMIN_TOKEN
+        sync: false
+      - key: TREG_GITHUB_CLIENT_ID
+        sync: false
+      - key: TREG_GITHUB_CLIENT_SECRET
+        sync: false
+      - key: TREG_RESEND_API_KEY
+        sync: false

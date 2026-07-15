@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <rect width="32" height="32" rx="7" fill="#211d16"/>
+  <!-- the ▚ brand mark: upper-left + lower-right quadrants in Ledger clay -->
+  <rect x="6" y="6" width="9.5" height="9.5" rx="1.5" fill="#e0703f"/>
+  <rect x="16.5" y="16.5" width="9.5" height="9.5" rx="1.5" fill="#e0703f"/>
+</svg>

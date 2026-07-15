@@ -1,0 +1,40 @@
+[project]
+name = "tools-registry"
+version = "0.0.1"
+description = "A remote registry that turns team skills into shareable, callable tools via a credential-injecting proxy."
+requires-python = ">=3.12,<3.14"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "httpx>=0.27",
+    "sqlmodel>=0.0.22",
+    "sqlalchemy[asyncio]>=2.0",
+    "aiosqlite>=0.20",
+    "asyncpg>=0.30",
+    "cryptography>=43",
+    "pydantic-settings>=2.5",
+    "questionary>=2.0",
+]
+
+[project.scripts]
+treg = "treg.cli:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/treg"]
+# The web/ dir lives inside the treg package, so `packages` already ships every asset
+# (favicon.svg, index.html, tutorial.*, tour/, llms.txt, install.sh) — hatchling includes
+# non-.py data files under a package by default. A force-include here would add each a SECOND
+# time and break the wheel build (`A second file is being added ... at the same path`).
