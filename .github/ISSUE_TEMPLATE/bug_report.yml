@@ -27,6 +27,16 @@ body:
         3. See error
     validations:
       required: true
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots / recording
+      description: |
+        If it helps, add a screenshot or a short screen recording. Drag the image or video
+        directly into this box to attach it. **Blur or crop out any secrets, tokens, or keys first.**
+      placeholder: Paste or drag an image/video here.
+    validations:
+      required: false
   - type: dropdown
     id: surface
     attributes:
