@@ -1,4 +1,6 @@
-# tools-registry
+# Treg (Tool-Registries)
+
+![treg — share skills & secrets without leaking keys](docs/assets/treg-hero.png)
 
 **A remote registry that turns a team's skills into shareable, callable tools, via a
 credential-injecting proxy.** Call an upstream API (PostHog, Stripe, Search Console, Render, …)

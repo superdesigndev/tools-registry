@@ -12,6 +12,7 @@
 <script src="/tutorial.js"></script>
 <script src="/dashboard-tour/tour.js"></script>
 <style>
+  [v-cloak]{display:none}  /* hide the raw template until Vue mounts — else a hard refresh flashes the un-compiled landing markup while the CDN script downloads */
   /* ===== Ledger: warm paper + clay, mono-forward. Dark default. ===== */
   :root{ --bg:#211d16;--panel:#2a251d;--panel2:#332d23;--ink:#f0e9d9;--muted:#a99e88;--line:#3b352a;
     --accent:#e0703f;--onAccent:#231c14;--green:#7fae72;--amber:#d0a24a;--teal:#6aa89c;--red:#e08a7a;--r:14px;--rb:9px;
@@ -117,6 +118,13 @@
   .statgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-bottom:18px}
   .stat{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px} .stat .n{font-size:26px;font-weight:700;color:var(--accent)} .stat .l{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.06em}
   .tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:14px} .tabs button{background:none;border:0;color:var(--muted);padding:9px 13px;border-bottom:2px solid transparent;font-family:var(--mono)} .tabs button.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+  .tswitch{display:inline-flex;align-items:center;flex:none;cursor:pointer} .tswitch input{display:none}
+  .tswitch .knob{width:30px;height:17px;border-radius:9px;background:var(--line);position:relative;transition:background .15s;flex:none}
+  .tswitch .knob::after{content:'';position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:var(--muted);transition:transform .15s,background .15s}
+  .tswitch input:checked+.knob{background:var(--accent)} .tswitch input:checked+.knob::after{transform:translateX(13px);background:#fff}
+  /* a switch-option card: knob + [title / caption], vertically centered on the title line */
+  .cliopt{display:flex;align-items:flex-start;gap:10px;margin:12px 0;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);cursor:pointer}
+  .cliopt .tswitch{margin-top:1px} .cliopt b{font-size:12.5px;line-height:1.4} .cliopt .sub{font-size:11px;line-height:1.5;margin:0}
   .scrim{position:fixed;inset:0;background:rgba(20,16,10,.55);display:grid;place-items:center;z-index:50}
   .modal{background:var(--panel);border:1px solid var(--line);border-radius:14px;width:min(680px,94vw);max-height:88vh;overflow:auto}
   /* onboarding - a docked right-side narrative stepper; content is pushed left so nothing overlaps */
@@ -425,7 +433,7 @@ th{background:rgba(0,0,0,.25)}
 </style>
 </head>
 <body>
-<div id="app">
+<div id="app" v-cloak>
   <!-- LANDING (logged-out) -->
   <div v-if="!authed" class="lp">
     <!-- SHARE-LINK GATE: a /app/skills|tools/<name> deep link while logged out gets a focused
@@ -722,9 +730,14 @@ th{background:rgba(0,0,0,.25)}
           </div>
           <div class="tut-head">
             <div><h1>Tools in {{activeName}}</h1><p class="sub" style="margin:0" v-if="filteredTools.length">Call any of these with no key on your machine. <b>Copy</b> a snippet, or <b>Try it</b> here.</p><p class="sub" style="margin:0" v-else-if="canRegister && !q">Register an upstream API here, then call it with no key on your machine.</p></div>
-            <div class="tut-actions" v-if="canRegister">
+            <div class="tut-actions" v-if="canRegister" style="position:relative">
               <button class="btn sm" @click="openAddSkill">＋ Skill</button>
-              <button class="btn sm primary" @click="openAddTool">＋ Add tool</button>
+              <button class="btn sm primary" @click.stop="addToolMenu=!addToolMenu" aria-haspopup="true" :aria-expanded="addToolMenu">＋ Add tool</button>
+              <div v-if="addToolMenu" style="position:fixed;inset:0;z-index:29" @click="addToolMenu=false"></div>
+              <div class="dropdown" v-if="addToolMenu" style="left:auto;right:0;top:110%;width:280px" @click.stop>
+                <div class="row" @click="openAddTool('endpoint')"><span style="min-width:0"><b style="font-size:12.5px">⛁ Endpoint</b><span class="sub" style="display:block;font-size:11px;margin-top:1px">an HTTP API, called through the proxy</span></span></div>
+                <div class="row" @click="openAddTool('cli')"><span style="min-width:0"><b style="font-size:12.5px">⌘ CLI</b><span class="sub" style="display:block;font-size:11px;margin-top:1px">a command members run with the key injected</span></span></div>
+              </div>
             </div>
           </div>
           <div v-if="toolErr && !newTool" class="banner" style="margin-top:12px">{{toolErr}}</div>
@@ -803,7 +816,24 @@ th{background:rgba(0,0,0,.25)}
                 <span v-if="detailData&&detailData.owner" class="chip" :title="'shared by '+detailData.owner">{{detailData.owner}}</span>
               </h1>
             </div>
-            <div class="tut-actions">
+            <div class="tut-actions" style="position:relative">
+              <template v-if="detailData && detail.kind==='skill' && (detailData.tools||[]).length">
+                <button class="btn sm" @click.stop="(detailData.tools.length===1 ? tryDetailTool(detailData.tools[0]) : tryMenu=!tryMenu)" title="Call one of this skill's tools right here — the key stays server-side">▶ Try it</button>
+                <div v-if="tryMenu" style="position:fixed;inset:0;z-index:29" @click="tryMenu=false"></div>
+                <div class="dropdown" v-if="tryMenu" style="left:auto;right:0;top:110%;width:260px" @click.stop>
+                  <div class="row" v-for="t in detailData.tools" :key="'try'+t.id" @click="tryDetailTool(t)"><span style="min-width:0"><b style="font-size:12.5px">⚒ {{t.name}}</b><span class="sub" style="display:block;font-size:11px;margin-top:1px">{{t.host||t.base_url}}</span></span></div>
+                </div>
+              </template>
+              <template v-if="canRegister && detailData">
+                <button v-if="detail.kind==='tool'" class="btn sm" @click="configureTool(detailData)" :title="'Edit this '+(detailData.cli?'CLI':'endpoint')+' — credentials, '+(detailData.cli?'deny list, local runs':'bindings')">⚙ Configure</button>
+                <template v-else-if="(detailData.tools||[]).length">
+                  <button class="btn sm" @click.stop="(detailData.tools.length===1 ? configureTool(detailData.tools[0]) : cfgMenu=!cfgMenu)" title="Edit this skill's tools — credentials, deny lists, local runs">⚙ Configure</button>
+                  <div v-if="cfgMenu" style="position:fixed;inset:0;z-index:29" @click="cfgMenu=false"></div>
+                  <div class="dropdown" v-if="cfgMenu" style="left:auto;right:0;top:110%;width:260px" @click.stop>
+                    <div class="row" v-for="t in detailData.tools" :key="'cfg'+t.id" @click="configureTool(t)"><span style="min-width:0"><b style="font-size:12.5px">⚒ {{t.name}}</b><span class="sub" style="display:block;font-size:11px;margin-top:1px">{{t.host||t.base_url}}</span></span></div>
+                  </div>
+                </template>
+              </template>
               <button class="btn sm" @click="copyDetail(detailShareUrl,'url')" title="Copy this page's URL — anyone on the team can open it">{{detailCopied==='url'?'✓ copied':'⧉ Copy link'}}</button>
               <button v-if="canAdmin && detailData" class="btn sm primary" @click="openShare" title="Invite someone outside the team — they'll land right on this page">Share…</button>
             </div>
@@ -866,6 +896,10 @@ th{background:rgba(0,0,0,.25)}
                   <span class="chip" v-else title="Local only — this CLI authenticates from the member's own machine (treg run --local)">local-only</span>
                   <span class="chip run" v-if="!detailData.cli.enabled" title="The owner has local runs switched off for this tool">⌘ run off</span>
                 </p>
+                <template v-if="(detailData.cli.deny||[]).length">
+                  <div class="lbl">Guardrails</div>
+                  <p class="sub" style="margin:2px 0 12px">runs matching these patterns are refused before the key is injected: <span class="mono" v-for="(p,pi) in detailData.cli.deny" :key="'dg'+pi" style="margin-right:8px">{{p}}</span></p>
+                </template>
               </template>
               <template v-if="detailParentSkill">
                 <div class="lbl">From skill</div>
@@ -1403,27 +1437,59 @@ th{background:rgba(0,0,0,.25)}
 
     <!-- ADD / EDIT TOOL -->
     <div class="scrim" role="dialog" aria-modal="true" v-if="newTool" @click.self="newTool=false;toolErr=''">
-      <div class="modal" style="width:min(660px,95vw)"><div class="hd"><b>{{tForm.id?'Edit tool':'Add a tool'}}</b><button class="btn sm" @click="newTool=false;toolErr=''" aria-label="Close">✕</button></div>
+      <div class="modal" style="width:min(620px,95vw)"><div class="hd"><b>{{(tForm.id?'Edit ':'Add ')+(tForm.mode==='cli'?'CLI':'endpoint')}}</b><button class="btn sm" @click="newTool=false;toolErr=''" aria-label="Close">✕</button></div>
         <div style="padding:16px 18px">
-          <p class="explain">A tool = an upstream base URL + one or more credential bindings (how treg injects each key). Need a key? Close this and open <b>⚿ Secrets</b> first.</p>
-          <div class="frow"><label>Name</label><input v-model="tForm.name" :disabled="!!tForm.id" placeholder="e.g. openai"/></div>
-          <div class="frow"><label>Base URL</label><input v-model="tForm.base_url" placeholder="https://api.openai.com"/></div>
-          <div class="lbl" style="margin-top:12px;display:flex;align-items:center">Bindings - how each key is injected <button class="btn sm" @click="addBinding" style="margin-left:auto">＋ binding</button></div>
-          <div class="bindrow" v-for="(b,i) in tForm.bindings" :key="i">
-            <select v-model="b.secret_id" class="msel">
-              <option v-if="!secrets.length" :value="null" disabled>- add a secret -</option>
-              <option v-for="s in secrets" :key="s.id" :value="s.id">{{s.name}}</option>
-            </select>
-            <select v-model="b.injector" class="msel"><option>env</option><option>oauth</option></select>
-            <select v-model="b.location" class="msel"><option value="header">header</option><option value="query">query</option></select>
-            <input v-model="b.name" placeholder="field (Authorization)" class="bindinput"/>
-            <input v-model="b.format" placeholder="Bearer {secret}" class="bindinput"/>
-            <input v-if="b.injector==='oauth'" v-model="b.secret_field" placeholder="token" class="bindinput" style="max-width:80px;min-width:70px"/>
-            <button v-if="tForm.bindings.length>1" class="btn sm" @click="removeBinding(i)" aria-label="Remove binding">✕</button>
-          </div>
-          <p class="sub" style="font-size:11px"><span class="mono">{secret}</span> becomes the credential - e.g. header <span class="mono">Authorization: Bearer {secret}</span>, or query <span class="mono">api_key={secret}</span>. Every binding applies on each call (multi-credential upstreams).</p>
+          <template v-if="tForm.mode!=='cli'">
+            <p class="explain">An endpoint = an upstream base URL + one or more credential bindings (how treg injects each key). Need a key? Close this and open <b>⚿ Secrets</b> first.</p>
+            <div class="frow"><label>Name</label><input v-model="tForm.name" :disabled="!!tForm.id" placeholder="e.g. openai"/></div>
+            <div class="frow"><label>Base URL</label><input v-model="tForm.base_url" placeholder="https://api.openai.com"/></div>
+            <div class="lbl" style="margin-top:12px;display:flex;align-items:center">Bindings - how each key is injected <button class="btn sm" @click="addBinding" style="margin-left:auto">＋ binding</button></div>
+            <div class="bindrow" v-for="(b,i) in tForm.bindings" :key="i">
+              <select v-model="b.secret_id" class="msel">
+                <option v-if="!secrets.length" :value="null" disabled>- add a secret -</option>
+                <option v-for="s in secrets" :key="s.id" :value="s.id">{{s.name}}</option>
+              </select>
+              <select v-model="b.injector" class="msel"><option>env</option><option>oauth</option></select>
+              <select v-model="b.location" class="msel"><option value="header">header</option><option value="query">query</option></select>
+              <input v-model="b.name" placeholder="field (Authorization)" class="bindinput"/>
+              <input v-model="b.format" placeholder="Bearer {secret}" class="bindinput"/>
+              <input v-if="b.injector==='oauth'" v-model="b.secret_field" placeholder="token" class="bindinput" style="max-width:80px;min-width:70px"/>
+              <button v-if="tForm.bindings.length>1" class="btn sm" @click="removeBinding(i)" aria-label="Remove binding">✕</button>
+            </div>
+            <p class="sub" style="font-size:11px"><span class="mono">{secret}</span> becomes the credential - e.g. header <span class="mono">Authorization: Bearer {secret}</span>, or query <span class="mono">api_key={secret}</span>. Every binding applies on each call (multi-credential upstreams).</p>
+          </template>
+          <template v-else>
+            <p class="explain">Members run <span class="mono">treg run {{tForm.cli.bin||'&lt;cli&gt;'}} -- &lt;args&gt;</span> — treg injects the key into that run's environment only; it never lands on their machine.</p>
+            <div class="frow"><label>CLI command</label><input v-model="tForm.cli.bin" :disabled="!!tForm.id" placeholder="e.g. gh" style="font-family:var(--mono)"/></div>
+            <div class="frow"><label>Package</label><input v-model="tForm.cli.package" placeholder="how to install it, e.g. brew install gh (optional)"/></div>
+            <div class="frow"><label>API base URL</label><input v-model="tForm.base_url" placeholder="https://api.github.com — the provider behind the CLI"/></div>
+            <div class="lbl" style="margin-top:14px;display:flex;align-items:center">Binding key - injected as an env var, per run <button class="btn sm" @click="tForm.cli.inject.push({via:'env',name:'',secret_id:null})" style="margin-left:auto">＋ env var</button></div>
+            <div class="bindrow" v-for="(inj,i) in tForm.cli.inject" :key="'inj'+i">
+              <select v-model="inj.secret_id" class="msel">
+                <option v-if="!secrets.length" :value="null" disabled>- add a secret -</option>
+                <option v-for="s in secrets" :key="s.id" :value="s.id">{{s.name}}</option>
+              </select>
+              <input v-model="inj.name" placeholder="env var, e.g. GH_TOKEN" class="bindinput" style="font-family:var(--mono)"/>
+              <button v-if="tForm.cli.inject.length>1" class="btn sm" @click="tForm.cli.inject.splice(i,1)" aria-label="Remove env var">✕</button>
+            </div>
+            <label class="cliopt"><span class="tswitch"><input type="checkbox" v-model="tForm.cli.enabled"/><span class="knob"></span></span><span style="flex:1;min-width:0"><b>Local runs</b><span class="sub" style="display:block;margin-top:2px">{{tForm.cli.enabled?'on — members can treg run '+(tForm.cli.bin||'it')+' with the key injected':'off — every run is refused'}}</span></span></label>
+            <div class="lbl" style="margin-top:14px;display:flex;align-items:center">Deny list - matching runs are refused before the key is injected <button class="btn sm" @click="tForm.cli.deny.push('')" style="margin-left:auto">＋ pattern</button></div>
+            <p class="sub" style="font-size:11px;margin:4px 0 8px">Each row is a regex, matched against the whole command line AND each argument — block subcommands that execute arbitrary code (<span class="mono">(^|\s)run(\s|$)</span>) or flags that redirect the key (<span class="mono">--publish-url\b</span>).</p>
+            <div class="bindrow" v-for="(p,i) in tForm.cli.deny" :key="'dn'+i">
+              <input v-model="tForm.cli.deny[i]" placeholder="regex, e.g. (^|\s)run(\s|$)" class="bindinput" style="font-family:var(--mono)"/>
+              <button class="btn sm" @click="tForm.cli.deny.splice(i,1)" aria-label="Remove pattern">✕</button>
+            </div>
+            <p class="sub" v-if="!tForm.cli.deny.length && !(tForm.cli.deny_defaults && catalogExtra.length)" style="font-size:11px;margin:4px 0 8px;color:var(--warn,#e0a458)">No guardrails — any {{tForm.cli.bin||'CLI'}} invocation gets the key.</p>
+            <label class="cliopt" v-if="catalogExtra.length"><span class="tswitch"><input type="checkbox" v-model="tForm.cli.deny_defaults"/><span class="knob"></span></span><span style="flex:1;min-width:0"><b>Catalog defaults</b><span class="sub" style="display:block;margin-top:2px">treg's built-in deny patterns for {{tForm.cli.bin}} — shown below, maintained centrally</span></span></label>
+            <template v-if="tForm.cli.deny_defaults && catalogExtra.length">
+              <div class="bindrow" v-for="(cp,ci) in catalogExtra" :key="'cd'+ci">
+                <input :value="cp" disabled class="bindinput" style="font-family:var(--mono);opacity:.55"/>
+                <span class="chip" title="From the treg catalog — applies to every org's instance of this CLI; maintained centrally">catalog</span>
+              </div>
+            </template>
+          </template>
           <div v-if="toolErr" class="banner">{{toolErr}}</div>
-          <button class="btn primary" @click="saveTool" :disabled="toolBusy">{{toolBusy?'Saving…':(tForm.id?'Save changes':'Create tool')}}</button>
+          <button class="btn primary" style="margin-top:6px" @click="saveTool" :disabled="toolBusy">{{toolBusy?'Saving…':(tForm.id?'Save changes':(tForm.mode==='cli'?'Create CLI':'Create endpoint'))}}</button>
         </div></div>
     </div>
 
@@ -1741,6 +1807,10 @@ createApp({
       secrets:[], showSecrets:false, secretRows:[{name:'',value:'',kind:'env'}], secretBusy:false, secretErr:'', runNote:'',
       newTool:false, toolBusy:false, toolErr:'', confirmDelTool:null, confirmDelSecret:null,
       tForm:{id:null, name:'', base_url:'', bindings:[]},
+      addToolMenu:false,  // the ＋ Add tool [endpoint | cli] chooser
+      cfgMenu:false,  // detail-page ⚙ Configure tool-picker (skills with >1 tool)
+      tryMenu:false,  // detail-page ▶ Try it tool-picker (skills with >1 tool)
+      catalogClis:null,  // bin → catalog default deny patterns (lazy, from /providers.json)
       newSkill:false, skillJson:'', skillBusy:false, skillErr:'', skillMode:'folder',
       skillFiles:[], detected:null, skillSel:{}, skillVals:{}, skillResults:null,
       sessionMode:false, activeSlug: localStorage.getItem('treg-active')||null, meta:{github:false, public_url:location.origin},
@@ -1775,6 +1845,9 @@ createApp({
     };
   },
   computed:{
+    catalogDeny(){ const c=this.tForm.cli; return (c && this.catalogClis && this.catalogClis[c.bin]) || []; },
+    catalogExtra(){  // catalog patterns not already in the own list — the union dedupes at run time, so showing both would double up
+      const own=new Set((this.tForm.cli&&this.tForm.cli.deny||[]).map(p=>p.trim())); return this.catalogDeny.filter(p=>!own.has(p)); },
     sortedInvites(){  // the clicked email link's team first, then newest-first (the API's order)
       return [...this.pendingInvites].sort((a,b)=>(b.org_id===this.inviteLinkOrg?1:0)-(a.org_id===this.inviteLinkOrg?1:0)); },
     selectedInvites(){ return this.sortedInvites.filter(i=>this.inviteSel[i.id]); },
@@ -2233,10 +2306,26 @@ createApp({
       try{ await this.api('/secrets/'+s.id,{method:'DELETE'}); await this.loadSecrets(); }
       catch(e){ this.secretErr='Delete secret failed: '+(e.detail||e.status); } },
     defaultBinding(){ return {secret_id:(this.secrets[0]?this.secrets[0].id:null), injector:'env', location:'header', name:'Authorization', format:'Bearer {secret}', secret_field:'access_token'}; },
-    openAddTool(){ this.loadSecrets().then(()=>{ this.tForm={id:null, name:'', base_url:'', bindings:[this.defaultBinding()]}; this.toolErr=''; this.newTool=true; }); },
-    openEditTool(t){ this.loadSecrets().then(()=>{ this.tForm={ id:t.id, name:t.name, base_url:t.base_url,
-        bindings:(t.bindings||[]).map(b=>({secret_id:b.secret_id, injector:b.injector||'env', location:b.location||'header', name:b.name||'Authorization', format:b.format||'Bearer {secret}', secret_field:b.secret_field||'access_token'})) };
-      if(!this.tForm.bindings.length) this.tForm.bindings=[this.defaultBinding()]; this.toolErr=''; this.newTool=true; }); },
+    openAddTool(mode){ this.addToolMenu=false; this.loadSecrets().then(()=>{
+      this.tForm = mode==='cli'
+        ? {id:null, mode:'cli', name:'', base_url:'', bindings:[],
+           cli:{bin:'', package:'', enabled:true, auth_mechanism:'env', deny:[], deny_defaults:true,
+                inject:[{via:'env', name:'', secret_id:(this.secrets[0]?this.secrets[0].id:null)}]}}
+        : {id:null, mode:'endpoint', name:'', base_url:'', bindings:[this.defaultBinding()]};
+      if(mode==='cli') this.loadCatalogClis();
+      this.toolErr=''; this.newTool=true; }); },
+    openEditTool(t){ this.loadSecrets().then(()=>{ this.tForm={ id:t.id, mode:(t.cli?'cli':'endpoint'), name:t.name, base_url:t.base_url,
+        bindings:(t.bindings||[]).map(b=>({secret_id:b.secret_id, injector:b.injector||'env', location:b.location||'header', name:b.name||'Authorization', format:b.format||'Bearer {secret}', secret_field:b.secret_field||'access_token'})),
+        // deep-copy the cli profile — the PATCH replaces it wholesale, so every field must round-trip
+        cli: t.cli ? Object.assign(JSON.parse(JSON.stringify(t.cli)), {package:t.cli.package||'', deny:(t.cli.deny||[]).slice(), deny_defaults:t.cli.deny_defaults!==false,
+                inject:(t.cli.inject||[]).map(e=>Object.assign({via:'env',name:'',secret_id:null},e))}) : null };
+      if(this.tForm.cli){ if(!this.tForm.cli.inject.length) this.tForm.cli.inject=[{via:'env', name:'', secret_id:null}]; this.loadCatalogClis(); }
+      else if(!this.tForm.bindings.length) this.tForm.bindings=[this.defaultBinding()];
+      this.toolErr=''; this.newTool=true; }); },
+    async loadCatalogClis(){ if(this.catalogClis) return;  // bin → catalog deny patterns, fetched once
+      try{ const cat=await (await fetch('/providers.json')).json();
+        const m={}; (cat.providers||cat||[]).forEach(e=>{ const c=e.cli; if(c&&c.bin) m[c.bin]=(c.deny||[]); }); this.catalogClis=m; }
+      catch(e){ this.catalogClis={}; } },
     addBinding(){ const b=this.defaultBinding();
       // avoid cloning a duplicate header name (which would fail on save) - pick a fresh one
       const used=new Set(this.tForm.bindings.filter(x=>(x.location||'header')==='header').map(x=>(x.name||'Authorization').toLowerCase()));
@@ -2244,18 +2333,34 @@ createApp({
       this.tForm.bindings.push(b); },
     removeBinding(i){ this.tForm.bindings.splice(i,1); },
     async saveTool(){ const f=this.tForm;
-      if(!f.base_url.trim() || (!f.id && !f.name.trim())){ this.toolErr='Name and base URL are required.'; return; }
-      if(!/^https?:\/\/.+/i.test(f.base_url.trim())){ this.toolErr='Base URL must start with http:// or https://'; return; }  // client-side URL check
-      if(!f.bindings.length || f.bindings.some(b=>!b.secret_id)){ this.toolErr='Every binding needs a secret.'; return; }
-      const hdr=f.bindings.filter(b=>(b.location||'header')==='header').map(b=>(b.name||'Authorization').toLowerCase());
-      if(new Set(hdr).size!==hdr.length){ this.toolErr='Two bindings target the same header - give each a distinct name.'; return; }  // catch the collision inline, clearly
+      if(!/^https?:\/\/.+/i.test(f.base_url.trim())){ this.toolErr=(f.mode==='cli'?'The provider API base URL':'Base URL')+' must start with http:// or https://'; return; }  // client-side URL check
+      let body;
+      if(f.mode==='cli'){
+        const bin=(f.cli.bin||'').trim();
+        if(!f.id && !bin){ this.toolErr='The CLI command (e.g. gh) is required.'; return; }
+        const inject=f.cli.inject.filter(e=>(e.name||'').trim()||e.secret_id).map(e=>({via:'env', name:(e.name||'').trim(), secret_id:e.secret_id}));
+        if(inject.some(e=>!e.name||!e.secret_id)){ this.toolErr='Each binding key needs a secret AND the env var to inject it as.'; return; }
+        const deny=f.cli.deny.map(p=>p.trim()).filter(Boolean);
+        for(const p of deny){ try{ new RegExp(p); }catch(e){ this.toolErr='Deny pattern is not a valid regex: '+p; return; } }
+        const cli=Object.assign({},f.cli,{bin, inject, deny, deny_defaults:!!f.cli.deny_defaults, enabled:!!f.cli.enabled});
+        if(!(cli.package||'').trim()) delete cli.package; else cli.package=cli.package.trim();
+        // PATCH omits `bindings` on purpose: editing the CLI must not clobber any HTTP bindings the tool also has
+        body = f.id ? {base_url:f.base_url.trim(), cli} : {name:bin.replace(/_/g,'-'), base_url:f.base_url.trim(), bindings:[], cli};
+      } else {
+        if(!f.id && !f.name.trim()){ this.toolErr='Name and base URL are required.'; return; }
+        if(!f.bindings.length || f.bindings.some(b=>!b.secret_id)){ this.toolErr='Every binding needs a secret.'; return; }
+        const hdr=f.bindings.filter(b=>(b.location||'header')==='header').map(b=>(b.name||'Authorization').toLowerCase());
+        if(new Set(hdr).size!==hdr.length){ this.toolErr='Two bindings target the same header - give each a distinct name.'; return; }  // catch the collision inline, clearly
+        const bindings=f.bindings.map(b=>({secret_id:b.secret_id, injector:b.injector, location:b.location, name:b.name, format:b.format, secret_field:b.secret_field}));
+        body = f.id ? {base_url:f.base_url.trim(), bindings} : {name:f.name.trim(), base_url:f.base_url.trim(), bindings};
+      }
       this.toolBusy=true; this.toolErr='';
-      const bindings=f.bindings.map(b=>({secret_id:b.secret_id, injector:b.injector, location:b.location, name:b.name, format:b.format, secret_field:b.secret_field}));
       try{
-        if(f.id){ await this.api('/tools/'+f.id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({base_url:f.base_url.trim(), bindings})}); }
-        else { await this.api('/tools',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name:f.name.trim(), base_url:f.base_url.trim(), bindings})}); }
-        const created = f.id ? null : f.name.trim();
+        if(f.id){ await this.api('/tools/'+f.id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(body)}); }
+        else { await this.api('/tools',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}); }
+        const created = f.id ? null : body.name;
         this.newTool=false; await this.loadAll();
+        if(this.view==='detail') this.loadDetail();  // a detail-page ⚙ Configure save must show the new values
         if(created) await this.remindCustomizedAccess(created); }
       catch(e){ this.toolErr='Save tool failed: '+(e.detail||e.status); } finally{ this.toolBusy=false; } },
     async remindCustomizedAccess(toolName){  // a NEW tool auto-applies to 'all-tools' members but NOT to customized ones
@@ -2512,6 +2617,7 @@ createApp({
           `       treg health --run     # validates every credential server-side in a single batch`,
           `       treg tool ls`,
           `   Report ONLY the failures, plus a one-line summary of what you registered.`,``,
+          `6. Wrapping up: if this went smoothly, offer to star the open-source project — if I say yes, open https://github.com/superdesigndev/tools-registry in my browser and I'll click it.`,``,
           `Goal: my teammates can call these tools through treg without ever holding my keys.`
         ].join('\n');
       }
@@ -2527,6 +2633,7 @@ createApp({
         `   treg tool ls`,`   # then pick a tool and call it, e.g.  treg call <tool> <path>`,
         `   # a tool shown with a "⌘ run" marker is a command-line tool, not an HTTP API — use it with:`,
         `   #   treg run <tool> -- <cli args>     (runs the CLI with the key injected; you never hold it)`,``,
+        `5. If the test call worked, offer to star the open-source project — if I say yes, open https://github.com/superdesigndev/tools-registry in my browser and I'll click it.`,``,
         `Full protocol reference: ${B}/llms.txt`
       ].join('\n');
     },
@@ -2557,6 +2664,12 @@ createApp({
           ? 'Not found in your teams. This link needs an invite — ask the person who shared it to invite you (Share… on their side), then click the link again.'
           : 'Could not load: '+(e.detail||e.status); }
       finally{ this.detailLoading=false; } },
+    async fullTool(t){  // skill pages carry tool SUMMARIES — resolve the full record (bindings + cli) before acting on it
+      let full=(this.tools||[]).find(x=>x.id===t.id);
+      if(!full && !(t.bindings||t.cli)){ try{ full=(await this.api('/tools')).find(x=>x.id===t.id); }catch(e){} }
+      return full||t; },
+    async configureTool(t){ this.cfgMenu=false; this.openEditTool(await this.fullTool(t)); },
+    async tryDetailTool(t){ this.tryMenu=false; this.openUse(await this.fullTool(t)); },
     async copyDetail(text, tag){ if(!(await this.toClipboard(text))) return; this.detailCopied=tag; setTimeout(()=>{ if(this.detailCopied===tag) this.detailCopied=''; },1500); },
     rowTarget(t){  // where a tools-list row leads: a skill-born tool opens its SKILL (the shareable thing), a bare endpoint opens the tool page
       if(t.bundle_id){ const b=this.bundles.find(x=>x.id===t.bundle_id); if(b) return {kind:'skill', name:b.name}; }
