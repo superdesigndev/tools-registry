@@ -829,7 +829,7 @@ p.lead,p.sub{font-family:var(--mono);font-size:15px;line-height:1.65}
 .hx-tree.hx-on svg.hx-paths circle{opacity:.9}
 
 /* featured member: the terminal, front and center */
-.hx-term{position:absolute;left:50%;top:118px;transform:translateX(-50%);width:min(520px,90%);
+.hx-term{position:absolute;left:50%;top:118px;transform:translateX(-50%);width:min(520px,90%);z-index:4;
   text-align:left;border-radius:22px;border:1px solid rgba(255,255,255,.1);z-index:4;
   background:linear-gradient(180deg,#232220 0%,#171614 100%);
   box-shadow:rgba(255,255,255,.09) 0 1px 0 inset, rgba(0,0,0,.6) 5px 4px 16px 0,
@@ -907,8 +907,47 @@ p.lead,p.sub{font-family:var(--mono);font-size:15px;line-height:1.65}
 @media(max-width:760px){
   .hx-dmrow{flex-direction:column;align-items:center}
   .hx-dmrow.hx-r2{transform:none}
-  .hx-tree{height:600px}
+  /* text fits: wrap messages, scale terminal/vault/log type */
+  .hx-dm{max-width:94vw}
+  .hx-dm .hx-msg{white-space:normal}
+  .hx-term pre{font-size:11px}
+  .hx-term .hx-ln{white-space:pre-wrap;word-break:break-word}
+  .hx-vault .hx-bar span{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .hx-vrow{font-size:10.5px;gap:8px;white-space:nowrap}
+  .hx-vrow .hx-chip{font-size:9px;padding:2px 6px}
+  .hx-vrow.hx-sub{padding-left:12px;font-size:10px}
+  .hx-vrow .hx-t,.hx-vrow .hx-dots{display:none}
+  .hx-beam .hx-cap{font-size:18px}
+  .hx-treecap{font-size:19px}
+  .hx-logsec h2{font-size:22px}
+  .hx-logsec .hx-sub{padding:0 16px}
+  .hx-lrow2{font-size:11px;gap:10px}
+  .hx-lrow2 .hx-ts{width:52px}
+  .hx-lrow2 .hx-who{width:auto;max-width:52%}
+  .hx-lrow2 .hx-what{display:none}
+  /* fewer reveal targets on phones — shorten the scrub so no dead scroll stretch */
+  .hx-scrolly{height:280vh}
+}
+/* tablet: side member cards would collide with the terminal — compact row below it */
+@media(max-width:1100px) and (min-width:641px){
+  .hx-tree{height:560px}
+  .hx-member{width:22% !important;min-width:150px;padding:9px 12px;gap:9px}
+  .hx-member .hx-k{display:none}
+  .hx-member .hx-tok{font-size:10px;padding:2px 8px}
+  .hx-member img,.hx-member .hx-agent{width:22px;height:22px}
+  .hx-member .hx-agent svg{width:12px;height:12px}
+  .hx-member .hx-agent.hx-codex svg{width:19px;height:19px}
+  .hx-member .hx-n{font-size:11px}
+  .hx-tree .hx-member:nth-of-type(1){left:3% !important;right:auto !important;top:462px !important}
+  .hx-tree .hx-member:nth-of-type(2){left:28% !important;right:auto !important;top:462px !important}
+  .hx-tree .hx-member:nth-of-type(3){left:53% !important;right:auto !important;top:462px !important}
+  .hx-tree .hx-member:nth-of-type(4){left:78% !important;right:auto !important;top:462px !important}
+}
+/* phones: hide the side cast entirely; the tree routes to the terminal only */
+@media(max-width:640px){
+  .hx-tree{height:380px}
   .hx-member{display:none}
+  .hx-beam2{height:100px}
 }
 @media (prefers-reduced-motion: reduce){
   .hx-dm,.hx-vrow,.hx-term,.hx-term .hx-ln,.hx-member,.hx-treecap,.hx-beam .hx-line,.hx-beam .hx-cap{opacity:1 !important;transform:none !important;transition:none}
@@ -1568,7 +1607,7 @@ function buildPaths(){
   const rootDot=document.createElementNS(NS,'circle');
   rootDot.setAttribute('cx',rootX); rootDot.setAttribute('cy',rootY); rootDot.setAttribute('r','3.5');
   svg.appendChild(rootDot);
-  [...members, termEl].forEach(el=>{
+  [...members, termEl].filter(el=>el.offsetWidth>0).forEach(el=>{
     const r=el.getBoundingClientRect();
     const cx=r.left-tr.left+r.width/2;
     let ex,ey;
@@ -1616,7 +1655,7 @@ function apply(pIn,pPin){
   logh2.classList.toggle('hx-show',step(pPin,0.70));
   document.querySelector('.hx-logcard').style.opacity=step(pPin,0.72)?1:0;
   logsub.classList.toggle('hx-show',step(pPin,0.73));
-  lrows.forEach((r,i)=>r.classList.toggle('hx-show',step(pPin,0.76+i*0.04)));
+  lrows.forEach((r,i)=>r.classList.toggle('hx-show',step(pPin,0.735+i*0.03)));
   const maxPan=Math.max(0,stageEl.scrollHeight-stickyEl.clientHeight+40);
   const yTerm=(termEl.getBoundingClientRect().top-stageEl.getBoundingClientRect().top)+termEl.offsetHeight/2+40;
   const pan1=clampv(yTerm-stickyEl.clientHeight*0.46,0,maxPan);
