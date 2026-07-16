@@ -142,6 +142,11 @@ def _migrate_to_orgs(conn) -> None:
     if "invite" in tables and "email_token_hash" not in {c["name"] for c in insp.get_columns("invite")}:
         conn.execute(text("ALTER TABLE invite ADD COLUMN email_token_hash VARCHAR"))
 
+    # (A14) additive: invite.landing — the shared detail page ("/app/skills/<name>") the invitee
+    # lands on after invite-signin. Nullable: a plain invite lands on the dashboard as before.
+    if "invite" in tables and "landing" not in {c["name"] for c in insp.get_columns("invite")}:
+        conn.execute(text("ALTER TABLE invite ADD COLUMN landing VARCHAR"))
+
     # (B) legacy backfill — guarded
     if "org" not in tables:
         return  # defensive: create_all should have made it

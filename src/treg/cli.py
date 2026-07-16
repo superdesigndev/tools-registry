@@ -2507,10 +2507,36 @@ def cmd_org_invite(args, cfg) -> None:
         org_id = _active_org_id(cfg, c)
         if org_id is None:
             sys.exit("no active org")
+        # --skill/--tool = a SHARE invite: the invitee lands on that detail page after the emailed
+        # sign-in, and (unless --tools/--all-tools overrides) their calls are scoped to just it.
+        landing, share_tools = None, None
+        if getattr(args, "skill", None):
+            r = c.get(f"/bundles/by-name/{quote(args.skill, safe='')}")
+            if r.status_code >= 400:
+                sys.exit(f"no skill named {args.skill!r} in the active org")
+            landing = f"/app/skills/{quote(args.skill, safe='')}"
+            share_tools = [t["name"] for t in (r.json().get("tools") or [])]
+        elif getattr(args, "tool", None):
+            r = c.get(f"/tools/by-name/{quote(args.tool, safe='')}")
+            if r.status_code >= 400:
+                sys.exit(f"no tool named {args.tool!r} in the active org")
+            landing = f"/app/tools/{quote(args.tool, safe='')}"
+            share_tools = [args.tool]
+        if landing is None or args.all_tools or getattr(args, "tools", None):
+            access = _resolve_tool_access(c, org_id, args)
+        else:
+            access = share_tools or None  # recipe-only skill: nothing to scope
         body = {"email": args.email, "role": args.role, "expires_days": args.expires_days,
-                "tool_access": _resolve_tool_access(c, org_id, args),
-                "local_run_enabled": getattr(args, "local_run", "on") != "off"}
-        _show(c.post(f"/orgs/{org_id}/invites", json=body))
+                "tool_access": access,
+                "local_run_enabled": getattr(args, "local_run", "on") != "off",
+                "landing": landing}
+        r = c.post(f"/orgs/{org_id}/invites", json=body)
+        _show(r)
+    if landing is not None:  # _show exits on error, so this only prints on success
+        base = (cfg.get("base_url") or "https://treg.superdesign.dev").rstrip("/")
+        print(f"↗ share link: {base}{landing}")
+        print("  The invite email's button signs them in and lands them on this page. DM alternative:"
+              f" send the link — after they sign in with {args.email}, the invite auto-appears.")
 
 
 def cmd_org_access(args, cfg) -> None:
@@ -2790,8 +2816,11 @@ def build_parser() -> argparse.ArgumentParser:
     oi = mk(og, "invite", "Invite someone to the active team by email (choose their tool access).",
             "treg org invite bob@company.com --role member",
             "treg org invite bob@company.com --tools stripe,gh   # only these tools",
-            "treg org invite bob@company.com --all-tools --local-run off")
+            "treg org invite bob@company.com --all-tools --local-run off",
+            "treg org invite bob@company.com --skill slideshow   # share ONE skill: lands on its page, calls scoped to its tools")
     oi.add_argument("email", help="the invitee's email"); oi.add_argument("--role", default="member", choices=["viewer", "member", "admin"], help="role to grant (default: member)")
+    oi.add_argument("--skill", help="share invite: land them on this skill's page + scope access to its tools")
+    oi.add_argument("--tool", help="share invite: land them on this tool's page + scope access to it")
     oi.add_argument("--expires-days", type=int, default=7, help="invite validity in days (default: 7)")
     oi.add_argument("--tools", help="comma-separated tool names this member may use (default: prompt / all)")
     oi.add_argument("--all-tools", dest="all_tools", action="store_true", help="grant access to every tool (skip the prompt)")

@@ -63,7 +63,10 @@ async def send_otp(email: str, code: str, ttl_minutes: int = 10) -> bool:
 
 
 async def send_invite(email: str, inviter: str, org_name: str, role: str, code: str,
-                      email_token: str, expires_at: str = "", link_base: str = "") -> bool:
+                      email_token: str, expires_at: str = "", link_base: str = "",
+                      shared: str = "") -> bool:
+    """`shared` = a human phrase for a share-born invite (e.g. 'the skill “slideshow”') — the email
+    then leads with what was shared and its button lands on that page after sign-in."""
     s = get_settings()
     from urllib.parse import quote
     # The link should open on the SAME deployment the inviter was using. The request origin
@@ -74,8 +77,10 @@ async def send_invite(email: str, inviter: str, org_name: str, role: str, code: 
     # The visible code below stays the out-of-band credential the admin also holds — join-only.
     url = f"{base}/auth/invite-signin?t={quote(email_token)}"
     exp = f" It expires on {expires_at[:10]}." if expires_at else ""
+    headline = (f'<b>{_esc(inviter)}</b> shared {_esc(shared)} with you — join <b>{_esc(org_name)}</b> to use it'
+                if shared else f'<b>{_esc(inviter)}</b> invited you to <b>{_esc(org_name)}</b>')
     body = (
-        f'<p style="margin:0 0 6px;color:#201c15;font-size:15px"><b>{_esc(inviter)}</b> invited you to <b>{_esc(org_name)}</b></p>'
+        f'<p style="margin:0 0 6px;color:#201c15;font-size:15px">{headline}</p>'
         f'<p style="margin:0 0 16px;color:#877e6c;font-size:13px">You\'ve been added as <b style="color:#201c15">{_esc(role)}</b> on tools-registry — call the team\'s tools with no API keys on your machine.{exp}</p>'
         f'<a href="{url}" style="display:inline-block;background:#b8461f;color:#fff;text-decoration:none;font-weight:600;font-size:14px;padding:11px 20px;border-radius:8px">Sign in &amp; accept →</a>'
         f'<p style="margin:16px 0 6px;color:#877e6c;font-size:12px">Sign in with <b>{_esc(email)}</b> and the invite appears automatically. Prefer a code? Use this one:</p>'
@@ -83,11 +88,14 @@ async def send_invite(email: str, inviter: str, org_name: str, role: str, code: 
     )
     html = _WRAP.format(body=body)
     text = (
-        f"{inviter} invited you to {org_name} as {role} on tools-registry.\n"
-        f"Sign in at {url} with {email} and the invite appears automatically.\n"
+        (f"{inviter} shared {shared} with you on tools-registry (team {org_name}, as {role}).\n" if shared
+         else f"{inviter} invited you to {org_name} as {role} on tools-registry.\n")
+        + f"Sign in at {url} with {email} and the invite appears automatically.\n"
         f"Or accept with this one-time code: {code}.{exp}"
     )
-    return await _send(email, f"{inviter} invited you to {org_name} on tools-registry", html, text)
+    subject = (f"{inviter} shared {shared} with you on tools-registry" if shared
+               else f"{inviter} invited you to {org_name} on tools-registry")
+    return await _send(email, subject, html, text)
 
 
 def _esc(s: str) -> str:

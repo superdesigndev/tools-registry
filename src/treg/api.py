@@ -895,7 +895,11 @@ async def auth_invite_signin_confirm(request: Request, db: AsyncSession = Depend
     invite.email_token_hash = None  # consume: one sign-in per emailed link
     db.add(invite)
     await db.commit()
-    resp = RedirectResponse(f"/?invite_org={invite.org_id}", status_code=303)
+    # A share-born invite lands on the shared page itself (the SPA auto-accepts + switches org);
+    # a plain invite lands on the dashboard with the accept banner, as before. `landing` was
+    # allowlist-validated at create time, so this can never redirect off-app.
+    dest = f"{invite.landing}?invite_org={invite.org_id}" if invite.landing else f"/?invite_org={invite.org_id}"
+    resp = RedirectResponse(dest, status_code=303)
     resp.set_cookie(sess.COOKIE, sess.make(user.id, token_version=user.token_version), httponly=True,
                     samesite="lax", secure=_is_https(request), max_age=sess.TTL_SECONDS)
     return resp
@@ -1319,6 +1323,12 @@ class InviteIn(BaseModel):
     # tool names; local_run may be turned off. Both default to the unrestricted state.
     tool_access: list[str] | None = None
     local_run_enabled: bool = True
+    landing: str | None = None  # a shared detail page ("/app/skills/<name>") to land on after sign-in
+
+
+# Landing must be one of OUR detail paths — a path-only allowlist so an emailed invite link can never
+# become an open redirect (no scheme, no host, no traversal, single trailing name segment).
+_LANDING_RE = re.compile(r"^/app/(skills|tools)/[A-Za-z0-9][A-Za-z0-9._%-]*$")
 
 
 class AcceptIn(BaseModel):
@@ -1675,6 +1685,8 @@ async def create_invite(
     days = max(1, min(body.expires_days, 3650))  # clamp BOTH ends — a huge value overflows datetime → 500
     expires_at = _utcnow_naive() + timedelta(days=days)
     tool_access = _normalize_tool_access(body.tool_access, await _known_tool_names(org_id, db))
+    if body.landing is not None and not _LANDING_RE.match(body.landing):
+        raise HTTPException(status_code=422, detail="landing must be a detail path like /app/skills/<name>")
     code = crypto.new_token()
     # A SECOND secret for the email link only. The admin gets `code` back (out-of-band relay) so the
     # code can never be a sign-in factor; `email_token` is never returned here — only the inbox sees
@@ -1684,7 +1696,7 @@ async def create_invite(
         org_id=org_id, email=email, role=body.role,
         code_hash=crypto.hash_token(code), email_token_hash=crypto.hash_token(email_token),
         invited_by=caller.email, expires_at=expires_at,
-        tool_access=tool_access, local_run_enabled=body.local_run_enabled,
+        tool_access=tool_access, local_run_enabled=body.local_run_enabled, landing=body.landing,
     )
     db.add(invite)
     await db.commit()
@@ -1692,9 +1704,13 @@ async def create_invite(
     if not email.endswith("@" + demo_seed.DEMO_DOMAIN):  # don't email the onboarding's fake teammate domain
         scheme = "https" if _is_https(request) else request.url.scheme
         host = request.headers.get("host", "")
+        shared = ""  # share-born invite → the email leads with what was shared
+        if body.landing:
+            kind, _, name = body.landing.removeprefix("/app/").partition("/")
+            shared = f'the {"skill" if kind == "skills" else "tool"} “{name}”'
         await email_sender.send_invite(  # best-effort; the code is also returned for out-of-band relay
             email, caller.email, (org.name if org else email), body.role, code, email_token,
-            expires_at.isoformat(), link_base=(f"{scheme}://{host}" if host else "")
+            expires_at.isoformat(), link_base=(f"{scheme}://{host}" if host else ""), shared=shared,
         )
     return {"code": code, "email": email, "role": body.role, "org_id": org_id,
             "expires_at": expires_at.isoformat()}  # email_token deliberately NOT returned (inbox-only)
@@ -1771,7 +1787,7 @@ async def my_invites(
             continue
         out.append({
             "id": inv.id, "org": org.slug, "org_id": org.id, "name": org.name, "role": inv.role,
-            "invited_by": inv.invited_by,
+            "invited_by": inv.invited_by, "landing": inv.landing,
             "expires_at": inv.expires_at.isoformat() if inv.expires_at else None,
             "created_at": inv.created_at.isoformat() if inv.created_at else None,
         })

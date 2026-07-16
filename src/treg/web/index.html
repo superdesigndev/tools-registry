@@ -788,6 +788,7 @@ th{background:rgba(0,0,0,.25)}
             </div>
             <div class="tut-actions">
               <button class="btn sm" @click="copyDetail(detailShareUrl,'url')" title="Copy this page's URL — anyone on the team can open it">{{detailCopied==='url'?'✓ copied':'⧉ Copy link'}}</button>
+              <button v-if="canAdmin && detailData" class="btn sm primary" @click="openShare" title="Invite someone outside the team — they'll land right on this page">Share…</button>
             </div>
           </div>
           <div v-if="detailErr" class="banner" style="margin-top:12px">{{detailErr}}</div>
@@ -1599,6 +1600,38 @@ th{background:rgba(0,0,0,.25)}
         </div></div>
     </div>
 
+    <!-- SHARE A DETAIL PAGE (invite someone new; they land right here after sign-in) -->
+    <div class="scrim" role="dialog" aria-modal="true" v-if="share.on && detail" @click.self="share.on=false">
+      <div class="modal" style="width:min(560px,95vw)"><div class="hd"><b>Share “{{detail.name}}”</b><button class="btn sm ico" @click="share.on=false" aria-label="Close">✕</button></div>
+        <div style="padding:16px 18px">
+          <template v-if="share.sent">
+            <p class="explain">✓ Invite sent to <b>{{share.sent.email}}</b> — the email's button signs them in and lands them right on this page.</p>
+            <p class="sub" style="margin:0 0 8px">No email arrived? Send them this link + one-time code instead:</p>
+            <pre class="code" style="white-space:pre-wrap">{{detailShareUrl}}
+code: {{share.sent.code}}   (treg org join {{share.sent.code}} --email {{share.sent.email}})</pre>
+            <div style="margin-top:12px"><button class="btn primary" @click="copyDetail(detailShareUrl+'\n'+'code: '+share.sent.code,'sharecopy')">⧉ {{detailCopied==='sharecopy'?'Copied!':'Copy link + code'}}</button></div>
+          </template>
+          <template v-else>
+            <p class="explain">Already on the team? Just send them the page link (⧉ Copy link). This invites someone <b>new</b> — after one click in the email they land on this exact page.</p>
+            <div v-if="share.member" class="tut-notice" style="margin:0 0 10px"><b>{{share.member.email}}</b> is already a member — just send them the link, no invite needed.</div>
+            <div class="field" style="margin-bottom:10px"><input v-model="share.email" type="email" placeholder="teammate@company.com" @keyup.enter="sendShare"/></div>
+            <div style="display:flex;gap:14px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
+              <label style="display:flex;gap:6px;align-items:center;font-size:12.5px">role
+                <select v-model="share.role" style="background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:6px;padding:4px 8px;font-family:var(--mono)">
+                  <option value="viewer">viewer (use, not edit)</option><option value="member">member</option><option v-if="isOwner" value="admin">admin</option>
+                </select>
+              </label>
+              <label v-if="detail.kind==='tool' || ((detailData&&detailData.tools)||[]).length" style="display:flex;gap:8px;align-items:center;font-size:12.5px;cursor:pointer">
+                <input type="checkbox" v-model="share.scope"/> limit their calls to just {{detail.kind==='skill'?'this skill’s tools':'this tool'}}
+              </label>
+            </div>
+            <p class="sub" style="margin:0 0 12px;font-size:12px">They'll see the team's skill pages, but with the limit on they can only <b>call</b> what you're sharing. Local CLI runs stay off.</p>
+            <div v-if="share.err" class="banner" style="margin:0 0 10px">{{share.err}}</div>
+            <button class="btn primary" @click="sendShare" :disabled="share.busy">{{share.busy?'Sending…':'Send invite'}}</button>
+          </template>
+        </div></div>
+    </div>
+
     <!-- VIEW A RECIPE (the SKILL.md content) -->
     <div class="scrim" role="dialog" aria-modal="true" v-if="viewRecipe" @click.self="viewRecipe=null">
       <div class="modal" style="width:min(760px,95vw)"><div class="hd"><b>{{viewRecipe.name}} <span class="sub" style="font-weight:400">· SKILL.md</span></b><button class="btn sm ico" @click="viewRecipe=null" aria-label="Close">✕</button></div>
@@ -1693,6 +1726,7 @@ createApp({
       copyRecipe:null, recipeTab:'cURL', viewRecipe:null, recipeSaved:false,
       // detail pages (shareable /app/skills/<name> + /app/tools/<name> deep links)
       detail:null, detailData:null, detailErr:'', detailLoading:false, detailFile:'SKILL.md', detailCopied:'',
+      share:{on:false, email:'', role:'viewer', scope:true, busy:false, err:'', sent:null, member:null},  // detail-page "Share…" (invite + land on this page)
       me:'', myOrgs:[], isAdmin:false,
       onboarded:true,  // first-run onboarding (narrative stepper) - see onb.*
       welcome:{on:false, name:'', busy:false, err:''},  // first-run: name your team (the primary path)
@@ -2345,7 +2379,8 @@ createApp({
         // Enter the team the email link pointed at when it was accepted; otherwise the first accepted.
         const linked=joined.find(j=>j.inv.org_id===this.inviteLinkOrg)||joined[0];
         if(linked.r&&linked.r.org) this.switchOrg({slug:linked.r.org});
-        this.inviteChoice=false; this.inviteLinkOrg=null; this.go('tools');
+        this.inviteChoice=false; this.inviteLinkOrg=null;
+        if(this.detail) this.openDetail(this.detail.kind, this.detail.name, true); else this.go('tools');  // accepting while on a shared page = stay on it
         this.orgMsg='You joined '+joined.map(j=>(j.r&&j.r.name)||j.inv.name).join(', ')
           +(failed.length?' (could not join '+failed.join(', ')+')':'')
           +'. Here are the shared tools & skills — call any with no key on your machine.';
@@ -2486,9 +2521,11 @@ createApp({
       this.loadDetail(); },
     async loadDetail(){ if(!this.detail) return; this.detailErr=''; this.detailLoading=true; this.detailData=null;
       try{ this.detailData=await this.api((this.detail.kind==='skill'?'/bundles/by-name/':'/tools/by-name/')+encodeURIComponent(this.detail.name)); }
-      catch(e){ this.detailErr = e.status===404
-        ? 'Not found in this team. If someone shared this link with you, make sure you’re in their team (switch teams above, or ask them for an invite).'
-        : 'Could not load: '+(e.detail||e.status); }
+      catch(e){
+        if(e.status===404 && await this.findDetailOrg()) return void (this.detailLoading=false);  // it lives in another of my teams — switched
+        this.detailErr = e.status===404
+          ? 'Not found in your teams. This link needs an invite — ask the person who shared it to invite you (Share… on their side), then click the link again.'
+          : 'Could not load: '+(e.detail||e.status); }
       finally{ this.detailLoading=false; } },
     async copyDetail(text, tag){ if(!(await this.toClipboard(text))) return; this.detailCopied=tag; setTimeout(()=>{ if(this.detailCopied===tag) this.detailCopied=''; },1500); },
     rowTarget(t){  // where a tools-list row leads: a skill-born tool opens its SKILL (the shareable thing), a bare endpoint opens the tool page
@@ -2496,6 +2533,68 @@ createApp({
       return {kind:'tool', name:t.name}; },
     rowHref(t){ const d=this.rowTarget(t); return '/app/'+(d.kind==='skill'?'skills':'tools')+'/'+encodeURIComponent(d.name); },
     rowOpen(t){ const d=this.rowTarget(t); this.openDetail(d.kind, d.name); },
+    async autoAcceptShare(route){  // a share-link invite: clicking the emailed "Sign in & accept" IS the consent — accept silently, enter that team
+      // Match by the email link's org param, or — for a DM'd bare link — by an invite whose landing IS this page.
+      const path=route?'/app/'+(route.kind==='skill'?'skills':'tools')+'/'+encodeURIComponent(route.name):null;
+      const inv=this.pendingInvites.find(i=>i.org_id===this.inviteLinkOrg)
+              ||(path&&this.pendingInvites.find(i=>i.landing===path));
+      if(!inv) return false;
+      try{
+        const r=await this.api('/invites/'+inv.id+'/accept',{method:'POST'});
+        this.pendingInvites=this.pendingInvites.filter(i=>i.id!==inv.id);
+        this.onboarded=true; try{ await this.api('/onboard/skip',{method:'POST'}); }catch(e){}
+        if(r&&r.org){ this.activeSlug=r.org; localStorage.setItem('treg-active',r.org); }
+        await this.loadAll();
+        this.inviteLinkOrg=null;
+        this.orgMsg='You joined '+((r&&r.name)||inv.name)+' — this page was shared with you.';
+        return true;
+      }catch(e){ return false; }  // revoked/used → the detail page's not-found message explains
+    },
+    async findDetailOrg(){  // the link may belong to another of MY teams — probe them, switch silently on a unique hit
+      if(!this.detail) return false;
+      const others=(this.myOrgs||[]).filter(o=>o.slug!==this.activeSlugNow);
+      const path=(this.detail.kind==='skill'?'/bundles/by-name/':'/tools/by-name/')+encodeURIComponent(this.detail.name);
+      for(const o of others){
+        let h;
+        if(this.sessionMode) h={'X-Treg-Org':o.slug};
+        else { const t=(this.cfg.orgs[o.slug]||{}).token; if(!t) continue; h={'X-Treg-Token':t}; }
+        try{
+          const r=await fetch(path,{credentials:'include',headers:{'ngrok-skip-browser-warning':'1',...h}});
+          if(!r.ok) continue;
+          const data=await r.json();
+          if(this.sessionMode){ this.activeSlug=o.slug; localStorage.setItem('treg-active',o.slug); }
+          else { this.cfg.active=o.slug; this.save(); }
+          this.detailData=data; this.detailErr='';
+          this.orgMsg='Switched to '+(o.name||o.slug)+' — this '+this.detail.kind+' lives there.';
+          await this.loadAll();
+          return true;
+        }catch(_){}
+      }
+      return false;
+    },
+    openShare(){
+      this.share={on:true, email:'', role:'viewer', scope:this.detail.kind==='skill', busy:false, err:'', sent:null, member:null};
+      if(this.canAdmin) this.loadOrgAdmin().catch(()=>{}); },
+    async sendShare(){ const email=(this.share.email||'').trim(); if(!email){ this.share.err='Enter their email.'; return; }
+      this.share.member=(this.orgMembers||[]).find(m=>(m.email||'').toLowerCase()===email.toLowerCase())||null;
+      if(this.share.member) return;  // already on the team — the modal now says "just send the link"
+      this.share.busy=true; this.share.err='';
+      const landing='/app/'+(this.detail.kind==='skill'?'skills':'tools')+'/'+encodeURIComponent(this.detail.name);
+      // Scope a skill share to just its bundled tools (viewer + limited tools ≈ share one capability);
+      // a tool share scopes to that tool. Unchecked = full org tool access.
+      let tool_access=null;
+      if(this.share.scope){
+        tool_access = this.detail.kind==='skill'
+          ? ((this.detailData&&this.detailData.tools)||[]).map(t=>t.name)
+          : [this.detail.name];
+        if(!tool_access.length) tool_access=null;  // recipe-only skill: nothing to scope
+      }
+      try{
+        const r=await this.api('/orgs/'+this.activeOrgId+'/invites',{method:'POST',headers:{'content-type':'application/json'},
+          body:JSON.stringify({email, role:this.share.role, landing, tool_access, local_run_enabled:false})});
+        this.share.sent=r;
+      }catch(e){ this.share.err='Invite failed: '+(e.detail||e.status); }
+      finally{ this.share.busy=false; } },
     async loadAll(){ this.err=''; this.loading=true;
       try{
         this.myOrgs=await this.api('/orgs');
@@ -2601,7 +2700,7 @@ createApp({
       this.orgMenuStyle={position:'fixed', top:(r.bottom+6)+'px', left:r.left+'px'};
     },
     toggleOrgMenu(){ this.orgMenu=!this.orgMenu; if(this.orgMenu) this.placeOrgMenu(); },
-    closeOverlays(){ this.newTool=false; this.newSkill=false; this.showJoin=false; this.newOrg=false; this.addOrg=false; this.tryTool=null; this.copyTool=null; this.orgMenu=false; },
+    closeOverlays(){ this.newTool=false; this.newSkill=false; this.showJoin=false; this.newOrg=false; this.addOrg=false; this.tryTool=null; this.copyTool=null; this.orgMenu=false; this.share.on=false; },
   },
   async mounted(){
     document.documentElement.dataset.theme=this.theme;
@@ -2644,7 +2743,14 @@ createApp({
     const stashed=localStorage.getItem('treg-next');
     if(stashed){ localStorage.removeItem('treg-next'); if(!route){ route=this.routeFromPath(stashed); if(route) history.replaceState(null,'',stashed); } }
     const me = await fetch('/auth/me',{credentials:'include',headers:{'ngrok-skip-browser-warning':'1'}}).then(r=>r.ok?r.json():null).catch(()=>null);
-    if(me){ this.sessionMode=true; this.me=me.email; this.isAdmin=!!me.is_superadmin; this.onboarded=!!me.onboarded; await this.loadAll(); this.maybeOnboard(); if(route) this.openDetail(route.kind, route.name, true); return; }  // GitHub/email session
+    if(me){ this.sessionMode=true; this.me=me.email; this.isAdmin=!!me.is_superadmin; this.onboarded=!!me.onboarded; await this.loadAll();
+      // Share-born arrival (/app/skills/x?invite_org=N from the invite email): accept silently and
+      // enter that team — the emailed "Sign in & accept" click was the consent. Otherwise the normal
+      // first-run / invite-banner flow.
+      let landed=false;
+      if(route) landed=await this.autoAcceptShare(route);
+      if(!landed) this.maybeOnboard();
+      if(route) this.openDetail(route.kind, route.name, true); return; }  // GitHub/email session
     if(this.token){ await this.loadAll(); if(route) this.openDetail(route.kind, route.name, true); return; }      // token-in-browser fallback
     if(!inv && !linkOrg && !route && !qs.get('invite_expired')){ location.replace('/'); return; }  // logged-out plain visit → the marketing landing owns the front door
     this.sbxInit();                                 // logged-out invite/deep-link flow → the in-app landing + sign-in modal
