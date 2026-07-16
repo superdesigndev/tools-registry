@@ -1624,11 +1624,11 @@ th{background:rgba(0,0,0,.25)}
                   <option value="viewer">viewer (use, not edit)</option><option value="member">member</option><option v-if="isOwner" value="admin">admin</option>
                 </select>
               </label>
-              <label v-if="detail.kind==='tool' || ((detailData&&detailData.tools)||[]).length" style="display:flex;gap:8px;align-items:center;font-size:12.5px;cursor:pointer">
-                <input type="checkbox" v-model="share.scope"/> limit their calls to just {{detail.kind==='skill'?'this skill’s tools':'this tool'}}
+              <label style="display:flex;gap:8px;align-items:center;font-size:12.5px;cursor:pointer">
+                <input type="checkbox" v-model="share.full"/> Share full vault access
               </label>
             </div>
-            <p class="sub" style="margin:0 0 12px;font-size:12px">They'll see the team's skill pages, but with the limit on they can only <b>call</b> what you're sharing. Local CLI runs stay off.</p>
+            <p class="sub" style="margin:0 0 12px;font-size:12px">Full access = they see and can use the whole team vault. Uncheck to scope them to just {{detail.kind==='skill'?'this skill':'this tool'}} — they'll only see and call what you're sharing. Local CLI runs stay off either way.</p>
             <div v-if="share.err" class="banner" style="margin:0 0 10px">{{share.err}}</div>
             <button class="btn primary" @click="sendShare" :disabled="share.busy">{{share.busy?'Sending…':'Send invite'}}</button>
           </template>
@@ -1729,7 +1729,7 @@ createApp({
       copyRecipe:null, recipeTab:'cURL', viewRecipe:null, recipeSaved:false,
       // detail pages (shareable /app/skills/<name> + /app/tools/<name> deep links)
       detail:null, detailData:null, detailErr:'', detailLoading:false, detailFile:'SKILL.md', detailCopied:'', detailNote:'',
-      share:{on:false, email:'', role:'viewer', scope:false, busy:false, err:'', sent:null, member:null},  // detail-page "Share…" (invite + land on this page)
+      share:{on:false, email:'', role:'viewer', full:true, busy:false, err:'', sent:null, member:null},  // detail-page "Share…" (invite + land on this page)
       me:'', myOrgs:[], isAdmin:false,
       onboarded:true,  // first-run onboarding (narrative stepper) - see onb.*
       welcome:{on:false, name:'', busy:false, err:''},  // first-run: name your team (the primary path)
@@ -2583,17 +2583,17 @@ createApp({
       return false;
     },
     openShare(){
-      this.share={on:true, email:'', role:'viewer', scope:false, busy:false, err:'', sent:null, member:null};
+      this.share={on:true, email:'', role:'viewer', full:true, busy:false, err:'', sent:null, member:null};
       if(this.canAdmin) this.loadOrgAdmin().catch(()=>{}); },
     async sendShare(){ const email=(this.share.email||'').trim(); if(!email){ this.share.err='Enter their email.'; return; }
       this.share.member=(this.orgMembers||[]).find(m=>(m.email||'').toLowerCase()===email.toLowerCase())||null;
       if(this.share.member) return;  // already on the team — the modal now says "just send the link"
       this.share.busy=true; this.share.err='';
       const landing='/app/'+(this.detail.kind==='skill'?'skills':'tools')+'/'+encodeURIComponent(this.detail.name);
-      // Scope a skill share to the skill itself + its bundled tools (the access list also gates which
-      // skills a restricted member can SEE); a tool share scopes to that tool. Unchecked = full access.
+      // Full vault access (default) = no restriction. Unchecked = scope to the skill itself + its
+      // bundled tools (the access list also gates which skills a restricted member can SEE).
       let tool_access=null;
-      if(this.share.scope){
+      if(!this.share.full){
         tool_access = this.detail.kind==='skill'
           ? [this.detail.name].concat((((this.detailData&&this.detailData.tools)||[]).map(t=>t.name)))
           : [this.detail.name];
