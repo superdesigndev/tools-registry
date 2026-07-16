@@ -2281,7 +2281,7 @@ createApp({
       catch(e){ this.err='Save failed: '+(e.detail||e.status); } },
     recipeSnippet(tab){ const r=this.copyRecipe; if(!r) return {text:'',html:''};
       const proxy=(this.proxy||location.origin).replace(/\/$/,'');
-      const tok=this.myToken||'$TREG_TOKEN', tokS=tok.length>28?tok.slice(0,12)+'…'+tok.slice(-6):tok;
+      const tok=this.myToken||'$TREG_TOKEN', tokS=tok;  // full token in the preview — matches the copied text
       const esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
       const P=s=>`<span class="s-proxy">${esc(s)}</span>`, A=s=>`<span class="s-path">${esc(s)}</span>`,
             T=s=>`<span class="s-token">${esc(s)}</span>`, C=s=>`<span class="s-cmt">${esc(s)}</span>`, K=s=>`<span class="s-kw">${esc(s)}</span>`;
@@ -2667,7 +2667,7 @@ createApp({
       const urlH=`${P(proxy)}${C('/call/')}${H(up)}/${A(path)}`;
       const hint=(t.examples||[]).length?`e.g. ${t.examples[0].path}`:'the part after the domain';
       const tok=this.myToken||'$TREG_TOKEN', org=(this.activeOrg&&this.activeOrg.slug)||'$TREG_ORG';  // real token+org so a copied snippet runs as-is
-      const tokShort=tok.length>28?tok.slice(0,12)+'…'+tok.slice(-6):tok;  // DISPLAY only — the copied text keeps the full token
+      const tokShort=tok;  // show the full real token — the preview must match what Copy puts on the clipboard
       switch(tab){
         case 'Claude Code': return {
           text:`# Call "${t.name}" through treg - your key is injected server-side.\n${m} ${urlT}\nX-Treg-Token: ${tok}\nX-Treg-Org: ${org}\n\n# PATH = the ${t.host} path you'd normally call (${hint}).`,
