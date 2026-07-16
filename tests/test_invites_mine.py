@@ -112,8 +112,9 @@ def sent_invites(monkeypatch):
     from treg import email as email_mod
     sent = []
 
-    async def _capture(email, inviter, org_name, role, code, email_token, expires_at="", link_base=""):
-        sent.append({"email": email, "code": code, "email_token": email_token})
+    async def _capture(email, inviter, org_name, role, code, email_token, expires_at="", link_base="",
+                       shared=""):
+        sent.append({"email": email, "code": code, "email_token": email_token, "shared": shared})
         return True
 
     monkeypatch.setattr(email_mod, "send_invite", _capture)
@@ -212,3 +213,57 @@ async def test_invites_mine_newest_first_with_created_at(client, sent_invites):
     mine = (await client.get("/invites/mine", headers=_h(bob))).json()
     assert [m["org"] for m in mine] == [org2["org"], org1["org"]]  # newest first
     assert all(m.get("created_at") for m in mine)
+
+
+# ---- share-born invites: landing on the shared detail page (Phase 3 of the share flow) ----
+
+SHARE_SKILL = {
+    "name": "intercom",
+    "recipe": "# intercom\n",
+    "secrets": [{"local_name": "key", "kind": "env", "value": "K"}],
+    "tools": [{"name": "intercom", "base_url": "http://upstream",
+               "bindings": [{"secret": "key", "injector": "env", "location": "header",
+                             "name": "Authorization", "format": "Bearer {secret}"}]}],
+}
+
+
+async def test_share_invite_landing_roundtrip_and_redirect(client, sent_invites):
+    """An invite created with a landing page: surfaces in /invites/mine, scopes tool access,
+    flavours the email, and the emailed link's POST lands on the shared page (not the dashboard)."""
+    tok = await _otp(client, "tom@sd.io")
+    org = (await client.post("/orgs", json={"name": "Superdesign"}, headers=_h(tok))).json()
+    await client.post("/skills", json=SHARE_SKILL, headers=_h(tok, org["org"]))
+    r = await client.post(
+        f"/orgs/{org['org_id']}/invites",
+        json={"email": "bob@x.io", "role": "viewer", "landing": "/app/skills/intercom",
+              "tool_access": ["intercom"], "local_run_enabled": False},
+        headers=_h(tok, org["org"]))
+    assert r.status_code == 200, r.text
+    assert "the skill" in sent_invites[0]["shared"] and "intercom" in sent_invites[0]["shared"]
+
+    bob = await _otp(client, "bob@x.io")
+    mine = (await client.get("/invites/mine", headers=_h(bob))).json()
+    assert mine[0]["landing"] == "/app/skills/intercom"
+
+    t = sent_invites[0]["email_token"]
+    async with await _fresh() as visitor:
+        resp = await visitor.post("/auth/invite-signin", content=f"t={t}",
+                                  headers={"content-type": "application/x-www-form-urlencoded"},
+                                  follow_redirects=False)
+        assert resp.status_code == 303
+        assert resp.headers["location"] == f"/app/skills/intercom?invite_org={org['org_id']}"
+
+
+async def test_share_invite_landing_is_allowlisted(client):
+    """landing is a path-only allowlist — an emailed invite link must never become an open redirect."""
+    tok = await _otp(client, "tom@sd.io")
+    org = (await client.post("/orgs", json={"name": "Superdesign"}, headers=_h(tok))).json()
+    for bad in ("https://evil.com", "//evil.com/x", "/app/skills/../../etc", "/app/other/x",
+                "/app/skills/", "/app/skills/a/b", "javascript:alert(1)"):
+        r = await client.post(f"/orgs/{org['org_id']}/invites",
+                              json={"email": "bob@x.io", "landing": bad}, headers=_h(tok, org["org"]))
+        assert r.status_code == 422, f"{bad!r} should be rejected, got {r.status_code}"
+    ok = await client.post(f"/orgs/{org['org_id']}/invites",
+                           json={"email": "bob@x.io", "landing": "/app/tools/stripe-cli"},
+                           headers=_h(tok, org["org"]))
+    assert ok.status_code == 200

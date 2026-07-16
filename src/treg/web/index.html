@@ -428,6 +428,21 @@ th{background:rgba(0,0,0,.25)}
 <div id="app">
   <!-- LANDING (logged-out) -->
   <div v-if="!authed" class="lp">
+    <!-- SHARE-LINK GATE: a /app/skills|tools/<name> deep link while logged out gets a focused
+         sign-in page (no sandbox demo, no tour) — the marketing landing is for the front door. -->
+    <template v-if="shareGate">
+      <header class="lp-nav">
+        <div class="brand">▚ tools-registry</div>
+        <nav class="lp-links"><a href="/tutorial">Docs</a><button class="iconbtn" @click="toggleTheme" :aria-label="theme==='dark'?'Light theme':'Dark theme'">{{theme==='dark'?'◐':'◑'}}</button></nav>
+      </header>
+      <section class="lp-hero" style="min-height:55vh">
+        <div class="lp-eyebrow">shared with you</div>
+        <h1 class="lp-h1">{{shareGate.name}} <span style="color:var(--accent)">· {{shareGate.kind}}</span></h1>
+        <p class="lp-lead">A teammate shared this {{shareGate.kind}} with you. Sign in and you'll land right on its page — no API key ever touches your machine.</p>
+        <div class="lp-cta"><button class="btn primary lg" @click="demo.signin=true">Sign in to view</button></div>
+      </section>
+    </template>
+    <template v-else>
     <header class="lp-nav">
       <div class="brand">▚ tools-registry</div>
       <nav class="lp-links">
@@ -596,14 +611,16 @@ th{background:rgba(0,0,0,.25)}
     </section>
 
     <footer class="lp-foot">tools-registry · a credential-injecting proxy · <a href="/tutorial">tutorial</a> · <a href="/llms.txt">llms.txt</a></footer>
+    </template>
 
-    <!-- SIGN-IN MODAL -->
+    <!-- SIGN-IN MODAL (shared by the landing and the share-link gate) -->
     <div class="lc-scrim" :class="{open:demo.signin}" @click.self="demo.signin=false">
       <div class="lc-modal" role="dialog" aria-modal="true" aria-label="Sign in">
         <button class="cls" @click="demo.signin=false" aria-label="Close">✕</button>
         <div style="font-size:26px">▚</div>
-        <h2 style="margin:8px 0 2px;font-family:var(--mono)">{{invitePrefill?'Accept your invite':'Make it yours'}}</h2>
+        <h2 style="margin:8px 0 2px;font-family:var(--mono)">{{invitePrefill?'Accept your invite':(shareGate?'Sign in to view it':'Make it yours')}}</h2>
         <p v-if="invitePrefill" class="sub">Sign in with <b>{{invitePrefill}}</b> and you'll drop straight into the team.</p>
+        <p v-else-if="shareGate" class="sub">You'll land on “{{shareGate.name}}” right after.</p>
         <p v-else class="sub">Bring the sandbox into a real account.</p>
         <button v-if="meta.github" class="btn primary" style="width:100%;padding:11px;margin-bottom:8px" @click="githubLogin">Continue with GitHub</button>
         <button v-if="meta.google" class="btn" style="width:100%;padding:11px;margin-bottom:8px" @click="googleLogin">Continue with Google</button>
@@ -726,11 +743,11 @@ th{background:rgba(0,0,0,.25)}
           <div class="tgroup" v-for="grp in toolGroups" :key="grp.key" v-show="grp.rows.length && (toolTab==='all'||toolTab===grp.key)">
             <div class="tgh">{{grp.label}} <span class="tgh-n">{{grp.rows.length}}</span><span class="tgh-hint">{{grp.hint}}</span></div>
             <div class="ttable-wrap"><table class="ttable">
-              <tr v-for="t in grp.rows" :key="t.id">
-                <td class="tn"><b>{{t.name}}</b></td>
+              <tr v-for="t in grp.rows" :key="t.id" @click="rowOpen(t)" style="cursor:pointer" :title="'Open the '+rowTarget(t).kind+'’s page (shareable link)'">
+                <td class="tn"><a :href="rowHref(t)" @click.prevent.stop="rowOpen(t)" style="color:inherit;text-decoration:none"><b>{{t.name}}</b></a></td>
                 <td class="th"><span class="mono">{{t.host}}</span></td>
                 <td class="ta"><span v-if="t.cli" class="chip run" :title="localRunTitle(t)">⌘ run{{t.cli.enabled?'':' off'}}</span><span v-if="t.server_runnable" class="chip ok" title="Runs on the server — the key is injected there, never on a member's machine">server</span><span v-else-if="t.cli" class="chip" title="Local only — this CLI authenticates from the member's own machine (treg run --local)">local-only</span><span class="chip" :class="w.kind" v-for="(w,wi) in credChips(t)" :key="'w'+wi" :title="w.title">{{w.label}}</span></td>
-                <td class="tx"><button v-if="t.cli && canRegister" class="btn sm ico" :class="{on:t.cli.enabled}" @click="toggleLocalRun(t)" :title="localRunTitle(t)">⌘</button><button class="btn sm ico" @click="openCopy(t)" title="Copy a call snippet">⧉</button><button class="btn sm ico" @click="openUse(t)" title="Use it - API call or CLI run">▶</button><button v-if="canRegister" class="btn sm ico" @click="openEditTool(t)" title="Edit">✎</button><button v-if="canRegister" class="btn sm ico" :class="{danger:confirmDelTool===t.id}" @click="deleteTool(t)" :title="confirmDelTool===t.id?'Click again to delete':'Delete'">✕</button></td>
+                <td class="tx" @click.stop><button v-if="t.cli && canRegister" class="btn sm ico" :class="{on:t.cli.enabled}" @click="toggleLocalRun(t)" :title="localRunTitle(t)">⌘</button><button class="btn sm ico" @click="openCopy(t)" title="Copy a call snippet">⧉</button><button class="btn sm ico" @click="openUse(t)" title="Use it - API call or CLI run">▶</button><button v-if="canRegister" class="btn sm ico" @click="openEditTool(t)" title="Edit">✎</button><button v-if="canRegister" class="btn sm ico" :class="{danger:confirmDelTool===t.id}" @click="deleteTool(t)" :title="confirmDelTool===t.id?'Click again to delete':'Delete'">✕</button></td>
               </tr>
             </table></div>
           </div>
@@ -738,10 +755,10 @@ th{background:rgba(0,0,0,.25)}
           <div class="tgroup" v-show="recipes.length && (toolTab==='all'||toolTab==='recipes')">
             <div class="tgh">Skills <span class="tgh-n">{{recipes.length}}</span><span class="tgh-hint">knowledge skills - pull with the CLI</span></div>
             <div class="ttable-wrap"><table class="ttable">
-              <tr v-for="r in recipes" :key="r.id">
-                <td class="tn"><b>{{r.name}}</b></td>
+              <tr v-for="r in recipes" :key="r.id" @click="openDetail('skill',r.name)" style="cursor:pointer" title="Open the skill’s page (shareable link)">
+                <td class="tn"><a :href="'/app/skills/'+encodeURIComponent(r.name)" @click.prevent.stop="openDetail('skill',r.name)" style="color:inherit;text-decoration:none"><b>{{r.name}}</b></a></td>
                 <td class="th" colspan="2"><span class="mono muted">treg skill install {{r.name}}</span></td>
-                <td class="tx"><button class="btn sm ico" @click="openRecipeCopy(r)" title="How to install / use">⧉</button><button class="btn sm ico" @click="openRecipeView(r)" title="View the SKILL.md">✎</button><button v-if="canRegister" class="btn sm ico" :class="{danger:confirmDelBundle===r.id}" @click="deleteRecipe(r)" :title="confirmDelBundle===r.id?'Click again to delete':'Delete'">✕</button></td>
+                <td class="tx" @click.stop><button class="btn sm ico" @click="openRecipeCopy(r)" title="How to install / use">⧉</button><button class="btn sm ico" @click="openRecipeView(r)" title="View the SKILL.md">✎</button><button v-if="canRegister" class="btn sm ico" :class="{danger:confirmDelBundle===r.id}" @click="deleteRecipe(r)" :title="confirmDelBundle===r.id?'Click again to delete':'Delete'">✕</button></td>
               </tr>
             </table></div>
           </div>
@@ -774,6 +791,88 @@ th{background:rgba(0,0,0,.25)}
             </template>
           </div>
           </div>
+        </template>
+
+        <!-- DETAIL (shareable deep links: /app/skills/<name> + /app/tools/<name>) -->
+        <template v-if="view==='detail' && detail">
+          <div class="tut-head">
+            <div>
+              <p class="sub" style="margin:0 0 4px"><a href="/app#tools" @click.prevent="go('tools')">← Tools</a></p>
+              <h1 style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">{{detail.name}}
+                <span class="chip">{{detail.kind==='skill' ? 'skill' : (detailData&&detailData.cli ? 'endpoint + CLI' : 'endpoint')}}</span>
+                <span v-if="detailData&&detailData.owner" class="chip" :title="'shared by '+detailData.owner">{{detailData.owner}}</span>
+              </h1>
+            </div>
+            <div class="tut-actions">
+              <button class="btn sm" @click="copyDetail(detailShareUrl,'url')" title="Copy this page's URL — anyone on the team can open it">{{detailCopied==='url'?'✓ copied':'⧉ Copy link'}}</button>
+              <button v-if="canAdmin && detailData" class="btn sm primary" @click="openShare" title="Invite someone outside the team — they'll land right on this page">Share…</button>
+            </div>
+          </div>
+          <div v-if="detailErr" class="banner" style="margin-top:12px">{{detailErr}}</div>
+          <div v-if="detailNote" class="tut-notice" style="margin-top:12px;max-width:860px">{{detailNote}}</div>
+          <p v-if="detailLoading" class="sub">Loading…</p>
+
+          <template v-if="detailData && detail.kind==='skill'">
+            <div style="max-width:860px;border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin:14px 0;background:var(--panel)">
+              <h3 style="margin:0 0 6px;font-size:14px">Use with your agent</h3>
+              <p class="sub" style="margin:0 0 10px">Send someone this page's link, or paste this into a coding agent (Claude Code / Codex / Gemini) — it installs the CLI, signs them in as themselves, and pulls just this skill. <template v-if="(detailData.secrets||[]).length">Its credential{{detailData.secrets.length>1?'s stay':' stays'}} server-side — calls go through the proxy, no key lands on their machine.</template></p>
+              <pre class="code" style="white-space:pre-wrap;max-height:34vh;overflow:auto">{{detailPrompt}}</pre>
+              <div style="margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+                <button class="btn primary" @click="copyDetail(detailPrompt,'prompt')">⧉ {{detailCopied==='prompt'?'Copied!':'Copy prompt'}}</button>
+                <button class="btn" @click="copyDetail('treg skill install '+detail.name,'cli')" title="Just the CLI command, if treg is already set up">{{detailCopied==='cli'?'✓ copied':'treg skill install '+detail.name}}</button>
+              </div>
+            </div>
+            <div v-if="(detailData.tools||[]).length || (detailData.secrets||[]).length" style="max-width:860px;margin:0 0 14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+              <span class="sub" style="margin:0">Bundled:</span>
+              <a v-for="t in detailData.tools" :key="'dt'+t.id" class="chip" :href="'/app/tools/'+encodeURIComponent(t.name)" @click.prevent="openDetail('tool',t.name)" style="cursor:pointer" :title="'tool · '+(t.host||t.base_url)">⚒ {{t.name}}</a>
+              <span v-for="s in detailData.secrets" :key="'ds'+s.id" class="chip" title="credential — stored encrypted server-side, injected by the proxy, never shown">🔒 {{s.name||s.local_name}}</span>
+            </div>
+            <div style="max-width:860px;border:1px solid var(--line);border-radius:16px;overflow:hidden;display:flex;min-height:280px;background:var(--panel)">
+              <div style="width:220px;flex:none;border-right:1px solid var(--line);padding:10px 0;overflow:auto;max-height:60vh">
+                <div v-for="row in detailTree" :key="row.path"
+                     :style="{padding:'4px 12px 4px '+(14+row.depth*14)+'px', cursor:row.dir?'default':'pointer', fontSize:'12.5px',
+                              color:row.dir?'var(--muted)':'var(--ink)', background:(!row.dir&&detailFile===row.path)?'var(--panel2)':'transparent'}"
+                     @click="!row.dir && (detailFile=row.path)">{{row.dir?'▸ ':'· '}}{{row.name}}</div>
+              </div>
+              <pre class="code" style="flex:1;margin:0;border:0;border-radius:0;white-space:pre-wrap;word-break:break-word;overflow:auto;max-height:60vh">{{detailFileContent}}</pre>
+            </div>
+          </template>
+
+          <template v-if="detailData && detail.kind==='tool'">
+            <div style="max-width:860px;border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin:14px 0;background:var(--panel)">
+              <h3 style="margin:0 0 6px;font-size:14px">Use with your agent</h3>
+              <p class="sub" style="margin:0 0 10px">Send someone this page's link, or paste this into a coding agent. Calls go through the proxy — the credential is injected server-side, never on their machine.</p>
+              <pre class="code" style="white-space:pre-wrap;max-height:34vh;overflow:auto">{{detailPrompt}}</pre>
+              <div style="margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+                <button class="btn primary" @click="copyDetail(detailPrompt,'prompt')">⧉ {{detailCopied==='prompt'?'Copied!':'Copy prompt'}}</button>
+                <button class="btn" @click="openCopy(detailData)" title="Language-specific call snippets (cURL / Python / Node / …)">⧉ Call snippets</button>
+                <button class="btn" @click="openUse(detailData)" title="Try it right here">▶ Try it</button>
+              </div>
+            </div>
+            <div style="max-width:860px;border:1px solid var(--line);border-radius:16px;padding:16px 18px;background:var(--panel)">
+              <div class="lbl">Upstream</div>
+              <p style="margin:2px 0 12px"><span class="mono">{{detailData.base_url}}</span></p>
+              <div class="lbl">Credentials</div>
+              <p class="sub" style="margin:2px 0 12px" v-if="(detailData.bindings||[]).length || (detailData.cli&&(detailData.cli.inject||[]).length)"><span class="chip" v-for="(w,wi) in credChips(detailData)" :key="'dw'+wi" :class="w.kind" :title="w.title">{{w.label}}</span> injected server-side on every call — the value never appears here or on a caller's machine.</p>
+              <p class="sub" style="margin:2px 0 12px" v-else>none — a public upstream, no credential needed.</p>
+              <template v-if="(detailData.examples||[]).length">
+                <div class="lbl">Examples</div>
+                <div class="exrow" style="margin:4px 0 12px"><span v-for="(ex,exi) in detailData.examples" :key="'de'+exi" class="exchip"><span class="m">{{ex.method||'GET'}}</span>{{ex.note||ex.path}}</span></div>
+              </template>
+              <template v-if="detailData.cli">
+                <div class="lbl">CLI</div>
+                <p class="sub" style="margin:2px 0 12px"><span class="mono">treg run {{detail.name}} -- &lt;args&gt;</span>
+                  <span class="chip ok" v-if="detailData.server_runnable" title="Runs on the server — the key is injected there, never on a member's machine">server</span>
+                  <span class="chip" v-else title="Local only — this CLI authenticates from the member's own machine (treg run --local)">local-only</span>
+                  <span class="chip run" v-if="!detailData.cli.enabled" title="The owner has local runs switched off for this tool">⌘ run off</span>
+                </p>
+              </template>
+              <template v-if="detailParentSkill">
+                <div class="lbl">From skill</div>
+                <p style="margin:2px 0 0"><a :href="'/app/skills/'+encodeURIComponent(detailParentSkill.name)" @click.prevent="openDetail('skill',detailParentSkill.name)">▚ {{detailParentSkill.name}}</a> — the recipe + files that registered this tool.</p>
+              </template>
+            </div>
+          </template>
         </template>
 
         <!-- SECRETS -->
@@ -885,11 +984,11 @@ th{background:rgba(0,0,0,.25)}
                 <tr v-if="editAccess===m.user_id">
                   <td colspan="7" style="background:color-mix(in srgb,var(--accent) 5%,transparent)">
                     <div style="padding:6px 2px">
-                      <div class="sub" style="margin-bottom:6px">Tools <b>{{m.email}}</b> may use — uncheck to withhold. All checked = full access (and new tools apply automatically).</div>
-                      <div v-if="!tools.length" class="muted" style="font-size:12px">No tools registered yet.</div>
+                      <div class="sub" style="margin-bottom:6px">Tools &amp; skills <b>{{m.email}}</b> may use/see — uncheck to withhold. All checked = full access (and new ones apply automatically).</div>
+                      <div v-if="!accessNames.length" class="muted" style="font-size:12px">No tools registered yet.</div>
                       <div style="display:flex;flex-wrap:wrap;gap:6px 16px">
-                        <label v-for="t in tools" :key="t.id" class="tgl" style="min-width:150px">
-                          <input type="checkbox" v-model="accessDraft[t.name]"/><span>{{t.name}}</span>
+                        <label v-for="n in accessNames" :key="n" class="tgl" style="min-width:150px">
+                          <input type="checkbox" v-model="accessDraft[n]"/><span>{{n}}</span>
                         </label>
                       </div>
                       <div style="margin-top:10px;display:flex;gap:8px">
@@ -920,7 +1019,7 @@ th{background:rgba(0,0,0,.25)}
                 <div class="sub" style="font-size:12px;margin-bottom:4px">Tools this member may use (all checked by default — uncheck to withhold):</div>
                 <div v-if="!tools.length" class="muted" style="font-size:12px">No tools registered yet.</div>
                 <div style="display:flex;flex-wrap:wrap;gap:6px 16px">
-                  <label v-for="t in tools" :key="t.id" class="tgl" style="min-width:150px"><input type="checkbox" v-model="inviteToolSel[t.name]"/><span>{{t.name}}</span></label>
+                  <label v-for="n in accessNames" :key="n" class="tgl" style="min-width:150px"><input type="checkbox" v-model="inviteToolSel[n]"/><span>{{n}}</span></label>
                 </div>
               </div>
               <div v-if="lastInvite" class="tut-notice" style="max-width:560px">
@@ -1519,6 +1618,42 @@ th{background:rgba(0,0,0,.25)}
         </div></div>
     </div>
 
+    <!-- SHARE A DETAIL PAGE (invite someone new; they land right here after sign-in) -->
+    <div class="scrim" role="dialog" aria-modal="true" v-if="share.on && detail" @click.self="share.on=false">
+      <div class="modal" style="width:min(560px,95vw)"><div class="hd"><b>Share “{{detail.name}}”</b><button class="btn sm ico" @click="share.on=false" aria-label="Close">✕</button></div>
+        <div style="padding:16px 18px">
+          <template v-if="share.sent">
+            <p class="explain">✓ Invite sent to <b>{{share.sent.email}}</b> — the email's button signs them in and lands them right on this page.</p>
+            <p class="sub" style="margin:0 0 8px">Or DM them this link — it opens the sign-in with their email prefilled; once they sign in, the invite accepts itself and this page opens:</p>
+            <pre class="code" style="white-space:pre-wrap;word-break:break-all">{{shareInviteUrl}}</pre>
+            <div style="margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+              <button class="btn primary" @click="copyDetail(shareInviteUrl,'sharecopy')">⧉ {{detailCopied==='sharecopy'?'Copied!':'Copy invite link'}}</button>
+              <span class="sub" style="margin:0;font-size:12px">backup code: <span class="mono">{{share.sent.code}}</span> (<span class="mono">treg org join</span>)</span>
+            </div>
+          </template>
+          <template v-else>
+            <p class="explain">Already on the team? Just send them the page link (⧉ Copy link). This invites someone <b>new</b> — after one click in the email they land on this exact page.</p>
+            <div v-if="share.member" class="tut-notice" style="margin:0 0 10px"><b>{{share.member.email}}</b> is already a member — just send them the link, no invite needed.</div>
+            <div class="field" style="margin-bottom:10px"><input v-model="share.email" type="email" placeholder="teammate@company.com" @keyup.enter="sendShare"/></div>
+            <div style="margin-bottom:10px">
+              <label style="display:flex;gap:6px;align-items:center;font-size:12.5px">role
+                <select v-model="share.role" style="background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:6px;padding:4px 8px;font-family:var(--mono)">
+                  <option value="viewer">viewer (use, not edit)</option><option value="member">member</option><option v-if="isOwner" value="admin">admin</option>
+                </select>
+              </label>
+            </div>
+            <div style="margin-bottom:10px">
+              <label style="display:flex;gap:8px;align-items:center;font-size:12.5px;cursor:pointer">
+                <input type="checkbox" v-model="share.full"/> Share full vault access
+              </label>
+            </div>
+            <p class="sub" style="margin:0 0 12px;font-size:12px">Full access = they see and can use the whole team vault. Uncheck to scope them to just {{detail.kind==='skill'?'this skill':'this tool'}} — they'll only see and call what you're sharing. Local CLI runs stay off either way.</p>
+            <div v-if="share.err" class="banner" style="margin:0 0 10px">{{share.err}}</div>
+            <button class="btn primary" @click="sendShare" :disabled="share.busy">{{share.busy?'Sending…':'Send invite'}}</button>
+          </template>
+        </div></div>
+    </div>
+
     <!-- VIEW A RECIPE (the SKILL.md content) -->
     <div class="scrim" role="dialog" aria-modal="true" v-if="viewRecipe" @click.self="viewRecipe=null">
       <div class="modal" style="width:min(760px,95vw)"><div class="hd"><b>{{viewRecipe.name}} <span class="sub" style="font-weight:400">· SKILL.md</span></b><button class="btn sm ico" @click="viewRecipe=null" aria-label="Close">✕</button></div>
@@ -1611,6 +1746,10 @@ createApp({
       sessionMode:false, activeSlug: localStorage.getItem('treg-active')||null, meta:{github:false, public_url:location.origin},
       view:'tools', q:'', err:'', loading:false, toolTab:'all', bundles:[], confirmDelBundle:null, installCopied:null,
       copyRecipe:null, recipeTab:'cURL', viewRecipe:null, recipeSaved:false,
+      // detail pages (shareable /app/skills/<name> + /app/tools/<name> deep links)
+      detail:null, detailData:null, detailErr:'', detailLoading:false, detailFile:'SKILL.md', detailCopied:'', detailNote:'',
+      shareGate:null,  // logged-out arrival at a shared detail link: {kind,name} → focused sign-in page (no sandbox/tour)
+      share:{on:false, email:'', role:'viewer', full:true, busy:false, err:'', sent:null, member:null},  // detail-page "Share…" (invite + land on this page)
       me:'', myOrgs:[], isAdmin:false,
       onboarded:true,  // first-run onboarding (narrative stepper) - see onb.*
       welcome:{on:false, name:'', busy:false, err:''},  // first-run: name your team (the primary path)
@@ -1741,6 +1880,52 @@ createApp({
     isOwner(){ return this.activeRole==='owner'; },
     canRegister(){ return this.activeRole!=='viewer'; },  // members+ may create secrets/tools
     secretRowsReady(){ return this.secretRows.filter(r=>(r.name||'').trim()&&r.value).length; },
+    // ---- detail pages ----
+    accessNames(){  // the grantable universe: tool names + recipe-only skill names (an integration
+      // skill is reachable through its tool's name; recipe-only bundles need their own entry)
+      return [...new Set([...this.tools.map(t=>t.name), ...this.recipes.map(r=>r.name)])].sort(); },
+    detailShareUrl(){ if(!this.detail) return ''; return location.origin+'/app/'+(this.detail.kind==='skill'?'skills':'tools')+'/'+encodeURIComponent(this.detail.name); },
+    shareInviteUrl(){  // the DM-able one-click link: page URL + the invited email (prefills sign-in; the
+      // invite then auto-accepts on landing-match). Deliberately NOT the emailed token — that secret can
+      // mint a session and must never leave the inbox; this link still requires proving the email.
+      return this.share.sent ? this.detailShareUrl+'?invite='+encodeURIComponent(this.share.sent.email) : ''; },
+    detailTree(){  // the bundle's files as a flat, indent-rendered tree: synthesized dir rows + file rows
+      const files=Object.keys((this.detailData&&this.detailData.files)||{}).sort();
+      const rows=[{path:'SKILL.md', name:'SKILL.md', depth:0, dir:false}]; const seen=new Set();
+      for(const p of files){ const parts=p.split('/');
+        for(let i=0;i<parts.length-1;i++){ const d=parts.slice(0,i+1).join('/');
+          if(!seen.has(d)){ seen.add(d); rows.push({path:d, name:parts[i]+'/', depth:i, dir:true}); } }
+        rows.push({path:p, name:parts[parts.length-1], depth:parts.length-1, dir:false}); }
+      return rows; },
+    detailFileContent(){ if(!this.detailData) return '';
+      if(this.detailFile==='SKILL.md') return this.detailData.recipe||'';
+      return (this.detailData.files||{})[this.detailFile]||''; },
+    detailParentSkill(){ if(!this.detail||this.detail.kind!=='tool'||!this.detailData||!this.detailData.bundle_id) return null;
+      return this.bundles.find(b=>b.id===this.detailData.bundle_id)||null; },
+    detailPrompt(){  // the copyable "give this to your agent" instruction — no token embedded, the
+      // recipient signs in as themselves (this text is meant to be forwarded)
+      if(!this.detail) return '';
+      const B=(this.proxy||location.origin).replace(/\/$/,''); const n=this.detail.name;
+      const head=[`I want to use the shared ${this.detail.kind==='skill'?'skill':'tool'} "${n}" from my team's tools-registry at ${B} .`,``,
+        `1. Install the treg CLI (skip if \`treg\` already works) and sign me in:`,
+        `   curl -fsSL ${B}/install.sh | sh`,`   treg login`,``];
+      if(this.detail.kind==='skill'){
+        const t=(this.detailData&&this.detailData.tools&&this.detailData.tools[0])||null;
+        return head.concat([
+          `2. Install the skill into this project (writes the skill folder into my agent skills dir):`,
+          `   treg skill install ${n}`,``,
+          ...(t?[`3. The skill's API calls go through treg's proxy — the credential is injected server-side, never on this machine:`,
+                `   treg call ${t.name} <PATH>   # or prefix the real URL: ${B}/call/<full upstream URL>`,``]:[]),
+          `Then use the "${n}" skill for my request.`,``,
+          `Full protocol reference: ${B}/llms.txt`]).join('\n');
+      }
+      const t=this.detailData||{};
+      return head.concat([
+        `2. Call it through the proxy — the credential is injected server-side, never on this machine:`,
+        `   treg call ${n} <PATH>   # PATH = the ${t.host||'upstream'} path you'd normally call`,
+        ...(t.cli?[``,`   # it's also a CLI — run it with the key injected:`,`   treg run ${n} -- <cli args>`]:[]),``,
+        `Full protocol reference: ${B}/llms.txt`]).join('\n');
+    },
   },
   watch:{
     // a11y (WCAG 2.4.3): when a dialog/drawer opens, move focus INTO it (was left on the trigger)
@@ -1776,8 +1961,10 @@ createApp({
     save(){ localStorage.setItem(LS, JSON.stringify(this.cfg)); },
     connected(slug){ return this.sessionMode || !!this.cfg.orgs[slug]; },
     toggleTheme(){ this.theme=this.theme==='dark'?'light':'dark'; document.documentElement.dataset.theme=this.theme; localStorage.setItem('treg-theme',this.theme); },
-    githubLogin(){ location.href='/auth/github'; },
-    googleLogin(){ location.href='/auth/google'; },
+    _stashNext(){  // OAuth callbacks land on /app, losing a /app/skills/<x> deep link — stash it to restore after boot
+      const d=this.routeFromPath(location.pathname); if(d) localStorage.setItem('treg-next', location.pathname); },
+    githubLogin(){ this._stashNext(); location.href='/auth/github'; },
+    googleLogin(){ this._stashNext(); location.href='/auth/google'; },
     demoScroll(){ this.$refs.demo && this.$refs.demo.scrollIntoView({behavior:'smooth',block:'start'}); },
     scrollToSignin(){ this.$refs.signin && this.$refs.signin.scrollIntoView({behavior:'smooth',block:'start'}); },
     async sbx(path, opts={}){  // fetch against the sandbox, carrying the sandbox token explicitly
@@ -1967,18 +2154,18 @@ createApp({
       // typo like "foo bar" becomes a permanently-unacceptable dead invite cluttering the list.
       if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ this.orgErr='Enter a valid email address.'; return; }
       this.orgBusy=true; this.orgErr='';
-      const chosen=this.tools.filter(t=>this.inviteToolSel[t.name]).map(t=>t.name);
-      const tool_access = !this.inviteCustomize ? null : (chosen.length===this.tools.length ? null : chosen);
+      const chosen=this.accessNames.filter(n=>this.inviteToolSel[n]);
+      const tool_access = !this.inviteCustomize ? null : (chosen.length===this.accessNames.length ? null : chosen);
       try{ this.lastInvite=await this.api('/orgs/'+this.activeOrgId+'/invites',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email,role:this.inviteRole,tool_access,local_run_enabled:this.inviteLocalRun})});
         this.inviteEmail=''; this.inviteCustomize=false; this.orgInvites=await this.api('/orgs/'+this.activeOrgId+'/invites'); }
       catch(e){ this.orgErr='Invite failed: '+(e.detail||e.status); } finally{ this.orgBusy=false; } },
-    openInviteCustomize(){ this.inviteCustomize=true; const d={}; this.tools.forEach(t=>d[t.name]=true); this.inviteToolSel=d; },
+    openInviteCustomize(){ this.inviteCustomize=true; const d={}; this.accessNames.forEach(n=>d[n]=true); this.inviteToolSel=d; },
     openAccess(m){ if(m.role==='owner') return;
       if(this.editAccess===m.user_id){ this.editAccess=null; return; }
-      this.editAccess=m.user_id; const d={}; this.tools.forEach(t=>{ d[t.name]=(m.tool_access===null || m.tool_access.includes(t.name)); }); this.accessDraft=d; },
-    setAllAccess(v){ const d={}; this.tools.forEach(t=>d[t.name]=v); this.accessDraft=d; },
-    async saveAccess(m){ const names=this.tools.filter(t=>this.accessDraft[t.name]).map(t=>t.name);
-      const tool_access = (names.length===this.tools.length) ? null : names;  // all checked → 'all' (NULL)
+      this.editAccess=m.user_id; const d={}; this.accessNames.forEach(n=>{ d[n]=(m.tool_access===null || m.tool_access.includes(n)); }); this.accessDraft=d; },
+    setAllAccess(v){ const d={}; this.accessNames.forEach(n=>d[n]=v); this.accessDraft=d; },
+    async saveAccess(m){ const names=this.accessNames.filter(n=>this.accessDraft[n]);
+      const tool_access = (names.length===this.accessNames.length) ? null : names;  // all checked → 'all' (NULL)
       try{ await this.api('/orgs/'+this.activeOrgId+'/members/'+m.user_id+'/access',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({tool_access, local_run_enabled:m.local_run_enabled})}); this.editAccess=null; }
       catch(e){ this.orgErr='Set access failed: '+(e.detail||e.status); }
       await this.loadOrgAdmin(); },
@@ -2114,7 +2301,7 @@ createApp({
       catch(e){ this.err='Save failed: '+(e.detail||e.status); } },
     recipeSnippet(tab){ const r=this.copyRecipe; if(!r) return {text:'',html:''};
       const proxy=(this.proxy||location.origin).replace(/\/$/,'');
-      const tok=this.myToken||'$TREG_TOKEN', tokS=tok.length>28?tok.slice(0,12)+'…'+tok.slice(-6):tok;
+      const tok=this.myToken||'$TREG_TOKEN', tokS=tok;  // full token in the preview — matches the copied text
       const esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
       const P=s=>`<span class="s-proxy">${esc(s)}</span>`, A=s=>`<span class="s-path">${esc(s)}</span>`,
             T=s=>`<span class="s-token">${esc(s)}</span>`, C=s=>`<span class="s-cmt">${esc(s)}</span>`, K=s=>`<span class="s-kw">${esc(s)}</span>`;
@@ -2222,7 +2409,8 @@ createApp({
         // Enter the team the email link pointed at when it was accepted; otherwise the first accepted.
         const linked=joined.find(j=>j.inv.org_id===this.inviteLinkOrg)||joined[0];
         if(linked.r&&linked.r.org) this.switchOrg({slug:linked.r.org});
-        this.inviteChoice=false; this.inviteLinkOrg=null; this.go('tools');
+        this.inviteChoice=false; this.inviteLinkOrg=null;
+        if(this.detail) this.openDetail(this.detail.kind, this.detail.name, true); else this.go('tools');  // accepting while on a shared page = stay on it
         this.orgMsg='You joined '+joined.map(j=>(j.r&&j.r.name)||j.inv.name).join(', ')
           +(failed.length?' (could not join '+failed.join(', ')+')':'')
           +'. Here are the shared tools & skills — call any with no key on your machine.';
@@ -2350,8 +2538,93 @@ createApp({
       this.go('orgs'); },
     resetConfirms(){ this.confirmDelTool=null; this.confirmDelSecret=null; this.confirmDelBundle=null; this.confirmRemove=null; this.confirmLeave=false; this.confirmDel=''; this.confirmAdmUser=null; this.confirmAdmOrg=null; },
     go(v, fromPop){ this.resetConfirms();  // stale inline "Confirm" states must not survive a view switch (accidental-delete risk)
-      this.view=v; if(v==='activity')this.loadCalls(); if(v==='admin')this.loadAdmin(); if(v==='orgs'){this.loadOrgAdmin(); this.loadMyUsage();} if(v==='usage')this.loadUsage(); if(v==='secrets')this.loadSecrets();
-      if(!fromPop) history.pushState({view:v}, '', '#'+v); },  // push history so browser Back navigates BETWEEN views instead of leaving the app
+      this.detail=null; this.view=v; if(v==='activity')this.loadCalls(); if(v==='admin')this.loadAdmin(); if(v==='orgs'){this.loadOrgAdmin(); this.loadMyUsage();} if(v==='usage')this.loadUsage(); if(v==='secrets')this.loadSecrets();
+      // push history so browser Back navigates BETWEEN views instead of leaving the app; the '/app'
+      // pathname also walks back from a /app/skills/<x> detail URL so reload doesn't reopen the detail
+      if(!fromPop) history.pushState({view:v}, '', '/app#'+v); },
+    // ---- detail pages (shareable deep links) ----
+    routeFromPath(path){ const m=/^\/app\/(skills|tools)\/(.+)$/.exec(path||'');
+      return m ? {kind:m[1]==='skills'?'skill':'tool', name:decodeURIComponent(m[2])} : null; },
+    openDetail(kind, name, fromPop){ this.resetConfirms();
+      this.detail={kind, name}; this.view='detail'; this.detailFile='SKILL.md'; this.detailCopied=''; this.detailNote='';
+      if(!fromPop) history.pushState({detail:{kind,name}}, '', '/app/'+(kind==='skill'?'skills':'tools')+'/'+encodeURIComponent(name));
+      this.loadDetail(); },
+    async loadDetail(){ if(!this.detail) return; this.detailErr=''; this.detailLoading=true; this.detailData=null;
+      try{ this.detailData=await this.api((this.detail.kind==='skill'?'/bundles/by-name/':'/tools/by-name/')+encodeURIComponent(this.detail.name)); }
+      catch(e){
+        if(e.status===404 && await this.findDetailOrg()) return void (this.detailLoading=false);  // it lives in another of my teams — switched
+        this.detailErr = e.status===404
+          ? 'Not found in your teams. This link needs an invite — ask the person who shared it to invite you (Share… on their side), then click the link again.'
+          : 'Could not load: '+(e.detail||e.status); }
+      finally{ this.detailLoading=false; } },
+    async copyDetail(text, tag){ if(!(await this.toClipboard(text))) return; this.detailCopied=tag; setTimeout(()=>{ if(this.detailCopied===tag) this.detailCopied=''; },1500); },
+    rowTarget(t){  // where a tools-list row leads: a skill-born tool opens its SKILL (the shareable thing), a bare endpoint opens the tool page
+      if(t.bundle_id){ const b=this.bundles.find(x=>x.id===t.bundle_id); if(b) return {kind:'skill', name:b.name}; }
+      return {kind:'tool', name:t.name}; },
+    rowHref(t){ const d=this.rowTarget(t); return '/app/'+(d.kind==='skill'?'skills':'tools')+'/'+encodeURIComponent(d.name); },
+    rowOpen(t){ const d=this.rowTarget(t); this.openDetail(d.kind, d.name); },
+    async autoAcceptShare(route){  // a share-link invite: clicking the emailed "Sign in & accept" IS the consent — accept silently, enter that team
+      // Match by the email link's org param, or — for a DM'd bare link — by an invite whose landing IS this page.
+      const path=route?'/app/'+(route.kind==='skill'?'skills':'tools')+'/'+encodeURIComponent(route.name):null;
+      const inv=this.pendingInvites.find(i=>i.org_id===this.inviteLinkOrg)
+              ||(path&&this.pendingInvites.find(i=>i.landing===path));
+      if(!inv) return false;
+      try{
+        const r=await this.api('/invites/'+inv.id+'/accept',{method:'POST'});
+        this.pendingInvites=this.pendingInvites.filter(i=>i.id!==inv.id);
+        this.onboarded=true; try{ await this.api('/onboard/skip',{method:'POST'}); }catch(e){}
+        if(r&&r.org){ this.activeSlug=r.org; localStorage.setItem('treg-active',r.org); }
+        await this.loadAll();
+        this.inviteLinkOrg=null;
+        this.orgMsg='You joined '+((r&&r.name)||inv.name)+' — this page was shared with you.';
+        return true;
+      }catch(e){ return false; }  // revoked/used → the detail page's not-found message explains
+    },
+    async findDetailOrg(){  // the link may belong to another of MY teams — probe them, switch silently on a unique hit
+      if(!this.detail) return false;
+      const others=(this.myOrgs||[]).filter(o=>o.slug!==this.activeSlugNow);
+      const path=(this.detail.kind==='skill'?'/bundles/by-name/':'/tools/by-name/')+encodeURIComponent(this.detail.name);
+      for(const o of others){
+        let h;
+        if(this.sessionMode) h={'X-Treg-Org':o.slug};
+        else { const t=(this.cfg.orgs[o.slug]||{}).token; if(!t) continue; h={'X-Treg-Token':t}; }
+        try{
+          const r=await fetch(path,{credentials:'include',headers:{'ngrok-skip-browser-warning':'1',...h}});
+          if(!r.ok) continue;
+          const data=await r.json();
+          if(this.sessionMode){ this.activeSlug=o.slug; localStorage.setItem('treg-active',o.slug); }
+          else { this.cfg.active=o.slug; this.save(); }
+          this.detailData=data; this.detailErr='';
+          this.orgMsg='Switched to '+(o.name||o.slug)+' — this '+this.detail.kind+' lives there.';
+          await this.loadAll();
+          return true;
+        }catch(_){}
+      }
+      return false;
+    },
+    openShare(){
+      this.share={on:true, email:'', role:'viewer', full:true, busy:false, err:'', sent:null, member:null};
+      if(this.canAdmin) this.loadOrgAdmin().catch(()=>{}); },
+    async sendShare(){ const email=(this.share.email||'').trim(); if(!email){ this.share.err='Enter their email.'; return; }
+      this.share.member=(this.orgMembers||[]).find(m=>(m.email||'').toLowerCase()===email.toLowerCase())||null;
+      if(this.share.member) return;  // already on the team — the modal now says "just send the link"
+      this.share.busy=true; this.share.err='';
+      const landing='/app/'+(this.detail.kind==='skill'?'skills':'tools')+'/'+encodeURIComponent(this.detail.name);
+      // Full vault access (default) = no restriction. Unchecked = scope to the skill itself + its
+      // bundled tools (the access list also gates which skills a restricted member can SEE).
+      let tool_access=null;
+      if(!this.share.full){
+        tool_access = this.detail.kind==='skill'
+          ? [this.detail.name].concat((((this.detailData&&this.detailData.tools)||[]).map(t=>t.name)))
+          : [this.detail.name];
+        tool_access=[...new Set(tool_access)];
+      }
+      try{
+        const r=await this.api('/orgs/'+this.activeOrgId+'/invites',{method:'POST',headers:{'content-type':'application/json'},
+          body:JSON.stringify({email, role:this.share.role, landing, tool_access, local_run_enabled:false})});
+        this.share.sent=r;
+      }catch(e){ this.share.err='Invite failed: '+(e.detail||e.status); }
+      finally{ this.share.busy=false; } },
     async loadAll(){ this.err=''; this.loading=true;
       try{
         this.myOrgs=await this.api('/orgs');
@@ -2414,7 +2687,7 @@ createApp({
       const urlH=`${P(proxy)}${C('/call/')}${H(up)}/${A(path)}`;
       const hint=(t.examples||[]).length?`e.g. ${t.examples[0].path}`:'the part after the domain';
       const tok=this.myToken||'$TREG_TOKEN', org=(this.activeOrg&&this.activeOrg.slug)||'$TREG_ORG';  // real token+org so a copied snippet runs as-is
-      const tokShort=tok.length>28?tok.slice(0,12)+'…'+tok.slice(-6):tok;  // DISPLAY only — the copied text keeps the full token
+      const tokShort=tok;  // show the full real token — the preview must match what Copy puts on the clipboard
       switch(tab){
         case 'Claude Code': return {
           text:`# Call "${t.name}" through treg - your key is injected server-side.\n${m} ${urlT}\nX-Treg-Token: ${tok}\nX-Treg-Org: ${org}\n\n# PATH = the ${t.host} path you'd normally call (${hint}).`,
@@ -2457,7 +2730,7 @@ createApp({
       this.orgMenuStyle={position:'fixed', top:(r.bottom+6)+'px', left:r.left+'px'};
     },
     toggleOrgMenu(){ this.orgMenu=!this.orgMenu; if(this.orgMenu) this.placeOrgMenu(); },
-    closeOverlays(){ this.newTool=false; this.newSkill=false; this.showJoin=false; this.newOrg=false; this.addOrg=false; this.tryTool=null; this.copyTool=null; this.orgMenu=false; },
+    closeOverlays(){ this.newTool=false; this.newSkill=false; this.showJoin=false; this.newOrg=false; this.addOrg=false; this.tryTool=null; this.copyTool=null; this.orgMenu=false; this.share.on=false; },
   },
   async mounted(){
     document.documentElement.dataset.theme=this.theme;
@@ -2476,6 +2749,8 @@ createApp({
     window.addEventListener('scroll', ()=>{ if(this.orgMenu) this.placeOrgMenu(); }, true);
     window.addEventListener('resize', ()=>{ if(this.orgMenu) this.placeOrgMenu(); });
     window.addEventListener('popstate', e=>{  // browser Back moves between views (was exiting the app)
+      const d=(e.state&&e.state.detail)||this.routeFromPath(location.pathname);
+      if(d){ this.openDetail(d.kind, d.name, true); return; }
       const v=(e.state&&e.state.view)||(location.hash||'').replace('#','')||'tools';
       if(['tools','orgs','activity','usage','admin','help','secrets','start'].includes(v)) this.go(v, true);
     });
@@ -2492,11 +2767,28 @@ createApp({
     const linkOrg = qs.get('invite_org'), inv = qs.get('invite');
     if(linkOrg || inv || qs.get('invite_expired')){ history.replaceState(null,'',location.pathname+location.hash); }  // strip one-shot params so reload/share doesn't replay them
     if(linkOrg){ this.inviteLinkOrg=parseInt(linkOrg,10)||null; }
+    // A shared detail deep link (/app/skills/<x>, /app/tools/<x>) — from the URL itself, or stashed
+    // before an OAuth hop (the callback always lands on /app, which would otherwise drop the path).
+    let route=this.routeFromPath(location.pathname);
+    const stashed=localStorage.getItem('treg-next');
+    if(stashed){ localStorage.removeItem('treg-next'); if(!route){ route=this.routeFromPath(stashed); if(route) history.replaceState(null,'',stashed); } }
     const me = await fetch('/auth/me',{credentials:'include',headers:{'ngrok-skip-browser-warning':'1'}}).then(r=>r.ok?r.json():null).catch(()=>null);
-    if(me){ this.sessionMode=true; this.me=me.email; this.isAdmin=!!me.is_superadmin; this.onboarded=!!me.onboarded; await this.loadAll(); this.maybeOnboard(); return; }  // GitHub/email session
-    if(this.token){ this.loadAll(); return; }      // token-in-browser fallback
-    if(!inv && !linkOrg && !qs.get('invite_expired')){ location.replace('/'); return; }  // logged-out plain visit → the marketing landing owns the front door
-    this.sbxInit();                                 // logged-out invite flow → the in-app landing + sign-in modal
+    if(me){ this.sessionMode=true; this.me=me.email; this.isAdmin=!!me.is_superadmin; this.onboarded=!!me.onboarded; await this.loadAll();
+      // Share-born arrival (/app/skills/x?invite_org=N from the invite email): accept silently and
+      // enter that team — the emailed "Sign in & accept" click was the consent. Otherwise the normal
+      // first-run / invite-banner flow.
+      let landed=false;
+      if(route) landed=await this.autoAcceptShare(route);
+      if(!landed) this.maybeOnboard();
+      if(route){ this.openDetail(route.kind, route.name, true);
+        // a ?invite=<email> share link opened by a DIFFERENT signed-in account: say why it won't resolve
+        if(!landed && inv && this.me && inv.toLowerCase()!==this.me.toLowerCase())
+          this.detailNote='This share link was sent to '+inv+' — you’re signed in as '+this.me+'. Sign out (⏻) and sign in with that email to accept the invite.'; }
+      return; }  // GitHub/email session
+    if(this.token){ await this.loadAll(); if(route) this.openDetail(route.kind, route.name, true); return; }      // token-in-browser fallback
+    if(!inv && !linkOrg && !route && !qs.get('invite_expired')){ location.replace('/'); return; }  // logged-out plain visit → the marketing landing owns the front door
+    if(route){ this.shareGate=route; this.demo.signin=true; }  // shared link while logged out: the focused gate (no sandbox mint, no tour); after sign-in the boot lands on it (email verify reloads in place; OAuth restores via the treg-next stash)
+    else this.sbxInit();                            // other logged-out flows → the in-app landing + sign-in modal
     if(inv){ this.invitePrefill=inv; this.emailInput=inv; this.emailStage=false; this.demo.signin=true; }  // legacy code link while logged out: prefill + open sign-in; the invite auto-accepts after login (maybeOnboard)
   },
 }).mount('#app');

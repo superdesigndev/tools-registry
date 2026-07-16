@@ -895,7 +895,11 @@ async def auth_invite_signin_confirm(request: Request, db: AsyncSession = Depend
     invite.email_token_hash = None  # consume: one sign-in per emailed link
     db.add(invite)
     await db.commit()
-    resp = RedirectResponse(f"/?invite_org={invite.org_id}", status_code=303)
+    # A share-born invite lands on the shared page itself (the SPA auto-accepts + switches org);
+    # a plain invite lands on the dashboard with the accept banner, as before. `landing` was
+    # allowlist-validated at create time, so this can never redirect off-app.
+    dest = f"{invite.landing}?invite_org={invite.org_id}" if invite.landing else f"/?invite_org={invite.org_id}"
+    resp = RedirectResponse(dest, status_code=303)
     resp.set_cookie(sess.COOKIE, sess.make(user.id, token_version=user.token_version), httponly=True,
                     samesite="lax", secure=_is_https(request), max_age=sess.TTL_SECONDS)
     return resp
@@ -928,6 +932,37 @@ async def dashboard():
     if not index.exists():
         return HTMLResponse("<h3>tools-registry API. Dashboard not bundled.</h3>")
     return FileResponse(index, headers={"Cache-Control": "no-cache"})
+
+
+def _spa_with_og(kind: str, name: str):
+    """Serve the SPA at a shareable detail path (/app/skills/x, /app/tools/x) with per-resource
+    og/twitter meta so link unfurls show what was shared. The meta echoes only the URL's own
+    name segment — no DB read, so an unauthenticated crawler learns nothing it didn't send."""
+    index = _WEB_DIR / "index.html"
+    if not index.exists():
+        return HTMLResponse("<h3>tools-registry API. Dashboard not bundled.</h3>")
+    label = "skill" if kind == "skills" else "tool"
+    safe = _esc_html(name)
+    html = index.read_text(encoding="utf-8").replace(
+        "<title>tools-registry</title>",
+        f"<title>{safe} · tools-registry</title>\n"
+        f'<meta property="og:title" content="{safe} — shared {label}"/>\n'
+        f'<meta property="og:description" content="A {label} shared via tools-registry. '
+        f'Sign in to preview it and get the one-command install."/>\n'
+        f'<meta name="twitter:card" content="summary"/>',
+        1,
+    )
+    return HTMLResponse(html, headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/app/skills/{name}", include_in_schema=False)
+async def dashboard_skill_page(name: str):
+    return _spa_with_og("skills", name)
+
+
+@app.get("/app/tools/{name}", include_in_schema=False)
+async def dashboard_tool_page(name: str):
+    return _spa_with_og("tools", name)
 
 
 @app.get("/llms.txt", include_in_schema=False)
@@ -1262,6 +1297,22 @@ def _require_tool_access(caller: Caller, tool_name: str) -> None:
             "(dashboard → Team, or `treg org access <you> --tools …`)"))
 
 
+async def _visible_secret_ids(caller: Caller, db: AsyncSession) -> set[int] | None:
+    """The secret ids a tool-restricted member may SEE: the ones wired into their allowed tools
+    (HTTP bindings + cli.inject). None = unrestricted (owner / NULL tool_access) — show all. The
+    ACL isn't just a call gate: listings must not reveal credentials the member can't use."""
+    if caller.role == "owner" or caller.membership.tool_access is None:
+        return None
+    tools = (await db.execute(select(Tool).where(Tool.org_id == caller.org_id))).scalars().all()
+    ids: set[int] = set()
+    for t in tools:
+        if not _tool_allowed(caller, t.name):
+            continue
+        ids |= {b.get("secret_id") for b in (t.bindings or []) if b.get("secret_id") is not None}
+        ids |= {e.get("secret_id") for e in ((t.cli or {}).get("inject") or []) if e.get("secret_id") is not None}
+    return ids
+
+
 def _require_local_run(caller: Caller) -> None:
     """Gate the LOCAL run tier on the member's `local_run_enabled` (owner exempt). Off → server only."""
     if caller.role != "owner" and not caller.membership.local_run_enabled:
@@ -1288,6 +1339,12 @@ class InviteIn(BaseModel):
     # tool names; local_run may be turned off. Both default to the unrestricted state.
     tool_access: list[str] | None = None
     local_run_enabled: bool = True
+    landing: str | None = None  # a shared detail page ("/app/skills/<name>") to land on after sign-in
+
+
+# Landing must be one of OUR detail paths — a path-only allowlist so an emailed invite link can never
+# become an open redirect (no scheme, no host, no traversal, single trailing name segment).
+_LANDING_RE = re.compile(r"^/app/(skills|tools)/[A-Za-z0-9][A-Za-z0-9._%-]*$")
 
 
 class AcceptIn(BaseModel):
@@ -1643,7 +1700,9 @@ async def create_invite(
         await db.delete(prior)
     days = max(1, min(body.expires_days, 3650))  # clamp BOTH ends — a huge value overflows datetime → 500
     expires_at = _utcnow_naive() + timedelta(days=days)
-    tool_access = _normalize_tool_access(body.tool_access, await _known_tool_names(org_id, db))
+    tool_access = _normalize_tool_access(body.tool_access, await _known_access_names(org_id, db))
+    if body.landing is not None and not _LANDING_RE.match(body.landing):
+        raise HTTPException(status_code=422, detail="landing must be a detail path like /app/skills/<name>")
     code = crypto.new_token()
     # A SECOND secret for the email link only. The admin gets `code` back (out-of-band relay) so the
     # code can never be a sign-in factor; `email_token` is never returned here — only the inbox sees
@@ -1653,7 +1712,7 @@ async def create_invite(
         org_id=org_id, email=email, role=body.role,
         code_hash=crypto.hash_token(code), email_token_hash=crypto.hash_token(email_token),
         invited_by=caller.email, expires_at=expires_at,
-        tool_access=tool_access, local_run_enabled=body.local_run_enabled,
+        tool_access=tool_access, local_run_enabled=body.local_run_enabled, landing=body.landing,
     )
     db.add(invite)
     await db.commit()
@@ -1661,9 +1720,13 @@ async def create_invite(
     if not email.endswith("@" + demo_seed.DEMO_DOMAIN):  # don't email the onboarding's fake teammate domain
         scheme = "https" if _is_https(request) else request.url.scheme
         host = request.headers.get("host", "")
+        shared = ""  # share-born invite → the email leads with what was shared
+        if body.landing:
+            kind, _, name = body.landing.removeprefix("/app/").partition("/")
+            shared = f'the {"skill" if kind == "skills" else "tool"} “{name}”'
         await email_sender.send_invite(  # best-effort; the code is also returned for out-of-band relay
             email, caller.email, (org.name if org else email), body.role, code, email_token,
-            expires_at.isoformat(), link_base=(f"{scheme}://{host}" if host else "")
+            expires_at.isoformat(), link_base=(f"{scheme}://{host}" if host else ""), shared=shared,
         )
     return {"code": code, "email": email, "role": body.role, "org_id": org_id,
             "expires_at": expires_at.isoformat()}  # email_token deliberately NOT returned (inbox-only)
@@ -1740,7 +1803,7 @@ async def my_invites(
             continue
         out.append({
             "id": inv.id, "org": org.slug, "org_id": org.id, "name": org.name, "role": inv.role,
-            "invited_by": inv.invited_by,
+            "invited_by": inv.invited_by, "landing": inv.landing,
             "expires_at": inv.expires_at.isoformat() if inv.expires_at else None,
             "created_at": inv.created_at.isoformat() if inv.created_at else None,
         })
@@ -2120,16 +2183,23 @@ async def _known_tool_names(org_id: int, db: AsyncSession) -> set[str]:
     return {r[0] for r in rows}
 
 
+async def _known_access_names(org_id: int, db: AsyncSession) -> set[str]:
+    """Everything an access list may name: tool names (the call/run gate) plus bundle names (the
+    skill-visibility gate) — so a recipe-only skill can be granted even though it has no tool."""
+    bundles = (await db.execute(select(Bundle.name).where(Bundle.org_id == org_id))).all()
+    return await _known_tool_names(org_id, db) | {r[0] for r in bundles}
+
+
 def _normalize_tool_access(names: list[str] | None, known: set[str]) -> list[str] | None:
-    """Validate a requested tool_access list against the org's tools. None → None (all). A list must
-    name only real tools (else 422). A list covering EVERY tool collapses to None (unrestricted)."""
+    """Validate a requested access list against the org's tools + skills. None → None (all). A list
+    must name only real tools/skills (else 422). A list covering EVERYTHING collapses to None."""
     if names is None:
         return None
     unknown = [t for t in names if t not in known]
     if unknown:
-        raise HTTPException(status_code=422, detail=f"unknown tool(s): {', '.join(sorted(set(unknown)))}")
+        raise HTTPException(status_code=422, detail=f"unknown tool/skill(s): {', '.join(sorted(set(unknown)))}")
     chosen = set(names)
-    return None if chosen >= known and known else sorted(chosen)  # all tools checked → 'all' (NULL)
+    return None if chosen >= known and known else sorted(chosen)  # everything checked → 'all' (NULL)
 
 
 @app.patch("/orgs/{org_id}/members/{user_id}/access")
@@ -2147,7 +2217,7 @@ async def set_member_access(
         raise HTTPException(status_code=404, detail="not a member of this org")
     if membership.role == "owner":
         raise HTTPException(status_code=403, detail="an owner always has full access; it can't be restricted")
-    membership.tool_access = _normalize_tool_access(body.tool_access, await _known_tool_names(org_id, db))
+    membership.tool_access = _normalize_tool_access(body.tool_access, await _known_access_names(org_id, db))
     membership.local_run_enabled = body.local_run_enabled
     await db.commit()
     return {"user_id": user_id, "org_id": org_id, "tool_access": membership.tool_access,
@@ -2253,6 +2323,9 @@ async def list_secrets(
     caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session)
 ) -> list[dict]:
     rows = (await db.execute(select(Secret).where(Secret.org_id == caller.org_id))).scalars().all()
+    visible = await _visible_secret_ids(caller, db)
+    if visible is not None:  # tool-restricted member: only the keys wired into their allowed tools
+        rows = [s for s in rows if s.id in visible]
     return [_secret_view(s) for s in rows]
 
 
@@ -2461,7 +2534,22 @@ async def list_tools(
     caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session)
 ) -> list[dict]:
     rows = (await db.execute(select(Tool).where(Tool.org_id == caller.org_id))).scalars().all()
-    return [_tool_view(t) for t in rows]
+    # The per-member tool ACL hides what it gates: a restricted member's listing shows only their tools.
+    return [_tool_view(t) for t in rows if _tool_allowed(caller, t.name)]
+
+
+@app.get("/tools/by-name/{name}")
+async def get_tool_by_name(
+    name: str, caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session)
+) -> dict:
+    """Name-keyed lookup so shareable detail URLs (/app/tools/<name>) resolve without an id."""
+    tool = (await db.execute(
+        select(Tool).where(Tool.org_id == caller.org_id, Tool.name == name)
+    )).scalars().first()
+    if tool is None:
+        raise HTTPException(status_code=404, detail="tool not found")
+    _require_tool_access(caller, tool.name)  # a 403 names the fix (ask an admin) — clearer than a fake 404
+    return _tool_view(tool)
 
 
 @app.patch("/tools/{tool_id}")
@@ -2929,12 +3017,41 @@ async def import_skill_folder(
         shutil.rmtree(root, ignore_errors=True)
 
 
+async def _bundle_allowed(caller: Caller, bundle: Bundle, db: AsyncSession) -> bool:
+    """Skill visibility for a tool-restricted member: the access list may grant a bundle by its own
+    name (recipe-only skills) or via any of its tools. Owner / NULL access see everything."""
+    if caller.role == "owner" or caller.membership.tool_access is None:
+        return True
+    access = set(caller.membership.tool_access)
+    if bundle.name in access:
+        return True
+    tools = (await db.execute(select(Tool.name).where(Tool.bundle_id == bundle.id))).all()
+    return any(r[0] in access for r in tools)
+
+
 @app.get("/bundles")
 async def list_bundles(
     caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session)
 ) -> list[dict]:
     rows = (await db.execute(select(Bundle).where(Bundle.org_id == caller.org_id))).scalars().all()
-    return [{"id": b.id, "name": b.name, "owner": b.owner} for b in rows]
+    return [{"id": b.id, "name": b.name, "owner": b.owner}
+            for b in rows if await _bundle_allowed(caller, b, db)]
+
+
+@app.get("/bundles/by-name/{name}")
+async def get_bundle_by_name(
+    name: str, caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session)
+) -> dict:
+    """Name-keyed lookup so shareable detail URLs (/app/skills/<name>) resolve without an id."""
+    bundle = (await db.execute(
+        select(Bundle).where(Bundle.org_id == caller.org_id, Bundle.name == name)
+    )).scalars().first()
+    if bundle is None:
+        raise HTTPException(status_code=404, detail="bundle not found")
+    if not await _bundle_allowed(caller, bundle, db):
+        raise HTTPException(status_code=403, detail=(
+            f"you don't have access to the skill {name!r} in this team — an admin can grant it"))
+    return await _bundle_view(bundle.id, db)
 
 
 @app.get("/bundles/{bundle_id}")
@@ -2944,6 +3061,9 @@ async def get_bundle(
     bundle = await db.get(Bundle, bundle_id)
     if bundle is None or bundle.org_id != caller.org_id:
         raise HTTPException(status_code=404, detail="bundle not found")
+    if not await _bundle_allowed(caller, bundle, db):  # `treg skill install` uses this route too
+        raise HTTPException(status_code=403, detail=(
+            f"you don't have access to the skill {bundle.name!r} in this team — an admin can grant it"))
     return await _bundle_view(bundle_id, db)
 
 
@@ -3162,6 +3282,9 @@ async def get_health(
     caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session)
 ) -> list[dict]:
     rows = (await db.execute(select(Secret).where(Secret.org_id == caller.org_id))).scalars().all()
+    visible = await _visible_secret_ids(caller, db)
+    if visible is not None:  # same visibility rule as /secrets — health mustn't leak hidden keys
+        rows = [s for s in rows if s.id in visible]
     return [
         {
             "secret_id": s.id,
@@ -3483,6 +3606,15 @@ async def call_tool(
     caller: Caller = Depends(require_member),
     db: AsyncSession = Depends(get_session),
 ):
+    # Faithful-relay: use the RAW request path, not Starlette's decoded path param. Decoding is
+    # lossy — an encoded slash (`%2f`) in `rest` would become a real `/` and change the upstream
+    # route (npm's scoped publish `PUT /@scope%2fname` 404s as `/@scope/name`). httpx preserves
+    # valid percent-escapes, so the original bytes travel through to the upstream one-to-one.
+    raw_path = request.scope.get("raw_path")
+    if raw_path:
+        _, sep, raw_rest = raw_path.decode("ascii", "replace").partition("/call/")
+        if sep:
+            rest = raw_rest
     tool, upstream_url = await _resolve_call(rest, caller.org_id, db)
     _require_tool_access(caller, tool.name)  # per-member tool ACL (NULL access = all; admins exempt)
     await _enforce_daily_cap(caller, db)  # per-user daily cap (skips sandbox + unmetered members)

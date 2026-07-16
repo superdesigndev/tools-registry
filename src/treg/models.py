@@ -105,6 +105,9 @@ class Invite(SQLModel, table=True):
     # time, modify later). NULL tool_access = all tools; a list = the allowed tool names.
     tool_access: list | None = Field(default=None, sa_column=Column("tool_access", JSON, nullable=True))
     local_run_enabled: bool = Field(default=True)
+    # Where the invitee lands after sign-in — a shared detail page ("/app/skills/<name>") when the
+    # invite was minted from a share, else NULL for the plain dashboard. Path-only, validated on create.
+    landing: str | None = Field(default=None)
     created_at: datetime = Field(default_factory=_now)
 
 

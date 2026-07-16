@@ -1,6 +1,6 @@
 ---
 name: tools-registry
-description: Call shared team tools without holding their credentials, and turn your local skills into shareable tools. Use when you need to hit an upstream API (PostHog, GSC, Google Ads, Intercom, Stripe, …) but don't have the key locally, or when you want to register/share a skill so teammates' agents can call it. Three personas in one skill — consumer (call), creator (register/share), admin (manage).
+description: How to use the treg CLI (tools-registry) — call shared team tools without holding their credentials, and turn your local skills into shareable tools. Use when working with the `treg` command, or when you need to hit an upstream API (PostHog, GSC, Google Ads, Intercom, Stripe, …) but don't have the key locally, or when you want to register/share a skill so teammates' agents can call it. Three personas in one skill — consumer (call), creator (register/share), admin (manage).
 ---
 
 # tools-registry — call shared tools, share your own

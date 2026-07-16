@@ -159,3 +159,44 @@ async def test_empty_list_blocks_every_tool(env):
     assert (await env.c.get("/call/alpha", headers=_h(env.member))).status_code == 403
     assert (await env.c.get("/call/beta", headers=_h(env.member))).status_code == 403
     assert (await env.c.post("/run", headers=_h(env.member), json={"tool": "alpha"})).status_code == 403
+
+
+async def test_tool_access_hides_listings_and_keys(env):
+    """The ACL isn't just a call gate — a restricted member's dashboard listings must not reveal
+    the tools and credentials they can't use (/tools, /secrets, /health, /tools/by-name)."""
+    await _set_access(env, ["alpha"])
+    m = _h(env.member)
+    assert {t["name"] for t in (await env.c.get("/tools", headers=m)).json()} == {"alpha"}
+    assert {s["name"] for s in (await env.c.get("/secrets", headers=m)).json()} == {"a-key"}
+    assert {h["name"] for h in (await env.c.get("/health", headers=m)).json()} == {"a-key"}
+    assert (await env.c.get("/tools/by-name/alpha", headers=m)).status_code == 200
+    assert (await env.c.get("/tools/by-name/beta", headers=m)).status_code == 403  # names the fix, not a fake 404
+    # the owner and an unrestricted member still see everything
+    assert {t["name"] for t in (await env.c.get("/tools", headers=_h(env.owner))).json()} == {"alpha", "beta"}
+    await _set_access(env, None)
+    assert {t["name"] for t in (await env.c.get("/tools", headers=m)).json()} == {"alpha", "beta"}
+    assert {s["name"] for s in (await env.c.get("/secrets", headers=m)).json()} >= {"a-key"}
+
+
+async def test_tool_access_gates_skill_visibility(env):
+    """The access list also gates which SKILLS a restricted member can see: granted by the bundle's
+    own name (recipe-only skills) or via any of its tools. /bundles + both bundle getters comply."""
+    await env.c.post("/skills", headers=_h(env.owner),
+                     json={"name": "gamma", "recipe": "# gamma", "secrets": [], "tools": []})
+    m = _h(env.member)
+
+    await _set_access(env, ["alpha"])  # a bare endpoint grant — no skills granted at all
+    assert {b["name"] for b in (await env.c.get("/bundles", headers=m)).json()} == set()
+    assert (await env.c.get("/bundles/by-name/beta", headers=m)).status_code == 403
+
+    await _set_access(env, ["gamma"])  # recipe-only skill granted by its own name
+    assert {b["name"] for b in (await env.c.get("/bundles", headers=m)).json()} == {"gamma"}
+    ok = await env.c.get("/bundles/by-name/gamma", headers=m)
+    assert ok.status_code == 200
+    assert (await env.c.get(f"/bundles/{ok.json()['id']}", headers=m)).status_code == 200  # skill install route
+
+    await _set_access(env, ["beta"])  # an integration skill granted via its tool's name
+    assert {b["name"] for b in (await env.c.get("/bundles", headers=m)).json()} == {"beta"}
+
+    # the owner is never restricted
+    assert {b["name"] for b in (await env.c.get("/bundles", headers=_h(env.owner))).json()} == {"beta", "gamma"}

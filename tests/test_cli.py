@@ -142,8 +142,8 @@ class _FakeClient:
     def __init__(self): self.calls = []
     def __enter__(self): return self
     def __exit__(self, *a): return False
-    def request(self, method, url, params=None, content=None):
-        self.calls.append((method, url, params, content)); return _FakeResp()
+    def request(self, method, url, params=None, content=None, headers=None):
+        self.calls.append((method, url, params, content, headers)); return _FakeResp()
 
 
 def test_call_preserves_duplicate_query_keys(monkeypatch):
@@ -152,7 +152,7 @@ def test_call_preserves_duplicate_query_keys(monkeypatch):
     monkeypatch.setattr(cli, "_show", lambda r: None)
     args = cli.build_parser().parse_args(["call", "echo", "--query", "tag=a", "--query", "tag=b"])
     cli.cmd_call(args, {"base_url": "http://x"})
-    _, _, params, _ = fake.calls[0]
+    _, _, params, _, _ = fake.calls[0]
     assert params == [("tag", "a"), ("tag", "b")]  # both survive; a dict would drop tag=a
 
 
@@ -372,3 +372,23 @@ def test_org_access_and_invite_access_parsers():
     assert a.fn is cli.cmd_org_access and a.user_id == 5 and a.tools == "stripe,gh" and a.local_run == "off"
     b = p.parse_args(["org", "invite", "x@y.z", "--all-tools", "--local-run", "off"])
     assert b.fn is cli.cmd_org_invite and b.all_tools is True and b.local_run == "off"
+
+
+def test_call_content_type_flag_and_json_sniff(monkeypatch):
+    """`call` sends a Content-Type: explicit --content-type wins; else a JSON body sniffs to
+    application/json (npm publish et al. reject an untyped body); a non-JSON body sends none."""
+    p = cli.build_parser()
+    assert p.parse_args(["call", "t", "p", "--content-type", "text/plain"]).content_type == "text/plain"
+
+    fake = _FakeClient()
+    monkeypatch.setattr(cli, "_client", lambda cfg: fake)
+    monkeypatch.setattr(cli, "_show", lambda r: None)
+    cfg = {"base_url": "http://x", "token": "T"}
+
+    def sent_headers(*extra) -> dict:
+        cli.cmd_call(p.parse_args(["call", "t", "p", "--method", "PUT", *extra]), cfg)
+        return fake.calls[-1][4]
+
+    assert sent_headers("--data", '{"ok":1}') == {"content-type": "application/json"}  # sniffed from JSON body
+    assert sent_headers("--data", "plain text") == {}  # non-JSON body: no guess
+    assert sent_headers("--data", "plain", "--content-type", "text/csv") == {"content-type": "text/csv"}  # flag wins

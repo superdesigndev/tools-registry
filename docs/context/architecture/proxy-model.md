@@ -31,6 +31,9 @@ Faithfulness mechanics inside `relay()`:
 - request headers rebuilt from `request.headers.raw` into an `httpx.Headers` multidict (preserves
   duplicate headers / cookies); injection (`headers[name] = v`) overwrites only the named one.
 - query as a list from `request.query_params.multi_items()` (keeps duplicate keys like `?tag=a&tag=b`).
+- path rebuilt from `request.scope["raw_path"]` (in `call_tool`), not Starlette's URL-decoded path
+  param — percent-encoding survives to the upstream (npm's scoped publish `PUT /@scope%2fname` 404s
+  if `%2f` is decoded to a literal slash).
 - body streamed via `content=request.stream()` (stream, never buffer). Exception: a caller may
   base64/gzip-encode the body with `X-Treg-Body-Encoding` to slip SQL/HTML past a hosting-edge WAF;
   `_BodyDecodeMiddleware` (in api.py) then buffers + decodes it *before* `relay()` runs, so the relay

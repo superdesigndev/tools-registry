@@ -160,6 +160,13 @@ def _show(resp: httpx.Response) -> None:
         sys.exit(1)
 
 
+def _detail_url(cfg: dict, kind: str, name: str) -> str:
+    """The shareable dashboard page for a registered skill/tool. Printed after every registration so
+    sharing is just forwarding the link — the page carries the preview + the agent install prompt."""
+    base = (cfg.get("base_url") or "https://treg.superdesign.dev").rstrip("/")
+    return f"{base}/app/{'skills' if kind == 'skill' else 'tools'}/{quote(str(name), safe='')}"
+
+
 # ---- auth --------------------------------------------------------------------------------
 def cmd_config(args, cfg) -> None:
     if args.base_url:
@@ -1047,7 +1054,8 @@ def _import_env(args, cfg, env_path: str) -> None:
                         print(f"  ✗ {a.tool_name}: {a.secret_name} has no value in the env — skipped"); continue
                 if a.tool_name in existing_tools:               # already registered → skip (or replace) BEFORE writing a secret
                     if not args.replace:
-                        print(f"  · {a.tool_name}: already registered (use --replace)"); continue
+                        print(f"  · {a.tool_name}: already registered (use --replace)")
+                        print(f"    ↗ {_detail_url(cfg, 'tool', a.tool_name)}"); continue
                     c.delete(f"/tools/{existing_tools[a.tool_name]}")
                     if a.secret_name in existing_secrets:
                         c.delete(f"/secrets/{existing_secrets[a.secret_name]}")
@@ -1065,7 +1073,8 @@ def _import_env(args, cfg, env_path: str) -> None:
                 rt = c.post("/tools", json=tool_body)
                 if rt.status_code >= 400:
                     print(f"  ✗ {a.tool_name}: tool failed ({rt.status_code}) {rt.text[:100]}"); continue
-                print(f"  ✓ {a.tool_name:<14} {a.base_url}"); ok += 1
+                print(f"  ✓ {a.tool_name:<14} {a.base_url}")
+                print(f"    ↗ {_detail_url(cfg, 'tool', a.tool_name)}"); ok += 1
             print(f"\nRegistered {ok}/{len(chosen)} tools.")
         if oauth_dets:
             if not args.no_oauth and sys.stdin.isatty():
@@ -1120,7 +1129,7 @@ def _import_clis(args, cfg, env_path: str) -> None:
                 if name in existing:  # --replace: delete-then-recreate
                     c.delete(f"/tools/{existing[name]}")
                 registered.append((name, d["tier"], _register_cli_tool(c, entry, cli, d, envvar, _val)))
-    _print_cli_report(scanned, registered, report_only, args.status)
+    _print_cli_report(scanned, registered, report_only, args.status, cfg)
 
 
 def _register_cli_tool(c, entry, cli, decision, envvar, val_getter) -> str:
@@ -1198,6 +1207,7 @@ def _import_add_cli(args, cfg) -> None:
     # An unknown bin is NOT on the server allow-list (the RCE guard), so it runs LOCALLY; server-run needs
     # an admin to allow-list the bin. If a key was bound it's also a callable HTTP tool.
     print(f"✓ Registered '{name}'. Run it locally: `treg run {name}`.")
+    print(f"  ↗ {_detail_url(cfg, 'tool', name)}")
     if bindings:
         print(f"  (key stored — also a callable API tool; to run '{bin_}' on the SERVER too, an admin adds it to TREG_RUN_ALLOWED_BINS.)")
     import json as _json
@@ -1207,7 +1217,7 @@ def _import_add_cli(args, cfg) -> None:
     print("\nShare this to add it to the catalog for everyone:\n  " + _json.dumps(entry))
 
 
-def _print_cli_report(scanned, registered, report_only, verbose) -> None:
+def _print_cli_report(scanned, registered, report_only, verbose, cfg=None) -> None:
     """Group the scan into an actionable report: what's ready (and where it runs), what needs a key or a
     login (with the exact next step), what isn't supported, and how many catalog CLIs aren't installed."""
     from collections import defaultdict
@@ -1229,6 +1239,10 @@ def _print_cli_report(scanned, registered, report_only, verbose) -> None:
     if local:
         print(f"{verb} (local, uses your login):")
         _list(local)
+    if cfg and not report_only:  # each registered CLI's shareable page (send the link to share it)
+        for n, _t, r in registered:
+            if r in ("ok", "exists"):
+                print(f"  ↗ {_detail_url(cfg, 'tool', n)}")
     if buckets["needs_key"] or buckets["needs_login"]:
         print("\nNeeds setup before it can register:")
         for _e, cli, d, _v in buckets["needs_key"]:
@@ -1517,7 +1531,8 @@ def _import_skills(args, cfg, skills_dir, env_path: str) -> None:
             clash = d.name in existing_bundles or (d.kind != "recipe_only" and d.name in existing_tools)
             if clash:
                 if not args.replace:
-                    print(f"  · {d.name}: already registered (use --replace to update)"); continue
+                    print(f"  · {d.name}: already registered (use --replace to update)")
+                    print(f"    ↗ {_detail_url(cfg, 'skill', d.name)}"); continue
                 for bid in existing_bundles.get(d.name, []):   # delete the old bundle (cascades its tool+secrets)
                     c.delete(f"/bundles/{bid}")
             try:
@@ -1531,8 +1546,10 @@ def _import_skills(args, cfg, skills_dir, env_path: str) -> None:
                 print(f"  ✗ {d.name}: {r.status_code} {r.text[:100]}"); continue
             wrote = sk.write_contract(d)                        # only after a successful push
             tag = "recipe" if d.kind == "recipe_only" else "tool"
-            print(f"  ✓ {d.name:<28} ({tag})" + ("  [wrote treg.json]" if wrote else "")); ok += 1
-    print(f"\nImported {ok}/{len(chosen)} skills.")
+            print(f"  ✓ {d.name:<28} ({tag})" + ("  [wrote treg.json]" if wrote else ""))
+            print(f"    ↗ {_detail_url(cfg, 'skill', d.name)}"); ok += 1
+    print(f"\nImported {ok}/{len(chosen)} skills. Share a skill by sending its ↗ link — "
+          "the page previews it and carries the agent install prompt.")
 
 
 # ---- tools --------------------------------------------------------------------------------
@@ -1602,7 +1619,9 @@ def cmd_add(args, cfg) -> None:
             body.update(secret_id=sid, injector="env", auth_in="header",
                         auth_name=args.header or "Authorization",
                         auth_format=args.format or "Bearer {secret}", secret_field="access_token")
-        _show(c.post("/tools", json=body))
+        r = c.post("/tools", json=body)
+        _show(r)
+    print(f"↗ {_detail_url(cfg, 'tool', args.name)}")
 
 
 def cmd_tool_ls(args, cfg) -> None:
@@ -1652,11 +1671,21 @@ def cmd_call(args, cfg) -> None:
     # httpx serializes a list of tuples preserving duplicates; a dict would drop all but the last.
     params = [tuple(kv.split("=", 1)) for kv in args.query]
     content = Path(args.file).read_bytes() if args.file else (args.data.encode() if args.data else None)
+    # Content-Type: explicit flag wins; otherwise sniff JSON so `--data '{...}'` / `--file doc.json`
+    # reach upstreams that require `application/json` (e.g. npm publish) without extra flags.
+    ctype = args.content_type
+    if ctype is None and content:
+        try:
+            json.loads(content)
+            ctype = "application/json"
+        except ValueError:
+            pass
+    headers = {"content-type": ctype} if ctype else {}
     rest = args.target.rstrip("/")
     if args.path:
         rest += "/" + args.path.lstrip("/")
     with _client(cfg) as c:
-        _show(c.request(args.method, f"/call/{rest}", params=params, content=content))
+        _show(c.request(args.method, f"/call/{rest}", params=params, content=content, headers=headers))
 
 
 def cmd_calls(args, cfg) -> None:
@@ -2196,6 +2225,8 @@ def cmd_skill_push(args, cfg) -> None:
         sys.exit(f"could not read skill file {args.file!r}: {exc}")
     with _client(cfg) as c:
         _show(c.post("/skills", json=body))
+    if body.get("name"):
+        print(f"↗ {_detail_url(cfg, 'skill', body['name'])}")
 
 
 def cmd_skill_init(args, cfg) -> None:
@@ -2232,6 +2263,7 @@ def cmd_skill_add(args, cfg) -> None:
         sys.exit(str(exc))
     with _client(cfg) as c:
         _show(c.post("/skills", json=payload))
+    print(f"↗ {_detail_url(cfg, 'skill', payload['name'])}")
 
 
 def cmd_skill_ls(args, cfg) -> None:
@@ -2485,10 +2517,35 @@ def cmd_org_invite(args, cfg) -> None:
         org_id = _active_org_id(cfg, c)
         if org_id is None:
             sys.exit("no active org")
+        # --skill/--tool = a SHARE invite: the invitee lands on that detail page after the emailed
+        # sign-in. Access matches the dashboard's Share default — the FULL vault; scope with
+        # --tools (e.g. --tools <skill>,<its-tool>) to restrict what they can see and call.
+        landing = None
+        if getattr(args, "skill", None):
+            r = c.get(f"/bundles/by-name/{quote(args.skill, safe='')}")
+            if r.status_code >= 400:
+                sys.exit(f"no skill named {args.skill!r} in the active org")
+            landing = f"/app/skills/{quote(args.skill, safe='')}"
+        elif getattr(args, "tool", None):
+            r = c.get(f"/tools/by-name/{quote(args.tool, safe='')}")
+            if r.status_code >= 400:
+                sys.exit(f"no tool named {args.tool!r} in the active org")
+            landing = f"/app/tools/{quote(args.tool, safe='')}"
+        if landing is None or args.all_tools or getattr(args, "tools", None):
+            access = _resolve_tool_access(c, org_id, args)
+        else:
+            access = None  # full vault access — the dashboard Share modal's default
         body = {"email": args.email, "role": args.role, "expires_days": args.expires_days,
-                "tool_access": _resolve_tool_access(c, org_id, args),
-                "local_run_enabled": getattr(args, "local_run", "on") != "off"}
-        _show(c.post(f"/orgs/{org_id}/invites", json=body))
+                "tool_access": access,
+                "local_run_enabled": getattr(args, "local_run", "on") != "off",
+                "landing": landing}
+        r = c.post(f"/orgs/{org_id}/invites", json=body)
+        _show(r)
+    if landing is not None:  # _show exits on error, so this only prints on success
+        base = (cfg.get("base_url") or "https://treg.superdesign.dev").rstrip("/")
+        print(f"↗ share link: {base}{landing}?invite={quote(args.email, safe='')}")
+        print("  One click for them: sign in as that email → invite auto-accepts → this page opens."
+              "  (The invite email's button does the same.)")
 
 
 def cmd_org_access(args, cfg) -> None:
@@ -2768,8 +2825,11 @@ def build_parser() -> argparse.ArgumentParser:
     oi = mk(og, "invite", "Invite someone to the active team by email (choose their tool access).",
             "treg org invite bob@company.com --role member",
             "treg org invite bob@company.com --tools stripe,gh   # only these tools",
-            "treg org invite bob@company.com --all-tools --local-run off")
+            "treg org invite bob@company.com --all-tools --local-run off",
+            "treg org invite bob@company.com --skill slideshow   # share invite: they land on its page (full access; add --tools to scope)")
     oi.add_argument("email", help="the invitee's email"); oi.add_argument("--role", default="member", choices=["viewer", "member", "admin"], help="role to grant (default: member)")
+    oi.add_argument("--skill", help="share invite: land them on this skill's page (full vault access; scope with --tools)")
+    oi.add_argument("--tool", help="share invite: land them on this tool's page (full vault access; scope with --tools)")
     oi.add_argument("--expires-days", type=int, default=7, help="invite validity in days (default: 7)")
     oi.add_argument("--tools", help="comma-separated tool names this member may use (default: prompt / all)")
     oi.add_argument("--all-tools", dest="all_tools", action="store_true", help="grant access to every tool (skip the prompt)")
@@ -2865,6 +2925,8 @@ def build_parser() -> argparse.ArgumentParser:
     cl.add_argument("--method", default="GET", help="HTTP method (default: GET)")
     cl.add_argument("--query", action="append", default=[], metavar="K=V", help="a query param (repeatable)")
     cl.add_argument("--data", help="request body (string)"); cl.add_argument("--file", help="request body from a file")
+    cl.add_argument("--content-type", dest="content_type", metavar="TYPE",
+                    help="Content-Type for the body (default: sniffed — a body that parses as JSON sends application/json)")
     cl.set_defaults(fn=cmd_call)
 
     ca = mk(sub, "calls", "Show the audit log: who called what, when, and the result.", "treg calls --limit 20")
