@@ -1618,12 +1618,14 @@ th{background:rgba(0,0,0,.25)}
             <p class="explain">Already on the team? Just send them the page link (⧉ Copy link). This invites someone <b>new</b> — after one click in the email they land on this exact page.</p>
             <div v-if="share.member" class="tut-notice" style="margin:0 0 10px"><b>{{share.member.email}}</b> is already a member — just send them the link, no invite needed.</div>
             <div class="field" style="margin-bottom:10px"><input v-model="share.email" type="email" placeholder="teammate@company.com" @keyup.enter="sendShare"/></div>
-            <div style="display:flex;gap:14px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
+            <div style="margin-bottom:10px">
               <label style="display:flex;gap:6px;align-items:center;font-size:12.5px">role
                 <select v-model="share.role" style="background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:6px;padding:4px 8px;font-family:var(--mono)">
                   <option value="viewer">viewer (use, not edit)</option><option value="member">member</option><option v-if="isOwner" value="admin">admin</option>
                 </select>
               </label>
+            </div>
+            <div style="margin-bottom:10px">
               <label style="display:flex;gap:8px;align-items:center;font-size:12.5px;cursor:pointer">
                 <input type="checkbox" v-model="share.full"/> Share full vault access
               </label>
