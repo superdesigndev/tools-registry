@@ -1729,7 +1729,7 @@ createApp({
       copyRecipe:null, recipeTab:'cURL', viewRecipe:null, recipeSaved:false,
       // detail pages (shareable /app/skills/<name> + /app/tools/<name> deep links)
       detail:null, detailData:null, detailErr:'', detailLoading:false, detailFile:'SKILL.md', detailCopied:'', detailNote:'',
-      share:{on:false, email:'', role:'viewer', scope:true, busy:false, err:'', sent:null, member:null},  // detail-page "Share…" (invite + land on this page)
+      share:{on:false, email:'', role:'viewer', scope:false, busy:false, err:'', sent:null, member:null},  // detail-page "Share…" (invite + land on this page)
       me:'', myOrgs:[], isAdmin:false,
       onboarded:true,  // first-run onboarding (narrative stepper) - see onb.*
       welcome:{on:false, name:'', busy:false, err:''},  // first-run: name your team (the primary path)
@@ -2580,7 +2580,7 @@ createApp({
       return false;
     },
     openShare(){
-      this.share={on:true, email:'', role:'viewer', scope:this.detail.kind==='skill', busy:false, err:'', sent:null, member:null};
+      this.share={on:true, email:'', role:'viewer', scope:false, busy:false, err:'', sent:null, member:null};
       if(this.canAdmin) this.loadOrgAdmin().catch(()=>{}); },
     async sendShare(){ const email=(this.share.email||'').trim(); if(!email){ this.share.err='Enter their email.'; return; }
       this.share.member=(this.orgMembers||[]).find(m=>(m.email||'').toLowerCase()===email.toLowerCase())||null;
