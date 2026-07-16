@@ -4,7 +4,9 @@
 set -e
 
 BASE="{BASE}"
-SRC="git+https://github.com/superdesigndev/tools-registry.git"
+# Install from PyPI (fast, public, no git clone). The base package is the light CLI; the FastAPI/DB
+# server stack is the `tools-registry[server]` extra, which people who self-host install separately.
+SRC="tools-registry"
 
 printf '\n\033[38;5;173m▚ tools-registry\033[0m - installing the treg CLI…\n\n'
 
