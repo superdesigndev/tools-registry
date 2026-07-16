@@ -19,12 +19,17 @@ import json
 import re
 from datetime import datetime, timezone
 
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select
+from typing import TYPE_CHECKING
 
-from . import crypto, oauth
-from .injectors import _token_from_json
-from .models import Secret, Tool
+from .injectors import _token_from_json  # light: pure JSON/token helpers, no DB
+
+# The DB/crypto/oauth deps are used at runtime ONLY in `render_grant` (the server-side grant path — the
+# CLI client never calls it). Keeping them out of the module's top-level imports lets the CLI install
+# without the heavy `tools-registry[server]` stack. They are imported lazily inside render_grant; here
+# they're TYPE_CHECKING-only for the annotations (safe under `from __future__ import annotations`).
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
+    from .models import Tool
 
 # OAuth grants may release ONLY the short-lived leaf (access token). Releasing refresh_token /
 # client_secret would hand the whole re-mintable identity to the member — never allowed.
@@ -211,6 +216,9 @@ async def render_grant(tool: Tool, profile: dict, db: AsyncSession, http) -> dic
     The CLIENT decides HOW to hand each item to the CLI (an env var, a flag, or a private socket); the
     server only resolves + renders the value. Raises LookupError (a referenced secret is missing) or lets
     an oauth refresh error propagate — the endpoint maps both to the same statuses the /call path uses."""
+    from sqlmodel import select  # lazy: server-only deps (part of the tools-registry[server] extra)
+    from . import crypto, oauth
+    from .models import Secret
     inject = profile.get("inject") or []
     if not inject:
         # A self-authenticating CLI (auto-import "local tier": gh, gcloud, vercel — the credential lives

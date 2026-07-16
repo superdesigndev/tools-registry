@@ -92,7 +92,8 @@ its own sqlite DB and email dev mode.
 
 ## Render (Blueprint)
 `render.yaml` at the repo root deploys the whole thing as **one web service + a managed Postgres**
-(region `oregon`): `buildCommand: pip install .` (the wheel ships every web asset via the package),
+(region `oregon`): `buildCommand: pip install ".[server]"` — the base install is the **CLI only**, so the
+server deploy needs the `[server]` extra (FastAPI/DB/crypto); the wheel ships every web asset via the package.
 `startCommand: python -m treg`, health check on `/meta`. The DB URL is auto-wired via `fromDatabase`
 (config's validator adds the asyncpg driver). Secrets are **dashboard-managed** (`sync: false` — the
 Fernet key, session/admin tokens, GitHub OAuth pair, Resend key); `TREG_PUBLIC_URL`,

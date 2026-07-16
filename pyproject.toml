@@ -1,29 +1,61 @@
 [project]
 name = "tools-registry"
-version = "0.0.1"
+version = "0.2.0"
 description = "A remote registry that turns team skills into shareable, callable tools via a credential-injecting proxy."
+readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.12,<3.14"
+authors = [
+    { name = "Unclecode", email = "unclecode@superdesign.dev" },
+    { name = "SuperDesign" },
+]
+maintainers = [{ name = "Unclecode", email = "unclecode@superdesign.dev" }]
+keywords = ["registry", "cli", "proxy", "credentials", "secrets", "api", "tools", "agents"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: Other/Proprietary License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development",
+    "Topic :: Utilities",
+]
+# Base install = just the CLI. Light + pure-Python, so `pip install tools-registry` (and Homebrew) are
+# fast. Everything needed to RUN a registry server lives in the `[server]` extra below.
 dependencies = [
+    "httpx>=0.27",
+    "questionary>=2.0",
+]
+
+[project.optional-dependencies]
+# The registry SERVER — host your own. The FastAPI app, the DB drivers, and encryption. Not needed to
+# USE the CLI against a hosted registry, only to RUN one. Install with: pip install "tools-registry[server]"
+server = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.32",
-    "httpx>=0.27",
     "sqlmodel>=0.0.22",
     "sqlalchemy[asyncio]>=2.0",
     "aiosqlite>=0.20",
     "asyncpg>=0.30",
     "cryptography>=43",
     "pydantic-settings>=2.5",
-    "questionary>=2.0",
 ]
 
 [project.scripts]
 treg = "treg.cli:main"
 
+[project.urls]
+Homepage = "https://treg.superdesign.dev"
+Repository = "https://github.com/superdesigndev/tools-registry"
+Issues = "https://github.com/superdesigndev/tools-registry/issues"
+
 [dependency-groups]
 dev = [
     "pytest>=8.3",
     "pytest-asyncio>=0.24",
+    "tools-registry[server]",   # the test suite imports the server (api, models, …), so dev pulls it in
 ]
 
 [tool.pytest.ini_options]
