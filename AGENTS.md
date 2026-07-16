@@ -5,8 +5,8 @@ This file orients an AI agent (Claude Code, Codex, Cursor, …) working in this 
 ## Read first
 
 - **Design docs are the source of truth.** `docs/context/` holds one fragment per subsystem, each citing
-  the source files it covers. Before changing code, load the fragment for that area. The
-  `tools-registry-context` skill (`.claude/skills/`) maps a source file → its fragment.
+  the source files it covers in its frontmatter (`sources:`). Before changing code, load the fragment for
+  that area; `docs/context/README.md` is the generated index (source file → fragment).
 - **The charter:** tools-registry is a registry that turns a team's skills into shareable, callable tools;
   the core mechanic is a proxy that injects credentials server-side so a consumer never holds the secret.
   See `README.md`.
