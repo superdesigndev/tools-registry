@@ -54,7 +54,24 @@ scans skill subdirs, then registers what you pick:
 ```bash
 treg upload                       # both sides of the cwd; `treg upload env|skills --dir <d>` to restrict
 ```
-**Single-credential tool (the common case):**
+**Default: wrap new keys in a skill.** When registering a new key/endpoint/CLI, pair it with
+a skill so credential, tool, and recipe land together (and it gets a shareable page). If no
+skill exists, create a basic one — a proper SKILL.md (frontmatter matters: agents discover
+skills by it) + one example call:
+```bash
+mkdir -p ./posthog && cat > ./posthog/SKILL.md <<'MD'
+---
+name: posthog
+description: Query the PostHog analytics API through treg — the key is injected server-side. Use for events, insights, and project queries.
+---
+Call it: `treg call posthog api/projects/@current` (upstream: https://us.posthog.com)
+MD
+treg skill init --dir ./posthog   # drafts treg.json: base_url from the catalog (folder name) or URLs in SKILL.md; review it + add the key
+treg skill add --dir ./posthog    # registers recipe + secret + tool atomically
+```
+**Never orphan a secret:** a stored key nothing binds is dead weight — if you use `secret add`
+directly, bind it to a tool (endpoint/CLI) in the same breath.
+**Bare endpoint, no recipe (only when a skill adds nothing):**
 ```bash
 treg secret add posthog-key --value "$POSTHOG_API_KEY"          # or --file ./.secret/token.json
 treg tool add posthog --base-url https://us.posthog.com --secret posthog-key

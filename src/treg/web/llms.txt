@@ -107,6 +107,9 @@ in the `X-Treg-Token` header on every call. Never share the upstream key - share
     treg add <name> --base-url URL [--secret <name|id>]   convenience shortcut for `tool add` above
                                                           (`tool add` is the canonical command; `add`
                                                           just resolves --secret by name + defaults to Bearer)
+                                                          (register NEW keys via a skill bundle by default —
+                                                          see Skills — so the tool carries a recipe; never
+                                                          store a secret without binding it to a tool)
     treg tool ls | rm <id> | update <id> …
     treg call <tool> <path>  |  treg call <full-url>     proxy an HTTP call (named or agent-native)
     treg calls [--limit N]                        the proxied-call audit log
@@ -168,6 +171,10 @@ A skill is a folder registered as one bundle - a recipe + its secrets + its tool
 (guessing the base_url, finding the secrets). Review it, then `treg skill add --dir
 ./my-skill` uploads recipe + secrets + tool atomically.
 
+Default when adding a NEW key/endpoint/CLI: pair it with a skill — if none exists, create a
+basic one (SKILL.md with frontmatter + one example call) so recipe, secret, and tool register
+together.
+
 A teammate installs any registered skill onto their machine with
 `treg skill install <name>` (or `--all`) - it writes the recipe to `.claude/skills/<name>/SKILL.md`.
 
@@ -200,6 +207,10 @@ skills` restrict it (`--dir` sets the location).
 2. Discover available tools with `treg tool ls` or `GET {BASE}/tools`.
 3. Prefer a **per-org token** for an agent (scoped to one team), not a human identity token.
 4. The registry records who called what - calls are attributed to the token's user.
+5. Registering a new key/endpoint/CLI? Default to the skill path (`treg skill init` +
+   `skill add`, or `POST {BASE}/skills`) — create a minimal SKILL.md (with frontmatter) if
+   none exists. Bare `secret add` + `tool add` only when a recipe adds nothing, and never
+   leave a secret unbound to a tool.
 
 Example (an agent calling Intercom with no key on its box):
 
