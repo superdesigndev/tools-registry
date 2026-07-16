@@ -58,7 +58,7 @@ def test_admin_and_skill_parsers():
 
 def test_config_v2_roundtrip(tmp_path, monkeypatch):
     monkeypatch.setattr(cli, "CONFIG_PATH", tmp_path / "config.json")
-    cli._save_config({"base_url": "https://treg.ngrok.app", "token": "T", "email": "me@x.dev",
+    cli._save_config({"base_url": "https://treg.superdesign.dev", "token": "T", "email": "me@x.dev",
                       "active_org": "team-a", "identity": True})
     cfg = cli._load_config()
     assert cfg["token"] == "T" and cfg["active_org"] == "team-a" and cfg["identity"] is True
@@ -67,7 +67,7 @@ def test_config_v2_roundtrip(tmp_path, monkeypatch):
 def test_legacy_multiorg_config_migrates(tmp_path, monkeypatch):
     monkeypatch.setattr(cli, "CONFIG_PATH", tmp_path / "config.json")
     (tmp_path / "config.json").write_text(json.dumps({
-        "base_url": "https://treg.ngrok.app", "active_org": "team-a",
+        "base_url": "https://treg.superdesign.dev", "active_org": "team-a",
         "orgs": {"team-a": {"token": "OLD", "org_id": 3}}}))
     cfg = cli._load_config()
     assert cfg["token"] == "OLD" and cfg["active_org"] == "team-a" and cfg["identity"] is False

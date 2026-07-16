@@ -35,7 +35,8 @@ keygen` prints a Fernet key for `TREG_SECRET_KEY`.
   Render's `fromDatabase`-injected URL works unedited (the async engine needs the asyncpg driver).
 - `secret_key` — the Fernet key; empty → an ephemeral key is minted at startup (secrets won't survive a
   restart). See [auth-secrets](../architecture/auth-secrets.md).
-- `public_url` — default `https://treg.ngrok.app`; used to build the OAuth callback URI.
+- `public_url` — default `https://treg.superdesign.dev` (the reference deployment); self-hosters set
+  `TREG_PUBLIC_URL`. Used to build the OAuth callback URI.
 - `api_token` — a bootstrap caller token (MVP leftover; per-user tokens are the real auth).
 - `admin_token` — the cross-tenant **super-admin** bearer (`TREG_ADMIN_TOKEN`); empty disables the env
   path (only `is_superadmin` users reach `/admin`). Keep it long + secret. See
@@ -84,10 +85,10 @@ lives inside the `treg` package (the `packages` inclusion covers non-.py assets)
 [dashboard](../interface/dashboard.md).
 
 ## Current hosting (shipped)
-Self-hosted on a Mac Studio: `python -m treg` on port **18790**, exposed via the ngrok endpoint `treg` →
-`https://treg.ngrok.app`. The server runs from the repo dir; the gitignored `.env` (Fernet key) +
-`treg-server.db` (registered tools/secrets) live only on the host — **back them up before moving**;
-losing the key makes every stored secret unrecoverable.
+Deployed on **Render** at `https://treg.superdesign.dev` via the Blueprint below (one web service + a
+managed Postgres). The Fernet key lives only in the service's environment — **back it up**; losing it
+makes every stored secret unrecoverable. For local dev, `scripts/dev-local.sh up` runs the server with
+its own sqlite DB and email dev mode.
 
 ## Render (Blueprint)
 `render.yaml` at the repo root deploys the whole thing as **one web service + a managed Postgres**

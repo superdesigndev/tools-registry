@@ -89,7 +89,7 @@ files a skill folder is — `SKILL.md` (agent recipe: call the treg proxy, key i
 
 ## CLI installer
 `GET /install.sh` (`install_sh`) serves `src/treg/web/install.sh`, `{BASE}`-templated like `llms.txt`
-(so it targets whatever host is live — ngrok now, the real domain after deploy). The script installs the
+(so it targets whatever host is live — a dev box or the real domain). The script installs the
 `treg` CLI via `uv tool install` → `pipx` → `pip3` and runs `treg config --base-url {BASE}`.
 **Caveat:** the repo is private and the package is not on PyPI, so `curl … /install.sh | sh` works today
 for teammates with repo access (git creds); a fully public install needs a PyPI publish (or a

@@ -4,7 +4,7 @@ Decide **which tools each member may use**, and whether they may run CLIs **on t
 tutorial follows the same format as the [main tutorial](/tutorial): every step shows the **exact command**,
 the **expected output**, and **what to notice** — so it reads standalone. Copy each command and follow along.
 
-We use the registry at `https://treg.ngrok.app`.
+We use the registry at `https://treg.superdesign.dev`.
 
 ---
 
@@ -48,7 +48,7 @@ the `HOME=` prefix.
 ```bash
 for u in tom sam; do
   mkdir -p ~/.treg-personas/$u
-  HOME=~/.treg-personas/$u treg config --base-url https://treg.ngrok.app
+  HOME=~/.treg-personas/$u treg config --base-url https://treg.superdesign.dev
 done
 ```
 
@@ -281,7 +281,7 @@ are rejected with a clear `422` so you never grant a typo.
 
 # Part 4 — The same controls in the dashboard
 
-Everything above is also point-and-click at `https://treg.ngrok.app/` → **Team**.
+Everything above is also point-and-click at `https://treg.superdesign.dev/` → **Team**.
 
 - **The members table** gains two cells per person:
   - **Tools** — shows `All` or `N tools`. Click it to open a checklist of *every* tool in the team;

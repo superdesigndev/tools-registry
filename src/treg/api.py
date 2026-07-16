@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import base64
 import gzip
+import hashlib
 import hmac
 import json
 import os
@@ -154,14 +155,33 @@ async def _id_out_of_range(request: Request, exc: OverflowError) -> JSONResponse
 
 _WEB_DIR = Path(__file__).parent / "web"
 
+_app_version_cache: tuple[float, str] | None = None  # (index.html mtime, content hash)
+
+
+def _app_version() -> str:
+    """A stamp that changes with every deploy of the dashboard bundle: a hash of index.html,
+    re-derived when the file's mtime moves (so dev --reload picks up edits too). Long-lived tabs
+    compare this against the value they booted with and offer a refresh when it drifts."""
+    global _app_version_cache
+    index = _WEB_DIR / "index.html"
+    try:
+        mtime = index.stat().st_mtime
+    except OSError:
+        return "dev"
+    if _app_version_cache is None or _app_version_cache[0] != mtime:
+        digest = hashlib.sha256(index.read_bytes()).hexdigest()[:12]
+        _app_version_cache = (mtime, digest)
+    return _app_version_cache[1]
+
 
 @app.get("/meta")
 async def meta() -> dict:
     """Open: what the dashboard needs to render correct, shareable snippets — the public proxy URL
-    (so copy/paste snippets use the real domain, not whatever origin the browser happens to be on)."""
+    (so copy/paste snippets use the real domain, not whatever origin the browser happens to be on)
+    — plus the bundle version, so an open tab can detect a new deploy and offer a refresh."""
     s = get_settings()
     return {"public_url": s.public_url.rstrip("/"), "github": bool(s.github_client_id),
-            "google": bool(s.google_client_id)}
+            "google": bool(s.google_client_id), "app_version": _app_version()}
 
 
 @app.get("/providers.json", include_in_schema=False)
@@ -175,7 +195,7 @@ async def providers_catalog() -> dict:
 
 # ---- human login via GitHub OAuth (dashboard sessions) ------------------------------------
 def _is_https(request: Request) -> bool:
-    # behind ngrok/Render, TLS is terminated upstream and forwarded as http + X-Forwarded-Proto.
+    # behind a reverse proxy (Render), TLS is terminated upstream and forwarded as http + X-Forwarded-Proto.
     return request.headers.get("x-forwarded-proto", "").lower() == "https" or request.url.scheme == "https"
 
 
@@ -887,12 +907,16 @@ def _esc_html(s: str) -> str:
 
 
 @app.get("/", include_in_schema=False)
-async def landing(request: Request):
+async def landing(request: Request, treg_session: str = Cookie(default=""),
+                  db: AsyncSession = Depends(get_session)):
     """Serve the marketing landing at the root. Any query string (invite links, OAuth returns,
     tour deep-links) belongs to the SPA, so those requests fall through to the dashboard —
-    the landing is only the clean, parameterless front door."""
+    the landing is only the clean, parameterless front door. A signed-in visitor belongs on
+    the dashboard, so a live session redirects to /app instead of re-showing the pitch."""
     page = _WEB_DIR / "landing.html"
     if page.exists() and not request.query_params:
+        if treg_session and await _user_from_session(treg_session, db):
+            return RedirectResponse("/app", status_code=302)
         return FileResponse(page, headers={"Cache-Control": "no-cache"})
     return await dashboard()
 
@@ -921,7 +945,7 @@ async def llms_txt():
 @app.get("/install.sh", include_in_schema=False)
 async def install_sh():
     """`curl -fsSL {BASE}/install.sh | sh` — installs the treg CLI and points it at this server.
-    The serving domain is templated in so it targets whichever host is live (ngrok now, the real
+    The serving domain is templated in so it targets whichever host is live (dev box or the real
     domain after deploy)."""
     f = _WEB_DIR / "install.sh"
     if not f.exists():
@@ -1768,7 +1792,7 @@ SANDBOX_RATE_WINDOW_S = 3600   # 1 hour
 
 
 def _client_ip(request: Request) -> str:
-    """Best-effort client IP — first hop of X-Forwarded-For behind ngrok/Render, else the socket peer."""
+    """Best-effort client IP — first hop of X-Forwarded-For behind the reverse proxy (Render), else the socket peer."""
     xff = request.headers.get("x-forwarded-for")
     if xff:
         return xff.split(",")[0].strip()

@@ -638,12 +638,12 @@ th{background:rgba(0,0,0,.25)}
       <nav class="side">
         <!-- ORG (top): name → settings · ▾ → switch -->
         <div class="orgblock">
-          <div class="orgmain" @click="orgMenu=!orgMenu" role="button" tabindex="0" @keydown.enter="orgMenu=!orgMenu" aria-haspopup="true" :aria-expanded="orgMenu" aria-label="Teams">
+          <div class="orgmain" ref="orgmain" @click="toggleOrgMenu" role="button" tabindex="0" @keydown.enter="toggleOrgMenu" aria-haspopup="true" :aria-expanded="orgMenu" aria-label="Teams">
             <span class="role" :class="activeRole">{{activeRole}}</span>
             <b class="orgname">{{activeName}}</b>
             <span class="orgcaret">▾</span>
           </div>
-          <div class="dropdown" v-if="orgMenu" @click.stop>
+          <div class="dropdown" v-if="orgMenu" :style="orgMenuStyle" @click.stop>
             <div class="grp" style="margin:4px 10px 6px">Your teams</div>
             <div class="orgrow" v-for="o in myOrgs" :key="o.slug" :class="{off:!connected(o.slug)}">
               <div class="orgrow-main">
@@ -1573,6 +1573,10 @@ th{background:rgba(0,0,0,.25)}
     </div>
 
     <!-- access reminder toast: fired when a new tool is registered while some members have customized access -->
+    <div v-if="newVersion" class="tut-notice" style="position:fixed;bottom:18px;right:18px;max-width:360px;z-index:200;box-shadow:0 6px 20px rgba(0,0,0,.25);background:var(--card)">
+      A new version of the dashboard is available.
+      <div style="margin-top:8px;display:flex;gap:8px"><button class="btn sm" @click="reloadApp()">Refresh now</button><button class="btn sm" @click="newVersion=false">Later</button></div>
+    </div>
     <div v-if="accessNote" class="tut-notice" style="position:fixed;bottom:18px;right:18px;max-width:360px;z-index:200;box-shadow:0 6px 20px rgba(0,0,0,.25);background:var(--card)">
       {{accessNote}}
       <div style="margin-top:8px;display:flex;gap:8px"><button class="btn sm" @click="go('org')">Open Team</button><button class="btn sm" @click="accessNote=''">Dismiss</button></div>
@@ -1588,13 +1592,14 @@ createApp({
     let cfg={active:null,orgs:{}}; try{ cfg=JSON.parse(localStorage.getItem(LS))||cfg; }catch(e){}
     return {
       theme: localStorage.getItem('treg-theme')||'dark',
-      cfg, tokenInput:'', busy:false, loginErr:'', addOrg:false, orgMenu:false,
+      cfg, tokenInput:'', busy:false, loginErr:'', addOrg:false, orgMenu:false, orgMenuStyle:null,
       emailInput:'', codeInput:'', emailStage:false, devCode:'', pendingInvites:[], invitePrefill:'', inviteChoice:false, inviteBusy:false,
       inviteSel:{}, inviteLinkOrg:null, inviteErr:'',  // multi-select accept: checked ids, the org_id the clicked email link was for, partial-failure note
       tut:{i:0, panel:null}, tutCopied:false, tourI:0, helpMode:null, xtut:{i:0},
       newOrg:false, newOrgName:'', orgBusy:false, orgErr:'', orgMsg:'',
       orgMembers:[], orgInvites:[], inviteEmail:'', inviteRole:'member', lastInvite:null,
       editAccess:null, accessDraft:{}, inviteCustomize:false, inviteLocalRun:true, inviteToolSel:{}, accessNote:'',
+      bootVersion:'', newVersion:false,
       usage:null, usageDays:30, myUsage:null,  // usage-metering: rollups + the member's own used/cap
       confirmDel:'', confirmLeave:false, confirmRemove:null,
       showJoin:false, joinCode:'', joinBusy:false, joinErr:'',
@@ -2223,7 +2228,7 @@ createApp({
           +'. Here are the shared tools & skills — call any with no key on your machine.';
       }finally{ this.inviteBusy=false; }
     },
-    _suggestTeamName(){  // a friendly default from the email domain: jason@superdesign.dev → "Superdesign"
+    _suggestTeamName(){  // a friendly default from the email domain: sam@acme.dev → "Acme"
       const dom=((this.me||'').split('@')[1]||'').split('.')[0]||'';
       const generic=['gmail','outlook','hotmail','yahoo','icloud','proton','protonmail','me','qq','163'];
       return (dom && !generic.includes(dom.toLowerCase())) ? dom.charAt(0).toUpperCase()+dom.slice(1) : ''; },
@@ -2436,6 +2441,22 @@ createApp({
         if(!txt){ this.tryResp='(empty response body - status '+r.status+')'; }  // e.g. a 404 with no body left the box blank
         else { try{ this.tryResp=JSON.stringify(JSON.parse(txt),null,2); }catch(_){ this.tryResp=txt.slice(0,4000); } }
       }catch(e){ this.tryResp='Request failed: '+e; this.tryStatus=0; this.tryMs=Math.round(performance.now()-t0); } finally{ this.trying=false; } },
+    reloadApp(){ location.reload(); },
+    async checkVersion(){  // index.html is served no-cache, so a plain reload picks up a new deploy —
+      // this just detects one: compare /meta's bundle stamp against the one this tab booted with
+      if(!this.bootVersion || this.newVersion) return;
+      try{
+        const m = await fetch('/meta',{headers:{'ngrok-skip-browser-warning':'1'}}).then(r=>r.json());
+        if(m.app_version && m.app_version !== this.bootVersion) this.newVersion = true;
+      }catch(_){}
+    },
+    placeOrgMenu(){  // the sidebar is a scroll container that clips overflow, so the dropdown is
+      // position:fixed (viewport coords) and glued to its trigger here on open/scroll/resize
+      const t=this.$refs.orgmain; if(!t) return;
+      const r=t.getBoundingClientRect();
+      this.orgMenuStyle={position:'fixed', top:(r.bottom+6)+'px', left:r.left+'px'};
+    },
+    toggleOrgMenu(){ this.orgMenu=!this.orgMenu; if(this.orgMenu) this.placeOrgMenu(); },
     closeOverlays(){ this.newTool=false; this.newSkill=false; this.showJoin=false; this.newOrg=false; this.addOrg=false; this.tryTool=null; this.copyTool=null; this.orgMenu=false; },
   },
   async mounted(){
@@ -2449,14 +2470,22 @@ createApp({
       if(e.key==='/' && !typing && this.authed && this.view==='tools'){ e.preventDefault(); this.$refs.search && this.$refs.search.focus(); }
     });
     document.addEventListener('click', e=>{  // the org dropdown didn't close on an outside click
-      if(this.orgMenu && !e.target.closest('.orgblock')) this.orgMenu=false;
+      if(this.orgMenu && !e.target.closest('.orgblock') && !e.target.closest('.dropdown')) this.orgMenu=false;
     });
+    // the fixed-position dropdown must follow its trigger when anything scrolls or resizes
+    window.addEventListener('scroll', ()=>{ if(this.orgMenu) this.placeOrgMenu(); }, true);
+    window.addEventListener('resize', ()=>{ if(this.orgMenu) this.placeOrgMenu(); });
     window.addEventListener('popstate', e=>{  // browser Back moves between views (was exiting the app)
       const v=(e.state&&e.state.view)||(location.hash||'').replace('#','')||'tools';
       if(['tools','orgs','activity','usage','admin','help','secrets','start'].includes(v)) this.go(v, true);
     });
     this.meta = await fetch('/meta',{headers:{'ngrok-skip-browser-warning':'1'}}).then(r=>r.json()).catch(()=>this.meta);
     this.proxy = this.meta.public_url || location.origin;
+    // deploy detection: long-lived tabs learn about a new bundle on tab focus + a slow poll,
+    // then offer a one-click refresh (index.html is no-cache, so a soft reload is enough)
+    this.bootVersion = this.meta.app_version || '';
+    document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) this.checkVersion(); });
+    setInterval(()=>this.checkVersion(), 5*60*1000);
     // Invite-link params, parsed BEFORE the session check: ?invite_org= arrives freshly signed in
     // from the email link's POST-confirm; ?invite= is the legacy code path (prefilled login).
     const qs = new URLSearchParams(location.search);

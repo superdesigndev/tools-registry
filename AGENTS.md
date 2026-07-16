@@ -1,7 +1,3 @@
-<!-- DRAFT SKELETON — for AI collaborators (Claude Code / Codex / etc.). You plan to author the full
-version; this frames what such a file usually carries. Note: the private CLAUDE.md from the internal repo
-did NOT come across — this is the public, contributor-facing equivalent, with no internal infra details. -->
-
 # AGENTS.md — guide for AI coding agents
 
 This file orients an AI agent (Claude Code, Codex, Cursor, …) working in this repository.
@@ -20,7 +16,16 @@ This file orients an AI agent (Claude Code, Codex, Cursor, …) working in this 
 - Run `uv run pytest -q` before and after changes; keep it green (add tests for new behavior).
 - Keep changes minimal and scoped; match the surrounding style.
 - When you change a subsystem, update its `docs/context/` fragment in the same change.
-- _TODO: commit conventions, PR expectations, any do-not-touch areas._
+- Commits follow Conventional Commits (`feat(scope): …`, `fix: …`, `docs: …`); one logical change per
+  commit. PRs should say what changed and why, and note which fragments were updated.
+
+## Do not touch (without reading the fragment first)
+
+- **The faithful-relay contract** (`src/treg/proxy.py`): the proxy alters only hop-by-hop headers, treg's
+  own control headers, and the injected credential — never add upstream-specific modeling or buffering.
+- **Security guards that look redundant on purpose**: the `expose_dev_code` double-guard (dev OTP only on
+  local sqlite), the call-time SSRF check, the fail-loud missing-Fernet-key startup check, and the
+  `treg run` allow-list/rlimits. Read `docs/context/architecture/` before changing any of them.
 
 ## Security awareness
 
@@ -31,6 +36,16 @@ This file orients an AI agent (Claude Code, Codex, Cursor, …) working in this 
 
 ## Local setup
 
-See **[CONTRIBUTING.md](CONTRIBUTING.md)**.
+See **[CONTRIBUTING.md](CONTRIBUTING.md)**. Quick version: `uv sync && uv run pytest -q`; the live dev
+stack is `scripts/dev-local.sh up` (server on `:18790`, hot-reload, own sqlite DB, email OTP shown
+on-page) with a sandboxed CLI via `scripts/dev-local.sh cli <args>`.
 
-_TODO: expand with anything you want every agent to know before it edits._
+## Things every agent should know before editing
+
+- The API (`src/treg/api.py`) is the only brain — the CLI and the dashboard are thin clients over it.
+  Put logic in the API, not in `cli.py` or the web layer.
+- The dashboard (`src/treg/web/index.html`) is a single-file Vue app with **no build step** — edit the
+  HTML directly; there is nothing to compile.
+- Migrations run on every startup and must stay idempotent **and** portable across SQLite + Postgres
+  (see `docs/context/ops/deploy.md` for the SQL rules).
+- One fetch teaches you the product itself: `src/treg/web/llms.txt` (served at `/llms.txt`).

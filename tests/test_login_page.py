@@ -61,6 +61,19 @@ async def _seed_user_org(email="pat@x.dev", team="Acme", slug="acme", tools=0):
 
 
 # ---- the page ------------------------------------------------------------------------------
+async def test_landing_redirects_signed_in_visitor_to_app(web):
+    """`/` is the front door for strangers; a live session belongs on the dashboard."""
+    r = await web.get("/", follow_redirects=False)
+    assert r.status_code == 200  # anonymous → marketing landing
+    uid = await _seed_user()
+    web.cookies.set("treg_session", sess.make(uid))
+    r = await web.get("/", follow_redirects=False)
+    assert r.status_code == 302 and r.headers["location"] == "/app"
+    web.cookies.set("treg_session", sess.make(uid, ttl=-1))  # expired session → landing again
+    r = await web.get("/", follow_redirects=False)
+    assert r.status_code == 200
+
+
 async def test_login_without_cli_redirects_to_dashboard(web):
     r = await web.get("/login", follow_redirects=False)
     assert r.status_code == 302 and r.headers["location"] == "/app"

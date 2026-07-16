@@ -8,7 +8,7 @@ member's machine safe.
 
 Every step shows the **exact command**, the **expected output**, and a **"Notice:"** line explaining what
 happened and why it matters. Copy each command and follow along. The registry in the examples is
-`https://treg.ngrok.app`; replace it with your own.
+`https://treg.superdesign.dev`; replace it with your own.
 
 > This is a companion to the main [hands-on tutorial](/tutorial) (sign-in, teams, the proxy, skills). Read
 > that first if the words *tool*, *skill*, *org*, or *member* are new. For controlling **which** tools each

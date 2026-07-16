@@ -1,5 +1,3 @@
-<!-- DRAFT — review and set the contact address before publishing. -->
-
 # Security policy
 
 ## Reporting a vulnerability
@@ -7,7 +5,7 @@
 Please report suspected vulnerabilities **privately** — do not open a public issue.
 
 Use GitHub's **[Private vulnerability reporting](https://docs.github.com/en/code-security/security-advisories/guidance-on-reporting-and-writing-information-about-vulnerabilities/privately-reporting-a-security-vulnerability)**
-(the "Report a vulnerability" button on the Security tab), or email **<security@REPLACE-ME>**.
+(the "Report a vulnerability" button on the Security tab), or email **<jason@superdesign.dev>**.
 
 We aim to acknowledge a report within a few business days, agree on a disclosure timeline, and credit
 reporters who wish to be named.

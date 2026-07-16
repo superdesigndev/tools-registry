@@ -66,8 +66,8 @@ class Settings(BaseSettings):
     proxy_ssrf_check: bool = True
 
     # treg's own public base URL — used to build the OAuth callback (must be whitelisted in the
-    # provider's OAuth app). On the Mac Studio + ngrok this is the treg subdomain.
-    public_url: str = "https://treg.ngrok.app"
+    # provider's OAuth app). Self-hosting? Set TREG_PUBLIC_URL to your deployment's URL.
+    public_url: str = "https://treg.superdesign.dev"
 
     # Human login via GitHub OAuth (dashboard sessions). Create a GitHub OAuth App with callback
     # <public_url>/auth/github/callback and set these; empty disables the GitHub button.
