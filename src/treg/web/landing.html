@@ -33,6 +33,7 @@
   --mono:"Geist Mono",ui-monospace,"SF Mono",Menlo,monospace;
 }
 *{box-sizing:border-box}
+html,body{overflow-x:clip}
 html{scroll-behavior:smooth}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);
   font-size:17px;line-height:1.6;-webkit-font-smoothing:antialiased}
@@ -129,7 +130,7 @@ p.sub{font-size:16.5px;color:var(--ink70);line-height:1.6;margin:14px auto 0;max
 @media(max-width:640px){.nav .links a.hidem{display:none}}
 
 /* ---------- hero ---------- */
-.hero{padding:170px 0 90px;text-align:center;position:relative;overflow:hidden}
+.hero{padding:170px 0 90px;text-align:center;position:relative}
 .hero-glow{position:absolute;top:-260px;left:50%;transform:translateX(-50%);width:1100px;height:680px;
   background:radial-gradient(ellipse at center,rgba(0,94,255,.16) 0%,rgba(0,94,255,.05) 45%,transparent 70%);
   pointer-events:none}
@@ -737,6 +738,186 @@ p.lead,p.sub{font-family:var(--mono);font-size:15px;line-height:1.65}
 .smodal input:focus{border-color:rgba(25,208,232,.5)}
 .smodal .err{color:var(--red,#f08a7a);font-size:11.5px;margin-top:10px;min-height:14px}
 </style>
+<style>
+/* ===== hero scroll story (hx-*) — ported from prototypes/hero-v2.html ===== */
+/* ================================================================
+   SCROLL SHELL — the stage pins; scroll scrubs the story
+   ================================================================ */
+.hx-scrolly{height:430vh;position:relative}
+.hx-sticky{position:sticky;top:0;height:100vh;overflow:hidden;display:flex;align-items:flex-start;justify-content:center}
+.hx-stage{max-width:1100px;width:100%;padding:6vh 28px 60px;position:relative;z-index:2;will-change:transform}
+.hx-scrollhint{position:absolute;left:50%;bottom:26px;transform:translateX(-50%);z-index:5;
+  font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink55);
+  opacity:1;transition:opacity .4s;pointer-events:none}
+.hx-scrollhint.hx-off{opacity:0}
+
+/* ================================================================
+   ACT 1 — the DM chaos (neat staggered cluster, mild tilts)
+   ================================================================ */
+.hx-dms{display:flex;flex-direction:column;gap:16px;align-items:center}
+.hx-dmrow{display:flex;gap:18px;justify-content:center}
+.hx-dmrow.hx-r2{transform:translateX(46px)}
+.hx-dm{display:flex;gap:11px;align-items:flex-start;text-align:left;
+  
+  background:linear-gradient(180deg,#232220 0%,#1c1b19 100%);
+  border:1px solid var(--line);border-radius:14px;padding:12px 16px;
+  box-shadow:rgba(255,255,255,.06) 0 1px 0 inset, rgba(0,0,0,.5) 0 10px 24px -10px;
+  opacity:0;transform:translateY(14px) scale(.92);
+  transition:opacity .35s cubic-bezier(.22,1,.36,1),transform .35s cubic-bezier(.22,1,.36,1),filter .5s}
+.hx-dm.hx-show{opacity:1;transform:var(--tilt,none)}
+.hx-dm .hx-av{width:30px;height:30px;border-radius:8px;flex:none;object-fit:cover;display:block}
+.hx-dm .hx-av.hx-agent{display:flex;align-items:center;justify-content:center;background:#faf5f2}
+.hx-dm .hx-av.hx-agent svg{width:16px;height:16px}
+.hx-dm .hx-av.hx-codex{background:#fff}
+.hx-dm .hx-av.hx-codex svg{width:26px;height:26px;border-radius:7px}
+.hx-dm .hx-who{font-size:12px;font-weight:500;color:var(--ink)}
+.hx-dm .hx-who i{font-style:normal;font-size:9.5px;letter-spacing:.08em;color:var(--ink55);
+  background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:1px 5px;margin-left:6px;vertical-align:1px}
+.hx-dm .hx-who span{font-weight:400;color:var(--ink55);font-size:10.5px;margin-left:7px}
+.hx-dm .hx-msg{font-size:12.5px;color:var(--ink70);margin-top:3px;white-space:nowrap}
+.hx-dm .hx-msg code{color:var(--blue);background:var(--blue-tint);border-radius:4px;padding:1px 5px;font-size:11.5px}
+
+/* ---- the beam ---- */
+.hx-beam{position:relative;height:170px;margin:10px 0 6px}
+.hx-beam .hx-line{position:absolute;left:50%;top:0;width:1px;height:calc(50% - 38px);
+  background:linear-gradient(180deg,transparent,rgba(25,208,232,.7));
+  opacity:0;transition:opacity .6s}
+.hx-beam .hx-line.hx-lo{top:auto;bottom:0;
+  background:linear-gradient(180deg,rgba(25,208,232,.7),rgba(25,208,232,.85))}
+.hx-beam.hx-on .hx-line{opacity:1}
+.hx-beam .hx-cap{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  font-family:var(--display);font-size:28px;letter-spacing:.02em;color:var(--ink);white-space:nowrap;
+  opacity:0;transition:opacity .6s}
+.hx-beam .hx-cap b{color:var(--blue);font-weight:400}
+.hx-beam.hx-on .hx-cap{opacity:1}
+
+/* ================================================================
+   ACT 2 — vault as the ROOT of a tree → distributed to the team
+   ================================================================ */
+.hx-vault{width:min(560px,92%);margin:0 auto;text-align:left;opacity:0;transition:opacity .5s,box-shadow .5s;border-radius:26px;border:1px solid rgba(255,255,255,.1);
+  background:linear-gradient(180deg,#232220 0%,#171614 100%);
+  box-shadow:rgba(255,255,255,.09) 0 1px 0 inset, rgba(0,0,0,.6) 5px 4px 16px 0,
+    rgba(0,0,0,.35) 18px 12px 38px 6px, rgba(0,0,0,.16) 40px 26px 70px 10px;
+  position:relative;z-index:4;transition:box-shadow .5s}
+.hx-vault.hx-pulse{box-shadow:rgba(25,208,232,.28) 0 0 0 1px, rgba(25,208,232,.12) 0 0 44px 4px,
+    rgba(255,255,255,.09) 0 1px 0 inset, rgba(0,0,0,.6) 5px 4px 16px 0}
+.hx-vault .hx-bar{display:flex;align-items:center;gap:8px;padding:14px 18px;border-bottom:1px solid var(--line)}
+.hx-vault .hx-bar i{width:11px;height:11px;border-radius:99px;background:#333130;display:block}
+.hx-vault .hx-bar span{margin-left:8px;font-size:12px;color:var(--ink55)}
+.hx-vault .hx-bar b{color:var(--blue);font-weight:500}
+.hx-vrows{padding:12px 20px 16px;background:rgba(0,0,0,.28);border-radius:0 0 25px 25px;
+  box-shadow:rgba(0,0,0,.5) 0 2px 10px 0 inset;min-height:100px}
+.hx-vrow{display:flex;align-items:center;gap:10px;padding:8.5px 6px;font-size:13px;
+  border-bottom:1px solid var(--line);
+  opacity:0;transform:translateY(8px);transition:opacity .4s cubic-bezier(.22,1,.36,1),transform .4s cubic-bezier(.22,1,.36,1)}
+.hx-vrow.hx-show{opacity:1;transform:none}
+.hx-vrow:last-child{border-bottom:0}
+.hx-vrow .hx-t{margin-left:auto;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink55)}
+.hx-vrow .hx-chip{font-size:10px;letter-spacing:.06em;border-radius:5px;padding:2px 8px}
+.hx-vrow .hx-chip.hx-skill{color:var(--blue);background:var(--blue-tint)}
+.hx-vrow .hx-chip.hx-key{color:var(--ink55);border:1px solid var(--line2)}
+.hx-vrow.hx-sub{padding-left:32px;color:var(--ink55);font-size:12px}
+.hx-vrow.hx-sub .ok{color:var(--green);margin-left:auto;font-size:11px}
+.hx-vrow .hx-dots{color:var(--ink55);letter-spacing:2px}
+
+/* ---- the tree stage: paths fan out from the vault to the team ---- */
+.hx-tree{position:relative;height:412px;margin-top:-8px}
+.hx-tree svg.hx-paths{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none}
+.hx-tree svg.hx-paths path{fill:none;stroke:rgba(25,208,232,.5);stroke-width:1.2}
+.hx-tree.hx-on svg.hx-paths path{stroke-dashoffset:0}
+.hx-tree svg.hx-paths circle{fill:var(--blue);opacity:0;transition:opacity .3s}
+.hx-tree.hx-on svg.hx-paths circle{opacity:.9}
+
+/* featured member: the terminal, front and center */
+.hx-term{position:absolute;left:50%;top:118px;transform:translateX(-50%);width:min(520px,90%);
+  text-align:left;border-radius:22px;border:1px solid rgba(255,255,255,.1);z-index:4;
+  background:linear-gradient(180deg,#232220 0%,#171614 100%);
+  box-shadow:rgba(255,255,255,.09) 0 1px 0 inset, rgba(0,0,0,.6) 5px 4px 16px 0,
+    rgba(0,0,0,.35) 18px 12px 38px 6px;
+  opacity:0;transform:translateX(-50%) translateY(18px);
+  transition:opacity .5s cubic-bezier(.22,1,.36,1),transform .5s cubic-bezier(.22,1,.36,1)}
+.hx-term.hx-show{opacity:1;transform:translateX(-50%)}
+.hx-term .hx-bar{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.hx-term .hx-bar i{width:10px;height:10px;border-radius:99px;background:#333130;display:block}
+.hx-term .hx-bar img{width:20px;height:20px;border-radius:99px;object-fit:cover;margin-left:6px}
+.hx-term .hx-bar span{margin-left:4px;font-size:11.5px;color:var(--ink55)}
+.hx-term pre{margin:0;padding:18px 22px;font-family:var(--mono);font-size:13px;line-height:1.9;
+  background:rgba(0,0,0,.28);border-radius:0 0 21px 21px;box-shadow:rgba(0,0,0,.5) 0 2px 10px 0 inset;color:var(--ink)}
+.hx-term .hx-ln{display:block;opacity:0;transform:translateY(5px);transition:opacity .35s,transform .35s}
+.hx-term .hx-ln.hx-show{opacity:1;transform:none}
+.hx-term .hx-c-mut{color:var(--ink55)} .hx-term .c-blue{color:var(--blue)} .hx-term .c-green{color:var(--green)}
+
+/* the rest of the team: little profile cards floating BEHIND, blurred */
+.hx-member{position:absolute;display:flex;align-items:center;gap:9px;z-index:2;
+  background:linear-gradient(180deg,#1b1a18 0%,#161513 100%);border:1px solid var(--line);
+  border-radius:12px;padding:9px 13px;text-align:left;opacity:0;
+  transition:opacity .7s cubic-bezier(.22,1,.36,1)}
+.hx-member.hx-show{opacity:1}
+.hx-member .hx-n{color:var(--ink70)}
+.hx-member.hx-near.hx-show{opacity:1}
+.hx-member img,.hx-member .hx-agent{width:24px;height:24px;border-radius:99px;object-fit:cover;display:block;flex:none}
+.hx-member .hx-agent{display:flex;align-items:center;justify-content:center;background:#faf5f2}
+.hx-member .hx-agent svg{width:13px;height:13px}
+.hx-member .hx-agent.hx-codex{background:#fff}
+.hx-member .hx-agent.hx-codex svg{width:21px;height:21px;border-radius:99px}
+.hx-member .hx-n{font-size:11.5px;color:var(--ink)}
+.hx-member .hx-k{font-size:9.5px;color:var(--ink55)}
+.hx-member .hx-tok{margin-left:6px;font-size:9px;color:var(--green);border:1px solid rgba(166,238,152,.35);
+  border-radius:999px;padding:1px 7px;white-space:nowrap}
+
+.hx-logsec{margin:0 auto;max-width:760px;text-align:center}
+.hx-logsec h2{font-family:var(--display);font-weight:400;font-size:28px;letter-spacing:.02em;line-height:1.15;
+  color:var(--ink);opacity:0;transform:translateY(16px);
+  transition:opacity .5s cubic-bezier(.22,1,.36,1),transform .5s cubic-bezier(.22,1,.36,1)}
+.hx-logsec h2 b{font-weight:400;color:var(--blue)}
+.hx-logsec h2.hx-show{opacity:1;transform:none}
+.hx-logsec .hx-sub{font-size:12.5px;color:var(--ink55);margin-top:10px;opacity:0;transition:opacity .5s}
+.hx-logsec .hx-sub.hx-show{opacity:1}
+.hx-logcard{margin:22px auto 0;text-align:left;opacity:0;transition:opacity .5s;border-radius:22px;border:1px solid rgba(255,255,255,.1);
+  background:linear-gradient(180deg,#232220 0%,#171614 100%);
+  box-shadow:rgba(255,255,255,.09) 0 1px 0 inset, rgba(0,0,0,.6) 5px 4px 16px 0,
+    rgba(0,0,0,.35) 18px 12px 38px 6px}
+.hx-logcard .hx-bar{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.hx-logcard .hx-bar i{width:10px;height:10px;border-radius:99px;background:#333130;display:block}
+.hx-logcard .hx-bar span{margin-left:6px;font-size:11.5px;color:var(--ink55)}
+.hx-logrows{padding:10px 18px 14px;background:rgba(0,0,0,.28);border-radius:0 0 21px 21px;
+  box-shadow:rgba(0,0,0,.5) 0 2px 10px 0 inset}
+.hx-lrow2{display:flex;align-items:center;gap:18px;padding:9px 8px;font-size:12.5px;
+  border-bottom:1px solid var(--line);color:var(--ink70);
+  opacity:0;transform:translateY(8px);transition:opacity .4s cubic-bezier(.22,1,.36,1),transform .4s cubic-bezier(.22,1,.36,1)}
+.hx-lrow2.hx-show{opacity:1;transform:none}
+.hx-lrow2:last-child{border-bottom:0}
+.hx-lrow2 .hx-ts{color:var(--ink55);width:72px;flex:none}
+.hx-lrow2 .hx-who{color:var(--ink);width:190px;flex:none}
+.hx-lrow2 .hx-what{color:var(--ink55);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hx-lrow2 .hx-res{color:var(--green);flex:none}
+.hx-lrow2.hx-hot{background:var(--blue-tint);border-radius:8px;border-bottom-color:transparent}
+.hx-lrow2.hx-hot .hx-who,.hx-lrow2.hx-hot .hx-what{color:var(--ink)}
+.hx-treecap{position:absolute;left:50%;top:100%;margin-top:20px;transform:translateX(-50%);z-index:4;
+  font-family:var(--display);font-size:28px;letter-spacing:.02em;color:var(--ink);white-space:nowrap;
+  opacity:0;transition:opacity .6s;transition-delay:.1s}
+.hx-treecap b{color:var(--blue);font-weight:400}
+.hx-treecap.hx-show{opacity:1}
+/* connector: extends from under the terminal caption down to the log */
+.hx-beam2{position:relative;height:150px;margin-top:-6px}
+.hx-beam2 .hx-line{position:absolute;left:50%;top:0;height:100%;width:1px;
+  background:linear-gradient(180deg,rgba(25,208,232,.85),rgba(25,208,232,.3));
+  transform:scaleY(0);transform-origin:top}
+
+@media(max-width:760px){
+  .hx-dmrow{flex-direction:column;align-items:center}
+  .hx-dmrow.hx-r2{transform:none}
+  .hx-tree{height:600px}
+  .hx-member{display:none}
+}
+@media (prefers-reduced-motion: reduce){
+  .hx-dm,.hx-vrow,.hx-term,.hx-term .hx-ln,.hx-member,.hx-treecap,.hx-beam .hx-line,.hx-beam .hx-cap{opacity:1 !important;transform:none !important;transition:none}
+  .hx-term{transform:translateX(-50%) !important}
+  
+  .hx-tree svg.hx-paths path{stroke-dashoffset:0}
+  .hx-tree svg.hx-paths circle{opacity:.9}
+}
+</style>
 </head>
 <body>
 
@@ -759,8 +940,8 @@ p.lead,p.sub{font-family:var(--mono);font-size:15px;line-height:1.65}
   <div class="narrow" style="max-width:960px">
     <div class="eyebrow blue rv">one registry · every key · every skill</div>
     <h1 class="rv hero-h1">Share skills & secrets<br/><span class="grad"><i>without leaking keys</i></span></h1>
-    <p class="lead rv">tools-registry turns your team's API keys and skills into callable tools.
-      Any agent calls them by name — the credential is injected server-side and never leaves the vault.</p>
+    <p class="lead rv">Stop pasting keys into Slack. tools-registry turns your team's skills and secrets
+      into one central vault — humans and agents call them by name, the credential never leaves.</p>
     <div class="hero-cta rv">
       <button class="candy" onclick="openSignin()">Get started</button>
       <a class="ghostbtn" href="https://github.com/superdesigndev/tools-registry" target="_blank" rel="noopener"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg> GitHub</a>
@@ -768,35 +949,130 @@ p.lead,p.sub{font-family:var(--mono);font-size:15px;line-height:1.65}
     <div class="stars rv"><b>★★★★★</b>&nbsp; 100% open source · built for agent-first teams</div>
   </div>
 
+<div class="hx-scrolly" id="hx-scrolly">
+  <div class="hx-sticky">
+  <div class="hx-stage" id="hx-stage">
+    <!-- ACT 1 · the DM chaos — staggered rows, mild tilts -->
+    <div class="hx-dms" id="hx-dms">
+      <div class="hx-dmrow">
+        <div class="hx-dm" style="--tilt:rotate(-1.6deg)">
+          <img class="hx-av" src="https://randomuser.me/api/portraits/women/44.jpg" alt=""/>
+          <div><div class="hx-who">Sam <span>9:14 AM</span></div>
+            <div class="hx-msg">can you send me the <code>stripe key</code>? 🙏</div></div>
+        </div>
+        <div class="hx-dm" style="--tilt:rotate(1.2deg) translateY(10px)">
+          <div class="hx-av hx-agent"><svg viewBox="0 0 24 24"><path clip-rule="evenodd" d="M20.998 10.949H24v3.102h-3v3.028h-1.487V20H18v-2.921h-1.487V20H15v-2.921H9V20H7.488v-2.921H6V20H4.487v-2.921H3V14.05H0V10.95h3V5h17.998v5.949zM6 10.949h1.488V8.102H6v2.847zm10.51 0H18V8.102h-1.49v2.847z" fill="#D97757" fill-rule="evenodd"/></svg></div>
+          <div><div class="hx-who">Claude Code<i>APP</i><span>10:58 AM</span></div>
+            <div class="hx-msg">blocked: <code>POSTHOG_KEY</code> not set in .env</div></div>
+        </div>
+        <div class="hx-dm" style="--tilt:rotate(1.8deg)">
+          <img class="hx-av" src="https://randomuser.me/api/portraits/men/32.jpg" alt=""/>
+          <div><div class="hx-who">Devon <span>10:02 AM</span></div>
+            <div class="hx-msg">can I get the google-ads skill?</div></div>
+        </div>
+      </div>
+      <div class="hx-dmrow hx-r2">
+        <div class="hx-dm" style="--tilt:rotate(1deg) translateY(4px)">
+          <img class="hx-av" src="https://randomuser.me/api/portraits/men/75.jpg" alt=""/>
+          <div><div class="hx-who">Mika <span>10:44 AM</span></div>
+            <div class="hx-msg">what's the <code>OPENAI_API_KEY</code> again?</div></div>
+        </div>
+        <div class="hx-dm" style="--tilt:rotate(-1.4deg)">
+          <div class="hx-av hx-codex"><svg viewBox="0 0 24 24"><path d="M19.503 0H4.496A4.496 4.496 0 000 4.496v15.007A4.496 4.496 0 004.496 24h15.007A4.496 4.496 0 0024 19.503V4.496A4.496 4.496 0 0019.503 0z" fill="#fff"/><path d="M9.064 3.344a4.578 4.578 0 012.285-.312c1 .115 1.891.54 2.673 1.275.01.01.024.017.037.021a.09.09 0 00.043 0 4.55 4.55 0 013.046.275l.047.022.116.057a4.581 4.581 0 012.188 2.399c.209.51.313 1.041.315 1.595a4.24 4.24 0 01-.134 1.223.123.123 0 00.03.115c.594.607.988 1.33 1.183 2.17.289 1.425-.007 2.71-.887 3.854l-.136.166a4.548 4.548 0 01-2.201 1.388.123.123 0 00-.081.076c-.191.551-.383 1.023-.74 1.494-.9 1.187-2.222 1.846-3.711 1.838-1.187-.006-2.239-.44-3.157-1.302a.107.107 0 00-.105-.024c-.388.125-.78.143-1.204.138a4.441 4.441 0 01-1.945-.466 4.544 4.544 0 01-1.61-1.335c-.152-.202-.303-.392-.414-.617a5.81 5.81 0 01-.37-.961 4.582 4.582 0 01-.014-2.298.124.124 0 00.006-.056.085.085 0 00-.027-.048 4.467 4.467 0 01-1.034-1.651 3.896 3.896 0 01-.251-1.192 5.189 5.189 0 01.141-1.6c.337-1.112.982-1.985 1.933-2.618.212-.141.413-.251.601-.33.215-.089.43-.164.646-.227a.098.098 0 00.065-.066 4.51 4.51 0 01.829-1.615 4.535 4.535 0 011.837-1.388zm3.482 10.565a.637.637 0 000 1.272h3.636a.637.637 0 100-1.272h-3.636zM8.462 9.23a.637.637 0 00-1.106.631l1.272 2.224-1.266 2.136a.636.636 0 101.095.649l1.454-2.455a.636.636 0 00.005-.64L8.462 9.23z" fill="url(#cxg2)"/><defs><linearGradient gradientUnits="userSpaceOnUse" id="cxg2" x1="12" x2="12" y1="3" y2="21"><stop stop-color="#B1A7FF"/><stop offset=".5" stop-color="#7A9DFF"/><stop offset="1" stop-color="#3941FF"/></linearGradient></defs></svg></div>
+          <div><div class="hx-who">Codex<i>APP</i><span>11:45 AM</span></div>
+            <div class="hx-msg">missing the google-ads skill + its key</div></div>
+        </div>
+        <div class="hx-dm" style="--tilt:rotate(-2deg) translateY(8px)">
+          <img class="hx-av" src="https://randomuser.me/api/portraits/women/68.jpg" alt=""/>
+          <div><div class="hx-who">Priya <span>11:38 AM</span></div>
+            <div class="hx-msg">posthog key again? new laptop 😅</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- the beam -->
+    <div class="hx-beam" id="hx-beam">
+      <span class="hx-line"></span>
+      <span class="hx-line hx-lo"></span>
+      <span class="hx-cap">shared <b>skill &amp; secret</b> vault</span>
+    </div>
+
+    <!-- ACT 2 · the vault, root of the tree -->
+    <div class="hx-vault" id="hx-vault">
+      <div class="hx-bar"><i></i><i></i><i></i><span>🔒 <b>treg</b> · tool-vault — skills &amp; secrets, sealed</span></div>
+      <div class="hx-vrows" id="hx-vrows">
+        <div class="hx-vrow">📦 google-ads-report <span class="hx-chip hx-skill">skill</span><span class="hx-t">SKILL.md</span></div>
+        <div class="hx-vrow hx-sub">└ 🔑 GOOGLE_ADS_TOKEN <span class="hx-chip hx-key">key</span><span class="ok">bound ✓</span></div>
+        <div class="hx-vrow">📦 stripe-cli <span class="hx-chip hx-skill">skill</span><span class="hx-t">SKILL.md</span></div>
+        <div class="hx-vrow hx-sub">└ 🔑 STRIPE_KEY <span class="hx-chip hx-key">key</span><span class="ok">bound ✓</span></div>
+        <div class="hx-vrow">🔑 OPENAI_API_KEY <span class="hx-chip hx-key">key</span><span class="hx-dots">••••••</span><span class="hx-t">standalone</span></div>
+      </div>
+    </div>
+
+    <!-- the tree: vault → team -->
+    <div class="hx-tree" id="hx-tree">
+      <svg class="hx-paths" aria-hidden="true"></svg>
+
+      <!-- blurred team floating behind -->
+      <div class="hx-member hx-near" style="left:4%;top:106px" data-depth="0.35">
+        <img src="https://randomuser.me/api/portraits/women/44.jpg" alt=""/>
+        <div><div class="hx-n">Sam</div><div class="hx-k">stripe-cli</div></div><span class="hx-tok">token ✓</span>
+      </div>
+      <div class="hx-member hx-near" style="right:3%;top:98px" data-depth="0.5">
+        <span class="hx-agent"><svg viewBox="0 0 24 24"><path clip-rule="evenodd" d="M20.998 10.949H24v3.102h-3v3.028h-1.487V20H18v-2.921h-1.487V20H15v-2.921H9V20H7.488v-2.921H6V20H4.487v-2.921H3V14.05H0V10.95h3V5h17.998v5.949zM6 10.949h1.488V8.102H6v2.847zm10.51 0H18V8.102h-1.49v2.847z" fill="#D97757" fill-rule="evenodd"/></svg></span>
+        <div><div class="hx-n">Claude Code</div><div class="hx-k">posthog skill</div></div><span class="hx-tok">token ✓</span>
+      </div>
+      <div class="hx-member" style="left:2.5%;top:312px" data-depth="0.7">
+        <img src="https://randomuser.me/api/portraits/women/68.jpg" alt=""/>
+        <div><div class="hx-n">Priya</div><div class="hx-k">google-ads-report</div></div><span class="hx-tok">token ✓</span>
+      </div>
+      <div class="hx-member" style="right:2%;top:322px" data-depth="0.85">
+        <span class="hx-agent hx-codex"><svg viewBox="0 0 24 24"><path d="M19.503 0H4.496A4.496 4.496 0 000 4.496v15.007A4.496 4.496 0 004.496 24h15.007A4.496 4.496 0 0024 19.503V4.496A4.496 4.496 0 0019.503 0z" fill="#fff"/><path d="M9.064 3.344a4.578 4.578 0 012.285-.312c1 .115 1.891.54 2.673 1.275.01.01.024.017.037.021a.09.09 0 00.043 0 4.55 4.55 0 013.046.275l.047.022.116.057a4.581 4.581 0 012.188 2.399c.209.51.313 1.041.315 1.595a4.24 4.24 0 01-.134 1.223.123.123 0 00.03.115c.594.607.988 1.33 1.183 2.17.289 1.425-.007 2.71-.887 3.854l-.136.166a4.548 4.548 0 01-2.201 1.388.123.123 0 00-.081.076c-.191.551-.383 1.023-.74 1.494-.9 1.187-2.222 1.846-3.711 1.838-1.187-.006-2.239-.44-3.157-1.302a.107.107 0 00-.105-.024c-.388.125-.78.143-1.204.138a4.441 4.441 0 01-1.945-.466 4.544 4.544 0 01-1.61-1.335c-.152-.202-.303-.392-.414-.617a5.81 5.81 0 01-.37-.961 4.582 4.582 0 01-.014-2.298.124.124 0 00.006-.056.085.085 0 00-.027-.048 4.467 4.467 0 01-1.034-1.651 3.896 3.896 0 01-.251-1.192 5.189 5.189 0 01.141-1.6c.337-1.112.982-1.985 1.933-2.618.212-.141.413-.251.601-.33.215-.089.43-.164.646-.227a.098.098 0 00.065-.066 4.51 4.51 0 01.829-1.615 4.535 4.535 0 011.837-1.388zm3.482 10.565a.637.637 0 000 1.272h3.636a.637.637 0 100-1.272h-3.636zM8.462 9.23a.637.637 0 00-1.106.631l1.272 2.224-1.266 2.136a.636.636 0 101.095.649l1.454-2.455a.636.636 0 00.005-.64L8.462 9.23z" fill="url(#cxg2)"/></svg></span>
+        <div><div class="hx-n">Codex</div><div class="hx-k">stripe-cli</div></div><span class="hx-tok">token ✓</span>
+      </div>
+
+      <!-- featured member: Devon's terminal, using a shared tool -->
+      <div class="hx-term" id="hx-term">
+        <div class="hx-bar"><i></i><i></i><i></i>
+          <img src="https://randomuser.me/api/portraits/men/32.jpg" alt=""/>
+          <span>devon@laptop — no keys installed</span>
+        </div>
+        <pre><span class="hx-ln">$ <span class="c-blue">treg</span> call stripe /v1/refunds --method POST</span><span class="hx-ln hx-c-mut">→ key auto-injected server-side · never on this machine</span><span class="hx-ln c-green">✓ 200 OK · refund re_9f2… created · 412ms</span></pre>
+        <div class="hx-treecap" id="hx-treecap">access <b>without keys</b></div>
+      </div>
+
+    </div>
+
+    <!-- connector into act 3 -->
+    <div class="hx-beam2" id="hx-beam2"><span class="hx-line"></span></div>
+
+    <!-- ACT 3 · the audit log -->
+    <div class="hx-logsec" id="hx-logsec">
+      <h2 id="hx-logh2">Every call lands in <b>the log.</b></h2>
+      <div class="hx-sub" id="hx-logsub">who · which tool · when — attributed to the person or agent, never a shared key</div>
+      <div class="hx-logcard">
+        <div class="hx-bar"><i></i><i></i><i></i><span>treg · audit — live</span></div>
+        <div class="hx-logrows">
+          <div class="hx-lrow2 hx-hot"><span class="hx-ts">14:32:07</span><span class="hx-who">devon@ → stripe</span><span class="hx-what">POST /v1/refunds · re_9f2…</span><span class="hx-res">200 · 412ms</span></div>
+          <div class="hx-lrow2"><span class="hx-ts">14:31:44</span><span class="hx-who">sam@ → stripe-cli</span><span class="hx-what">charges list · 48 rows</span><span class="hx-res">200 · 96ms</span></div>
+          <div class="hx-lrow2"><span class="hx-ts">14:29:03</span><span class="hx-who">priya@ → google-ads-report</span><span class="hx-what">GET /v16/…/report</span><span class="hx-res">200 · 1.2s</span></div>
+          <div class="hx-lrow2"><span class="hx-ts">14:18:20</span><span class="hx-who">agent:claude-code → posthog</span><span class="hx-what">POST /api/query · daily cap 82%</span><span class="hx-res">200 · 104ms</span></div>
+          <div class="hx-lrow2"><span class="hx-ts">14:12:51</span><span class="hx-who">agent:codex → stripe-cli</span><span class="hx-what">key rotated by sam@ 14:10</span><span class="hx-res">401 → retried · 200</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="hx-scrollhint" id="hx-scrollhint">scroll ↓</div>
+  </div>
+</div>
+
   <div class="wrap">
     <div class="logos rv">
       <div class="lcap">works with your whole stack — 89 providers auto-detected from your .env</div>
       <div class="lviewport"><div class="lrow" id="logorow"></div></div>
     </div>
-
-    <div class="hero-stage">
-    <div class="hero-wm" aria-hidden="true">treg</div>
-    <div class="heroterm rv" style="margin-top:34px">
-      <div class="bar herobar"><i></i><i></i><i></i>
-        <div class="htabs" id="hero-tabs">
-          <button class="htab on" data-ph="0">
-            <img class="hava" src="https://randomuser.me/api/portraits/women/44.jpg" alt=""/>
-            <span class="tl"><span class="tl-l">Setup tool-vault</span><span class="tl-s">Setup</span></span></button>
-          <span class="harr"><svg width="9" height="16" viewBox="0 0 9 16" fill="none"><path d="M1.5 1.5L7.5 8l-6 6.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-          <button class="htab" data-ph="1">
-            <span class="hstack">
-              <img src="https://randomuser.me/api/portraits/men/32.jpg" alt=""/>
-              <img src="https://randomuser.me/api/portraits/men/75.jpg" alt=""/>
-              <i class="agent claude" title="Claude Code"><svg viewBox="0 0 24 24"><path clip-rule="evenodd" d="M20.998 10.949H24v3.102h-3v3.028h-1.487V20H18v-2.921h-1.487V20H15v-2.921H9V20H7.488v-2.921H6V20H4.487v-2.921H3V14.05H0V10.95h3V5h17.998v5.949zM6 10.949h1.488V8.102H6v2.847zm10.51 0H18V8.102h-1.49v2.847z" fill="#D97757" fill-rule="evenodd"/></svg></i>
-              <i class="agent codex" title="Codex"><svg viewBox="0 0 24 24"><path d="M19.503 0H4.496A4.496 4.496 0 000 4.496v15.007A4.496 4.496 0 004.496 24h15.007A4.496 4.496 0 0024 19.503V4.496A4.496 4.496 0 0019.503 0z" fill="#fff"/><path d="M9.064 3.344a4.578 4.578 0 012.285-.312c1 .115 1.891.54 2.673 1.275.01.01.024.017.037.021a.09.09 0 00.043 0 4.55 4.55 0 013.046.275l.047.022.116.057a4.581 4.581 0 012.188 2.399c.209.51.313 1.041.315 1.595a4.24 4.24 0 01-.134 1.223.123.123 0 00.03.115c.594.607.988 1.33 1.183 2.17.289 1.425-.007 2.71-.887 3.854l-.136.166a4.548 4.548 0 01-2.201 1.388.123.123 0 00-.081.076c-.191.551-.383 1.023-.74 1.494-.9 1.187-2.222 1.846-3.711 1.838-1.187-.006-2.239-.44-3.157-1.302a.107.107 0 00-.105-.024c-.388.125-.78.143-1.204.138a4.441 4.441 0 01-1.945-.466 4.544 4.544 0 01-1.61-1.335c-.152-.202-.303-.392-.414-.617a5.81 5.81 0 01-.37-.961 4.582 4.582 0 01-.014-2.298.124.124 0 00.006-.056.085.085 0 00-.027-.048 4.467 4.467 0 01-1.034-1.651 3.896 3.896 0 01-.251-1.192 5.189 5.189 0 01.141-1.6c.337-1.112.982-1.985 1.933-2.618.212-.141.413-.251.601-.33.215-.089.43-.164.646-.227a.098.098 0 00.065-.066 4.51 4.51 0 01.829-1.615 4.535 4.535 0 011.837-1.388zm3.482 10.565a.637.637 0 000 1.272h3.636a.637.637 0 100-1.272h-3.636zM8.462 9.23a.637.637 0 00-1.106.631l1.272 2.224-1.266 2.136a.636.636 0 101.095.649l1.454-2.455a.636.636 0 00.005-.64L8.462 9.23z" fill="url(#cxg)"/><defs><linearGradient gradientUnits="userSpaceOnUse" id="cxg" x1="12" x2="12" y1="3" y2="21"><stop stop-color="#B1A7FF"/><stop offset=".5" stop-color="#7A9DFF"/><stop offset="1" stop-color="#3941FF"/></linearGradient></defs></svg></i>
-            </span>
-            <span class="tl"><span class="tl-l">Team &amp; agents use — no keys</span><span class="tl-s">Team &amp; agents</span></span></button>
-        </div>
-      </div>
-      <pre id="hero-pre" style="min-height:300px"></pre>
-    </div>
-
   </div>
+
 </header>
 
 <!-- ===== try it live (the test section, sparkle skin) ===== -->
@@ -1260,75 +1536,124 @@ addEventListener('resize', drive, { passive:true });
 buildTerm('term0'); buildTerm('term1');
 applyState(0); drive();
 
-/* ===== hero terminal: a two-act loop — scan/upload → share access with the team ===== */
-const HERO = [
-  { title:'your laptop — treg cli', team:false, play:7200, lines:[
-    { cmd:'treg scan' },
-    { out:'<span class="c-green">✓</span> <span class="c-blue">stripe</span>       <span class="c-yellow">STRIPE_KEY</span>       <span class="c-dim">→ api.stripe.com</span>' },
-    { out:'<span class="c-green">✓</span> <span class="c-blue">posthog</span>      <span class="c-yellow">POSTHOG_KEY</span>      <span class="c-dim">→ eu.posthog.com</span>' },
-    { out:'<span class="c-green">✓</span> <span class="c-blue">openai</span>       <span class="c-yellow">OPENAI_API_KEY</span>   <span class="c-dim">→ api.openai.com</span>' },
-    { out:'<span class="c-green">✓</span> <span class="c-blue">resend</span>       <span class="c-yellow">RESEND_API_KEY</span>   <span class="c-dim">→ api.resend.com</span>' },
-    { out:'<span class="c-green">✓</span> <span class="c-blue">vercel</span>       <span class="c-yellow">VERCEL_TOKEN</span>     <span class="c-dim">→ api.vercel.com</span>' },
-    { out:'<span class="c-dim">◆</span> <span class="c-blue">google-ads</span>   <span class="c-dim">OAuth pair — connects in the browser</span>' },
-    { out:'<span class="c-green">✓ 3 skills</span><span class="c-dim">: google-ads-report · search-console · stripe-cli</span>' },
-    { cmd:'treg upload --all' },
-    { out:'<span class="c-green">✓ 6 tools + 3 skills sealed in the vault</span> <span class="c-dim">· encrypted at rest · plaintext never left this machine</span>' },
-  ]},
-  { title:'team', team:true, play:6800, lines:[
-    { out:'<span class="c-dim"># bob\'s laptop — zero keys installed</span>' },
-    { cmd:'treg skill ls' },
-    { out:'<span class="c-dim">[ { "name":</span> <span class="c-blue">"stripe"</span><span class="c-dim">,            "owner": "alice@superdesign.dev" },</span>' },
-    { out:'<span class="c-dim">&nbsp;&nbsp;{ "name":</span> <span class="c-blue">"google-ads-report"</span><span class="c-dim">, "owner": "alice@superdesign.dev" },</span>' },
-    { out:'<span class="c-dim">&nbsp;&nbsp;{ "name":</span> <span class="c-blue">"posthog"</span><span class="c-dim">,           "owner": "tim@superdesign.dev" } ]</span>' },
-    { cmd:'treg call stripe /v1/refunds --method POST' },
-    { out:'<span class="c-dim">→ key auto-injected server-side</span>' },
-    { out:'<span class="c-green">✓ 200 OK</span> <span class="c-dim">· refund re_9f2… created · 412ms — the key stayed home</span>' },
-  ]},
-];
-const heroPre = document.getElementById('hero-pre');
-function heroBuild(phase){
-  heroPre.innerHTML = '';
-  return phase.lines.map(step => {
-    const ln = document.createElement('span');
-    if (step.cmd){
-      ln.className = 'ln';
-      ln.innerHTML = '<span class="c-cmd">$ </span><span class="typed c-cmd"></span>';
-      heroPre.appendChild(ln);
-      return { el:ln, w:1.8, cmd:step.cmd, typed:ln.querySelector('.typed') };
+/* ===== hero scroll story — DM chaos → vault → team tree → keyless call → audit log ===== */
+(function(){
+const dms=[...document.querySelectorAll('.hx-dm')];
+const rows=[...document.querySelectorAll('.hx-vrow')];
+const lns=[...document.querySelectorAll('.hx-term .hx-ln')];
+const members=[...document.querySelectorAll('.hx-member')];
+const beamEl=document.getElementById('hx-beam');
+const vaultEl=document.getElementById('hx-vault');
+const treeEl=document.getElementById('hx-tree');
+const termEl=document.getElementById('hx-term');
+const treecap=document.getElementById('hx-treecap');
+const logh2=document.getElementById('hx-logh2');
+const logsub=document.getElementById('hx-logsub');
+const lrows=[...document.querySelectorAll('.hx-lrow2')];
+const beam2line=document.querySelector('.hx-beam2 .hx-line');
+const scrollyEl=document.getElementById('hx-scrolly');
+const stageEl=document.getElementById('hx-stage');
+const stickyEl=document.querySelector('.hx-sticky');
+const hint=document.getElementById('hx-scrollhint');
+const svg=document.querySelector('.hx-tree svg.hx-paths');
+const NS='http://www.w3.org/2000/svg';
+let pathData=[];
+
+function buildPaths(){
+  svg.innerHTML=''; pathData=[];
+  const tr=treeEl.getBoundingClientRect();
+  svg.setAttribute('viewBox',`0 0 ${tr.width} ${tr.height}`);
+  svg.setAttribute('width',tr.width); svg.setAttribute('height',tr.height);
+  const rootX=tr.width/2, rootY=0;
+  const rootDot=document.createElementNS(NS,'circle');
+  rootDot.setAttribute('cx',rootX); rootDot.setAttribute('cy',rootY); rootDot.setAttribute('r','3.5');
+  svg.appendChild(rootDot);
+  [...members, termEl].forEach(el=>{
+    const r=el.getBoundingClientRect();
+    const cx=r.left-tr.left+r.width/2;
+    let ex,ey;
+    if(el===termEl){ ex=cx; ey=r.top-tr.top+14; }
+    else{
+      ex = cx;
+      ey = r.top-tr.top + r.height/2;
     }
-    ln.className = 'ln'; ln.innerHTML = step.out; heroPre.appendChild(ln);
-    return { el:ln, w:1 };
+    const midY=Math.max(rootY,ey)*0.45;
+    const d=`M ${rootX},${rootY} C ${rootX},${midY+40} ${ex},${Math.max(ey-90,20)} ${ex},${ey}`;
+    const path=document.createElementNS(NS,'path');
+    path.setAttribute('d',d);
+    svg.appendChild(path);
+    const len=path.getTotalLength();
+    path.style.strokeDasharray=len;
+    path.style.strokeDashoffset=len;
+    const dot=document.createElementNS(NS,'circle');
+    dot.setAttribute('cx',ex); dot.setAttribute('cy',ey); dot.setAttribute('r','3'); dot.style.opacity=0;
+    svg.appendChild(dot);
+    pathData.push({path,len,dot});
   });
 }
-function heroAt(units, t){
-  const total = units.reduce((s,u) => s + u.w, 0); let acc = 0;
-  units.forEach(u => {
-    const a = acc / total, b = (acc + u.w) / total; acc += u.w;
-    const lt = (t - a) / (b - a);
-    if (lt <= 0){ u.el.classList.remove('show'); if (u.typed){ u.typed.textContent=''; u.typed.classList.remove('typing'); } }
-    else { u.el.classList.add('show');
-      if (u.typed){ const n = Math.ceil(Math.min(1, lt) * u.cmd.length);
-        u.typed.textContent = u.cmd.slice(0, n); u.typed.classList.toggle('typing', lt < 1); } }
+
+const clampv=(v,a,b)=>Math.max(a,Math.min(b,v));
+const step=(p,at)=>p>=at;
+function apply(pIn,pPin){
+  const ghosted=step(pIn,0.10);
+  beamEl.classList.toggle('hx-on',ghosted);
+  vaultEl.style.opacity=step(pIn,0.16)?1:0;
+  vaultEl.classList.toggle('hx-pulse',pIn>=0.20);
+  rows.forEach((r,i)=>r.classList.toggle('hx-show',step(pIn,0.30+i*0.09)));
+  const t=clampv((pPin-0.05)/0.21,0,1);
+  const eased=1-Math.pow(1-t,3);
+  pathData.forEach(({path,len,dot})=>{
+    path.style.strokeDashoffset=len*(1-eased);
+    dot.style.opacity=eased>=0.97?0.9:0;
   });
+  treeEl.classList.toggle('hx-on',t>0.02);
+  members.forEach((m,i)=>m.classList.toggle('hx-show',step(pPin,0.24+i*0.018)));
+  termEl.classList.toggle('hx-show',step(pPin,0.30));
+  treecap.classList.toggle('hx-show',step(pPin,0.30));
+  lns.forEach((l,i)=>l.classList.toggle('hx-show',step(pPin,0.36+i*0.06)));
+  const b2=clampv((pPin-0.61)/0.08,0,1);
+  beam2line.style.transform=`scaleY(${b2})`;
+  logh2.classList.toggle('hx-show',step(pPin,0.70));
+  document.querySelector('.hx-logcard').style.opacity=step(pPin,0.72)?1:0;
+  logsub.classList.toggle('hx-show',step(pPin,0.73));
+  lrows.forEach((r,i)=>r.classList.toggle('hx-show',step(pPin,0.76+i*0.04)));
+  const maxPan=Math.max(0,stageEl.scrollHeight-stickyEl.clientHeight+40);
+  const yTerm=(termEl.getBoundingClientRect().top-stageEl.getBoundingClientRect().top)+termEl.offsetHeight/2+40;
+  const pan1=clampv(yTerm-stickyEl.clientHeight*0.46,0,maxPan);
+  let pan;
+  if(pPin<0.30){ const q=clampv((pPin-0.02)/0.28,0,1); pan=pan1*(1-Math.pow(1-q,2)); }
+  else if(pPin<0.62){ pan=pan1; }
+  else { const q=clampv((pPin-0.62)/0.24,0,1); pan=pan1+(maxPan-pan1)*(1-Math.pow(1-q,2)); }
+  stageEl.style.transform=`translateY(${(-pan).toFixed(1)}px)`;
+  hint.classList.toggle('hx-off',pIn>0.05);
 }
-let heroAnim = 0;
-function heroPlay(i){
-  const my = ++heroAnim, ph = HERO[i];
-  document.querySelectorAll('.htab').forEach(b => b.classList.toggle('on', +b.dataset.ph === i));
-  const units = heroBuild(ph);
-  if (REDUCED){ heroAt(units, 1); return; }
-  const t0 = performance.now();
-  requestAnimationFrame(function frame(now){
-    if (my !== heroAnim) return;
-    const t = Math.min(1, (now - t0) / (ph.play || 5000));
-    heroAt(units, t);
-    if (t < 1) requestAnimationFrame(frame);
-  });
+
+function onHxScroll(){
+  const rTop=scrollyEl.getBoundingClientRect().top;
+  const lead=Math.max(1,scrollyEl.offsetTop);
+  const total=scrollyEl.offsetHeight-innerHeight;
+  apply(clampv(1-rTop/lead,0,1), clampv(-rTop/total,0,1));
 }
-document.getElementById('hero-tabs').addEventListener('click', e => {
-  const b = e.target.closest('.htab'); if (b) heroPlay(+b.dataset.ph);
-});
-heroPlay(0);
+
+if(REDUCED){
+  document.querySelectorAll('.hx-dm,.hx-vrow,.hx-term,.hx-term .hx-ln,.hx-member,.hx-treecap,.hx-logsec h2,.hx-logsec .hx-sub,.hx-lrow2').forEach(e=>e.classList.add('hx-show'));
+  beamEl.classList.add('hx-on'); treeEl.classList.add('hx-on');
+  beam2line.style.transform='scaleY(1)';
+  document.querySelector('.hx-logcard').style.opacity=1;
+  vaultEl.style.opacity=1; vaultEl.classList.add('hx-pulse');
+  buildPaths();
+  pathData.forEach(({path,dot})=>{path.style.strokeDashoffset=0;dot.style.opacity=.9;});
+  scrollyEl.style.height='auto'; stickyEl.style.position='static'; stickyEl.style.height='auto';
+  hint.style.display='none';
+}else{
+  buildPaths();
+  const gaps=[350,700,1000,1250,1450,1600];
+  dms.forEach((d,i)=>setTimeout(()=>d.classList.add('hx-show'),gaps[i]||1700));
+  addEventListener('scroll',()=>requestAnimationFrame(onHxScroll),{passive:true});
+  addEventListener('resize',()=>{stageEl.style.transform='';buildPaths();onHxScroll();});
+  onHxScroll();
+}
+})();
 
 /* ===== provider logo marquee — the catalog strip ===== */
 const PROVIDERS = [
