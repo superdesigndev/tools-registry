@@ -97,3 +97,19 @@ async def test_orgs_reports_tool_count(clients: AsyncClient):
     await _register(clients, "stripe", "https://api.stripe.com/v1")
     orgs = (await clients.get("/orgs")).json()
     assert sum(o["tool_count"] for o in orgs) == 1          # the count reflects the registered tool
+
+
+async def test_encoded_slash_preserved_named_form(clients: AsyncClient):
+    """An encoded slash in the path must reach the upstream still encoded (`%2f`, not `/`) —
+    npm's scoped publish route (`PUT /@scope%2fname`) 404s if the proxy decodes it."""
+    await _register(clients, "npmreg", "https://registry.npm.test")
+    r = await clients.put("/call/npmreg/@superdesign%2ftreg", content=b"{}")
+    assert r.status_code == 200, r.text
+    assert r.json()["raw_path"].endswith("/@superdesign%2ftreg")
+
+
+async def test_encoded_slash_preserved_passthrough_form(clients: AsyncClient):
+    await _register(clients, "npmreg2", "https://registry.npm2.test")
+    r = await clients.put("/call/https://registry.npm2.test/@superdesign%2ftreg", content=b"{}")
+    assert r.status_code == 200, r.text
+    assert r.json()["raw_path"].endswith("/@superdesign%2ftreg")

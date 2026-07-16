@@ -54,6 +54,7 @@ def make_upstream(hook_hits: list | None = None) -> FastAPI:
             "query": dict(request.query_params),
             "query_multi": request.query_params.multi_items(),  # preserves duplicate keys
             "body": body,
+            "raw_path": request.scope.get("raw_path", b"").decode(),  # pre-decode bytes, for %2f fidelity asserts
         }
 
     return up
