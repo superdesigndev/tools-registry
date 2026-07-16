@@ -912,8 +912,11 @@ p.lead,p.sub{font-family:var(--mono);font-size:15px;line-height:1.65}
   .hx-dm .hx-msg{white-space:normal}
   .hx-term pre{font-size:11px}
   .hx-term .hx-ln{white-space:pre-wrap;word-break:break-word}
-  .hx-vrow{font-size:11px}
-  .hx-vrow .hx-t{font-size:9px}
+  .hx-vault .hx-bar span{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .hx-vrow{font-size:10.5px;gap:8px;white-space:nowrap}
+  .hx-vrow .hx-chip{font-size:9px;padding:2px 6px}
+  .hx-vrow.hx-sub{padding-left:12px;font-size:10px}
+  .hx-vrow .hx-t,.hx-vrow .hx-dots{display:none}
   .hx-beam .hx-cap{font-size:18px}
   .hx-treecap{font-size:19px}
   .hx-logsec h2{font-size:22px}
@@ -922,6 +925,8 @@ p.lead,p.sub{font-family:var(--mono);font-size:15px;line-height:1.65}
   .hx-lrow2 .hx-ts{width:52px}
   .hx-lrow2 .hx-who{width:auto;max-width:52%}
   .hx-lrow2 .hx-what{display:none}
+  /* fewer reveal targets on phones — shorten the scrub so no dead scroll stretch */
+  .hx-scrolly{height:280vh}
 }
 /* tablet: side member cards would collide with the terminal — compact row below it */
 @media(max-width:1100px) and (min-width:641px){
@@ -940,8 +945,9 @@ p.lead,p.sub{font-family:var(--mono);font-size:15px;line-height:1.65}
 }
 /* phones: hide the side cast entirely; the tree routes to the terminal only */
 @media(max-width:640px){
-  .hx-tree{height:520px}
+  .hx-tree{height:380px}
   .hx-member{display:none}
+  .hx-beam2{height:100px}
 }
 @media (prefers-reduced-motion: reduce){
   .hx-dm,.hx-vrow,.hx-term,.hx-term .hx-ln,.hx-member,.hx-treecap,.hx-beam .hx-line,.hx-beam .hx-cap{opacity:1 !important;transform:none !important;transition:none}
@@ -1649,7 +1655,7 @@ function apply(pIn,pPin){
   logh2.classList.toggle('hx-show',step(pPin,0.70));
   document.querySelector('.hx-logcard').style.opacity=step(pPin,0.72)?1:0;
   logsub.classList.toggle('hx-show',step(pPin,0.73));
-  lrows.forEach((r,i)=>r.classList.toggle('hx-show',step(pPin,0.76+i*0.04)));
+  lrows.forEach((r,i)=>r.classList.toggle('hx-show',step(pPin,0.735+i*0.03)));
   const maxPan=Math.max(0,stageEl.scrollHeight-stickyEl.clientHeight+40);
   const yTerm=(termEl.getBoundingClientRect().top-stageEl.getBoundingClientRect().top)+termEl.offsetHeight/2+40;
   const pan1=clampv(yTerm-stickyEl.clientHeight*0.46,0,maxPan);
