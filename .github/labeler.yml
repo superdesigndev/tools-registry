@@ -1,0 +1,50 @@
+# Path → area label mapping for the PR auto-labeler (actions/labeler v5).
+# Keep in sync with the labels defined on the repo and the docs/context fragments.
+
+"area:api":
+  - changed-files:
+      - any-glob-to-any-file: 'src/treg/api.py'
+
+"area:proxy":
+  - changed-files:
+      - any-glob-to-any-file: 'src/treg/proxy.py'
+
+"area:auth-secrets":
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'src/treg/injectors.py'
+          - 'src/treg/crypto.py'
+          - 'src/treg/oauth.py'
+          - 'src/treg/session.py'
+          - 'src/treg/email.py'
+          - 'src/treg/health.py'
+          - 'src/treg/ratestore.py'
+
+"area:cli":
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'src/treg/cli.py'
+          - 'src/treg/convert.py'
+          - 'src/treg/shell.py'
+
+"area:runner":
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'src/treg/runner.py'
+          - 'src/treg/localrun.py'
+          - 'src/treg/egress.py'
+          - 'src/treg/fsjail.py'
+
+"area:dashboard":
+  - changed-files:
+      - any-glob-to-any-file: 'src/treg/web/**'
+
+"area:docs":
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'docs/**'
+          - '**/*.md'
+
+"area:ci":
+  - changed-files:
+      - any-glob-to-any-file: '.github/**'
