@@ -15,7 +15,7 @@ No `.env` needed for dev — every setting has a working default (ephemeral encr
 sqlite). The `TREG_*` knobs for persistence / a real deployment are documented in the README's
 **Configuration** section (and `docs/context/ops/deploy.md`).
 
-A one-command local stack is in `scripts/dev-local.sh` (also the `dev-local` skill under `.claude/skills`).
+A one-command local stack is in `scripts/dev-local.sh` (`up` / `logs` / `cli` / `reset`).
 
 ## Project layout
 

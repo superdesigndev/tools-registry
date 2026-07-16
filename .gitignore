@@ -9,6 +9,6 @@ __pycache__/
 .secrets/
 .pytest_cache/
 dist/
-.claude/mode
 /.playwright-cli
 scripts/.dev-home/
+.claude/

@@ -290,9 +290,7 @@ tools-registry/
 ├── docs/
 │   ├── context/         # design fragments (codemap system) + generated index
 │   └── ONBOARDING.md    # first-time bootstrap
-├── .claude/skills/tools-registry-context/   # doc-maintenance skill (/tools-registry-context)
 ├── USAGE.md             # full treg CLI reference
-├── CLAUDE.md            # project instructions
 └── pyproject.toml
 ```
 
