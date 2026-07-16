@@ -1,0 +1,65 @@
+name: Bug report
+description: Something isn't working as expected
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug. Please fill in what you can —
+        the more detail, the faster we can help.
+        **Security issue?** Do NOT file it here — see [SECURITY.md](../blob/main/SECURITY.md).
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug, and what you expected instead.
+      placeholder: When I run `treg …`, I expected X but got Y.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: The exact commands or actions. Redact any secrets.
+      placeholder: |
+        1. `treg …`
+        2. …
+        3. See error
+    validations:
+      required: true
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Where did this happen?
+      options:
+        - CLI (treg)
+        - Web dashboard
+        - The API / proxy
+        - Self-hosted server
+        - Hosted (treg.superdesign.dev)
+        - Other / not sure
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version / commit
+      description: Output of `treg --version`, or the git commit if self-hosting.
+    validations:
+      required: false
+  - type: textarea
+    id: env
+    attributes:
+      label: Environment
+      description: OS, Python version, and whether you're on the hosted service or self-hosting.
+      placeholder: macOS 15, Python 3.13, self-hosted (Postgres)
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs / output
+      description: Paste any error output. **Redact tokens, keys, and secrets first.**
+      render: shell
+    validations:
+      required: false
