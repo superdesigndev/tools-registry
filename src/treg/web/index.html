@@ -638,12 +638,12 @@ th{background:rgba(0,0,0,.25)}
       <nav class="side">
         <!-- ORG (top): name → settings · ▾ → switch -->
         <div class="orgblock">
-          <div class="orgmain" @click="orgMenu=!orgMenu" role="button" tabindex="0" @keydown.enter="orgMenu=!orgMenu" aria-haspopup="true" :aria-expanded="orgMenu" aria-label="Teams">
+          <div class="orgmain" ref="orgmain" @click="toggleOrgMenu" role="button" tabindex="0" @keydown.enter="toggleOrgMenu" aria-haspopup="true" :aria-expanded="orgMenu" aria-label="Teams">
             <span class="role" :class="activeRole">{{activeRole}}</span>
             <b class="orgname">{{activeName}}</b>
             <span class="orgcaret">▾</span>
           </div>
-          <div class="dropdown" v-if="orgMenu" @click.stop>
+          <div class="dropdown" v-if="orgMenu" :style="orgMenuStyle" @click.stop>
             <div class="grp" style="margin:4px 10px 6px">Your teams</div>
             <div class="orgrow" v-for="o in myOrgs" :key="o.slug" :class="{off:!connected(o.slug)}">
               <div class="orgrow-main">
@@ -1588,7 +1588,7 @@ createApp({
     let cfg={active:null,orgs:{}}; try{ cfg=JSON.parse(localStorage.getItem(LS))||cfg; }catch(e){}
     return {
       theme: localStorage.getItem('treg-theme')||'dark',
-      cfg, tokenInput:'', busy:false, loginErr:'', addOrg:false, orgMenu:false,
+      cfg, tokenInput:'', busy:false, loginErr:'', addOrg:false, orgMenu:false, orgMenuStyle:null,
       emailInput:'', codeInput:'', emailStage:false, devCode:'', pendingInvites:[], invitePrefill:'', inviteChoice:false, inviteBusy:false,
       inviteSel:{}, inviteLinkOrg:null, inviteErr:'',  // multi-select accept: checked ids, the org_id the clicked email link was for, partial-failure note
       tut:{i:0, panel:null}, tutCopied:false, tourI:0, helpMode:null, xtut:{i:0},
@@ -2436,6 +2436,13 @@ createApp({
         if(!txt){ this.tryResp='(empty response body - status '+r.status+')'; }  // e.g. a 404 with no body left the box blank
         else { try{ this.tryResp=JSON.stringify(JSON.parse(txt),null,2); }catch(_){ this.tryResp=txt.slice(0,4000); } }
       }catch(e){ this.tryResp='Request failed: '+e; this.tryStatus=0; this.tryMs=Math.round(performance.now()-t0); } finally{ this.trying=false; } },
+    placeOrgMenu(){  // the sidebar is a scroll container that clips overflow, so the dropdown is
+      // position:fixed (viewport coords) and glued to its trigger here on open/scroll/resize
+      const t=this.$refs.orgmain; if(!t) return;
+      const r=t.getBoundingClientRect();
+      this.orgMenuStyle={position:'fixed', top:(r.bottom+6)+'px', left:r.left+'px'};
+    },
+    toggleOrgMenu(){ this.orgMenu=!this.orgMenu; if(this.orgMenu) this.placeOrgMenu(); },
     closeOverlays(){ this.newTool=false; this.newSkill=false; this.showJoin=false; this.newOrg=false; this.addOrg=false; this.tryTool=null; this.copyTool=null; this.orgMenu=false; },
   },
   async mounted(){
@@ -2449,8 +2456,11 @@ createApp({
       if(e.key==='/' && !typing && this.authed && this.view==='tools'){ e.preventDefault(); this.$refs.search && this.$refs.search.focus(); }
     });
     document.addEventListener('click', e=>{  // the org dropdown didn't close on an outside click
-      if(this.orgMenu && !e.target.closest('.orgblock')) this.orgMenu=false;
+      if(this.orgMenu && !e.target.closest('.orgblock') && !e.target.closest('.dropdown')) this.orgMenu=false;
     });
+    // the fixed-position dropdown must follow its trigger when anything scrolls or resizes
+    window.addEventListener('scroll', ()=>{ if(this.orgMenu) this.placeOrgMenu(); }, true);
+    window.addEventListener('resize', ()=>{ if(this.orgMenu) this.placeOrgMenu(); });
     window.addEventListener('popstate', e=>{  // browser Back moves between views (was exiting the app)
       const v=(e.state&&e.state.view)||(location.hash||'').replace('#','')||'tools';
       if(['tools','orgs','activity','usage','admin','help','secrets','start'].includes(v)) this.go(v, true);
