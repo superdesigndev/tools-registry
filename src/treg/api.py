@@ -887,12 +887,16 @@ def _esc_html(s: str) -> str:
 
 
 @app.get("/", include_in_schema=False)
-async def landing(request: Request):
+async def landing(request: Request, treg_session: str = Cookie(default=""),
+                  db: AsyncSession = Depends(get_session)):
     """Serve the marketing landing at the root. Any query string (invite links, OAuth returns,
     tour deep-links) belongs to the SPA, so those requests fall through to the dashboard —
-    the landing is only the clean, parameterless front door."""
+    the landing is only the clean, parameterless front door. A signed-in visitor belongs on
+    the dashboard, so a live session redirects to /app instead of re-showing the pitch."""
     page = _WEB_DIR / "landing.html"
     if page.exists() and not request.query_params:
+        if treg_session and await _user_from_session(treg_session, db):
+            return RedirectResponse("/app", status_code=302)
         return FileResponse(page, headers={"Cache-Control": "no-cache"})
     return await dashboard()
 
