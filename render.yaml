@@ -2,8 +2,9 @@
 # /llms.txt + /install.sh) backed by a managed Postgres. See docs/context/ops/deploy.md.
 #
 # The app is a single FastAPI service: `python -m treg` honors $PORT (Render routes + health-checks
-# it). Web assets ship in the wheel via pyproject `force-include src/treg/web`, so a plain
-# `pip install .` bundles everything — no separate frontend build.
+# it). Web assets ship in the wheel via pyproject `force-include src/treg/web`, so `pip install .[server]`
+# bundles everything — no separate frontend build. The `[server]` extra pulls the FastAPI/DB/crypto stack
+# (the base install is the CLI only — see pyproject).
 #
 # Secrets (Fernet key, OAuth, Resend, admin/session tokens) are NOT in this file — they are set once
 # in the Render dashboard (sync:false below marks them as dashboard-managed). The Postgres URL is
@@ -22,7 +23,7 @@ services:
     region: oregon
     plan: starter
     branch: main
-    buildCommand: pip install .
+    buildCommand: pip install ".[server]"
     startCommand: python -m treg
     healthCheckPath: /meta
     autoDeploy: true

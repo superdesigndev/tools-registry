@@ -194,10 +194,15 @@ scripts/dev-local.sh reset       # wipe the dev DB + CLI sandbox for a fresh sta
 Or run the server directly, without tmux:
 
 ```bash
-uv sync                        # create the venv from uv.lock
+uv sync                        # create the venv from uv.lock (pulls the server deps for dev)
 uv run python -m treg          # serve on 0.0.0.0:18790 (add --reload for dev)
 uv run python -m treg keygen   # print a fresh Fernet key for TREG_SECRET_KEY
 ```
+
+> **Installing to run a server (not from source):** the base package is the **CLI only**. To run a
+> registry, install the server extra — `pip install "tools-registry[server]"` — which adds FastAPI, the
+> database drivers, and encryption. `pip install tools-registry` alone gives just the `treg` command for
+> talking to an existing registry.
 
 The team instance is hosted on **Render** (web service + Postgres) at `treg.superdesign.dev`.
 
