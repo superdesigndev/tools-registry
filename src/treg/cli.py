@@ -160,6 +160,13 @@ def _show(resp: httpx.Response) -> None:
         sys.exit(1)
 
 
+def _detail_url(cfg: dict, kind: str, name: str) -> str:
+    """The shareable dashboard page for a registered skill/tool. Printed after every registration so
+    sharing is just forwarding the link — the page carries the preview + the agent install prompt."""
+    base = (cfg.get("base_url") or "https://treg.superdesign.dev").rstrip("/")
+    return f"{base}/app/{'skills' if kind == 'skill' else 'tools'}/{quote(str(name), safe='')}"
+
+
 # ---- auth --------------------------------------------------------------------------------
 def cmd_config(args, cfg) -> None:
     if args.base_url:
@@ -1047,7 +1054,8 @@ def _import_env(args, cfg, env_path: str) -> None:
                         print(f"  ✗ {a.tool_name}: {a.secret_name} has no value in the env — skipped"); continue
                 if a.tool_name in existing_tools:               # already registered → skip (or replace) BEFORE writing a secret
                     if not args.replace:
-                        print(f"  · {a.tool_name}: already registered (use --replace)"); continue
+                        print(f"  · {a.tool_name}: already registered (use --replace)")
+                        print(f"    ↗ {_detail_url(cfg, 'tool', a.tool_name)}"); continue
                     c.delete(f"/tools/{existing_tools[a.tool_name]}")
                     if a.secret_name in existing_secrets:
                         c.delete(f"/secrets/{existing_secrets[a.secret_name]}")
@@ -1065,7 +1073,8 @@ def _import_env(args, cfg, env_path: str) -> None:
                 rt = c.post("/tools", json=tool_body)
                 if rt.status_code >= 400:
                     print(f"  ✗ {a.tool_name}: tool failed ({rt.status_code}) {rt.text[:100]}"); continue
-                print(f"  ✓ {a.tool_name:<14} {a.base_url}"); ok += 1
+                print(f"  ✓ {a.tool_name:<14} {a.base_url}")
+                print(f"    ↗ {_detail_url(cfg, 'tool', a.tool_name)}"); ok += 1
             print(f"\nRegistered {ok}/{len(chosen)} tools.")
         if oauth_dets:
             if not args.no_oauth and sys.stdin.isatty():
@@ -1120,7 +1129,7 @@ def _import_clis(args, cfg, env_path: str) -> None:
                 if name in existing:  # --replace: delete-then-recreate
                     c.delete(f"/tools/{existing[name]}")
                 registered.append((name, d["tier"], _register_cli_tool(c, entry, cli, d, envvar, _val)))
-    _print_cli_report(scanned, registered, report_only, args.status)
+    _print_cli_report(scanned, registered, report_only, args.status, cfg)
 
 
 def _register_cli_tool(c, entry, cli, decision, envvar, val_getter) -> str:
@@ -1198,6 +1207,7 @@ def _import_add_cli(args, cfg) -> None:
     # An unknown bin is NOT on the server allow-list (the RCE guard), so it runs LOCALLY; server-run needs
     # an admin to allow-list the bin. If a key was bound it's also a callable HTTP tool.
     print(f"✓ Registered '{name}'. Run it locally: `treg run {name}`.")
+    print(f"  ↗ {_detail_url(cfg, 'tool', name)}")
     if bindings:
         print(f"  (key stored — also a callable API tool; to run '{bin_}' on the SERVER too, an admin adds it to TREG_RUN_ALLOWED_BINS.)")
     import json as _json
@@ -1207,7 +1217,7 @@ def _import_add_cli(args, cfg) -> None:
     print("\nShare this to add it to the catalog for everyone:\n  " + _json.dumps(entry))
 
 
-def _print_cli_report(scanned, registered, report_only, verbose) -> None:
+def _print_cli_report(scanned, registered, report_only, verbose, cfg=None) -> None:
     """Group the scan into an actionable report: what's ready (and where it runs), what needs a key or a
     login (with the exact next step), what isn't supported, and how many catalog CLIs aren't installed."""
     from collections import defaultdict
@@ -1229,6 +1239,10 @@ def _print_cli_report(scanned, registered, report_only, verbose) -> None:
     if local:
         print(f"{verb} (local, uses your login):")
         _list(local)
+    if cfg and not report_only:  # each registered CLI's shareable page (send the link to share it)
+        for n, _t, r in registered:
+            if r in ("ok", "exists"):
+                print(f"  ↗ {_detail_url(cfg, 'tool', n)}")
     if buckets["needs_key"] or buckets["needs_login"]:
         print("\nNeeds setup before it can register:")
         for _e, cli, d, _v in buckets["needs_key"]:
@@ -1517,7 +1531,8 @@ def _import_skills(args, cfg, skills_dir, env_path: str) -> None:
             clash = d.name in existing_bundles or (d.kind != "recipe_only" and d.name in existing_tools)
             if clash:
                 if not args.replace:
-                    print(f"  · {d.name}: already registered (use --replace to update)"); continue
+                    print(f"  · {d.name}: already registered (use --replace to update)")
+                    print(f"    ↗ {_detail_url(cfg, 'skill', d.name)}"); continue
                 for bid in existing_bundles.get(d.name, []):   # delete the old bundle (cascades its tool+secrets)
                     c.delete(f"/bundles/{bid}")
             try:
@@ -1531,8 +1546,10 @@ def _import_skills(args, cfg, skills_dir, env_path: str) -> None:
                 print(f"  ✗ {d.name}: {r.status_code} {r.text[:100]}"); continue
             wrote = sk.write_contract(d)                        # only after a successful push
             tag = "recipe" if d.kind == "recipe_only" else "tool"
-            print(f"  ✓ {d.name:<28} ({tag})" + ("  [wrote treg.json]" if wrote else "")); ok += 1
-    print(f"\nImported {ok}/{len(chosen)} skills.")
+            print(f"  ✓ {d.name:<28} ({tag})" + ("  [wrote treg.json]" if wrote else ""))
+            print(f"    ↗ {_detail_url(cfg, 'skill', d.name)}"); ok += 1
+    print(f"\nImported {ok}/{len(chosen)} skills. Share a skill by sending its ↗ link — "
+          "the page previews it and carries the agent install prompt.")
 
 
 # ---- tools --------------------------------------------------------------------------------
@@ -1602,7 +1619,9 @@ def cmd_add(args, cfg) -> None:
             body.update(secret_id=sid, injector="env", auth_in="header",
                         auth_name=args.header or "Authorization",
                         auth_format=args.format or "Bearer {secret}", secret_field="access_token")
-        _show(c.post("/tools", json=body))
+        r = c.post("/tools", json=body)
+        _show(r)
+    print(f"↗ {_detail_url(cfg, 'tool', args.name)}")
 
 
 def cmd_tool_ls(args, cfg) -> None:
@@ -2196,6 +2215,8 @@ def cmd_skill_push(args, cfg) -> None:
         sys.exit(f"could not read skill file {args.file!r}: {exc}")
     with _client(cfg) as c:
         _show(c.post("/skills", json=body))
+    if body.get("name"):
+        print(f"↗ {_detail_url(cfg, 'skill', body['name'])}")
 
 
 def cmd_skill_init(args, cfg) -> None:
@@ -2232,6 +2253,7 @@ def cmd_skill_add(args, cfg) -> None:
         sys.exit(str(exc))
     with _client(cfg) as c:
         _show(c.post("/skills", json=payload))
+    print(f"↗ {_detail_url(cfg, 'skill', payload['name'])}")
 
 
 def cmd_skill_ls(args, cfg) -> None:

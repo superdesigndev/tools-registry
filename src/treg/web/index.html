@@ -726,11 +726,11 @@ th{background:rgba(0,0,0,.25)}
           <div class="tgroup" v-for="grp in toolGroups" :key="grp.key" v-show="grp.rows.length && (toolTab==='all'||toolTab===grp.key)">
             <div class="tgh">{{grp.label}} <span class="tgh-n">{{grp.rows.length}}</span><span class="tgh-hint">{{grp.hint}}</span></div>
             <div class="ttable-wrap"><table class="ttable">
-              <tr v-for="t in grp.rows" :key="t.id">
-                <td class="tn"><b>{{t.name}}</b></td>
+              <tr v-for="t in grp.rows" :key="t.id" @click="rowOpen(t)" style="cursor:pointer" :title="'Open the '+rowTarget(t).kind+'’s page (shareable link)'">
+                <td class="tn"><a :href="rowHref(t)" @click.prevent.stop="rowOpen(t)" style="color:inherit;text-decoration:none"><b>{{t.name}}</b></a></td>
                 <td class="th"><span class="mono">{{t.host}}</span></td>
                 <td class="ta"><span v-if="t.cli" class="chip run" :title="localRunTitle(t)">⌘ run{{t.cli.enabled?'':' off'}}</span><span v-if="t.server_runnable" class="chip ok" title="Runs on the server — the key is injected there, never on a member's machine">server</span><span v-else-if="t.cli" class="chip" title="Local only — this CLI authenticates from the member's own machine (treg run --local)">local-only</span><span class="chip" :class="w.kind" v-for="(w,wi) in credChips(t)" :key="'w'+wi" :title="w.title">{{w.label}}</span></td>
-                <td class="tx"><button v-if="t.cli && canRegister" class="btn sm ico" :class="{on:t.cli.enabled}" @click="toggleLocalRun(t)" :title="localRunTitle(t)">⌘</button><button class="btn sm ico" @click="openCopy(t)" title="Copy a call snippet">⧉</button><button class="btn sm ico" @click="openUse(t)" title="Use it - API call or CLI run">▶</button><button v-if="canRegister" class="btn sm ico" @click="openEditTool(t)" title="Edit">✎</button><button v-if="canRegister" class="btn sm ico" :class="{danger:confirmDelTool===t.id}" @click="deleteTool(t)" :title="confirmDelTool===t.id?'Click again to delete':'Delete'">✕</button></td>
+                <td class="tx" @click.stop><button v-if="t.cli && canRegister" class="btn sm ico" :class="{on:t.cli.enabled}" @click="toggleLocalRun(t)" :title="localRunTitle(t)">⌘</button><button class="btn sm ico" @click="openCopy(t)" title="Copy a call snippet">⧉</button><button class="btn sm ico" @click="openUse(t)" title="Use it - API call or CLI run">▶</button><button v-if="canRegister" class="btn sm ico" @click="openEditTool(t)" title="Edit">✎</button><button v-if="canRegister" class="btn sm ico" :class="{danger:confirmDelTool===t.id}" @click="deleteTool(t)" :title="confirmDelTool===t.id?'Click again to delete':'Delete'">✕</button></td>
               </tr>
             </table></div>
           </div>
@@ -738,10 +738,10 @@ th{background:rgba(0,0,0,.25)}
           <div class="tgroup" v-show="recipes.length && (toolTab==='all'||toolTab==='recipes')">
             <div class="tgh">Skills <span class="tgh-n">{{recipes.length}}</span><span class="tgh-hint">knowledge skills - pull with the CLI</span></div>
             <div class="ttable-wrap"><table class="ttable">
-              <tr v-for="r in recipes" :key="r.id">
-                <td class="tn"><b>{{r.name}}</b></td>
+              <tr v-for="r in recipes" :key="r.id" @click="openDetail('skill',r.name)" style="cursor:pointer" title="Open the skill’s page (shareable link)">
+                <td class="tn"><a :href="'/app/skills/'+encodeURIComponent(r.name)" @click.prevent.stop="openDetail('skill',r.name)" style="color:inherit;text-decoration:none"><b>{{r.name}}</b></a></td>
                 <td class="th" colspan="2"><span class="mono muted">treg skill install {{r.name}}</span></td>
-                <td class="tx"><button class="btn sm ico" @click="openRecipeCopy(r)" title="How to install / use">⧉</button><button class="btn sm ico" @click="openRecipeView(r)" title="View the SKILL.md">✎</button><button v-if="canRegister" class="btn sm ico" :class="{danger:confirmDelBundle===r.id}" @click="deleteRecipe(r)" :title="confirmDelBundle===r.id?'Click again to delete':'Delete'">✕</button></td>
+                <td class="tx" @click.stop><button class="btn sm ico" @click="openRecipeCopy(r)" title="How to install / use">⧉</button><button class="btn sm ico" @click="openRecipeView(r)" title="View the SKILL.md">✎</button><button v-if="canRegister" class="btn sm ico" :class="{danger:confirmDelBundle===r.id}" @click="deleteRecipe(r)" :title="confirmDelBundle===r.id?'Click again to delete':'Delete'">✕</button></td>
               </tr>
             </table></div>
           </div>
@@ -774,6 +774,86 @@ th{background:rgba(0,0,0,.25)}
             </template>
           </div>
           </div>
+        </template>
+
+        <!-- DETAIL (shareable deep links: /app/skills/<name> + /app/tools/<name>) -->
+        <template v-if="view==='detail' && detail">
+          <div class="tut-head">
+            <div>
+              <p class="sub" style="margin:0 0 4px"><a href="/app#tools" @click.prevent="go('tools')">← Tools</a></p>
+              <h1 style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">{{detail.name}}
+                <span class="chip">{{detail.kind==='skill' ? 'skill' : (detailData&&detailData.cli ? 'endpoint + CLI' : 'endpoint')}}</span>
+                <span v-if="detailData&&detailData.owner" class="chip" :title="'shared by '+detailData.owner">{{detailData.owner}}</span>
+              </h1>
+            </div>
+            <div class="tut-actions">
+              <button class="btn sm" @click="copyDetail(detailShareUrl,'url')" title="Copy this page's URL — anyone on the team can open it">{{detailCopied==='url'?'✓ copied':'⧉ Copy link'}}</button>
+            </div>
+          </div>
+          <div v-if="detailErr" class="banner" style="margin-top:12px">{{detailErr}}</div>
+          <p v-if="detailLoading" class="sub">Loading…</p>
+
+          <template v-if="detailData && detail.kind==='skill'">
+            <div style="max-width:860px;border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin:14px 0;background:var(--panel)">
+              <h3 style="margin:0 0 6px;font-size:14px">Use with your agent</h3>
+              <p class="sub" style="margin:0 0 10px">Send someone this page's link, or paste this into a coding agent (Claude Code / Codex / Gemini) — it installs the CLI, signs them in as themselves, and pulls just this skill. <template v-if="(detailData.secrets||[]).length">Its credential{{detailData.secrets.length>1?'s stay':' stays'}} server-side — calls go through the proxy, no key lands on their machine.</template></p>
+              <pre class="code" style="white-space:pre-wrap;max-height:34vh;overflow:auto">{{detailPrompt}}</pre>
+              <div style="margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+                <button class="btn primary" @click="copyDetail(detailPrompt,'prompt')">⧉ {{detailCopied==='prompt'?'Copied!':'Copy prompt'}}</button>
+                <button class="btn" @click="copyDetail('treg skill install '+detail.name,'cli')" title="Just the CLI command, if treg is already set up">{{detailCopied==='cli'?'✓ copied':'treg skill install '+detail.name}}</button>
+              </div>
+            </div>
+            <div v-if="(detailData.tools||[]).length || (detailData.secrets||[]).length" style="max-width:860px;margin:0 0 14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+              <span class="sub" style="margin:0">Bundled:</span>
+              <a v-for="t in detailData.tools" :key="'dt'+t.id" class="chip" :href="'/app/tools/'+encodeURIComponent(t.name)" @click.prevent="openDetail('tool',t.name)" style="cursor:pointer" :title="'tool · '+(t.host||t.base_url)">⚒ {{t.name}}</a>
+              <span v-for="s in detailData.secrets" :key="'ds'+s.id" class="chip" title="credential — stored encrypted server-side, injected by the proxy, never shown">🔒 {{s.name||s.local_name}}</span>
+            </div>
+            <div style="max-width:860px;border:1px solid var(--line);border-radius:16px;overflow:hidden;display:flex;min-height:280px;background:var(--panel)">
+              <div style="width:220px;flex:none;border-right:1px solid var(--line);padding:10px 0;overflow:auto;max-height:60vh">
+                <div v-for="row in detailTree" :key="row.path"
+                     :style="{padding:'4px 12px 4px '+(14+row.depth*14)+'px', cursor:row.dir?'default':'pointer', fontSize:'12.5px',
+                              color:row.dir?'var(--muted)':'var(--ink)', background:(!row.dir&&detailFile===row.path)?'var(--panel2)':'transparent'}"
+                     @click="!row.dir && (detailFile=row.path)">{{row.dir?'▸ ':'· '}}{{row.name}}</div>
+              </div>
+              <pre class="code" style="flex:1;margin:0;border:0;border-radius:0;white-space:pre-wrap;word-break:break-word;overflow:auto;max-height:60vh">{{detailFileContent}}</pre>
+            </div>
+          </template>
+
+          <template v-if="detailData && detail.kind==='tool'">
+            <div style="max-width:860px;border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin:14px 0;background:var(--panel)">
+              <h3 style="margin:0 0 6px;font-size:14px">Use with your agent</h3>
+              <p class="sub" style="margin:0 0 10px">Send someone this page's link, or paste this into a coding agent. Calls go through the proxy — the credential is injected server-side, never on their machine.</p>
+              <pre class="code" style="white-space:pre-wrap;max-height:34vh;overflow:auto">{{detailPrompt}}</pre>
+              <div style="margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+                <button class="btn primary" @click="copyDetail(detailPrompt,'prompt')">⧉ {{detailCopied==='prompt'?'Copied!':'Copy prompt'}}</button>
+                <button class="btn" @click="openCopy(detailData)" title="Language-specific call snippets (cURL / Python / Node / …)">⧉ Call snippets</button>
+                <button class="btn" @click="openUse(detailData)" title="Try it right here">▶ Try it</button>
+              </div>
+            </div>
+            <div style="max-width:860px;border:1px solid var(--line);border-radius:16px;padding:16px 18px;background:var(--panel)">
+              <div class="lbl">Upstream</div>
+              <p style="margin:2px 0 12px"><span class="mono">{{detailData.base_url}}</span></p>
+              <div class="lbl">Credentials</div>
+              <p class="sub" style="margin:2px 0 12px" v-if="(detailData.bindings||[]).length || (detailData.cli&&(detailData.cli.inject||[]).length)"><span class="chip" v-for="(w,wi) in credChips(detailData)" :key="'dw'+wi" :class="w.kind" :title="w.title">{{w.label}}</span> injected server-side on every call — the value never appears here or on a caller's machine.</p>
+              <p class="sub" style="margin:2px 0 12px" v-else>none — a public upstream, no credential needed.</p>
+              <template v-if="(detailData.examples||[]).length">
+                <div class="lbl">Examples</div>
+                <div class="exrow" style="margin:4px 0 12px"><span v-for="(ex,exi) in detailData.examples" :key="'de'+exi" class="exchip"><span class="m">{{ex.method||'GET'}}</span>{{ex.note||ex.path}}</span></div>
+              </template>
+              <template v-if="detailData.cli">
+                <div class="lbl">CLI</div>
+                <p class="sub" style="margin:2px 0 12px"><span class="mono">treg run {{detail.name}} -- &lt;args&gt;</span>
+                  <span class="chip ok" v-if="detailData.server_runnable" title="Runs on the server — the key is injected there, never on a member's machine">server</span>
+                  <span class="chip" v-else title="Local only — this CLI authenticates from the member's own machine (treg run --local)">local-only</span>
+                  <span class="chip run" v-if="!detailData.cli.enabled" title="The owner has local runs switched off for this tool">⌘ run off</span>
+                </p>
+              </template>
+              <template v-if="detailParentSkill">
+                <div class="lbl">From skill</div>
+                <p style="margin:2px 0 0"><a :href="'/app/skills/'+encodeURIComponent(detailParentSkill.name)" @click.prevent="openDetail('skill',detailParentSkill.name)">▚ {{detailParentSkill.name}}</a> — the recipe + files that registered this tool.</p>
+              </template>
+            </div>
+          </template>
         </template>
 
         <!-- SECRETS -->
@@ -1611,6 +1691,8 @@ createApp({
       sessionMode:false, activeSlug: localStorage.getItem('treg-active')||null, meta:{github:false, public_url:location.origin},
       view:'tools', q:'', err:'', loading:false, toolTab:'all', bundles:[], confirmDelBundle:null, installCopied:null,
       copyRecipe:null, recipeTab:'cURL', viewRecipe:null, recipeSaved:false,
+      // detail pages (shareable /app/skills/<name> + /app/tools/<name> deep links)
+      detail:null, detailData:null, detailErr:'', detailLoading:false, detailFile:'SKILL.md', detailCopied:'',
       me:'', myOrgs:[], isAdmin:false,
       onboarded:true,  // first-run onboarding (narrative stepper) - see onb.*
       welcome:{on:false, name:'', busy:false, err:''},  // first-run: name your team (the primary path)
@@ -1741,6 +1823,45 @@ createApp({
     isOwner(){ return this.activeRole==='owner'; },
     canRegister(){ return this.activeRole!=='viewer'; },  // members+ may create secrets/tools
     secretRowsReady(){ return this.secretRows.filter(r=>(r.name||'').trim()&&r.value).length; },
+    // ---- detail pages ----
+    detailShareUrl(){ if(!this.detail) return ''; return location.origin+'/app/'+(this.detail.kind==='skill'?'skills':'tools')+'/'+encodeURIComponent(this.detail.name); },
+    detailTree(){  // the bundle's files as a flat, indent-rendered tree: synthesized dir rows + file rows
+      const files=Object.keys((this.detailData&&this.detailData.files)||{}).sort();
+      const rows=[{path:'SKILL.md', name:'SKILL.md', depth:0, dir:false}]; const seen=new Set();
+      for(const p of files){ const parts=p.split('/');
+        for(let i=0;i<parts.length-1;i++){ const d=parts.slice(0,i+1).join('/');
+          if(!seen.has(d)){ seen.add(d); rows.push({path:d, name:parts[i]+'/', depth:i, dir:true}); } }
+        rows.push({path:p, name:parts[parts.length-1], depth:parts.length-1, dir:false}); }
+      return rows; },
+    detailFileContent(){ if(!this.detailData) return '';
+      if(this.detailFile==='SKILL.md') return this.detailData.recipe||'';
+      return (this.detailData.files||{})[this.detailFile]||''; },
+    detailParentSkill(){ if(!this.detail||this.detail.kind!=='tool'||!this.detailData||!this.detailData.bundle_id) return null;
+      return this.bundles.find(b=>b.id===this.detailData.bundle_id)||null; },
+    detailPrompt(){  // the copyable "give this to your agent" instruction — no token embedded, the
+      // recipient signs in as themselves (this text is meant to be forwarded)
+      if(!this.detail) return '';
+      const B=(this.proxy||location.origin).replace(/\/$/,''); const n=this.detail.name;
+      const head=[`I want to use the shared ${this.detail.kind==='skill'?'skill':'tool'} "${n}" from my team's tools-registry at ${B} .`,``,
+        `1. Install the treg CLI (skip if \`treg\` already works) and sign me in:`,
+        `   curl -fsSL ${B}/install.sh | sh`,`   treg login`,``];
+      if(this.detail.kind==='skill'){
+        const t=(this.detailData&&this.detailData.tools&&this.detailData.tools[0])||null;
+        return head.concat([
+          `2. Install the skill into this project (writes the skill folder into my agent skills dir):`,
+          `   treg skill install ${n}`,``,
+          ...(t?[`3. The skill's API calls go through treg's proxy — the credential is injected server-side, never on this machine:`,
+                `   treg call ${t.name} <PATH>   # or prefix the real URL: ${B}/call/<full upstream URL>`,``]:[]),
+          `Then use the "${n}" skill for my request.`,``,
+          `Full protocol reference: ${B}/llms.txt`]).join('\n');
+      }
+      const t=this.detailData||{};
+      return head.concat([
+        `2. Call it through the proxy — the credential is injected server-side, never on this machine:`,
+        `   treg call ${n} <PATH>   # PATH = the ${t.host||'upstream'} path you'd normally call`,
+        ...(t.cli?[``,`   # it's also a CLI — run it with the key injected:`,`   treg run ${n} -- <cli args>`]:[]),``,
+        `Full protocol reference: ${B}/llms.txt`]).join('\n');
+    },
   },
   watch:{
     // a11y (WCAG 2.4.3): when a dialog/drawer opens, move focus INTO it (was left on the trigger)
@@ -1776,8 +1897,10 @@ createApp({
     save(){ localStorage.setItem(LS, JSON.stringify(this.cfg)); },
     connected(slug){ return this.sessionMode || !!this.cfg.orgs[slug]; },
     toggleTheme(){ this.theme=this.theme==='dark'?'light':'dark'; document.documentElement.dataset.theme=this.theme; localStorage.setItem('treg-theme',this.theme); },
-    githubLogin(){ location.href='/auth/github'; },
-    googleLogin(){ location.href='/auth/google'; },
+    _stashNext(){  // OAuth callbacks land on /app, losing a /app/skills/<x> deep link — stash it to restore after boot
+      const d=this.routeFromPath(location.pathname); if(d) localStorage.setItem('treg-next', location.pathname); },
+    githubLogin(){ this._stashNext(); location.href='/auth/github'; },
+    googleLogin(){ this._stashNext(); location.href='/auth/google'; },
     demoScroll(){ this.$refs.demo && this.$refs.demo.scrollIntoView({behavior:'smooth',block:'start'}); },
     scrollToSignin(){ this.$refs.signin && this.$refs.signin.scrollIntoView({behavior:'smooth',block:'start'}); },
     async sbx(path, opts={}){  // fetch against the sandbox, carrying the sandbox token explicitly
@@ -2350,8 +2473,29 @@ createApp({
       this.go('orgs'); },
     resetConfirms(){ this.confirmDelTool=null; this.confirmDelSecret=null; this.confirmDelBundle=null; this.confirmRemove=null; this.confirmLeave=false; this.confirmDel=''; this.confirmAdmUser=null; this.confirmAdmOrg=null; },
     go(v, fromPop){ this.resetConfirms();  // stale inline "Confirm" states must not survive a view switch (accidental-delete risk)
-      this.view=v; if(v==='activity')this.loadCalls(); if(v==='admin')this.loadAdmin(); if(v==='orgs'){this.loadOrgAdmin(); this.loadMyUsage();} if(v==='usage')this.loadUsage(); if(v==='secrets')this.loadSecrets();
-      if(!fromPop) history.pushState({view:v}, '', '#'+v); },  // push history so browser Back navigates BETWEEN views instead of leaving the app
+      this.detail=null; this.view=v; if(v==='activity')this.loadCalls(); if(v==='admin')this.loadAdmin(); if(v==='orgs'){this.loadOrgAdmin(); this.loadMyUsage();} if(v==='usage')this.loadUsage(); if(v==='secrets')this.loadSecrets();
+      // push history so browser Back navigates BETWEEN views instead of leaving the app; the '/app'
+      // pathname also walks back from a /app/skills/<x> detail URL so reload doesn't reopen the detail
+      if(!fromPop) history.pushState({view:v}, '', '/app#'+v); },
+    // ---- detail pages (shareable deep links) ----
+    routeFromPath(path){ const m=/^\/app\/(skills|tools)\/(.+)$/.exec(path||'');
+      return m ? {kind:m[1]==='skills'?'skill':'tool', name:decodeURIComponent(m[2])} : null; },
+    openDetail(kind, name, fromPop){ this.resetConfirms();
+      this.detail={kind, name}; this.view='detail'; this.detailFile='SKILL.md'; this.detailCopied='';
+      if(!fromPop) history.pushState({detail:{kind,name}}, '', '/app/'+(kind==='skill'?'skills':'tools')+'/'+encodeURIComponent(name));
+      this.loadDetail(); },
+    async loadDetail(){ if(!this.detail) return; this.detailErr=''; this.detailLoading=true; this.detailData=null;
+      try{ this.detailData=await this.api((this.detail.kind==='skill'?'/bundles/by-name/':'/tools/by-name/')+encodeURIComponent(this.detail.name)); }
+      catch(e){ this.detailErr = e.status===404
+        ? 'Not found in this team. If someone shared this link with you, make sure you’re in their team (switch teams above, or ask them for an invite).'
+        : 'Could not load: '+(e.detail||e.status); }
+      finally{ this.detailLoading=false; } },
+    async copyDetail(text, tag){ if(!(await this.toClipboard(text))) return; this.detailCopied=tag; setTimeout(()=>{ if(this.detailCopied===tag) this.detailCopied=''; },1500); },
+    rowTarget(t){  // where a tools-list row leads: a skill-born tool opens its SKILL (the shareable thing), a bare endpoint opens the tool page
+      if(t.bundle_id){ const b=this.bundles.find(x=>x.id===t.bundle_id); if(b) return {kind:'skill', name:b.name}; }
+      return {kind:'tool', name:t.name}; },
+    rowHref(t){ const d=this.rowTarget(t); return '/app/'+(d.kind==='skill'?'skills':'tools')+'/'+encodeURIComponent(d.name); },
+    rowOpen(t){ const d=this.rowTarget(t); this.openDetail(d.kind, d.name); },
     async loadAll(){ this.err=''; this.loading=true;
       try{
         this.myOrgs=await this.api('/orgs');
@@ -2476,6 +2620,8 @@ createApp({
     window.addEventListener('scroll', ()=>{ if(this.orgMenu) this.placeOrgMenu(); }, true);
     window.addEventListener('resize', ()=>{ if(this.orgMenu) this.placeOrgMenu(); });
     window.addEventListener('popstate', e=>{  // browser Back moves between views (was exiting the app)
+      const d=(e.state&&e.state.detail)||this.routeFromPath(location.pathname);
+      if(d){ this.openDetail(d.kind, d.name, true); return; }
       const v=(e.state&&e.state.view)||(location.hash||'').replace('#','')||'tools';
       if(['tools','orgs','activity','usage','admin','help','secrets','start'].includes(v)) this.go(v, true);
     });
@@ -2492,11 +2638,17 @@ createApp({
     const linkOrg = qs.get('invite_org'), inv = qs.get('invite');
     if(linkOrg || inv || qs.get('invite_expired')){ history.replaceState(null,'',location.pathname+location.hash); }  // strip one-shot params so reload/share doesn't replay them
     if(linkOrg){ this.inviteLinkOrg=parseInt(linkOrg,10)||null; }
+    // A shared detail deep link (/app/skills/<x>, /app/tools/<x>) — from the URL itself, or stashed
+    // before an OAuth hop (the callback always lands on /app, which would otherwise drop the path).
+    let route=this.routeFromPath(location.pathname);
+    const stashed=localStorage.getItem('treg-next');
+    if(stashed){ localStorage.removeItem('treg-next'); if(!route){ route=this.routeFromPath(stashed); if(route) history.replaceState(null,'',stashed); } }
     const me = await fetch('/auth/me',{credentials:'include',headers:{'ngrok-skip-browser-warning':'1'}}).then(r=>r.ok?r.json():null).catch(()=>null);
-    if(me){ this.sessionMode=true; this.me=me.email; this.isAdmin=!!me.is_superadmin; this.onboarded=!!me.onboarded; await this.loadAll(); this.maybeOnboard(); return; }  // GitHub/email session
-    if(this.token){ this.loadAll(); return; }      // token-in-browser fallback
-    if(!inv && !linkOrg && !qs.get('invite_expired')){ location.replace('/'); return; }  // logged-out plain visit → the marketing landing owns the front door
-    this.sbxInit();                                 // logged-out invite flow → the in-app landing + sign-in modal
+    if(me){ this.sessionMode=true; this.me=me.email; this.isAdmin=!!me.is_superadmin; this.onboarded=!!me.onboarded; await this.loadAll(); this.maybeOnboard(); if(route) this.openDetail(route.kind, route.name, true); return; }  // GitHub/email session
+    if(this.token){ await this.loadAll(); if(route) this.openDetail(route.kind, route.name, true); return; }      // token-in-browser fallback
+    if(!inv && !linkOrg && !route && !qs.get('invite_expired')){ location.replace('/'); return; }  // logged-out plain visit → the marketing landing owns the front door
+    this.sbxInit();                                 // logged-out invite/deep-link flow → the in-app landing + sign-in modal
+    if(route){ this.demo.signin=true; }             // shared link while logged out: sign in, then land on it (email verify reloads in place; OAuth restores via the treg-next stash)
     if(inv){ this.invitePrefill=inv; this.emailInput=inv; this.emailStage=false; this.demo.signin=true; }  // legacy code link while logged out: prefill + open sign-in; the invite auto-accepts after login (maybeOnboard)
   },
 }).mount('#app');

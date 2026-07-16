@@ -930,6 +930,37 @@ async def dashboard():
     return FileResponse(index, headers={"Cache-Control": "no-cache"})
 
 
+def _spa_with_og(kind: str, name: str):
+    """Serve the SPA at a shareable detail path (/app/skills/x, /app/tools/x) with per-resource
+    og/twitter meta so link unfurls show what was shared. The meta echoes only the URL's own
+    name segment — no DB read, so an unauthenticated crawler learns nothing it didn't send."""
+    index = _WEB_DIR / "index.html"
+    if not index.exists():
+        return HTMLResponse("<h3>tools-registry API. Dashboard not bundled.</h3>")
+    label = "skill" if kind == "skills" else "tool"
+    safe = _esc_html(name)
+    html = index.read_text(encoding="utf-8").replace(
+        "<title>tools-registry</title>",
+        f"<title>{safe} · tools-registry</title>\n"
+        f'<meta property="og:title" content="{safe} — shared {label}"/>\n'
+        f'<meta property="og:description" content="A {label} shared via tools-registry. '
+        f'Sign in to preview it and get the one-command install."/>\n'
+        f'<meta name="twitter:card" content="summary"/>',
+        1,
+    )
+    return HTMLResponse(html, headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/app/skills/{name}", include_in_schema=False)
+async def dashboard_skill_page(name: str):
+    return _spa_with_og("skills", name)
+
+
+@app.get("/app/tools/{name}", include_in_schema=False)
+async def dashboard_tool_page(name: str):
+    return _spa_with_og("tools", name)
+
+
 @app.get("/llms.txt", include_in_schema=False)
 async def llms_txt():
     """Agent-readable overview (llms.txt convention) — an AI agent that fetches this learns the
@@ -2464,6 +2495,19 @@ async def list_tools(
     return [_tool_view(t) for t in rows]
 
 
+@app.get("/tools/by-name/{name}")
+async def get_tool_by_name(
+    name: str, caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session)
+) -> dict:
+    """Name-keyed lookup so shareable detail URLs (/app/tools/<name>) resolve without an id."""
+    tool = (await db.execute(
+        select(Tool).where(Tool.org_id == caller.org_id, Tool.name == name)
+    )).scalars().first()
+    if tool is None:
+        raise HTTPException(status_code=404, detail="tool not found")
+    return _tool_view(tool)
+
+
 @app.patch("/tools/{tool_id}")
 async def update_tool(
     tool_id: int,
@@ -2935,6 +2979,19 @@ async def list_bundles(
 ) -> list[dict]:
     rows = (await db.execute(select(Bundle).where(Bundle.org_id == caller.org_id))).scalars().all()
     return [{"id": b.id, "name": b.name, "owner": b.owner} for b in rows]
+
+
+@app.get("/bundles/by-name/{name}")
+async def get_bundle_by_name(
+    name: str, caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session)
+) -> dict:
+    """Name-keyed lookup so shareable detail URLs (/app/skills/<name>) resolve without an id."""
+    bundle = (await db.execute(
+        select(Bundle).where(Bundle.org_id == caller.org_id, Bundle.name == name)
+    )).scalars().first()
+    if bundle is None:
+        raise HTTPException(status_code=404, detail="bundle not found")
+    return await _bundle_view(bundle.id, db)
 
 
 @app.get("/bundles/{bundle_id}")
