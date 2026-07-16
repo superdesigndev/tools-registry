@@ -5,6 +5,10 @@ on:
     branches: [main]
   pull_request:
 
+# Least-privilege: CI only reads the repo (checkout + tests + secret scan).
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
