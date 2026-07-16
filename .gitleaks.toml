@@ -14,6 +14,3 @@ regexes = [
   '''sk_live_ABCDEFGHIJKLMNOP1234''',     # tests/test_localrun.py — proves output redaction masks a key
   '''sk_test_123''',                      # tests/*.py — generic fake test key
 ]
-paths = [
-  '''\.env\.example$''',                  # placeholder values only, by design
-]

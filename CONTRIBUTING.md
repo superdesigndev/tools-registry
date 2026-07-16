@@ -7,12 +7,15 @@ Thanks for your interest! This is a starting frame — sections marked _TODO_ ar
 ## Getting set up
 
 ```bash
-git clone https://github.com/<org>/tools-registry
+git clone https://github.com/superdesigndev/tools-registry
 cd tools-registry
 uv sync                     # install deps (uv — https://docs.astral.sh/uv/)
-cp .env.example .env        # then: uv run python -m treg keygen  → set TREG_SECRET_KEY
 uv run pytest -q            # the full suite should pass before you start
 ```
+
+No `.env` needed for dev — every setting has a working default (ephemeral encryption key, local
+sqlite). The `TREG_*` knobs for persistence / a real deployment are documented in the README's
+**Configuration** section (and `docs/context/ops/deploy.md`).
 
 A one-command local stack is in `scripts/dev-local.sh` (also the `dev-local` skill under `.claude/skills`).
 
