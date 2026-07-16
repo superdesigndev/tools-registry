@@ -1700,7 +1700,7 @@ async def create_invite(
         await db.delete(prior)
     days = max(1, min(body.expires_days, 3650))  # clamp BOTH ends — a huge value overflows datetime → 500
     expires_at = _utcnow_naive() + timedelta(days=days)
-    tool_access = _normalize_tool_access(body.tool_access, await _known_tool_names(org_id, db))
+    tool_access = _normalize_tool_access(body.tool_access, await _known_access_names(org_id, db))
     if body.landing is not None and not _LANDING_RE.match(body.landing):
         raise HTTPException(status_code=422, detail="landing must be a detail path like /app/skills/<name>")
     code = crypto.new_token()
@@ -2183,16 +2183,23 @@ async def _known_tool_names(org_id: int, db: AsyncSession) -> set[str]:
     return {r[0] for r in rows}
 
 
+async def _known_access_names(org_id: int, db: AsyncSession) -> set[str]:
+    """Everything an access list may name: tool names (the call/run gate) plus bundle names (the
+    skill-visibility gate) — so a recipe-only skill can be granted even though it has no tool."""
+    bundles = (await db.execute(select(Bundle.name).where(Bundle.org_id == org_id))).all()
+    return await _known_tool_names(org_id, db) | {r[0] for r in bundles}
+
+
 def _normalize_tool_access(names: list[str] | None, known: set[str]) -> list[str] | None:
-    """Validate a requested tool_access list against the org's tools. None → None (all). A list must
-    name only real tools (else 422). A list covering EVERY tool collapses to None (unrestricted)."""
+    """Validate a requested access list against the org's tools + skills. None → None (all). A list
+    must name only real tools/skills (else 422). A list covering EVERYTHING collapses to None."""
     if names is None:
         return None
     unknown = [t for t in names if t not in known]
     if unknown:
-        raise HTTPException(status_code=422, detail=f"unknown tool(s): {', '.join(sorted(set(unknown)))}")
+        raise HTTPException(status_code=422, detail=f"unknown tool/skill(s): {', '.join(sorted(set(unknown)))}")
     chosen = set(names)
-    return None if chosen >= known and known else sorted(chosen)  # all tools checked → 'all' (NULL)
+    return None if chosen >= known and known else sorted(chosen)  # everything checked → 'all' (NULL)
 
 
 @app.patch("/orgs/{org_id}/members/{user_id}/access")
@@ -2210,7 +2217,7 @@ async def set_member_access(
         raise HTTPException(status_code=404, detail="not a member of this org")
     if membership.role == "owner":
         raise HTTPException(status_code=403, detail="an owner always has full access; it can't be restricted")
-    membership.tool_access = _normalize_tool_access(body.tool_access, await _known_tool_names(org_id, db))
+    membership.tool_access = _normalize_tool_access(body.tool_access, await _known_access_names(org_id, db))
     membership.local_run_enabled = body.local_run_enabled
     await db.commit()
     return {"user_id": user_id, "org_id": org_id, "tool_access": membership.tool_access,
@@ -3010,12 +3017,25 @@ async def import_skill_folder(
         shutil.rmtree(root, ignore_errors=True)
 
 
+async def _bundle_allowed(caller: Caller, bundle: Bundle, db: AsyncSession) -> bool:
+    """Skill visibility for a tool-restricted member: the access list may grant a bundle by its own
+    name (recipe-only skills) or via any of its tools. Owner / NULL access see everything."""
+    if caller.role == "owner" or caller.membership.tool_access is None:
+        return True
+    access = set(caller.membership.tool_access)
+    if bundle.name in access:
+        return True
+    tools = (await db.execute(select(Tool.name).where(Tool.bundle_id == bundle.id))).all()
+    return any(r[0] in access for r in tools)
+
+
 @app.get("/bundles")
 async def list_bundles(
     caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session)
 ) -> list[dict]:
     rows = (await db.execute(select(Bundle).where(Bundle.org_id == caller.org_id))).scalars().all()
-    return [{"id": b.id, "name": b.name, "owner": b.owner} for b in rows]
+    return [{"id": b.id, "name": b.name, "owner": b.owner}
+            for b in rows if await _bundle_allowed(caller, b, db)]
 
 
 @app.get("/bundles/by-name/{name}")
@@ -3028,6 +3048,9 @@ async def get_bundle_by_name(
     )).scalars().first()
     if bundle is None:
         raise HTTPException(status_code=404, detail="bundle not found")
+    if not await _bundle_allowed(caller, bundle, db):
+        raise HTTPException(status_code=403, detail=(
+            f"you don't have access to the skill {name!r} in this team — an admin can grant it"))
     return await _bundle_view(bundle.id, db)
 
 
@@ -3038,6 +3061,9 @@ async def get_bundle(
     bundle = await db.get(Bundle, bundle_id)
     if bundle is None or bundle.org_id != caller.org_id:
         raise HTTPException(status_code=404, detail="bundle not found")
+    if not await _bundle_allowed(caller, bundle, db):  # `treg skill install` uses this route too
+        raise HTTPException(status_code=403, detail=(
+            f"you don't have access to the skill {bundle.name!r} in this team — an admin can grant it"))
     return await _bundle_view(bundle_id, db)
 
 

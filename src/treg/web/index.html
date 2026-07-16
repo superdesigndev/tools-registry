@@ -967,11 +967,11 @@ th{background:rgba(0,0,0,.25)}
                 <tr v-if="editAccess===m.user_id">
                   <td colspan="7" style="background:color-mix(in srgb,var(--accent) 5%,transparent)">
                     <div style="padding:6px 2px">
-                      <div class="sub" style="margin-bottom:6px">Tools <b>{{m.email}}</b> may use — uncheck to withhold. All checked = full access (and new tools apply automatically).</div>
-                      <div v-if="!tools.length" class="muted" style="font-size:12px">No tools registered yet.</div>
+                      <div class="sub" style="margin-bottom:6px">Tools &amp; skills <b>{{m.email}}</b> may use/see — uncheck to withhold. All checked = full access (and new ones apply automatically).</div>
+                      <div v-if="!accessNames.length" class="muted" style="font-size:12px">No tools registered yet.</div>
                       <div style="display:flex;flex-wrap:wrap;gap:6px 16px">
-                        <label v-for="t in tools" :key="t.id" class="tgl" style="min-width:150px">
-                          <input type="checkbox" v-model="accessDraft[t.name]"/><span>{{t.name}}</span>
+                        <label v-for="n in accessNames" :key="n" class="tgl" style="min-width:150px">
+                          <input type="checkbox" v-model="accessDraft[n]"/><span>{{n}}</span>
                         </label>
                       </div>
                       <div style="margin-top:10px;display:flex;gap:8px">
@@ -1002,7 +1002,7 @@ th{background:rgba(0,0,0,.25)}
                 <div class="sub" style="font-size:12px;margin-bottom:4px">Tools this member may use (all checked by default — uncheck to withhold):</div>
                 <div v-if="!tools.length" class="muted" style="font-size:12px">No tools registered yet.</div>
                 <div style="display:flex;flex-wrap:wrap;gap:6px 16px">
-                  <label v-for="t in tools" :key="t.id" class="tgl" style="min-width:150px"><input type="checkbox" v-model="inviteToolSel[t.name]"/><span>{{t.name}}</span></label>
+                  <label v-for="n in accessNames" :key="n" class="tgl" style="min-width:150px"><input type="checkbox" v-model="inviteToolSel[n]"/><span>{{n}}</span></label>
                 </div>
               </div>
               <div v-if="lastInvite" class="tut-notice" style="max-width:560px">
@@ -1861,6 +1861,9 @@ createApp({
     canRegister(){ return this.activeRole!=='viewer'; },  // members+ may create secrets/tools
     secretRowsReady(){ return this.secretRows.filter(r=>(r.name||'').trim()&&r.value).length; },
     // ---- detail pages ----
+    accessNames(){  // the grantable universe: tool names + recipe-only skill names (an integration
+      // skill is reachable through its tool's name; recipe-only bundles need their own entry)
+      return [...new Set([...this.tools.map(t=>t.name), ...this.recipes.map(r=>r.name)])].sort(); },
     detailShareUrl(){ if(!this.detail) return ''; return location.origin+'/app/'+(this.detail.kind==='skill'?'skills':'tools')+'/'+encodeURIComponent(this.detail.name); },
     shareInviteUrl(){  // the DM-able one-click link: page URL + the invited email (prefills sign-in; the
       // invite then auto-accepts on landing-match). Deliberately NOT the emailed token — that secret can
@@ -2131,18 +2134,18 @@ createApp({
       // typo like "foo bar" becomes a permanently-unacceptable dead invite cluttering the list.
       if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ this.orgErr='Enter a valid email address.'; return; }
       this.orgBusy=true; this.orgErr='';
-      const chosen=this.tools.filter(t=>this.inviteToolSel[t.name]).map(t=>t.name);
-      const tool_access = !this.inviteCustomize ? null : (chosen.length===this.tools.length ? null : chosen);
+      const chosen=this.accessNames.filter(n=>this.inviteToolSel[n]);
+      const tool_access = !this.inviteCustomize ? null : (chosen.length===this.accessNames.length ? null : chosen);
       try{ this.lastInvite=await this.api('/orgs/'+this.activeOrgId+'/invites',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email,role:this.inviteRole,tool_access,local_run_enabled:this.inviteLocalRun})});
         this.inviteEmail=''; this.inviteCustomize=false; this.orgInvites=await this.api('/orgs/'+this.activeOrgId+'/invites'); }
       catch(e){ this.orgErr='Invite failed: '+(e.detail||e.status); } finally{ this.orgBusy=false; } },
-    openInviteCustomize(){ this.inviteCustomize=true; const d={}; this.tools.forEach(t=>d[t.name]=true); this.inviteToolSel=d; },
+    openInviteCustomize(){ this.inviteCustomize=true; const d={}; this.accessNames.forEach(n=>d[n]=true); this.inviteToolSel=d; },
     openAccess(m){ if(m.role==='owner') return;
       if(this.editAccess===m.user_id){ this.editAccess=null; return; }
-      this.editAccess=m.user_id; const d={}; this.tools.forEach(t=>{ d[t.name]=(m.tool_access===null || m.tool_access.includes(t.name)); }); this.accessDraft=d; },
-    setAllAccess(v){ const d={}; this.tools.forEach(t=>d[t.name]=v); this.accessDraft=d; },
-    async saveAccess(m){ const names=this.tools.filter(t=>this.accessDraft[t.name]).map(t=>t.name);
-      const tool_access = (names.length===this.tools.length) ? null : names;  // all checked → 'all' (NULL)
+      this.editAccess=m.user_id; const d={}; this.accessNames.forEach(n=>{ d[n]=(m.tool_access===null || m.tool_access.includes(n)); }); this.accessDraft=d; },
+    setAllAccess(v){ const d={}; this.accessNames.forEach(n=>d[n]=v); this.accessDraft=d; },
+    async saveAccess(m){ const names=this.accessNames.filter(n=>this.accessDraft[n]);
+      const tool_access = (names.length===this.accessNames.length) ? null : names;  // all checked → 'all' (NULL)
       try{ await this.api('/orgs/'+this.activeOrgId+'/members/'+m.user_id+'/access',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({tool_access, local_run_enabled:m.local_run_enabled})}); this.editAccess=null; }
       catch(e){ this.orgErr='Set access failed: '+(e.detail||e.status); }
       await this.loadOrgAdmin(); },
@@ -2587,14 +2590,14 @@ createApp({
       if(this.share.member) return;  // already on the team — the modal now says "just send the link"
       this.share.busy=true; this.share.err='';
       const landing='/app/'+(this.detail.kind==='skill'?'skills':'tools')+'/'+encodeURIComponent(this.detail.name);
-      // Scope a skill share to just its bundled tools (viewer + limited tools ≈ share one capability);
-      // a tool share scopes to that tool. Unchecked = full org tool access.
+      // Scope a skill share to the skill itself + its bundled tools (the access list also gates which
+      // skills a restricted member can SEE); a tool share scopes to that tool. Unchecked = full access.
       let tool_access=null;
       if(this.share.scope){
         tool_access = this.detail.kind==='skill'
-          ? ((this.detailData&&this.detailData.tools)||[]).map(t=>t.name)
+          ? [this.detail.name].concat((((this.detailData&&this.detailData.tools)||[]).map(t=>t.name)))
           : [this.detail.name];
-        if(!tool_access.length) tool_access=null;  // recipe-only skill: nothing to scope
+        tool_access=[...new Set(tool_access)];
       }
       try{
         const r=await this.api('/orgs/'+this.activeOrgId+'/invites',{method:'POST',headers:{'content-type':'application/json'},

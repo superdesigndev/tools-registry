@@ -2525,7 +2525,8 @@ def cmd_org_invite(args, cfg) -> None:
             if r.status_code >= 400:
                 sys.exit(f"no skill named {args.skill!r} in the active org")
             landing = f"/app/skills/{quote(args.skill, safe='')}"
-            share_tools = [t["name"] for t in (r.json().get("tools") or [])]
+            # the skill's own name too — the access list also gates which skills a member can SEE
+            share_tools = sorted({args.skill, *(t["name"] for t in (r.json().get("tools") or []))})
         elif getattr(args, "tool", None):
             r = c.get(f"/tools/by-name/{quote(args.tool, safe='')}")
             if r.status_code >= 400:
@@ -2535,7 +2536,7 @@ def cmd_org_invite(args, cfg) -> None:
         if landing is None or args.all_tools or getattr(args, "tools", None):
             access = _resolve_tool_access(c, org_id, args)
         else:
-            access = share_tools or None  # recipe-only skill: nothing to scope
+            access = share_tools
         body = {"email": args.email, "role": args.role, "expires_days": args.expires_days,
                 "tool_access": access,
                 "local_run_enabled": getattr(args, "local_run", "on") != "off",
