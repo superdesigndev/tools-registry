@@ -13,7 +13,7 @@ related:
 # Tools Registry — charter
 
 > **Status:** the MVP described below is **shipped and live** (API + CLI + skill, proxy, 4 auth shapes,
-> OAuth refresh/connect, health, 5 tools on `treg.ngrok.app`). This fragment records the vision + the
+> OAuth refresh/connect, health, 5 tools on `treg.superdesign.dev`). This fragment records the vision + the
 > "why"; the shipped detail lives in the architecture/interface fragments. Not yet: Render deploy, org
 > isolation.
 

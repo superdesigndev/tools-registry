@@ -53,7 +53,7 @@
     // ---- Setup ------------------------------------------------------------
     { part: "Setup", who: "sys", title: "Simulate three people on one machine",
       explain: "We play three users on one laptop by giving each its own <code>HOME</code>, so each gets an isolated <code>~/.treg/config.json</code> pointed at the registry. In real life every person is on their own machine and drops the <code>HOME=</code> prefix.",
-      cmd: `for u in tom bob alice; do\n  mkdir -p ~/.treg-personas/$u\n  HOME=~/.treg-personas/$u treg config --base-url https://treg.ngrok.app\ndone`,
+      cmd: `for u in tom bob alice; do\n  mkdir -p ~/.treg-personas/$u\n  HOME=~/.treg-personas/$u treg config --base-url https://treg.superdesign.dev\ndone`,
       out: `# each persona now points at the registry`,
       notice: "Prefix any command with <code>HOME=~/.treg-personas/&lt;name&gt;</code> to act as that person." },
 
@@ -154,7 +154,7 @@
 
     { part: "Part 5 · Call shapes & skills", who: "alice", title: "The raw HTTP underneath",
       explain: "<code>treg call</code> is sugar. Under the hood it's a plain HTTP request to <code>&lt;proxy&gt;/call/&lt;upstream-url&gt;</code> with your token header - any language, any agent, <code>curl</code>.",
-      cmd: `ATOK=$(python3 -c "import json;print(json.load(open('/Users/you/.treg-personas/alice/.treg/config.json'))['token'])")\ncurl -s -H "X-Treg-Token: $ATOK" \\\n  "https://treg.ngrok.app/call/https://postman-echo.com/get"`,
+      cmd: `ATOK=$(python3 -c "import json;print(json.load(open('/Users/you/.treg-personas/alice/.treg/config.json'))['token'])")\ncurl -s -H "X-Treg-Token: $ATOK" \\\n  "https://treg.superdesign.dev/call/https://postman-echo.com/get"`,
       out: `# the postman-echo JSON again, "authorization": "Bearer sk-demo-secret-123" injected -\n# just curl, no secret on the client.`,
       notice: "The whole product in one line: prefix any upstream URL with the proxy, send your token, treg swaps in the real credential." },
 
@@ -266,8 +266,8 @@
 
     // ---- Part 8 - The dashboard -----------------------------------------
     { part: "Part 8 · The dashboard", who: "tom", title: "The same registry, in the browser",
-      explain: "Open <b>treg.ngrok.app</b> and sign in with the <b>email code</b> door (the same one you used in the terminal): type your email → click <b>Email me a sign-in code</b> → <b>check your inbox</b> for the 6-digit code → paste it in and <b>Sign in</b>. You land on your team org - Tools shows the <code>echo</code> tool, Activity shows the call, and (since Tom is now super-admin) an <b>Admin</b> panel appears.",
-      cmd: `open https://treg.ngrok.app/`,
+      explain: "Open <b>treg.superdesign.dev</b> and sign in with the <b>email code</b> door (the same one you used in the terminal): type your email → click <b>Email me a sign-in code</b> → <b>check your inbox</b> for the 6-digit code → paste it in and <b>Sign in</b>. You land on your team org - Tools shows the <code>echo</code> tool, Activity shows the call, and (since Tom is now super-admin) an <b>Admin</b> panel appears.",
+      cmd: `open https://treg.superdesign.dev/`,
       out: `# Sign in with email → land on Superdesign\n#   Tools    → the echo tool (Copy a snippet · Try it live)\n#   Activity → Alice's GET echo · 200\n#   Admin    → cross-tenant stats + orgs (super-admin only)`,
       notice: "The dashboard now does it all in the browser - create teams, invite members, add secrets, register tools & skills, plus the super-admin surface - not just read + call." },
 
@@ -287,7 +287,7 @@
     // ---- Further, focused tutorials --------------------------------------
     { part: "Further tutorials", who: "sys", title: "Two deep-dive tutorials",
       explain: "Two features have their own step-by-step tutorials - <b>Import &amp; shell</b> and <b>Team access control</b>. Both are cards on the Tutorial page (← Tutorials, top left), and both also exist as plain markdown.",
-      cmd: `open https://treg.ngrok.app/tutorial-import-shell.md   # import + shell + the security sandbox\nopen https://treg.ngrok.app/tutorial-access.md         # per-member tool access control`,
+      cmd: `open https://treg.superdesign.dev/tutorial-import-shell.md   # import + shell + the security sandbox\nopen https://treg.superdesign.dev/tutorial-access.md         # per-member tool access control`,
       out: `# import-shell : treg upload clis (your machine's CLIs -> team tools) + treg shell (stripe/gh just work)\n#                + the local-run sandbox (isolated user, egress allow-list, filesystem jail)\n# access       : choose which tools each member may use + the local-run on/off toggle`,
       notice: "Pick them from the Tutorial page like this one, or open the markdown URLs directly (agent-friendly)." },
   ];
@@ -387,7 +387,7 @@
   const ACCESS = [
     { part: "Setup", who: "sys", title: "Two dials, two people",
       explain: "Every member has two independent dials: <b>tool access</b> (<code>tool_access</code>: which tools they may touch - default <b>all</b>) and <b>local execution</b> (<code>local_run_enabled</code>: may they run a CLI on their own machine - default <b>on</b>). A withheld tool is closed through <i>every</i> door - proxy call, server run, local run. The <b>owner</b> is never restricted. We play two people on one machine: <b>Tom</b> (owner) and <b>Sam</b> (the new teammate we restrict).",
-      cmd: `for u in tom sam; do\n  mkdir -p ~/.treg-personas/$u\n  HOME=~/.treg-personas/$u treg config --base-url https://treg.ngrok.app\ndone`,
+      cmd: `for u in tom sam; do\n  mkdir -p ~/.treg-personas/$u\n  HOME=~/.treg-personas/$u treg config --base-url https://treg.superdesign.dev\ndone`,
       out: `# each persona now points at the registry`,
       notice: "Prefix a command with <code>HOME=~/.treg-personas/&lt;name&gt;</code> to act as that person. In real life each person is on their own machine and drops the prefix." },
 

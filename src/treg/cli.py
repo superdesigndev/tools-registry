@@ -6,7 +6,7 @@ stores a single **identity token** (first login also registers you). Then you wo
 orgs — `treg org ls` / `treg org use <slug>` picks the active one, sent as `X-Treg-Org`. Agents/CI
 can instead `treg login --token <token>` with a per-org token. `treg logout` clears it.
 
-    treg config --base-url https://treg.ngrok.app
+    treg config --base-url https://treg.superdesign.dev
     treg login                       # GitHub (register-or-login); or: treg login --token <token>
     treg org ls | org use <slug>
     treg secret add / tool add / call / calls / health / skill / admin
@@ -72,7 +72,7 @@ def _save_config(cfg: dict) -> None:
 
 def _pick_active_org(cfg: dict) -> None:
     """Best-effort: set the active org from GET /orgs. The token is already persisted by the
-    caller, so a transient failure here (ngrok hiccup, cold restart) must never lose it."""
+    caller, so a transient failure here (proxy hiccup, cold restart) must never lose it."""
     try:
         with _client(cfg) as c:
             r = c.get("/orgs")

@@ -2228,7 +2228,7 @@ createApp({
           +'. Here are the shared tools & skills — call any with no key on your machine.';
       }finally{ this.inviteBusy=false; }
     },
-    _suggestTeamName(){  // a friendly default from the email domain: jason@superdesign.dev → "Superdesign"
+    _suggestTeamName(){  // a friendly default from the email domain: sam@acme.dev → "Acme"
       const dom=((this.me||'').split('@')[1]||'').split('.')[0]||'';
       const generic=['gmail','outlook','hotmail','yahoo','icloud','proton','protonmail','me','qq','163'];
       return (dom && !generic.includes(dom.toLowerCase())) ? dom.charAt(0).toUpperCase()+dom.slice(1) : ''; },

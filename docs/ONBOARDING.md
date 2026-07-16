@@ -1,59 +1,63 @@
 # tools-registry — onboarding
 
 The bootstrap an agent (or human) follows to start calling shared tools and to share its own.
-The CLI is a thin client over the API at `https://treg.ngrok.app`; the API is the only brain.
+The CLI is a thin client over the API at `https://treg.superdesign.dev`; the API is the only brain.
 
 ## 1. Install the CLI
+
 ```bash
-# from the tools-registry repo
-uv sync
-uv run treg --help                  # or `pip install -e .` to get a global `treg`
+curl -fsSL https://treg.superdesign.dev/install.sh | sh   # installs `treg`, points it at the registry
 ```
 
-## 2. Point it at the registry + authenticate
+(Working from a clone instead? `uv sync && uv run treg --help`.)
+
+## 2. Sign in
+
+Three doors, one identity (your email):
+
 ```bash
-treg config --base-url https://treg.ngrok.app
-treg register --email you@kidocode.com      # one-time; token saved to ~/.treg/config.json
-#   already have a token from elsewhere?  ->  treg login --token <TOKEN>
+treg login                                  # GitHub OAuth (opens the browser)
+treg login --email you@example.com          # email one-time code
+treg login --token <TOKEN>                  # agents/CI: a per-org token from a team owner
 ```
-The token is shown **once** at registration. It identifies you on every call (`X-Treg-Token`).
+
+Your token identifies you on every call (`X-Treg-Token`). New here? `treg onboard` walks you
+through everything with a disposable demo team.
 
 ## 3a. Use a tool someone already shared (consumer)
+
 ```bash
 treg tool ls                                 # what's available
 treg call posthog query/events --query limit=5
+treg run gh -- pr list                       # vendor CLIs work too
 ```
+
 You hold **no upstream key** — the registry injects it server-side.
 
-## 3b. Share your local skills (creator)
-An agent does this by reading each local skill and registering it:
+## 3b. Share your own (creator)
 
-1. **Identify** the local skills + their credentials. Skills live in `.claude/skills/<name>/` —
-   a `SKILL.md` (the recipe), a script, and a `.secret/` or `.secrets/` dir with key files.
-2. **Scaffold** a manifest (deterministic discovery of recipe + secrets):
-   ```bash
-   treg skill scaffold ~/.claude/skills/posthog --out posthog.json
-   ```
-3. **Complete** the manifest — the scaffolder can't read the script, so YOU set:
-   - `tools[].base_url` — the upstream (e.g. `https://us.posthog.com`).
-   - each `bindings[]` — where the credential goes: `location` (header|query), `name`,
-     `format` (template with `{secret}`), `injector` (`env`/`secret_file`/`oauth`/`cli_auth`),
-     and `secret_field` for JSON-blob secrets. A request may need several bindings
-     (e.g. google-ads: an OAuth bearer **and** a `developer-token` header).
-4. **Register** it (creates the bundle + secrets + tool(s) atomically):
-   ```bash
-   treg skill push posthog.json
-   ```
-5. **Share** — hand teammates the endpoint + the tool name. Their agent calls it with no key.
+Point treg at a project — it finds the provider keys in the `.env`, the skill folders, and the
+installed catalog CLIs, and registers what you pick:
+
+```bash
+treg scan          # read-only preview; nothing leaves the machine
+treg upload        # register (encrypted server-side); idempotent, --replace to update
+```
+
+For one skill or a tricky tool (multi-credential, OAuth), see the manual flow in
+[`USAGE.md`](../USAGE.md) — `treg skill init` / `skill add`, `treg tool add --bind`,
+`treg oauth connect`.
 
 ## 4. Verify + observe
+
 ```bash
 treg call <tool> <upstream-path>     # smoke-test
 treg calls                           # audit: who called which tool, when, status
+treg health                          # credential health across the org
 ```
 
 ## Notes
+
 - Secrets are write-only; the API never returns a stored value.
 - A tool can reference a secret another member uploaded (use-without-hold).
-- Security MVP = TLS only (like pasting a secret into GitHub/Vercel). End-to-end local-key
-  encryption is a later hardening, not required to start.
+- Everything is org-scoped: `treg org ls` / `treg org use <slug>` picks the active team.
