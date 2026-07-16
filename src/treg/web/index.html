@@ -792,6 +792,7 @@ th{background:rgba(0,0,0,.25)}
             </div>
           </div>
           <div v-if="detailErr" class="banner" style="margin-top:12px">{{detailErr}}</div>
+          <div v-if="detailNote" class="tut-notice" style="margin-top:12px;max-width:860px">{{detailNote}}</div>
           <p v-if="detailLoading" class="sub">Loading…</p>
 
           <template v-if="detailData && detail.kind==='skill'">
@@ -1606,10 +1607,12 @@ th{background:rgba(0,0,0,.25)}
         <div style="padding:16px 18px">
           <template v-if="share.sent">
             <p class="explain">✓ Invite sent to <b>{{share.sent.email}}</b> — the email's button signs them in and lands them right on this page.</p>
-            <p class="sub" style="margin:0 0 8px">No email arrived? Send them this link + one-time code instead:</p>
-            <pre class="code" style="white-space:pre-wrap">{{detailShareUrl}}
-code: {{share.sent.code}}   (treg org join {{share.sent.code}} --email {{share.sent.email}})</pre>
-            <div style="margin-top:12px"><button class="btn primary" @click="copyDetail(detailShareUrl+'\n'+'code: '+share.sent.code,'sharecopy')">⧉ {{detailCopied==='sharecopy'?'Copied!':'Copy link + code'}}</button></div>
+            <p class="sub" style="margin:0 0 8px">Or DM them this link — it opens the sign-in with their email prefilled; once they sign in, the invite accepts itself and this page opens:</p>
+            <pre class="code" style="white-space:pre-wrap;word-break:break-all">{{shareInviteUrl}}</pre>
+            <div style="margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+              <button class="btn primary" @click="copyDetail(shareInviteUrl,'sharecopy')">⧉ {{detailCopied==='sharecopy'?'Copied!':'Copy invite link'}}</button>
+              <span class="sub" style="margin:0;font-size:12px">backup code: <span class="mono">{{share.sent.code}}</span> (<span class="mono">treg org join</span>)</span>
+            </div>
           </template>
           <template v-else>
             <p class="explain">Already on the team? Just send them the page link (⧉ Copy link). This invites someone <b>new</b> — after one click in the email they land on this exact page.</p>
@@ -1725,7 +1728,7 @@ createApp({
       view:'tools', q:'', err:'', loading:false, toolTab:'all', bundles:[], confirmDelBundle:null, installCopied:null,
       copyRecipe:null, recipeTab:'cURL', viewRecipe:null, recipeSaved:false,
       // detail pages (shareable /app/skills/<name> + /app/tools/<name> deep links)
-      detail:null, detailData:null, detailErr:'', detailLoading:false, detailFile:'SKILL.md', detailCopied:'',
+      detail:null, detailData:null, detailErr:'', detailLoading:false, detailFile:'SKILL.md', detailCopied:'', detailNote:'',
       share:{on:false, email:'', role:'viewer', scope:true, busy:false, err:'', sent:null, member:null},  // detail-page "Share…" (invite + land on this page)
       me:'', myOrgs:[], isAdmin:false,
       onboarded:true,  // first-run onboarding (narrative stepper) - see onb.*
@@ -1859,6 +1862,10 @@ createApp({
     secretRowsReady(){ return this.secretRows.filter(r=>(r.name||'').trim()&&r.value).length; },
     // ---- detail pages ----
     detailShareUrl(){ if(!this.detail) return ''; return location.origin+'/app/'+(this.detail.kind==='skill'?'skills':'tools')+'/'+encodeURIComponent(this.detail.name); },
+    shareInviteUrl(){  // the DM-able one-click link: page URL + the invited email (prefills sign-in; the
+      // invite then auto-accepts on landing-match). Deliberately NOT the emailed token — that secret can
+      // mint a session and must never leave the inbox; this link still requires proving the email.
+      return this.share.sent ? this.detailShareUrl+'?invite='+encodeURIComponent(this.share.sent.email) : ''; },
     detailTree(){  // the bundle's files as a flat, indent-rendered tree: synthesized dir rows + file rows
       const files=Object.keys((this.detailData&&this.detailData.files)||{}).sort();
       const rows=[{path:'SKILL.md', name:'SKILL.md', depth:0, dir:false}]; const seen=new Set();
@@ -2516,7 +2523,7 @@ createApp({
     routeFromPath(path){ const m=/^\/app\/(skills|tools)\/(.+)$/.exec(path||'');
       return m ? {kind:m[1]==='skills'?'skill':'tool', name:decodeURIComponent(m[2])} : null; },
     openDetail(kind, name, fromPop){ this.resetConfirms();
-      this.detail={kind, name}; this.view='detail'; this.detailFile='SKILL.md'; this.detailCopied='';
+      this.detail={kind, name}; this.view='detail'; this.detailFile='SKILL.md'; this.detailCopied=''; this.detailNote='';
       if(!fromPop) history.pushState({detail:{kind,name}}, '', '/app/'+(kind==='skill'?'skills':'tools')+'/'+encodeURIComponent(name));
       this.loadDetail(); },
     async loadDetail(){ if(!this.detail) return; this.detailErr=''; this.detailLoading=true; this.detailData=null;
@@ -2750,7 +2757,11 @@ createApp({
       let landed=false;
       if(route) landed=await this.autoAcceptShare(route);
       if(!landed) this.maybeOnboard();
-      if(route) this.openDetail(route.kind, route.name, true); return; }  // GitHub/email session
+      if(route){ this.openDetail(route.kind, route.name, true);
+        // a ?invite=<email> share link opened by a DIFFERENT signed-in account: say why it won't resolve
+        if(!landed && inv && this.me && inv.toLowerCase()!==this.me.toLowerCase())
+          this.detailNote='This share link was sent to '+inv+' — you’re signed in as '+this.me+'. Sign out (⏻) and sign in with that email to accept the invite.'; }
+      return; }  // GitHub/email session
     if(this.token){ await this.loadAll(); if(route) this.openDetail(route.kind, route.name, true); return; }      // token-in-browser fallback
     if(!inv && !linkOrg && !route && !qs.get('invite_expired')){ location.replace('/'); return; }  // logged-out plain visit → the marketing landing owns the front door
     this.sbxInit();                                 // logged-out invite/deep-link flow → the in-app landing + sign-in modal

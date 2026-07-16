@@ -1671,11 +1671,21 @@ def cmd_call(args, cfg) -> None:
     # httpx serializes a list of tuples preserving duplicates; a dict would drop all but the last.
     params = [tuple(kv.split("=", 1)) for kv in args.query]
     content = Path(args.file).read_bytes() if args.file else (args.data.encode() if args.data else None)
+    # Content-Type: explicit flag wins; otherwise sniff JSON so `--data '{...}'` / `--file doc.json`
+    # reach upstreams that require `application/json` (e.g. npm publish) without extra flags.
+    ctype = args.content_type
+    if ctype is None and content:
+        try:
+            json.loads(content)
+            ctype = "application/json"
+        except ValueError:
+            pass
+    headers = {"content-type": ctype} if ctype else {}
     rest = args.target.rstrip("/")
     if args.path:
         rest += "/" + args.path.lstrip("/")
     with _client(cfg) as c:
-        _show(c.request(args.method, f"/call/{rest}", params=params, content=content))
+        _show(c.request(args.method, f"/call/{rest}", params=params, content=content, headers=headers))
 
 
 def cmd_calls(args, cfg) -> None:
@@ -2534,9 +2544,9 @@ def cmd_org_invite(args, cfg) -> None:
         _show(r)
     if landing is not None:  # _show exits on error, so this only prints on success
         base = (cfg.get("base_url") or "https://treg.superdesign.dev").rstrip("/")
-        print(f"↗ share link: {base}{landing}")
-        print("  The invite email's button signs them in and lands them on this page. DM alternative:"
-              f" send the link — after they sign in with {args.email}, the invite auto-appears.")
+        print(f"↗ share link: {base}{landing}?invite={quote(args.email, safe='')}")
+        print("  One click for them: sign in as that email → invite auto-accepts → this page opens."
+              "  (The invite email's button does the same.)")
 
 
 def cmd_org_access(args, cfg) -> None:
@@ -2916,6 +2926,8 @@ def build_parser() -> argparse.ArgumentParser:
     cl.add_argument("--method", default="GET", help="HTTP method (default: GET)")
     cl.add_argument("--query", action="append", default=[], metavar="K=V", help="a query param (repeatable)")
     cl.add_argument("--data", help="request body (string)"); cl.add_argument("--file", help="request body from a file")
+    cl.add_argument("--content-type", dest="content_type", metavar="TYPE",
+                    help="Content-Type for the body (default: sniffed — a body that parses as JSON sends application/json)")
     cl.set_defaults(fn=cmd_call)
 
     ca = mk(sub, "calls", "Show the audit log: who called what, when, and the result.", "treg calls --limit 20")
