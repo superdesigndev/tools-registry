@@ -553,16 +553,20 @@ wheels = [
 
 [[package]]
 name = "tools-registry"
-version = "0.0.1"
+version = "0.2.0"
 source = { editable = "." }
 dependencies = [
+    { name = "httpx" },
+    { name = "questionary" },
+]
+
+[package.optional-dependencies]
+server = [
     { name = "aiosqlite" },
     { name = "asyncpg" },
     { name = "cryptography" },
     { name = "fastapi" },
-    { name = "httpx" },
     { name = "pydantic-settings" },
-    { name = "questionary" },
     { name = "sqlalchemy", extra = ["asyncio"] },
     { name = "sqlmodel" },
     { name = "uvicorn", extra = ["standard"] },
@@ -570,28 +574,37 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "aiosqlite" },
+    { name = "asyncpg" },
+    { name = "cryptography" },
+    { name = "fastapi" },
+    { name = "pydantic-settings" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
+    { name = "sqlalchemy", extra = ["asyncio"] },
+    { name = "sqlmodel" },
+    { name = "uvicorn", extra = ["standard"] },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "aiosqlite", specifier = ">=0.20" },
-    { name = "asyncpg", specifier = ">=0.30" },
-    { name = "cryptography", specifier = ">=43" },
-    { name = "fastapi", specifier = ">=0.115" },
+    { name = "aiosqlite", marker = "extra == 'server'", specifier = ">=0.20" },
+    { name = "asyncpg", marker = "extra == 'server'", specifier = ">=0.30" },
+    { name = "cryptography", marker = "extra == 'server'", specifier = ">=43" },
+    { name = "fastapi", marker = "extra == 'server'", specifier = ">=0.115" },
     { name = "httpx", specifier = ">=0.27" },
-    { name = "pydantic-settings", specifier = ">=2.5" },
+    { name = "pydantic-settings", marker = "extra == 'server'", specifier = ">=2.5" },
     { name = "questionary", specifier = ">=2.0" },
-    { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0" },
-    { name = "sqlmodel", specifier = ">=0.0.22" },
-    { name = "uvicorn", extras = ["standard"], specifier = ">=0.32" },
+    { name = "sqlalchemy", extras = ["asyncio"], marker = "extra == 'server'", specifier = ">=2.0" },
+    { name = "sqlmodel", marker = "extra == 'server'", specifier = ">=0.0.22" },
+    { name = "uvicorn", extras = ["standard"], marker = "extra == 'server'", specifier = ">=0.32" },
 ]
 
 [package.metadata.requires-dev]
 dev = [
     { name = "pytest", specifier = ">=8.3" },
     { name = "pytest-asyncio", specifier = ">=0.24" },
+    { name = "tools-registry", extras = ["server"] },
 ]
 
 [[package]]
