@@ -1297,6 +1297,22 @@ def _require_tool_access(caller: Caller, tool_name: str) -> None:
             "(dashboard → Team, or `treg org access <you> --tools …`)"))
 
 
+async def _visible_secret_ids(caller: Caller, db: AsyncSession) -> set[int] | None:
+    """The secret ids a tool-restricted member may SEE: the ones wired into their allowed tools
+    (HTTP bindings + cli.inject). None = unrestricted (owner / NULL tool_access) — show all. The
+    ACL isn't just a call gate: listings must not reveal credentials the member can't use."""
+    if caller.role == "owner" or caller.membership.tool_access is None:
+        return None
+    tools = (await db.execute(select(Tool).where(Tool.org_id == caller.org_id))).scalars().all()
+    ids: set[int] = set()
+    for t in tools:
+        if not _tool_allowed(caller, t.name):
+            continue
+        ids |= {b.get("secret_id") for b in (t.bindings or []) if b.get("secret_id") is not None}
+        ids |= {e.get("secret_id") for e in ((t.cli or {}).get("inject") or []) if e.get("secret_id") is not None}
+    return ids
+
+
 def _require_local_run(caller: Caller) -> None:
     """Gate the LOCAL run tier on the member's `local_run_enabled` (owner exempt). Off → server only."""
     if caller.role != "owner" and not caller.membership.local_run_enabled:
@@ -2300,6 +2316,9 @@ async def list_secrets(
     caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session)
 ) -> list[dict]:
     rows = (await db.execute(select(Secret).where(Secret.org_id == caller.org_id))).scalars().all()
+    visible = await _visible_secret_ids(caller, db)
+    if visible is not None:  # tool-restricted member: only the keys wired into their allowed tools
+        rows = [s for s in rows if s.id in visible]
     return [_secret_view(s) for s in rows]
 
 
@@ -2508,7 +2527,8 @@ async def list_tools(
     caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session)
 ) -> list[dict]:
     rows = (await db.execute(select(Tool).where(Tool.org_id == caller.org_id))).scalars().all()
-    return [_tool_view(t) for t in rows]
+    # The per-member tool ACL hides what it gates: a restricted member's listing shows only their tools.
+    return [_tool_view(t) for t in rows if _tool_allowed(caller, t.name)]
 
 
 @app.get("/tools/by-name/{name}")
@@ -2521,6 +2541,7 @@ async def get_tool_by_name(
     )).scalars().first()
     if tool is None:
         raise HTTPException(status_code=404, detail="tool not found")
+    _require_tool_access(caller, tool.name)  # a 403 names the fix (ask an admin) — clearer than a fake 404
     return _tool_view(tool)
 
 
@@ -3235,6 +3256,9 @@ async def get_health(
     caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session)
 ) -> list[dict]:
     rows = (await db.execute(select(Secret).where(Secret.org_id == caller.org_id))).scalars().all()
+    visible = await _visible_secret_ids(caller, db)
+    if visible is not None:  # same visibility rule as /secrets — health mustn't leak hidden keys
+        rows = [s for s in rows if s.id in visible]
     return [
         {
             "secret_id": s.id,
@@ -3556,6 +3580,15 @@ async def call_tool(
     caller: Caller = Depends(require_member),
     db: AsyncSession = Depends(get_session),
 ):
+    # Faithful-relay: use the RAW request path, not Starlette's decoded path param. Decoding is
+    # lossy — an encoded slash (`%2f`) in `rest` would become a real `/` and change the upstream
+    # route (npm's scoped publish `PUT /@scope%2fname` 404s as `/@scope/name`). httpx preserves
+    # valid percent-escapes, so the original bytes travel through to the upstream one-to-one.
+    raw_path = request.scope.get("raw_path")
+    if raw_path:
+        _, sep, raw_rest = raw_path.decode("ascii", "replace").partition("/call/")
+        if sep:
+            rest = raw_rest
     tool, upstream_url = await _resolve_call(rest, caller.org_id, db)
     _require_tool_access(caller, tool.name)  # per-member tool ACL (NULL access = all; admins exempt)
     await _enforce_daily_cap(caller, db)  # per-user daily cap (skips sandbox + unmetered members)
