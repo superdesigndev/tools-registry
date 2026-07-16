@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import base64
 import gzip
+import hashlib
 import hmac
 import json
 import os
@@ -154,14 +155,33 @@ async def _id_out_of_range(request: Request, exc: OverflowError) -> JSONResponse
 
 _WEB_DIR = Path(__file__).parent / "web"
 
+_app_version_cache: tuple[float, str] | None = None  # (index.html mtime, content hash)
+
+
+def _app_version() -> str:
+    """A stamp that changes with every deploy of the dashboard bundle: a hash of index.html,
+    re-derived when the file's mtime moves (so dev --reload picks up edits too). Long-lived tabs
+    compare this against the value they booted with and offer a refresh when it drifts."""
+    global _app_version_cache
+    index = _WEB_DIR / "index.html"
+    try:
+        mtime = index.stat().st_mtime
+    except OSError:
+        return "dev"
+    if _app_version_cache is None or _app_version_cache[0] != mtime:
+        digest = hashlib.sha256(index.read_bytes()).hexdigest()[:12]
+        _app_version_cache = (mtime, digest)
+    return _app_version_cache[1]
+
 
 @app.get("/meta")
 async def meta() -> dict:
     """Open: what the dashboard needs to render correct, shareable snippets — the public proxy URL
-    (so copy/paste snippets use the real domain, not whatever origin the browser happens to be on)."""
+    (so copy/paste snippets use the real domain, not whatever origin the browser happens to be on)
+    — plus the bundle version, so an open tab can detect a new deploy and offer a refresh."""
     s = get_settings()
     return {"public_url": s.public_url.rstrip("/"), "github": bool(s.github_client_id),
-            "google": bool(s.google_client_id)}
+            "google": bool(s.google_client_id), "app_version": _app_version()}
 
 
 @app.get("/providers.json", include_in_schema=False)
