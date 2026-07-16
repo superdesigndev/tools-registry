@@ -2518,25 +2518,23 @@ def cmd_org_invite(args, cfg) -> None:
         if org_id is None:
             sys.exit("no active org")
         # --skill/--tool = a SHARE invite: the invitee lands on that detail page after the emailed
-        # sign-in, and (unless --tools/--all-tools overrides) their calls are scoped to just it.
-        landing, share_tools = None, None
+        # sign-in. Access matches the dashboard's Share default — the FULL vault; scope with
+        # --tools (e.g. --tools <skill>,<its-tool>) to restrict what they can see and call.
+        landing = None
         if getattr(args, "skill", None):
             r = c.get(f"/bundles/by-name/{quote(args.skill, safe='')}")
             if r.status_code >= 400:
                 sys.exit(f"no skill named {args.skill!r} in the active org")
             landing = f"/app/skills/{quote(args.skill, safe='')}"
-            # the skill's own name too — the access list also gates which skills a member can SEE
-            share_tools = sorted({args.skill, *(t["name"] for t in (r.json().get("tools") or []))})
         elif getattr(args, "tool", None):
             r = c.get(f"/tools/by-name/{quote(args.tool, safe='')}")
             if r.status_code >= 400:
                 sys.exit(f"no tool named {args.tool!r} in the active org")
             landing = f"/app/tools/{quote(args.tool, safe='')}"
-            share_tools = [args.tool]
         if landing is None or args.all_tools or getattr(args, "tools", None):
             access = _resolve_tool_access(c, org_id, args)
         else:
-            access = share_tools
+            access = None  # full vault access — the dashboard Share modal's default
         body = {"email": args.email, "role": args.role, "expires_days": args.expires_days,
                 "tool_access": access,
                 "local_run_enabled": getattr(args, "local_run", "on") != "off",
@@ -2828,10 +2826,10 @@ def build_parser() -> argparse.ArgumentParser:
             "treg org invite bob@company.com --role member",
             "treg org invite bob@company.com --tools stripe,gh   # only these tools",
             "treg org invite bob@company.com --all-tools --local-run off",
-            "treg org invite bob@company.com --skill slideshow   # share ONE skill: lands on its page, calls scoped to its tools")
+            "treg org invite bob@company.com --skill slideshow   # share invite: they land on its page (full access; add --tools to scope)")
     oi.add_argument("email", help="the invitee's email"); oi.add_argument("--role", default="member", choices=["viewer", "member", "admin"], help="role to grant (default: member)")
-    oi.add_argument("--skill", help="share invite: land them on this skill's page + scope access to its tools")
-    oi.add_argument("--tool", help="share invite: land them on this tool's page + scope access to it")
+    oi.add_argument("--skill", help="share invite: land them on this skill's page (full vault access; scope with --tools)")
+    oi.add_argument("--tool", help="share invite: land them on this tool's page (full vault access; scope with --tools)")
     oi.add_argument("--expires-days", type=int, default=7, help="invite validity in days (default: 7)")
     oi.add_argument("--tools", help="comma-separated tool names this member may use (default: prompt / all)")
     oi.add_argument("--all-tools", dest="all_tools", action="store_true", help="grant access to every tool (skip the prompt)")

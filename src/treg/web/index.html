@@ -428,6 +428,21 @@ th{background:rgba(0,0,0,.25)}
 <div id="app">
   <!-- LANDING (logged-out) -->
   <div v-if="!authed" class="lp">
+    <!-- SHARE-LINK GATE: a /app/skills|tools/<name> deep link while logged out gets a focused
+         sign-in page (no sandbox demo, no tour) — the marketing landing is for the front door. -->
+    <template v-if="shareGate">
+      <header class="lp-nav">
+        <div class="brand">▚ tools-registry</div>
+        <nav class="lp-links"><a href="/tutorial">Docs</a><button class="iconbtn" @click="toggleTheme" :aria-label="theme==='dark'?'Light theme':'Dark theme'">{{theme==='dark'?'◐':'◑'}}</button></nav>
+      </header>
+      <section class="lp-hero" style="min-height:55vh">
+        <div class="lp-eyebrow">shared with you</div>
+        <h1 class="lp-h1">{{shareGate.name}} <span style="color:var(--accent)">· {{shareGate.kind}}</span></h1>
+        <p class="lp-lead">A teammate shared this {{shareGate.kind}} with you. Sign in and you'll land right on its page — no API key ever touches your machine.</p>
+        <div class="lp-cta"><button class="btn primary lg" @click="demo.signin=true">Sign in to view</button></div>
+      </section>
+    </template>
+    <template v-else>
     <header class="lp-nav">
       <div class="brand">▚ tools-registry</div>
       <nav class="lp-links">
@@ -596,14 +611,16 @@ th{background:rgba(0,0,0,.25)}
     </section>
 
     <footer class="lp-foot">tools-registry · a credential-injecting proxy · <a href="/tutorial">tutorial</a> · <a href="/llms.txt">llms.txt</a></footer>
+    </template>
 
-    <!-- SIGN-IN MODAL -->
+    <!-- SIGN-IN MODAL (shared by the landing and the share-link gate) -->
     <div class="lc-scrim" :class="{open:demo.signin}" @click.self="demo.signin=false">
       <div class="lc-modal" role="dialog" aria-modal="true" aria-label="Sign in">
         <button class="cls" @click="demo.signin=false" aria-label="Close">✕</button>
         <div style="font-size:26px">▚</div>
-        <h2 style="margin:8px 0 2px;font-family:var(--mono)">{{invitePrefill?'Accept your invite':'Make it yours'}}</h2>
+        <h2 style="margin:8px 0 2px;font-family:var(--mono)">{{invitePrefill?'Accept your invite':(shareGate?'Sign in to view it':'Make it yours')}}</h2>
         <p v-if="invitePrefill" class="sub">Sign in with <b>{{invitePrefill}}</b> and you'll drop straight into the team.</p>
+        <p v-else-if="shareGate" class="sub">You'll land on “{{shareGate.name}}” right after.</p>
         <p v-else class="sub">Bring the sandbox into a real account.</p>
         <button v-if="meta.github" class="btn primary" style="width:100%;padding:11px;margin-bottom:8px" @click="githubLogin">Continue with GitHub</button>
         <button v-if="meta.google" class="btn" style="width:100%;padding:11px;margin-bottom:8px" @click="googleLogin">Continue with Google</button>
@@ -1731,6 +1748,7 @@ createApp({
       copyRecipe:null, recipeTab:'cURL', viewRecipe:null, recipeSaved:false,
       // detail pages (shareable /app/skills/<name> + /app/tools/<name> deep links)
       detail:null, detailData:null, detailErr:'', detailLoading:false, detailFile:'SKILL.md', detailCopied:'', detailNote:'',
+      shareGate:null,  // logged-out arrival at a shared detail link: {kind,name} → focused sign-in page (no sandbox/tour)
       share:{on:false, email:'', role:'viewer', full:true, busy:false, err:'', sent:null, member:null},  // detail-page "Share…" (invite + land on this page)
       me:'', myOrgs:[], isAdmin:false,
       onboarded:true,  // first-run onboarding (narrative stepper) - see onb.*
@@ -2769,8 +2787,8 @@ createApp({
       return; }  // GitHub/email session
     if(this.token){ await this.loadAll(); if(route) this.openDetail(route.kind, route.name, true); return; }      // token-in-browser fallback
     if(!inv && !linkOrg && !route && !qs.get('invite_expired')){ location.replace('/'); return; }  // logged-out plain visit → the marketing landing owns the front door
-    this.sbxInit();                                 // logged-out invite/deep-link flow → the in-app landing + sign-in modal
-    if(route){ this.demo.signin=true; }             // shared link while logged out: sign in, then land on it (email verify reloads in place; OAuth restores via the treg-next stash)
+    if(route){ this.shareGate=route; this.demo.signin=true; }  // shared link while logged out: the focused gate (no sandbox mint, no tour); after sign-in the boot lands on it (email verify reloads in place; OAuth restores via the treg-next stash)
+    else this.sbxInit();                            // other logged-out flows → the in-app landing + sign-in modal
     if(inv){ this.invitePrefill=inv; this.emailInput=inv; this.emailStage=false; this.demo.signin=true; }  // legacy code link while logged out: prefill + open sign-in; the invite auto-accepts after login (maybeOnboard)
   },
 }).mount('#app');
