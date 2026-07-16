@@ -195,7 +195,7 @@ async def providers_catalog() -> dict:
 
 # ---- human login via GitHub OAuth (dashboard sessions) ------------------------------------
 def _is_https(request: Request) -> bool:
-    # behind ngrok/Render, TLS is terminated upstream and forwarded as http + X-Forwarded-Proto.
+    # behind a reverse proxy (Render), TLS is terminated upstream and forwarded as http + X-Forwarded-Proto.
     return request.headers.get("x-forwarded-proto", "").lower() == "https" or request.url.scheme == "https"
 
 
@@ -945,7 +945,7 @@ async def llms_txt():
 @app.get("/install.sh", include_in_schema=False)
 async def install_sh():
     """`curl -fsSL {BASE}/install.sh | sh` — installs the treg CLI and points it at this server.
-    The serving domain is templated in so it targets whichever host is live (ngrok now, the real
+    The serving domain is templated in so it targets whichever host is live (dev box or the real
     domain after deploy)."""
     f = _WEB_DIR / "install.sh"
     if not f.exists():
@@ -1792,7 +1792,7 @@ SANDBOX_RATE_WINDOW_S = 3600   # 1 hour
 
 
 def _client_ip(request: Request) -> str:
-    """Best-effort client IP — first hop of X-Forwarded-For behind ngrok/Render, else the socket peer."""
+    """Best-effort client IP — first hop of X-Forwarded-For behind the reverse proxy (Render), else the socket peer."""
     xff = request.headers.get("x-forwarded-for")
     if xff:
         return xff.split(",")[0].strip()
