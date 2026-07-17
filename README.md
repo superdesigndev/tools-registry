@@ -1,4 +1,4 @@
-# Treg (Tool-Registries)
+# Treg (Tool-Registry)
 
 ![treg — share skills & secrets without leaking keys](docs/assets/treg-hero.png)
 
