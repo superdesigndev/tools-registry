@@ -15,8 +15,11 @@ later anyone with a valid ticket says "table 5's coat" and the attendant fetches
 they never carry it themselves. The proxy swaps a **tool reference** for the **real secret** on the
 way out.
 
-- **tool** = an upstream `base_url` + credential **bindings** (each binding injects one secret into
-  the request; a request can carry several, e.g. an OAuth bearer *and* a `developer-token` header).
+- **tool** = something the registry calls for you with the org's credential. Two kinds:
+  - **endpoint** - an upstream `base_url` + credential **bindings** (each binding injects one
+    secret into the request; a request can carry several, e.g. an OAuth bearer *and* a
+    `developer-token` header).
+  - **CLI** - a vendor binary (`stripe`, `gh`, `vercel`, ...) run with the credential injected.
 - **skill / bundle** = a recipe (`SKILL.md`) + its secrets + its tool(s), registered together.
 
 **The one rule:** the proxy **relays, never models** the upstream, and **injects auth server-side**
@@ -44,12 +47,11 @@ curl -fsSL https://treg.superdesign.dev/install.sh | sh
 # 2. sign in (GitHub default · --email for a one-time code · --token for agents/CI)
 treg login
 
-# 3. call a shared tool — no key on your machine
-treg call stripe v1/balance
+# 3. guided setup - share your skills & keys, or connect to your team's
+treg onboard
 
-# 4. make your agent a treg master in one fetch
-#    point it at https://treg.superdesign.dev/llms.txt — reading that file is enough
-#    for Claude Code / Codex to use the whole registry
+# then call a shared tool - no key on your machine
+treg call stripe v1/balance
 ```
 
 Your token identifies you on every call (`X-Treg-Token` header) and is the same for all tools.
