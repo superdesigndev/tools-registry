@@ -104,10 +104,14 @@ async def test_login_page_offers_session_reuse(web):
     r = await web.get(f"/login?cli={LID}")
     assert r.status_code == 200
     assert 'id="orgpick"' in r.text and "HAS_SESSION=true" in r.text
-    assert "or use a different account" in r.text  # doors still offered under a divider
+    # The doors still exist but start COLLAPSED behind the "use a different account" accordion —
+    # a signed-in user is one click from done and shouldn't see sign-in options by default.
+    assert 'id="other-acct"' in r.text and "toggleDoors()" in r.text
+    assert 'id="doors" class="stack" style="display:none"' in r.text
     web.cookies.clear()
     r2 = await web.get(f"/login?cli={LID}")  # no session
-    assert "HAS_SESSION=false" in r2.text and "or use a different account" not in r2.text
+    assert "HAS_SESSION=false" in r2.text and 'id="other-acct"' not in r2.text
+    assert 'id="doors" class="stack" style="display:none"' not in r2.text  # no session → doors visible
 
 
 # ---- the org picker: /auth/cli/orgs + approve with a chosen team ---------------------------
