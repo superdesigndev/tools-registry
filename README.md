@@ -2,38 +2,27 @@
 
 ![treg — share skills & secrets without leaking keys](docs/assets/treg-hero.png)
 
-**A remote registry that turns a team's skills into shareable, callable tools, via a
-credential-injecting proxy.** Call an upstream API (PostHog, Stripe, Search Console, Render, …)
-with **no key on your machine** — the registry injects auth server-side. Run a vendor CLI
-(`stripe`, `gh`, `vercel`, …) without owning its credential. Consumers are usually **agents**
-(Claude Code / Codex / Gemini), but humans use it too (CLI or raw HTTP).
+**Stop pasting API keys into agent contexts and Slack DMs.** Treg is your team's shared registry
+of skills, CLIs, endpoints, and secrets. Agents call Stripe, PostHog, `gh` directly - auth
+injected server-side, every call logged. Nothing to paste, nothing to leak.
 
-Built for the Superdesign team, live at **`https://treg.superdesign.dev`** — anyone can self-host.
-
-**The mental model - a bank teller:** you slide a request across the counter ("pay this invoice
-from my account"); the teller does the transaction inside the vault and slides back the result.
-You never enter the vault, and nothing in it ever crosses the counter - the proxy swaps your
-**tool reference** for the **real secret** server-side, on the way out to the upstream.
+Built for the Superdesign team, live at [treg.superdesign.dev](https://treg.superdesign.dev) - anyone can self-host.
 
 - **tool** = something the registry calls for you with the org's credential. Two kinds:
   - **endpoint** - an upstream `base_url` + credential **bindings** (each binding injects one
-    secret into the request; a request can carry several, e.g. an OAuth bearer *and* a
-    `developer-token` header).
+  secret into the request; a request can carry several, e.g. an OAuth bearer *and* a
+  `developer-token` header).
   - **CLI** - a vendor binary (`stripe`, `gh`, `vercel`, ...) run with the credential injected.
 - **skill / bundle** = a recipe (`SKILL.md`) + its secrets + its tool(s), registered together.
 
 **The one rule:** the proxy **relays, never models** the upstream, and **injects auth server-side**
 — so it survives upstream API changes and callers never hold keys.
 
-This README has two parts: **[using the registry](#part-1--using-the-registry)** (the hosted
-service) and **[self-hosting & development](#part-2--self-hosting--development)** (running your
-own).
-
 ---
 
 # Part 1 · Using the registry
 
-Visit **[treg.superdesign.dev](https://treg.superdesign.dev)** (hosted on Render) — the dashboard,
+Visit [**treg.superdesign.dev**](https://treg.superdesign.dev) (hosted on Render) — the dashboard,
 sign-in, and every URL below live there.
 
 ## Quickstart
@@ -166,13 +155,13 @@ treg org access <member> --tools a,b          # per-member tool access (admin+)
 
 ## Going deeper
 
-- **[`USAGE.md`](USAGE.md)** — the full `treg` CLI reference.
-- **[`/llms.txt`](https://treg.superdesign.dev/llms.txt)** — the agent-onboarding file: call
-  protocol, discovery, auth, CLI, skills. One fetch teaches an agent the whole registry.
+- [`USAGE.md`](USAGE.md) — the full `treg` CLI reference.
+- [`/llms.txt`](https://treg.superdesign.dev/llms.txt) — the agent-onboarding file: call
+protocol, discovery, auth, CLI, skills. One fetch teaches an agent the whole registry.
 - **The dashboard** at [treg.superdesign.dev](https://treg.superdesign.dev) — full CRUD, a guided
-  tutorial (Help → Tutorial), and copyable setup instructions for your agents.
+tutorial (Help → Tutorial), and copyable setup instructions for your agents.
 - **The API** — everything the CLI does is plain HTTP; interactive OpenAPI docs live at `/docs`.
-  The proxy endpoint is `/call/{...}`; all endpoints take the `X-Treg-Token` header.
+The proxy endpoint is `/call/{...}`; all endpoints take the `X-Treg-Token` header.
 
 ---
 
@@ -214,17 +203,19 @@ The team instance is hosted on **Render** (web service + Postgres) at `treg.supe
 
 Environment variables (prefix `TREG_`, read from `.env`):
 
-| Var | Default | Purpose |
-|---|---|---|
-| `TREG_DATABASE_URL` | `sqlite+aiosqlite:///./treg.db` | DB URL (SQLite for dev, Postgres in prod) |
-| `TREG_SECRET_KEY` | *(empty)* | Fernet key for secrets-at-rest; empty → an ephemeral key is minted (secrets won't survive a restart) |
-| `TREG_PUBLIC_URL` | `https://treg.superdesign.dev` | treg's public base, used to build the OAuth callback URI |
-| `TREG_SESSION_SECRET` | *(empty)* | signs the dashboard session cookie; falls back to `TREG_SECRET_KEY`. Set a real value in prod |
-| `TREG_GITHUB_CLIENT_ID` / `_SECRET` | *(empty)* | GitHub OAuth sign-in (callback `<public_url>/auth/github/callback`); empty hides the button |
-| `TREG_GOOGLE_CLIENT_ID` / `_SECRET` | *(empty)* | Google OAuth sign-in (redirect `<public_url>/auth/google/callback`); empty hides the button |
-| `TREG_RESEND_API_KEY` / `TREG_EMAIL_FROM` | *(empty)* | transactional email via Resend (OTP codes + invites); From must be a Resend-verified sender |
-| `TREG_ADMIN_TOKEN` | *(empty)* | cross-tenant **super-admin** bearer; authorizes every `/admin/*` endpoint. Empty disables the env path (only `is_superadmin` users reach `/admin`). Keep it long + secret. |
-| `TREG_EMAIL_DEV_MODE` | `false` | when true, `/auth/email/start` returns the OTP in its response (no mail sender needed) — **dev/local only**, never in prod. |
+
+| Var                                       | Default                         | Purpose                                                                                                                                                                    |
+| ----------------------------------------- | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TREG_DATABASE_URL`                       | `sqlite+aiosqlite:///./treg.db` | DB URL (SQLite for dev, Postgres in prod)                                                                                                                                  |
+| `TREG_SECRET_KEY`                         | *(empty)*                       | Fernet key for secrets-at-rest; empty → an ephemeral key is minted (secrets won't survive a restart)                                                                       |
+| `TREG_PUBLIC_URL`                         | `https://treg.superdesign.dev`  | treg's public base, used to build the OAuth callback URI                                                                                                                   |
+| `TREG_SESSION_SECRET`                     | *(empty)*                       | signs the dashboard session cookie; falls back to `TREG_SECRET_KEY`. Set a real value in prod                                                                              |
+| `TREG_GITHUB_CLIENT_ID` / `_SECRET`       | *(empty)*                       | GitHub OAuth sign-in (callback `<public_url>/auth/github/callback`); empty hides the button                                                                                |
+| `TREG_GOOGLE_CLIENT_ID` / `_SECRET`       | *(empty)*                       | Google OAuth sign-in (redirect `<public_url>/auth/google/callback`); empty hides the button                                                                                |
+| `TREG_RESEND_API_KEY` / `TREG_EMAIL_FROM` | *(empty)*                       | transactional email via Resend (OTP codes + invites); From must be a Resend-verified sender                                                                                |
+| `TREG_ADMIN_TOKEN`                        | *(empty)*                       | cross-tenant **super-admin** bearer; authorizes every `/admin/*` endpoint. Empty disables the env path (only `is_superadmin` users reach `/admin`). Keep it long + secret. |
+| `TREG_EMAIL_DEV_MODE`                     | `false`                         | when true, `/auth/email/start` returns the OTP in its response (no mail sender needed) — **dev/local only**, never in prod.                                                |
+
 
 No `.env` is needed for local dev — every setting has a working default (ephemeral key, sqlite).
 
@@ -240,27 +231,30 @@ audit record. The proxy does no business logic and never buffers the body.
 
 **Module map** (`src/treg/`):
 
-| Module | Role |
-|---|---|
-| `proxy.py` | `relay()` — the whole product in one function: a faithful streaming proxy |
-| `injectors.py` | the auth-shape seam: `env`, `cli_auth`, `secret_file`, `oauth` place a secret into a header/query |
-| `oauth.py` | token freshness (single-flight refresh) + the connect flow (consent URL, code exchange) |
-| `health.py` | credential health: refresh oauth, probe tools, webhook the owner of anything broken |
-| `convert.py` | scaffold a skill directory into a registerable bundle manifest |
-| `api.py` | the API — the only brain; CLI + skill are thin clients over it |
-| `cli.py` | the `treg` CLI |
-| `models.py` | SQLModel tables: `Org`, `User`, `Membership`, `Invite`, `Secret`, `Tool`, `Bundle`, `PendingOAuth`, `CallRecord` |
-| `crypto.py` `config.py` `db.py` `audit.py` | Fernet encryption + tokens · settings · async DB · deferred audit writer |
+
+| Module                                     | Role                                                                                                             |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| `proxy.py`                                 | `relay()` — the whole product in one function: a faithful streaming proxy                                        |
+| `injectors.py`                             | the auth-shape seam: `env`, `cli_auth`, `secret_file`, `oauth` place a secret into a header/query                |
+| `oauth.py`                                 | token freshness (single-flight refresh) + the connect flow (consent URL, code exchange)                          |
+| `health.py`                                | credential health: refresh oauth, probe tools, webhook the owner of anything broken                              |
+| `convert.py`                               | scaffold a skill directory into a registerable bundle manifest                                                   |
+| `api.py`                                   | the API — the only brain; CLI + skill are thin clients over it                                                   |
+| `cli.py`                                   | the `treg` CLI                                                                                                   |
+| `models.py`                                | SQLModel tables: `Org`, `User`, `Membership`, `Invite`, `Secret`, `Tool`, `Bundle`, `PendingOAuth`, `CallRecord` |
+| `crypto.py` `config.py` `db.py` `audit.py` | Fernet encryption + tokens · settings · async DB · deferred audit writer                                         |
+
 
 **The 4 auth shapes** (per binding `injector`): `env` (plain string / API key) · `secret_file` (a
 JSON token file, pull a field) · `oauth` (a JSON OAuth token, auto-refreshed if refreshable) ·
 `cli_auth` (material lifted from a CLI's keychain).
 
 **Faithful-relay contract:** the proxy alters **only** three things, everything else is verbatim:
+
 1. hop-by-hop transport headers (re-derived per hop),
 2. treg's own control + edge-forwarding headers (`x-treg-token`, `x-treg-org`,
-   `ngrok-skip-browser-warning`, `x-forwarded-*`, `via`, …) and treg's session cookie — all stripped,
-   never leak upstream,
+ `ngrok-skip-browser-warning`, `x-forwarded-*`, `via`, …) and treg's session cookie — all stripped,
+ never leak upstream,
 3. the injected credential(s).
 
 **OAuth, three ways to get the first token:** *manual upload* (drop in a `token.json`) ·
@@ -299,7 +293,7 @@ tools-registry/
 ```
 
 Per-subsystem design docs are **fragments** in `docs/context/`, each citing its `src/treg/*`
-sources. Working in this repo with an AI agent? The **`/tools-registry-context`** skill loads the
+sources. Working in this repo with an AI agent? The `/tools-registry-context` skill loads the
 right fragment for what you're touching and keeps the docs in sync — run
 `/tools-registry-context sync` before pushing.
 
