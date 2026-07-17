@@ -227,10 +227,10 @@ def cmd_login(args, cfg) -> None:
     # session with one click, else offers every configured door (GitHub / Google / email code).
     import secrets as _secrets
     base = cfg["base_url"].rstrip("/")
-    # Ask the SERVER to start the login: it mints the login_id AND a short pairing code. The browser
-    # must echo the code back before it finishes, so a login you didn't start — someone mailing you a
-    # /login?cli=… link — can't be approved into a token for them. If the server is too old to know
-    # /start, fall back to a locally-minted id (no code) so login still works.
+    # Ask the SERVER to start the login: it mints the login_id AND a short pairing code shown only here
+    # (never in the URL). The browser must echo the code back before it finishes, so a login you didn't
+    # start — someone mailing you a /login?cli=… link — can't be approved into a token for them. If the
+    # server is too old to know /start, fall back to a locally-minted id (no code) so login still works.
     code = None
     try:
         st = httpx.post(f"{base}/auth/cli/start", headers={"ngrok-skip-browser-warning": "1"}, timeout=10)
@@ -240,13 +240,10 @@ def cmd_login(args, cfg) -> None:
             lid = _secrets.token_urlsafe(18)
     except Exception:
         lid = _secrets.token_urlsafe(18)
-    # The code rides in the URL FRAGMENT (never sent to the server, so it stays out of request logs):
-    # the /login page displays it for a visual match against this terminal instead of making the user
-    # type it. The server still validates the code at approve time — the guard itself is unchanged.
-    url = f"{base}/login?cli={lid}" + (f"#code={code}" if code else "")
+    url = f"{base}/login?cli={lid}"
     print(f"Opening your browser to sign in…\nIf it doesn't open, visit:\n  {url}\n")
     if code:
-        print(f"  The sign-in page shows this code — check it matches:  {_B}{_TEAL}{code}{_R}\n")
+        print(f"  Enter this code in the browser to confirm it's you:  {_B}{_TEAL}{code}{_R}\n")
     print("Waiting for authorization…")
     try:
         webbrowser.open(url)
@@ -447,6 +444,98 @@ def _menu(message: str, options: list[tuple], default=None):
         print(f"{_B}{message}{_R}  {_A}{chose}{_R}")
     sys.stdout.flush()
     return picked
+
+
+def _splash() -> None:
+    """`treg onboard`'s opening beat (~2s, any key skips): the wordmark decrypts behind a ░▒▓
+    wavefront, then a spark runs the keyless relay — you → vault → api ✓ — and only the answer
+    comes back. TTY-only with color on; agents, pipes, dumb terminals and NO_COLOR never see it."""
+    if not (sys.stdin.isatty() and sys.stdout.isatty()) or os.environ.get("TERM") == "dumb" or not _A:
+        return
+    try:
+        import termios
+        import tty
+    except ImportError:
+        return
+    title, sub = "tools-registry", " — your team's vault"
+    text = f"▚ {title}{sub}"
+    d1, d2 = 8, 12  # dash runs: you ──▚ vault ──── api
+
+    def _title_line(front: int) -> str:
+        out = []
+        for i, ch in enumerate(text):
+            d = front - i
+            if d < 0:
+                out.append(" ")
+            elif d < 2:
+                out.append(f"{_M}░{_R}")
+            elif d < 4:
+                out.append(f"{_M}▒{_R}")
+            elif d < 6:
+                out.append(f"{_A}▓{_R}")
+            elif i == 0:
+                out.append(f"{_A}{_B}▚{_R}")
+            elif i <= len(title) + 1:
+                out.append(f"{_B}{ch}{_R}")
+            else:
+                out.append(f"{_M}{ch}{_R}")
+        return "".join(out)
+
+    def _relay_line(spark: int, hit: bool, back: int) -> str:
+        parts = [f"  {_M}◇ you {_R}"]
+        for i in range(d1):
+            parts.append(f"{_A}{_B}●{_R}" if spark == i else f"{_M}─{_R}")
+        parts.append(f"{_A}{_B}▚{_R}{_M} vault {_R}")
+        for i in range(d2):
+            j = d1 + 1 + i
+            if spark == j:
+                parts.append(f"{_A}{_B}●{_R}")
+            elif back == j:
+                parts.append(f"{_AM}●{_R}")  # the response riding home, amber
+            else:
+                parts.append(f"{_M}─{_R}")
+        parts.append(f" {_B}api{_R} {_G}✓{_R}" if hit else f"{_M} api{_R}")
+        return "".join(parts)
+
+    caption = " " * (8 + d1) + "└ keys stay here"
+    frames: list[tuple[str, str, str]] = []
+    for front in range(0, len(text) + 7, 3):  # phase 1 — dither reveal
+        frames.append((_title_line(front), "", ""))
+    done = _title_line(len(text) + 6)
+    for i in range(d1):  # phase 2 — the relay run
+        frames.append((done, _relay_line(i, False, -1), ""))
+    for i in range(d2):
+        frames.append((done, _relay_line(d1 + 1 + i, False, -1), f"{_M}{caption}{_R}"))
+    frames += [(done, _relay_line(-1, True, -1), f"{_M}{caption}{_R}")] * 2
+    for i in range(d2 - 1, -1, -2):
+        frames.append((done, _relay_line(-1, True, d1 + 1 + i), f"{_M}{caption}{_R}"))
+    final = (done, _relay_line(-1, True, -1), f"{_M}{' ' * (8 + d1)}└ the key never left{_R}")
+    frames.append(final)
+
+    fd = sys.stdin.fileno()
+    old = termios.tcgetattr(fd)
+    try:
+        tty.setcbreak(fd, termios.TCSANOW)  # TCSANOW: FLUSH would deadlock non-draining readers
+        sys.stdout.write("\x1b[?25l\n")
+        first = True
+        for fr in frames:
+            if not first:
+                sys.stdout.write("\x1b[3A")
+            first = False
+            sys.stdout.write("\n".join(f"\x1b[2K{ln}" for ln in fr) + "\n")
+            sys.stdout.flush()
+            if select.select([fd], [], [], 0.04)[0]:  # any key → skip to the payoff
+                while select.select([fd], [], [], 0)[0]:
+                    os.read(fd, 64)  # drain so the pressed key doesn't leak into the menu
+                break
+        sys.stdout.write("\x1b[3A" + "\n".join(f"\x1b[2K{ln}" for ln in final) + "\n")
+    except KeyboardInterrupt:
+        pass
+    finally:
+        termios.tcsetattr(fd, termios.TCSANOW, old)
+        sys.stdout.write("\x1b[?25h")
+        sys.stdout.flush()
+
 
 def _brand(sub: str) -> None: print(f"\n{_A}{_B}▚ tools-registry{_R} {_M}— {sub}{_R}")
 def _ok(t: str) -> None: print(f"  {_G}✓{_R} {t}")
@@ -977,6 +1066,8 @@ def cmd_onboard(args, cfg) -> None:
         sys.exit("Log in first:  treg login")
     if not cfg.get("active_org"):
         _pick_active_org(cfg)  # identity token needs an active org so requests carry X-Treg-Org
+    if not args.path and not getattr(args, "yes", False):  # scripted runs skip the theater
+        _splash()
     path = args.path or ("demo" if args.mode == "quick" else None) or _pick_path(cfg)  # --mode kept for back-compat
     _dispatch_onboard(cfg, path, args)
 
