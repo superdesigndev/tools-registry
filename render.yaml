@@ -56,3 +56,8 @@ services:
         sync: false
       - key: TREG_RESEND_API_KEY
         sync: false
+      # Landing live-wire demo (optional — unset = sandbox calls all synthesize / webhook 404s).
+      - key: TREG_DEMO_STRIPE_KEY       # Stripe sandbox restricted key (Charges only) for the live wire
+        sync: false
+      - key: TREG_DEMO_STRIPE_WEBHOOK_SECRET # whsec_… from the DEMO Stripe sandbox's webhook endpoint
+        sync: false

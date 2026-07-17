@@ -287,6 +287,90 @@ pre.dimothers .ln.fcs{background:var(--blue-tint);border-color:rgba(0,94,255,.45
   color:var(--ink70);font-size:13.5px;line-height:1.5}
 .card .cf b{color:var(--green);font-weight:600}
 
+/* ---------- live wire: vault window + call panel (view mode of the sandbox) ---------- */
+@keyframes livepulse{50%{opacity:.35}}
+.steplbl{display:flex;align-items:center;gap:10px;margin:30px 2px 12px;font-family:var(--mono);
+  font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink55)}
+.steplbl b{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;
+  border-radius:999px;background:rgba(129,255,125,.12);color:var(--green);font-size:10px}
+.steplbl .ln{flex:1;height:1px;background:var(--line)}
+/* same card treatment as the studio's vault bar (.vbar): panel bg + inset top highlight */
+.vw{background:var(--panel);border:1px solid var(--line);border-radius:20px;overflow:hidden;
+  box-shadow:rgba(255,255,255,.12) 0 1px 0 inset}
+.vw-bar{display:flex;align-items:center;gap:8px;padding:11px 15px;border-bottom:1px solid var(--line);
+  font-family:var(--mono);font-size:12px;color:var(--ink70)}
+.vw-bar i{width:9px;height:9px;border-radius:99px;background:#2e2e2e;display:block}
+.vw-bar b{color:var(--link);font-weight:700}
+.vw-edit{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--ink55);
+  border:1px solid var(--line);border-radius:6px;padding:3px 9px;background:none;cursor:pointer}
+.vw-edit:hover{color:var(--ink)}
+.vw-row{display:flex;align-items:center;gap:9px;padding:7px 15px;font-family:var(--mono);font-size:13px;color:var(--ink)}
+.vw-row.head{padding-top:12px;font-size:15px;font-weight:700}
+.vw-row.sub{padding:4px 15px 4px 34px;color:var(--ink70);font-size:12.5px}
+.vw-row.last{padding-bottom:12px}
+.vw-row .rt{margin-left:auto;display:flex;align-items:baseline;gap:8px;white-space:nowrap;text-align:right}
+.vw-row .t{font-size:10px;letter-spacing:.1em;color:var(--ink55);text-transform:uppercase;font-weight:400}
+.vw-row .ok{color:var(--green);font-size:11.5px;font-weight:400}
+.vw-row .dots{color:var(--ink55);letter-spacing:2px;font-weight:400}
+.vwchip{font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;border-radius:5px;padding:1.5px 7px;font-weight:400}
+.vwchip.skill{color:var(--link);background:var(--blue-tint)}
+.vwchip.keyc{color:var(--ink70);border:1px solid var(--line)}
+.vwchip.ep{color:var(--link);background:rgba(107,196,255,.10)}
+.vwdim{color:var(--ink55);font-weight:400}
+.vw-slogo{width:17px;height:17px;flex:none;border-radius:4px;display:block}
+/* the title truncates (never wraps) so the edit button stays put; statuses may drop to their
+   own right-aligned line on narrow screens instead of colliding with the row content */
+.vw-bar .vw-t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vw-edit{flex:none;white-space:nowrap}
+.vw-row{flex-wrap:wrap}
+@media (max-width:640px){
+  .vw-sub{display:none}
+  .vw-row{font-size:12px;gap:7px;padding:6px 12px}
+  .vw-row.head{font-size:13.5px;padding-top:11px}
+  .vw-row.sub{padding-left:26px;font-size:11.5px}
+  .vw-row .ok{font-size:10.5px}
+  .vw-feedbar{padding:9px 12px}
+  .vw-feedbar .you{width:100%;margin:2px 0 0}
+  .frow,.live-row{font-size:12px;gap:9px;padding:7px 12px}
+}
+.vw-feedbar{display:flex;align-items:center;gap:8px;padding:10px 15px;border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line);font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--ink55)}
+.vw-feedbar .you{margin-left:auto;letter-spacing:0;text-transform:none}
+.vw-feedbar .you b{color:var(--green);font-family:var(--mono);font-weight:600}
+.vw-feedbar .dot,.dot{width:8px;height:8px;border-radius:99px;background:var(--green);
+  box-shadow:0 0 8px var(--green);animation:livepulse 2s infinite}
+.live-rows{min-height:120px;max-height:240px;overflow-y:auto;padding:6px 0}
+.live-row{display:flex;align-items:baseline;gap:12px;padding:8px 18px;font-family:var(--mono);font-size:13px}
+.live-row .amt{color:var(--green);font-weight:600;min-width:72px}
+.live-row .cur{color:var(--ink55);font-size:11px;text-transform:uppercase}
+.live-row .idsfx{color:var(--ink55);margin-left:auto;font-size:11px}
+.live-row.fresh{animation:liverow .8s ease-out}
+@keyframes liverow{from{background:rgba(63,185,80,.18);transform:translateY(-4px)}to{background:transparent;transform:none}}
+.live-empty{padding:26px 18px;font-family:var(--mono);font-size:12.5px;color:var(--ink55);text-align:center}
+.live-row .who{color:var(--ink);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.live-row .when{color:var(--ink55);font-size:11px}
+.live-row .rcpt{margin-left:auto;font-size:11px;color:var(--link);text-decoration:none;white-space:nowrap;opacity:.85}
+.live-row .rcpt:hover{text-decoration:underline;opacity:1}
+/* tabbed command box */
+.live-tabs{display:flex;gap:2px;width:max-content;background:rgba(0,0,0,.3);border:1px solid var(--line);
+  border-bottom:0;border-radius:12px 12px 0 0;padding:6px 6px 0}
+.live-tab{font-family:var(--mono);font-size:11.5px;color:var(--ink55);background:transparent;border:0;
+  padding:7px 14px;border-radius:8px 8px 0 0;cursor:pointer}
+.live-tab.on{color:var(--ink);background:var(--panel2)}
+.live-pane{display:none}
+.live-pane.on{display:block}
+.live-pane .codewrap{border-top-left-radius:0}
+/* syntax roles inside the command */
+.lw-dim{color:var(--ink35, rgba(255,255,255,.35))}
+.lw-api{color:var(--green);font-weight:600;border-bottom:1px dashed rgba(129,255,125,.45)}
+.lw-tok{color:var(--link)}
+.lw-amt{color:#FFD43B}
+.lw-cmt{color:rgba(255,255,255,.35);font-style:italic}
+.vlive{font-family:var(--mono);font-size:9px;letter-spacing:.14em;font-weight:700;color:var(--page);
+  background:var(--green);border-radius:4px;padding:2px 6px;box-shadow:0 0 10px rgba(129,255,125,.35);
+  animation:livepulse 2s infinite}
+
 /* ---------- try-it sandbox (ported "test section", sparkle skin) ---------- */
 .sbx-sec{padding:170px 0 0}
 .guide{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;
@@ -1117,25 +1201,27 @@ p.lead,p.sub{font-family:var(--mono);font-size:15px;line-height:1.65}
 <!-- ===== try it live (the test section, sparkle skin) ===== -->
 <section class="sbx-sec" id="try">
   <div class="narrow">
-    <div class="eyebrow rv">try it live · no signup</div>
     <h2 class="rv">Try it live</h2>
+    <div class="eyebrow rv" style="margin-top:14px">hack it if you can</div>
   </div>
   <div class="wrap" style="max-width:900px">
-    <div class="guide rv" style="margin-top:26px">
+    <div class="guide rv" id="sbx-guide" style="margin-top:26px">
       <span><b>1</b> keys stay in the vault</span><span class="ga">→</span>
       <span><b>2</b> point at an API or a skill</span><span class="ga">→</span>
       <span><b>3</b> call it with just a token</span>
     </div>
 
+    <div id="sbx-studio">
     <!-- vault bar -->
     <div class="vbar rv">
       <span class="vl">🔒 vault</span>
       <span id="vchips" style="display:flex;gap:8px;flex-wrap:wrap"></span>
-      <span class="vadd">
+      <span class="vadd" id="vadd">
         <input class="kn" id="ns-name" placeholder="NEW_KEY" onkeyup="if(event.key==='Enter')sbxAddSecret()"/>
         <input class="kv" id="ns-value" placeholder="value" onkeyup="if(event.key==='Enter')sbxAddSecret()"/>
         <button class="minibtn" onclick="sbxAddSecret()">＋ add key</button>
       </span>
+      <button class="minibtn" id="vault-edit" style="display:none" onclick="toggleVaultEdit()">✎ edit vault</button>
     </div>
     <div class="vhint">treg holds these · referenced by name · never downloaded to a machine</div>
 
@@ -1195,6 +1281,40 @@ p.lead,p.sub{font-family:var(--mono);font-size:15px;line-height:1.65}
 
       </div>
     </div>
+    </div><!-- /sbx-studio -->
+
+<!-- live wire (view mode): step 1 vault window · step 2 call panel. Hidden while editing
+     or when the wire is off (then the classic studio above is the whole section). -->
+    <div id="sbx-view" style="display:none">
+      <div id="vw-wrap">
+        <div class="steplbl"><b>1</b> the live vault with our stripe key <span class="ln"></span></div>
+        <div class="vw rv">
+          <div class="vw-bar"><i></i><i></i><i></i>
+            <span class="vw-t">🔒 <b>Live vault</b><span class="vw-sub"> · a real Stripe account's key, sealed</span></span>
+            <button class="vw-edit" onclick="enterEdit()">✎ edit</button></div>
+          <div id="vw-rows"></div>
+        </div>
+      </div>
+
+      <div class="steplbl"><b>2</b> call it — your token, our key <span class="ln"></span></div>
+      <div class="vw rv">
+        <div class="live-tabs" role="tablist" style="border:0;background:none;padding:8px 8px 0">
+          <button class="live-tab on" data-pane="curl" onclick="liveTab('curl')">curl</button>
+          <button class="live-tab" data-pane="cli" onclick="liveTab('cli')">treg CLI</button>
+        </div>
+        <div class="live-pane on" id="lw-pane-curl">
+          <div class="codewrap" style="border-radius:0;border-left:0;border-right:0"><button class="cp" onclick="copyEl('lw-curl',this)">copy</button><pre id="lw-curl"></pre></div>
+        </div>
+        <div class="live-pane" id="lw-pane-cli">
+          <div class="codewrap" style="border-radius:0;border-left:0;border-right:0"><button class="cp" onclick="copyEl('lw-cli',this)">copy</button><pre id="lw-cli"></pre></div>
+        </div>
+        <div class="vw-feedbar"><span class="dot"></span> live · our stripe sandbox
+          <span class="you">you are <b id="lw-you">…</b></span></div>
+        <div class="live-rows" id="live-rows"><div class="live-empty">waiting for the first charge…</div></div>
+      </div>
+      <p class="vhint" style="text-align:left">the green URL is Stripe's real API · the key is injected in our proxy, your sandbox never holds it · every row links to a receipt hosted by Stripe</p>
+    </div>
+
   </div>
 </section>
 
@@ -1715,7 +1835,56 @@ logorow.innerHTML = [...PROVIDERS, ...PROVIDERS].map(([name, slug]) =>
 const $ = id => document.getElementById(id);
 function esc(x){ return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
 const SBX = { token:null, org_slug:'', secrets:[], tools:[], samples:[], skills:[],
-              ran:null, addOpen:false, skAddOpen:false };
+              ran:null, addOpen:false, skAddOpen:false, live:false, visitor:'', editing:false };
+// With the live wire ON the section has two modes: a VIEW (vault window + call panel, #sbx-view)
+// and an EDIT mode (the original studio, #sbx-studio). With the wire off, only the studio exists
+// and everything edits freely — the original behavior, untouched.
+function editingOn(){ return SBX.editing || !SBX.live; }
+function enterEdit(){ SBX.editing = true; applyMode(); renderVault(); }
+function toggleVaultEdit(){ SBX.editing = !SBX.editing; applyMode(); renderVault(); }
+function applyMode(){
+  const live = SBX.live && !!SBX.token;
+  // live: the call panel (step 2) is ALWAYS on screen; editing only swaps the vault window
+  // for the studio. wire off: the original studio is the whole section, untouched.
+  $('sbx-view').style.display = live ? '' : 'none';
+  $('vw-wrap').style.display = (live && !SBX.editing) ? '' : 'none';
+  $('sbx-studio').style.display = (live && !SBX.editing) ? 'none' : '';
+  $('sbx-guide').style.display = live ? 'none' : '';  // the step labels tell the story when live
+  $('vadd').style.display = editingOn() ? '' : 'none';
+  const b = $('vault-edit');
+  b.style.display = SBX.live ? '' : 'none';
+  b.textContent = '✓ done';
+  if (live && !SBX.editing) renderVaultView();
+}
+// Stripe's S mark (brand badge) for the live bundle row — inline so nothing is fetched.
+const STRIPE_BADGE =
+  '<svg class="vw-slogo" viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="5" fill="#635BFF"/>' +
+  '<path fill="#fff" transform="translate(4.56,4.56) scale(0.62)" d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 ' +
+  '0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 ' +
+  '6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 ' +
+  '0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 ' +
+  '4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.594-7.305h.003z"/></svg>';
+function renderVaultView(){
+  const rows = [];
+  const liveT = SBX.tools.find(isLiveTool);
+  if (liveT){
+    rows.push(`<div class="vw-row head">${STRIPE_BADGE} stripe-billing-skill <span class="vlive">LIVE</span>` +
+              `<span class="rt"><span class="t">SKILL.MD</span></span></div>`);
+    rows.push(`<div class="vw-row sub">└ ⚡ api.stripe.com<span class="vwdim">/v1/charges</span> <span class="vwchip ep">endpoint</span>` +
+              `<span class="rt"><span class="ok">wired ✓</span></span></div>`);
+    rows.push(`<div class="vw-row sub last">└ 🔑 STRIPE_KEY <span class="vwchip keyc">key</span>` +
+              `<span class="rt"><span class="ok">bound ✓ · never leaves</span></span></div>`);
+  }
+  // seeded POSTHOG_KEY stays out of the exhibit (it exists for the edit-mode "add your own" flow);
+  // keys the VISITOR added do show.
+  for (const k of SBX.secrets.filter(x => x.name !== 'STRIPE_KEY' && x.name !== 'POSTHOG_KEY'))
+    rows.push(`<div class="vw-row">🔑 ${esc(k.name)} <span class="vwchip keyc">key</span><span class="dots">••••••</span>` +
+              `<span class="rt"><span class="t">standalone</span></span></div>`);
+  for (const t of SBX.tools.filter(x => !isLiveTool(x)))
+    rows.push(`<div class="vw-row">⚡ ${esc(t.base_url.replace(/^https?:\/\//, ''))} <span class="vwchip ep">endpoint</span>` +
+              `<span class="rt"><span class="ok">wired ✓</span></span></div>`);
+  $('vw-rows').innerHTML = rows.join('');
+}
 const REAL_APIS = [
   { name:'posthog', url:'https://app.posthog.com/api/projects/@current/events', key:'POSTHOG_KEY' },
   { name:'openai',  url:'https://api.openai.com/v1/models',                     key:'OPENAI_KEY' },
@@ -1742,24 +1911,53 @@ async function sbxInit(){
   const saved = localStorage.getItem('treg-sbx');
   if (saved){
     SBX.token = saved;
-    try { await sbxFreshStart(); return; }
+    try {
+      // live-wire facts FIRST — sbxFreshStart needs SBX.live to know to spare the live tool
+      try { const lw = await sbxFetch('/demo/sandbox/live'); SBX.live = lw.live; SBX.visitor = lw.visitor; } catch(e){}
+      await sbxFreshStart();
+      liveInit();
+      return;
+    }
     catch(e){ SBX.token = null; localStorage.removeItem('treg-sbx'); }
   }
   try {
     const m = await sbxFetch('/demo/sandbox', { method:'POST' });
     SBX.token = m.token; SBX.org_slug = m.org_slug;
+    SBX.live = !!m.live; SBX.visitor = m.visitor || '';
     localStorage.setItem('treg-sbx', m.token);
     await sbxFreshStart();
+    liveInit();
   } catch(e){ sbxErr(e, 'Could not start the sandbox — please retry.'); }
 }
 async function sbxFreshStart(){
   // every visit tells the story from the top: the ADD state. Wipe the sandbox's
   // tools (keys stay in the vault) so the visitor's first action is hitting Add,
   // and the "call it from any terminal" payoff appears as a result of THEIR click.
+  // EXCEPT the live wire: its terminal commands must work the moment the page shows
+  // them, so the seeded live stripe tool survives the reset and starts selected.
   await sbxRefresh();
-  for (const t of [...SBX.tools]) await sbxFetch('/tools/' + t.id, { method:'DELETE' }).catch(() => {});
-  if (SBX.tools.length) await sbxRefresh();
+  const gone = SBX.tools.filter(t => !isLiveTool(t));
+  for (const t of gone) await sbxFetch('/tools/' + t.id, { method:'DELETE' }).catch(() => {});
+  if (gone.length) await sbxRefresh();
+  await ensureLiveTool();
+  if (SBX.live && !SBX.skills.length){
+    // the exhibit opens stocked: the stripe skill card sits in the Skills tab from the start
+    const sm = SBX.samples.find(x => x.name === 'stripe-billing');
+    if (sm && haveKey(sm.key)) SBX.skills.push({ ...sm, tab: 0, runOpen: false });
+  }
+  applyMode();
   prefillAdd();
+  const live = SBX.tools.find(isLiveTool);
+  if (live) selectTool(live.id);
+}
+async function ensureLiveTool(){
+  // sandboxes minted before the live wire shipped lack the pinned tool — recreate it silently
+  if (!SBX.live || SBX.tools.some(isLiveTool)) return;
+  const k = SBX.secrets.find(s => s.name === 'STRIPE_KEY');
+  if (!k) return;
+  await sbxFetch('/tools', { method:'POST', body: JSON.stringify({ name:'stripe', base_url: LIVE_API,
+    bindings: [{ secret_id: k.id, injector:'env', location:'header', name:'Authorization', format:'Bearer {secret}' }] }) }).catch(() => {});
+  await sbxRefresh();
 }
 async function sbxRefresh(){
   const [secrets, tools, samples] = await Promise.all([
@@ -1780,22 +1978,31 @@ function callPath(t){
 }
 function haveKey(name){ return !!name && SBX.secrets.some(k => k.name === name); }
 function renderVault(){
-  $('vchips').innerHTML = SBX.secrets.map(k =>
-    `<span class="vchip"><span class="kn">${esc(k.name)}</span><span class="kv">••••••</span>` +
-    `<button class="x" onclick="sbxRmSecret(${k.id})" aria-label="remove">✕</button></span>`).join('');
+  $('vchips').innerHTML = SBX.secrets.map(k => {
+    const isLiveKey = SBX.live && k.name === 'STRIPE_KEY';
+    const live = isLiveKey ? '<span class="vlive">LIVE</span>' : '';
+    const x = (editingOn() && !isLiveKey)  // the live key is never removable, even in edit mode
+      ? `<button class="x" onclick="sbxRmSecret(${k.id})" aria-label="remove">✕</button>` : '';
+    return `<span class="vchip"><span class="kn">${esc(k.name)}</span><span class="kv">••••••</span>${live}${x}</span>`;
+  }).join('');
   renderTools(); renderSkills();
+}
+function isLiveTool(t){  // mirror of sandbox.is_live_tool — the exact seeded fingerprint
+  return SBX.live && (t.base_url || '').replace(/\/$/, '') === LIVE_API;
 }
 function renderTools(){
   $('trows').innerHTML = SBX.tools.map(t => {
     const key = bindKeyName(t), host = t.base_url.replace(/^https?:\/\//,'').split('/')[0];
+    const x = (editingOn() && !isLiveTool(t))  // the live endpoint is never removable
+      ? `<button class="x" onclick="event.stopPropagation();sbxRmTool(${t.id})">✕</button>` : '';
     return `<div class="trow ${SBX.ran === t.id ? 'on' : ''}" onclick="selectTool(${t.id})">` +
       `<span class="meth">GET</span><span class="host">${esc(host)}<span class="path">${esc(callPath(t))}</span></span>` +
-      `<span class="key ${key === '—' ? 'warn' : ''}">🔑 ${esc(key)}</span><span class="sp"></span>` +
-      `<button class="x" onclick="event.stopPropagation();sbxRmTool(${t.id})">✕</button></div>`;
+      (isLiveTool(t) ? '<span class="vlive">LIVE</span>' : '') +
+      `<span class="key ${key === '—' ? 'warn' : ''}">🔑 ${esc(key)}</span><span class="sp"></span>` + x + `</div>`;
   }).join('');
-  const showAdd = SBX.tools.length === 0 || SBX.addOpen;
+  const showAdd = editingOn() && (SBX.tools.length === 0 || SBX.addOpen);
   $('addwrap').style.display = showAdd ? 'block' : 'none';
-  $('addmore').style.display = showAdd ? 'none' : 'inline-flex';
+  $('addmore').style.display = (editingOn() && !showAdd) ? 'inline-flex' : 'none';
   const prev = $('nt-key').value;
   $('nt-key').innerHTML = SBX.secrets.map(k => `<option value="${k.id}">${esc(k.name)}</option>`).join('');
   if ([...$('nt-key').options].some(o => o.value === prev)) $('nt-key').value = prev;
@@ -1879,7 +2086,7 @@ function renderSkills(){
       <div class="skh"><span>📦</span><b>${esc(sk.name)}</b><span class="skbadge">skill</span>
         <span class="sp" style="flex:1"></span>
         <span style="font-family:var(--mono);font-size:10.5px;color:${have ? 'var(--silver,#d8d2c2)' : '#f08a7a'};border:1px solid var(--line2);border-radius:900px;padding:2px 9px">needs 🔑 ${esc(sk.key)} ${have ? '✓' : '— missing'}</span>
-        <button class="x" style="border:0;background:none;color:var(--ink55);cursor:pointer;font-size:13px" onclick="skRm(${n})">✕</button></div>
+        ${editingOn() ? `<button class="x" style="border:0;background:none;color:var(--ink55);cursor:pointer;font-size:13px" onclick="skRm(${n})">✕</button>` : ''}</div>
       <div class="skmeta">A folder your agent loads. It calls its API through treg with <b>your</b> token — the key stays in the vault.</div>
       <div class="sktabs">${tabs}</div>
       <div class="skbody" id="skbody-${n}">${esc((sk.files || {})[files[sk.tab || 0]] || '')}</div>
@@ -1890,9 +2097,9 @@ function renderSkills(){
     </div>`;
   }).join('');
   const remaining = SBX.samples.filter(sm => !SBX.skills.some(sk => sk.name === sm.name));
-  const showAdd = (SBX.skills.length === 0 || SBX.skAddOpen) && remaining.length > 0;
+  const showAdd = editingOn() && (SBX.skills.length === 0 || SBX.skAddOpen) && remaining.length > 0;
   $('skadd').style.display = showAdd ? 'block' : 'none';
-  $('skaddmore').style.display = (!showAdd && remaining.length > 0) ? 'inline-flex' : 'none';
+  $('skaddmore').style.display = (editingOn() && !showAdd && remaining.length > 0) ? 'inline-flex' : 'none';
   if (showAdd){
     const prev = $('sk-pick').value;
     $('sk-pick').innerHTML = remaining.map(sm => `<option value="${esc(sm.name)}">${esc(sm.label || sm.name)}</option>`).join('');
@@ -1952,6 +2159,72 @@ function copyEl(id, btn){
 }
 sbxTab('endpoints');
 sbxInit();
+
+/* ===== live wire: the sandbox's ONE real endpoint =====
+   Uses the visitor's OWN sandbox token (SBX.token) — everyone gets a unique credential, which IS
+   the product story. The server decides whether the wire is live (TREG_DEMO_STRIPE_KEY set) and
+   who you are in the feed (`visitor`, injected into every charge as metadata server-side). When
+   the wire is off, the grid stays hidden and the sandbox behaves exactly as before. */
+const LIVE_MAX_ROWS = 8;
+const LIVE_API = 'https://api.stripe.com/v1/charges';
+function liveTab(name){
+  document.querySelectorAll('.live-tab').forEach(t => t.classList.toggle('on', t.dataset.pane === name));
+  ['curl','cli'].forEach(p => $(`lw-pane-${p}`).classList.toggle('on', p === name));
+}
+function liveSnippets(token, visitor){
+  const amount = Math.floor(Math.random() * 9900) + 100;  // $1.00–$99.99 (Stripe minimum is 50¢)
+  $('lw-you').textContent = visitor;
+  const E = esc, dim = s => `<span class="lw-dim">${E(s)}</span>`, api = `<span class="lw-api">${LIVE_API}</span>`,
+        tok = `<span class="lw-tok">${E(token)}</span>`, amt = s => `<span class="lw-amt">${E(s)}</span>`,
+        cmt = s => `<span class="lw-cmt">${E(s)}</span>`;
+  const dataHtml = `"${amt('amount=' + amount)}&amp;currency=usd&amp;source=tok_visa"`;
+  $('lw-curl').innerHTML =
+    `curl -X POST ${dim(location.origin + '/call/')}${api} \\\n` +
+    `  -H "X-Treg-Token: ${tok}" \\\n` +
+    `  -d ${amt('amount=' + amount)} -d currency=usd -d source=tok_visa`;
+  $('lw-cli').innerHTML =
+    cmt('# 1 · install the treg CLI (once — it points here automatically)') + `\n` +
+    `curl -fsSL ${dim(location.origin)}/install.sh | sh\n\n` +
+    cmt('# 2 · sign in with YOUR token') + `\n` +
+    `treg login --token ${tok}\n\n` +
+    cmt('# 3 · call Stripe — the key is injected server-side, never downloaded') + `\n` +
+    `treg call ${api} --method POST \\\n` +
+    `  --data ${dataHtml}`;
+}
+function liveRow(e, fresh){
+  const row = document.createElement('div');
+  row.className = 'live-row' + (fresh ? ' fresh' : '');
+  const when = e.created ? new Date(e.created * 1000).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '';
+  row.innerHTML = `<span class="amt"></span><span class="who"></span><span class="when"></span>`;
+  row.children[0].textContent = `$${(e.amount / 100).toFixed(2)}`;
+  row.children[1].textContent = e.name || `…${e.id_suffix || ''}`;
+  row.children[2].textContent = when;
+  if (e.receipt_url && e.receipt_url.indexOf('https://pay.stripe.com/') === 0){
+    const a = document.createElement('a');
+    a.className = 'rcpt'; a.href = e.receipt_url; a.target = '_blank'; a.rel = 'noopener';
+    a.textContent = 'receipt on stripe.com ↗';
+    row.appendChild(a);
+  }
+  return row;
+}
+function liveInit(){
+  if (!SBX.live || !SBX.token || !SBX.visitor || SBX._es) return;  // wire off / already wired
+  liveSnippets(SBX.token, SBX.visitor);
+  renderVault();  // repaint so the STRIPE_KEY chip picks up its LIVE badge
+  applyMode();
+  const rows = $('live-rows');
+  const t0 = Date.now();
+  let any = false;
+  const es = SBX._es = new EventSource('/landing/stripe-feed');
+  es.onmessage = m => {
+    const e = JSON.parse(m.data);
+    if (!any){ rows.textContent = ''; any = true; }
+    // the ring-buffer replay lands in the first moments of the stream — render it quietly;
+    // anything after that is a live charge and gets the flash.
+    rows.prepend(liveRow(e, Date.now() - t0 > 1500));
+    while (rows.children.length > LIVE_MAX_ROWS) rows.lastChild.remove();
+  };
+}
 
 /* ===== sign-in ===== */
 function openSignin(){ document.getElementById('signin-scrim').classList.add('open');

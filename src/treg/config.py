@@ -33,6 +33,16 @@ class Settings(BaseSettings):
     # The single bootstrap caller token for the MVP. Per-user/org tokens come in Step 3.
     api_token: str = "dev-token"
 
+    # DEMO Stripe webhook signing secret (env TREG_DEMO_STRIPE_WEBHOOK_SECRET) for the landing page's live
+    # payments feed (see pubfeed.py). Empty = the /stripe/webhook endpoint is off (404).
+    demo_stripe_webhook_secret: str = ""
+
+    # The Stripe sandbox restricted key (env TREG_DEMO_STRIPE_KEY) behind the landing sandbox's ONE
+    # live wire: a sandbox call to the exact seeded stripe tool relays for real with THIS key
+    # injected — the key never exists in any sandbox org (see sandbox.is_live_tool / api.call_tool).
+    # Empty = every sandbox call synthesizes, exactly as before the live wire existed.
+    demo_stripe_key: str = ""
+
     # Cross-tenant super-admin bearer (env TREG_ADMIN_TOKEN). Presenting it authorizes every
     # /admin/* endpoint regardless of org. Empty = the env key is disabled (only is_superadmin
     # users can reach /admin). Keep it long + secret; it sees ALL orgs.
