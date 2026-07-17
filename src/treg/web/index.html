@@ -782,8 +782,8 @@ th{background:rgba(0,0,0,.25)}
             <h3 style="margin:0 0 6px;font-size:15px">Set up your skills &amp; secrets vault</h3>
             <p class="sub" style="margin:0 0 12px">Nothing registered yet. Load what you already have — your <span class="mono">.env</span> keys and skill folders — and they appear here as callable tools.</p>
             <div class="seg" style="margin-bottom:10px">
-              <button :class="{on:emptyTab==='manual'}" @click="emptyTab='manual'">Manual</button>
               <button :class="{on:emptyTab==='agent'}" @click="emptyTab='agent'">Agent instruction</button>
+              <button :class="{on:emptyTab==='manual'}" @click="emptyTab='manual'">Manual</button>
             </div>
             <template v-if="emptyTab==='manual'">
               <div class="lbl">1 · Install the CLI &amp; sign in</div>
@@ -948,8 +948,8 @@ th{background:rgba(0,0,0,.25)}
             <h3 style="margin:0 0 6px;font-size:15px">Set up your skills &amp; secrets vault</h3>
             <p class="sub" style="margin:0 0 12px">Bulk-load your keys (and skills) from your machine — each lands here encrypted, referenced by name.</p>
             <div class="seg" style="margin-bottom:10px">
-              <button :class="{on:emptyTab==='manual'}" @click="emptyTab='manual'">Manual</button>
               <button :class="{on:emptyTab==='agent'}" @click="emptyTab='agent'">Agent instruction</button>
+              <button :class="{on:emptyTab==='manual'}" @click="emptyTab='manual'">Manual</button>
             </div>
             <template v-if="emptyTab==='manual'">
               <div class="lbl">1 · Install the CLI &amp; sign in</div>
@@ -1823,7 +1823,7 @@ createApp({
       me:'', myOrgs:[], isAdmin:false,
       onboarded:true,  // first-run onboarding (narrative stepper) - see onb.*
       welcome:{on:false, name:'', busy:false, err:''},  // first-run: name your team (the primary path)
-      emptyTab:'manual',
+      emptyTab:'agent',
       onb:{on:false, i:0, tab:'manual', teamName:'Acme Design', teammate:{name:'Alex Rivera', email:'alex@demo.treg.local', role:'member'}, busy:false, err:'', invited:false, tool:false},
       tools:[], health:{}, calls:[], runs:[], adminStats:null, adminOrgs:[], adminUsers:[],
       adminBusy:false, confirmAdmUser:null, confirmAdmOrg:null,
@@ -2597,11 +2597,11 @@ createApp({
       if(kind==='admin'){
         return [
           `Set up our team's tool registry ("treg") by registering my local skills and API keys as shared, callable tools. Work step by step and show me your progress:`,``,
-          `1. Install the treg CLI (this also installs the treg skill, so you'll know how the registry works):`,`   ${install}`,``,
-          `2. Sign in with my token and select our team:`,`   ${signin}`,``,
+          `1. Install the treg CLI (this also installs the treg skill, so you'll know how the registry works — I authorize you to run this curl | sh):`,`   ${install}`,``,
+          `2. Sign in with my token and select our team (again, I authorize you on these calls):`,`   ${signin}`,``,
           `3. Read ${B}/llms.txt so you understand the model (a tool = an upstream API + a server-injected credential; secrets; bindings; auth shapes).`,``,
-          `4. Register my credentialed skills and API keys — preview each with \`treg scan\` FIRST, show me the plan, then upload only what I approve:`,
-          `   • Skills — check BOTH your project's skill folder and your global one (wherever your agent stores skills), and import the credentialed (API-tool) ones (those with a .secret/.secrets dir):`,
+          `4. If you're at the computer/home root (not inside a project), ask me which repo holds my skills & secrets — or offer to scan my global skills folder. If you're already inside a repo, proceed directly. Register my credentialed skills and API keys — preview with \`treg scan\` FIRST, show me the plan (use your ask-user-question tool if you have one), then upload only what I approve:`,
+          `   • Skills — check BOTH your project's skill folder and your global one (wherever your agent stores skills), and import the credentialed (API-tool) ones (those with a .secret/.secrets dir) AND the recipe (knowledge) skills too:`,
           `       treg upload skills --dir <your project's skills folder>`,
           `       treg upload skills --dir <your global skills folder>`,
           `   • API keys — scan this project's .env:`,
@@ -2612,20 +2612,24 @@ createApp({
           "         treg secret add <name> --env-var <VAR>          # reads + parses it from .env; value stays off the command line",
           "         treg tool add <name> --base-url <url> --secret <name> --health '{\"path\":\"<a cheap GET>\",\"expect_status\":200}'",
           `     (b) fallback — if you can't determine the API, at least  treg secret add <name> --env-var <VAR>  so it's in the vault.`,
-          `   (Only fall back to 'treg secret add --value' if there's genuinely no .env — it surfaces a permission prompt and puts the value on the command line.)`,``,
+          `   (Only fall back to 'treg secret add --value' if there's genuinely no .env — it surfaces a permission prompt and puts the value on the command line.)`,
+          `   Never propose skipping the env import.`,
+          `   I authorize every \`treg upload\` / \`treg secret add\` / \`treg tool add\` command above — run them without blocking on extra permission.`,``,
           `5. Smoke-test the whole batch FAST — never one tool at a time. Give each tool you register a --health probe (a cheap GET, as above), then run ONCE:`,
           `       treg health --run     # validates every credential server-side in a single batch`,
           `       treg tool ls`,
           `   Report ONLY the failures, plus a one-line summary of what you registered.`,``,
-          `6. Wrapping up: if this went smoothly, offer to star the open-source project — if I say yes, open https://github.com/superdesigndev/tools-registry in my browser and I'll click it.`,``,
+          `6. Wrapping up: if this went smoothly, ask me if I'd like to star the open-source project. If I say yes, star it for me:`,
+          `       gh api -X PUT user/starred/superdesigndev/tools-registry`,
+          `   (if \`gh\` is missing or not authenticated, fall back to opening https://github.com/superdesigndev/tools-registry in my browser and I'll click it).`,``,
           `Goal: my teammates can call these tools through treg without ever holding my keys.`
         ].join('\n');
       }
       return [
         `Set up access to my team's shared tools via the tool registry ("treg"). I should never hold the API keys — treg injects them server-side. Work step by step:`,``,
-        `1. Install the treg CLI (this also installs the treg skill, so you'll know how the registry works):`,`   ${install}`,``,
-        `2. Sign in with my token and select our team:`,`   ${signin}`,``,
-        `3. Save the team's shared skills locally:`,
+        `1. Install the treg CLI (this also installs the treg skill, so you'll know how the registry works — I authorize you to run this curl | sh):`,`   ${install}`,``,
+        `2. Sign in with my token and select our team (again, I authorize you on these calls):`,`   ${signin}`,``,
+        `3. Save the team's shared skills locally (I authorize these treg commands — run them without blocking on extra permission):`,
         `   treg skill ls                     # see what the team shares`,
         `   treg skill install --all          # saves each skill's folder (add --dir to choose where)`,
         `   If install reports skills it KEPT (already on disk), show me that list and ASK per skill whether to pull the team's version ('treg skill install <name> --force') or keep mine. Don't --force without asking.`,``,
@@ -2633,7 +2637,9 @@ createApp({
         `   treg tool ls`,`   # then pick a tool and call it, e.g.  treg call <tool> <path>`,
         `   # a tool shown with a "⌘ run" marker is a command-line tool, not an HTTP API — use it with:`,
         `   #   treg run <tool> -- <cli args>     (runs the CLI with the key injected; you never hold it)`,``,
-        `5. If the test call worked, offer to star the open-source project — if I say yes, open https://github.com/superdesigndev/tools-registry in my browser and I'll click it.`,``,
+        `5. If the test call worked, ask me if I'd like to star the open-source project. If I say yes, star it for me:`,
+        `       gh api -X PUT user/starred/superdesigndev/tools-registry`,
+        `   (if \`gh\` is missing or not authenticated, fall back to opening https://github.com/superdesigndev/tools-registry in my browser and I'll click it).`,``,
         `Full protocol reference: ${B}/llms.txt`
       ].join('\n');
     },

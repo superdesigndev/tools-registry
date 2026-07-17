@@ -104,10 +104,14 @@ async def test_login_page_offers_session_reuse(web):
     r = await web.get(f"/login?cli={LID}")
     assert r.status_code == 200
     assert 'id="orgpick"' in r.text and "HAS_SESSION=true" in r.text
-    assert "or use a different account" in r.text  # doors still offered under a divider
+    # The doors still exist but start COLLAPSED behind the "use a different account" accordion —
+    # a signed-in user is one click from done and shouldn't see sign-in options by default.
+    assert 'id="other-acct"' in r.text and "toggleDoors()" in r.text
+    assert 'id="doors" class="stack" style="display:none"' in r.text
     web.cookies.clear()
     r2 = await web.get(f"/login?cli={LID}")  # no session
-    assert "HAS_SESSION=false" in r2.text and "or use a different account" not in r2.text
+    assert "HAS_SESSION=false" in r2.text and 'id="other-acct"' not in r2.text
+    assert 'id="doors" class="stack" style="display:none"' not in r2.text  # no session → doors visible
 
 
 # ---- the org picker: /auth/cli/orgs + approve with a chosen team ---------------------------
@@ -223,6 +227,15 @@ async def test_email_door_completes_the_handshake(web):
 # ---- the pairing-code phishing guard (#5) --------------------------------------------------
 async def test_login_page_renders_the_pairing_code_input(web):
     assert 'id="paircode"' in (await web.get(f"/login?cli={LID}")).text  # the code field is always present
+
+
+async def test_login_page_confirms_a_fragment_code_instead_of_typing(web):
+    """`treg login` puts the code in the URL fragment; the page's JS swaps the typed input for a
+    read-only display (visual confirm). The fragment never reaches the server, so this checks the
+    JS carries the swap logic, not a server-side render."""
+    body = (await web.get(f"/login?cli={LID}")).text
+    assert "location.hash" in body and "paircode-show" in body
+    assert "pairCode()" in body  # approve()/createTeam() read the fragment code, else the typed input
 
 
 async def test_start_mints_a_login_id_and_code(web):

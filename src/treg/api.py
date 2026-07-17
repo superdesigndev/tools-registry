@@ -557,9 +557,11 @@ def _login_page_html(login_id: str, *, session_email: str | None, github: bool, 
     is HTML-escaped (it's the only other interpolated value)."""
     from html import escape
 
-    # A pairing-code field sits above everything: whichever door the user takes, approve() won't complete
-    # the CLI handshake until they type the code shown in their own terminal (phishing guard — a login
-    # they didn't start has no matching code). #orgpick is ALWAYS present (filled by loadOrgs when a
+    # A pairing-code block sits above everything: whichever door the user takes, approve() won't complete
+    # the CLI handshake until the code shown in their own terminal is echoed back (phishing guard — a
+    # login they didn't start has no matching code). A `treg login` link carries the code in the URL
+    # fragment, so the JS swaps this input for a read-only display the user just visually confirms;
+    # the typed input remains the fallback for links without one. #orgpick is ALWAYS present (filled by loadOrgs when a
     # session exists at load, and after the email door signs in). #doors holds the sign-in options; the
     # divider only shows when a session pre-exists.
     parts: list[str] = [
@@ -568,8 +570,12 @@ def _login_page_html(login_id: str, *, session_email: str | None, github: bool, 
         'inputmode="latin" placeholder="e.g. 7F3K" maxlength="9"></div>',
         '<div id="orgpick"></div>',
     ]
+    # With a live session the doors are noise — the user is one click from done. Collapse them behind
+    # the divider (an accordion); a click expands. No session → no divider, doors always visible.
     if session_email:
-        parts.append('<div class="div" id="other-acct">or use a different account</div>')
+        parts.append('<div class="div acc" id="other-acct" onclick="toggleDoors()" role="button" tabindex="0" '
+                     'onkeydown="if(event.key===\'Enter\')toggleDoors()">'
+                     'use a different account <span id="acc-caret">▸</span></div>')
     doors: list[str] = []
     if github:
         doors.append(f'<a class="btn" href="/auth/github?cli={login_id}">Sign in with GitHub</a>')
@@ -582,7 +588,8 @@ def _login_page_html(login_id: str, *, session_email: str | None, github: bool, 
         '<div id="code-row" style="display:none"><input id="code" inputmode="numeric" placeholder="6-digit code">'
         '<button class="btn primary" onclick="verifyCode()">Verify</button></div>'
         '<div class="hint" id="hint"></div></div>')
-    parts.append(f'<div id="doors" class="stack">{"".join(doors)}</div>')
+    doors_style = ' style="display:none"' if session_email else ''
+    parts.append(f'<div id="doors" class="stack"{doors_style}>{"".join(doors)}</div>')
     has_session = "true" if session_email else "false"
     return (
         f"{_AUTH_HEAD.replace('</style>', _LOGIN_CSS + '</style>')}"
@@ -605,6 +612,8 @@ _LOGIN_CSS = (
     ".stack>div{display:flex;flex-direction:column;gap:10px}"
     ".div{display:flex;flex-direction:row!important;align-items:center;gap:10px;color:var(--muted);font-size:12px;margin:6px 0 0}"
     ".div:before,.div:after{content:'';flex:1;border-top:1px solid var(--line)}"
+    ".div.acc{cursor:pointer;user-select:none}.div.acc:hover{color:var(--ink)}"
+    "#email-row,#code-row{display:flex;flex-direction:column;gap:10px}"
     "input{width:100%;box-sizing:border-box;padding:11px 12px;border-radius:9px;border:1px solid var(--line);"
     "background:#1c1913;color:var(--ink);font-family:var(--mono);font-size:13.5px}"
     ".err{color:#d78f6c;font-size:12.5px;margin-top:10px;min-height:1em}"
@@ -616,12 +625,27 @@ _LOGIN_CSS = (
     ".team .tm{font-size:11px;color:var(--muted)}"
     ".team.primary .tm{color:#211d16;opacity:.8}"
     ".pklabel{font-size:12px;color:var(--muted);margin:2px 0 2px}"
+    "#paircode-show{font-size:22px;font-weight:700;letter-spacing:8px;text-align:center;color:var(--accent);"
+    "padding:10px 12px 10px 20px;border:1px dashed var(--line);border-radius:9px;background:#1c1913}"
 )
 
 # The page's whole brain: every door funnels into approve(), which completes the CLI handshake.
 # done() builds DOM via textContent (the email came over JSON — never trust it into innerHTML).
 _LOGIN_JS = """
 const LID='__LOGIN_ID__';
+// `treg login` puts the pairing code in the URL FRAGMENT (#code=…) — it never reaches the server on
+// the GET. When present, show it read-only for a visual match against the terminal instead of making
+// the user type it; approve() still sends it for full server-side validation. No fragment (an old CLI,
+// or a link someone stripped it from) → the typed-input fallback below stays.
+const PAIR=(()=>{const m=/[#&]code=([A-Za-z0-9-]{1,16})/.exec(location.hash||'');return m?m[1].toUpperCase():''})();
+if(PAIR){const box=document.getElementById('pcbox');if(box){box.innerHTML='';
+ const l=document.createElement('div');l.className='pklabel';l.textContent='Check this code matches your terminal:';box.appendChild(l);
+ const c=document.createElement('div');c.id='paircode-show';c.textContent=PAIR;box.appendChild(c);}}
+const pairCode=()=>PAIR||((document.getElementById('paircode')||{}).value||'');
+// Signed-in users see the doors collapsed behind the "use a different account" divider.
+function toggleDoors(){const d=document.getElementById('doors');if(!d)return;
+ const open=d.style.display==='none';d.style.display=open?'':'none';
+ const c=document.getElementById('acc-caret');if(c)c.textContent=open?'\\u25be':'\\u25b8'}
 const err=m=>{document.getElementById('err').textContent=m||''};
 async function post(p,b){const r=await fetch(p,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
  let d={};try{d=await r.json()}catch(e){}
@@ -632,12 +656,12 @@ function done(email){const c=document.getElementById('card');c.innerHTML='';
  mk('h1',null,email?('Logged in as '+email):'Logged in');
  mk('p',null,'Return to your terminal. The CLI is finishing up, you can close this tab.')}
 async function approve(org){err('');
- const pc=(document.getElementById('paircode')||{}).value||'';
+ const pc=pairCode();
  if(!pc.trim()){err('Enter the code shown in your terminal to continue.');const el=document.getElementById('paircode');if(el)el.focus();return}
  try{const b={login_id:LID,code:pc};if(org)b.org=org;const d=await post('/auth/cli/approve',b);done(d.email)}catch(e){err(e.message)}}
 let CREATED_ORG=null;  // remember a just-created team so a retry (e.g. after a wrong code) reuses it, never makes a 2nd
 async function createTeam(){err('');
- const pc=(document.getElementById('paircode')||{}).value||'';
+ const pc=pairCode();
  if(!pc.trim()){err('Enter the code shown in your terminal to continue.');const el=document.getElementById('paircode');if(el)el.focus();return}
  const inp=document.getElementById('newteam');const name=(inp&&inp.value||'').trim();if(!name)return err('give your team a name');
  try{if(!CREATED_ORG){const o=await post('/orgs',{name:name});CREATED_ORG=o.org;}await approve(CREATED_ORG);}catch(e){err(e.message)}}

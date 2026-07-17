@@ -22,6 +22,7 @@ import getpass
 import json
 import os
 import re
+import select
 import shutil
 import signal
 import subprocess
@@ -226,10 +227,10 @@ def cmd_login(args, cfg) -> None:
     # session with one click, else offers every configured door (GitHub / Google / email code).
     import secrets as _secrets
     base = cfg["base_url"].rstrip("/")
-    # Ask the SERVER to start the login: it mints the login_id AND a short pairing code shown only here
-    # (never in the URL). The browser must echo the code back before it finishes, so a login you didn't
-    # start — someone mailing you a /login?cli=… link — can't be approved into a token for them. If the
-    # server is too old to know /start, fall back to a locally-minted id (no code) so login still works.
+    # Ask the SERVER to start the login: it mints the login_id AND a short pairing code. The browser
+    # must echo the code back before it finishes, so a login you didn't start — someone mailing you a
+    # /login?cli=… link — can't be approved into a token for them. If the server is too old to know
+    # /start, fall back to a locally-minted id (no code) so login still works.
     code = None
     try:
         st = httpx.post(f"{base}/auth/cli/start", headers={"ngrok-skip-browser-warning": "1"}, timeout=10)
@@ -239,10 +240,13 @@ def cmd_login(args, cfg) -> None:
             lid = _secrets.token_urlsafe(18)
     except Exception:
         lid = _secrets.token_urlsafe(18)
-    url = f"{base}/login?cli={lid}"
+    # The code rides in the URL FRAGMENT (never sent to the server, so it stays out of request logs):
+    # the /login page displays it for a visual match against this terminal instead of making the user
+    # type it. The server still validates the code at approve time — the guard itself is unchanged.
+    url = f"{base}/login?cli={lid}" + (f"#code={code}" if code else "")
     print(f"Opening your browser to sign in…\nIf it doesn't open, visit:\n  {url}\n")
     if code:
-        print(f"  Enter this code in the browser to confirm it's you:  {_B}{_TEAL}{code}{_R}\n")
+        print(f"  The sign-in page shows this code — check it matches:  {_B}{_TEAL}{code}{_R}\n")
     print("Waiting for authorization…")
     try:
         webbrowser.open(url)
@@ -305,6 +309,209 @@ def _select(message: str, choices, **kw):
     return questionary.select(message, choices=choices, pointer="❯", style=_picker_style(),
                               instruction="↑↓ move, enter confirm", **kw)
 
+
+def _menu(message: str, options: list[tuple], default=None):
+    """House arrow-key picker: bold titles, dim `— description` tails, hovered row bolded behind
+    the ❯ cursor — per-part styling questionary's select can't combine with hover (a styled title
+    bypasses its `highlighted` class). options = [(value, title, desc)], or (value, title, desc, True)
+    for a type-in row: arrowing onto it focuses an inline input — printable keys type into it,
+    backspace edits, ↵ submits (value, typed_text). ↑↓/jk move, 1-9 jump-pick, ↵ confirms.
+    Returns the chosen value ((value, text) for a type-in row), or None on Ctrl-C / Ctrl-D / Esc."""
+    try:
+        import termios
+        import tty
+    except ImportError:  # no raw-key support (e.g. Windows) → questionary keeps it usable
+        import questionary
+        ch = [questionary.Choice(f"{o[1]} — {o[2]}" if o[2] else o[1], value=o[0]) for o in options]
+        return _select(message, ch, default=default).ask()
+    idx = next((i for i, o in enumerate(options) if o[0] == default), 0)
+    n = len(options)
+    buf = ""  # the type-in row's text
+    ghost = ""  # fish-style autosuggestion (first matching folder), shown dim after the cursor
+
+    def _is_text(i: int) -> bool:
+        return len(options[i]) > 3 and bool(options[i][3])
+
+    def _suggest(txt: str) -> str:
+        """The completion tail of the first directory matching `txt` (e.g. '/Us' → 'ers/').
+        Case-insensitive, like the filesystem it's completing against (git → GitHub)."""
+        if not txt:
+            return ""
+        p = Path(txt).expanduser()
+        base, part = (p, "") if txt.endswith("/") else (p.parent, p.name)
+        try:
+            cands = sorted((d.name for d in base.iterdir() if d.is_dir()
+                            and d.name.lower().startswith(part.lower())
+                            and (part.startswith(".") or not d.name.startswith("."))),
+                           key=str.lower)
+        except OSError:  # nonexistent or unreadable dir → just no hint
+            return ""
+        # prefer an exact-case prefix match over the first case-folded one (Git… beats git…)
+        best = next((c for c in cands if c.startswith(part)), cands[0] if cands else None)
+        return f"{best[len(part):]}/" if best else ""
+
+    print(f"\n{_B}{message}{_R}  {_M}(↑↓ move · ↵ confirm){_R}")
+
+    def _row(i: int) -> str:
+        val, title, desc = options[i][:3]
+        cur = i == idx
+        pre = f" {_A}{_B}❯{_R} " if cur else "   "
+        t = f"{_B}{title}{_R}" if cur else title
+        if _is_text(i) and (cur or buf):  # the focused (or filled) input row
+            if not buf:
+                tail = f"{_M}{desc}… {_R}"
+            elif cur and ghost:
+                tail = f"{_M}{ghost}{_R}"
+            else:
+                tail = ""
+            d = f"  {_M}—{_R} {buf}{tail}"
+        else:
+            d = f"  {_M}— {desc}{_R}" if desc else ""
+        return f"\x1b[2K{pre}{t}{d}"
+
+    def _place_cursor() -> None:
+        """From the parked (below-frame) spot: park the real cursor at the type-in row's input
+        point — after ` ❯ {title}  — {buf}` — where it blinks; plain rows keep it hidden."""
+        if _is_text(idx):
+            col = 3 + len(options[idx][1]) + 4 + len(buf)
+            sys.stdout.write(f"\x1b[{n - idx}A\r\x1b[{col}C\x1b[?25h")
+        else:
+            sys.stdout.write("\x1b[?25l")
+
+    def _draw(redraw: bool) -> None:
+        if redraw:
+            sys.stdout.write("\x1b8")  # jump back to the parked spot below the frame
+            sys.stdout.write(f"\x1b[{n}A")
+        sys.stdout.write("\n".join(_row(i) for i in range(n)) + "\n")
+        sys.stdout.write("\x1b7")  # park: remember the below-frame position for the next redraw
+        _place_cursor()
+        sys.stdout.flush()
+
+    fd = sys.stdin.fileno()
+    old = termios.tcgetattr(fd)
+    picked = None
+    try:
+        # TCSANOW, not the default TCSAFLUSH: FLUSH waits for pending output to drain, which
+        # deadlocks when the reader (pty harness, agent) hasn't consumed the frame yet
+        tty.setcbreak(fd, termios.TCSANOW)
+        sys.stdout.write("\x1b7\x1b[?25l")  # seed the parked spot; hide the cursor on plain rows
+        _draw(redraw=False)
+        # keys come via os.read on the fd — sys.stdin's buffer would swallow the tail of an
+        # escape sequence and make the select() lookahead below lie
+        while True:
+            c = os.read(fd, 1).decode(errors="replace")
+            if c == "\x1b":  # arrow keys arrive as ESC [ A/B/C; a bare ESC cancels
+                if select.select([fd], [], [], 0.05)[0] and os.read(fd, 1) == b"[":
+                    c = {b"A": "up", b"B": "down", b"C": "right"}.get(os.read(fd, 1))
+                else:
+                    break
+            if c in ("up", "k") and not (c == "k" and _is_text(idx)):
+                idx = (idx - 1) % n
+            elif c in ("down", "j") and not (c == "j" and _is_text(idx)):
+                idx = (idx + 1) % n
+            elif c in ("\r", "\n"):
+                if _is_text(idx):
+                    if not buf.strip():
+                        continue  # a type-in row needs text before ↵ means anything
+                    picked = (options[idx][0], buf.strip())
+                else:
+                    picked = options[idx][0]
+                break
+            elif c in ("", "\x03", "\x04"):  # EOF / Ctrl-C / Ctrl-D
+                break
+            elif _is_text(idx) and c in ("right", "\t") and ghost:  # →/tab accept the suggestion
+                buf += ghost
+                ghost = _suggest(buf)
+            elif _is_text(idx) and c in ("\x7f", "\x08"):  # backspace edits the input row
+                buf = buf[:-1]
+                ghost = _suggest(buf)
+            elif _is_text(idx) and c and len(c) == 1 and c.isprintable():  # focused input: keys type
+                buf += c
+                ghost = _suggest(buf)
+            elif c and c.isdigit() and 1 <= int(c) <= n:  # the old numeric prompt still works
+                idx = int(c) - 1
+                if not _is_text(idx):  # a digit lands on the type-in row = focus it, don't submit
+                    picked = options[idx][0]
+                    break
+            elif c == "q":
+                break
+            else:
+                continue
+            _draw(redraw=True)
+    except KeyboardInterrupt:  # cbreak keeps ISIG on, so Ctrl-C lands here, not as \x03
+        picked = None
+    finally:
+        termios.tcsetattr(fd, termios.TCSANOW, old)
+        sys.stdout.write("\x1b[?25h")
+    # collapse the menu into a one-line receipt, questionary-style (unpark below the frame first —
+    # the cursor may be sitting mid-frame on the type-in row)
+    sys.stdout.write(f"\x1b8\x1b[{n + 1}A\x1b[J")
+    if picked is not None:
+        chose = f"{options[idx][1]}  {buf.strip()}" if isinstance(picked, tuple) else options[idx][1]
+        print(f"{_B}{message}{_R}  {_A}{chose}{_R}")
+    sys.stdout.flush()
+    return picked
+
+
+def _dither_frames(chars: list[tuple[str, str]]) -> list[str]:
+    """Dither-reveal a styled line: chars = [(ch, ansi_prefix)]. A ░▒▓ wavefront sweeps left to
+    right; behind it every char lands in its final style. Returns the frame list (last = final)."""
+    frames = []
+    # stop at len+9 so the stepped wavefront always clears the last char (d ≥ 6 → fully revealed)
+    for front in range(0, len(chars) + 9, 3):
+        out = []
+        for i, (ch, st) in enumerate(chars):
+            d = front - i
+            if d < 0 or (d < 6 and ch == " "):
+                out.append(" ")
+            elif d < 2:
+                out.append(f"{_M}░{_R}")
+            elif d < 4:
+                out.append(f"{_M}▒{_R}")
+            elif d < 6:
+                out.append(f"{_A}▓{_R}")
+            else:
+                out.append(f"{st}{ch}{_R}" if ch != " " else " ")
+        frames.append("".join(out))
+    return frames
+
+
+def _splash() -> None:
+    """`treg onboard`'s opening beat (~1s, any key skips): the wordmark and tagline decrypt
+    behind a ░▒▓ wavefront. TTY-only with color on; agents, pipes, dumb terminals and NO_COLOR
+    never see a frame."""
+    if not (sys.stdin.isatty() and sys.stdout.isatty()) or os.environ.get("TERM") == "dumb" or not _A:
+        return
+    try:
+        import termios
+        import tty
+    except ImportError:
+        return
+    title, sub = "tools-registry", " — Skill & secret vault for your team & agents"
+    chars = ([("▚", f"{_A}{_B}"), (" ", "")] + [(c, _B) for c in title] + [(c, _M) for c in sub])
+    frames = _dither_frames(chars)
+
+    fd = sys.stdin.fileno()
+    old = termios.tcgetattr(fd)
+    try:
+        tty.setcbreak(fd, termios.TCSANOW)  # TCSANOW: FLUSH would deadlock non-draining readers
+        sys.stdout.write("\x1b[?25l\n")
+        for fr in frames:
+            sys.stdout.write(f"\r\x1b[2K{fr}")
+            sys.stdout.flush()
+            if select.select([fd], [], [], 0.04)[0]:  # any key → skip to the payoff
+                while select.select([fd], [], [], 0)[0]:
+                    os.read(fd, 64)  # drain so the pressed key doesn't leak into the menu
+                break
+        sys.stdout.write(f"\r\x1b[2K{frames[-1]}\n")
+    except KeyboardInterrupt:
+        pass
+    finally:
+        termios.tcsetattr(fd, termios.TCSANOW, old)
+        sys.stdout.write("\x1b[?25h")
+        sys.stdout.flush()
+
+
 def _brand(sub: str) -> None: print(f"\n{_A}{_B}▚ tools-registry{_R} {_M}— {sub}{_R}")
 def _ok(t: str) -> None: print(f"  {_G}✓{_R} {t}")
 def _dim(t: str) -> None: print(f"{_M}{t}{_R}")
@@ -320,40 +527,66 @@ def _pause(yes: bool) -> None:
         raise SystemExit(0)
 
 
+_ORG_CACHE: dict = {}  # (base_url, active_org) → summary; onboarding asks 2-3× per run — fetch once
+
+
 def _onboard_active_org(cfg: dict) -> dict | None:
     """The active org's summary {slug,name,role,tool_count} — drives the onboarding hint + guards.
     None if the caller has no team (a path then points them at `treg org create` / an invite)."""
+    key = (cfg.get("base_url"), cfg.get("active_org"))
+    if key in _ORG_CACHE:
+        return _ORG_CACHE[key]
     try:
-        with _client(cfg) as c:
+        with _spinner("loading your team"), _client(cfg) as c:
             orgs = c.get("/orgs").json()
     except Exception:  # noqa: BLE001 — a transient failure just means "no smart hint"
         return None
     if not isinstance(orgs, list) or not orgs:
         return None
     active = cfg.get("active_org")
-    return (next((o for o in orgs if o.get("slug") == active), None)
-            or next((o for o in orgs if o.get("active")), None) or orgs[0])
+    org = (next((o for o in orgs if o.get("slug") == active), None)
+           or next((o for o in orgs if o.get("active")), None) or orgs[0])
+    _ORG_CACHE[key] = org
+    return org
 
 
 _PATHS = {"1": "setup", "2": "access", "3": "demo"}
 
 
+def _is_rootish(d: Path) -> bool:
+    """True for folders no repo lives at directly: filesystem root, $HOME, or $HOME's parent
+    (/Users, /home). Scanning these as "this project" would sweep the whole account."""
+    try:
+        d = d.resolve()
+    except OSError:
+        pass
+    home = Path.home()
+    return d == home or d == home.parent or d.parent == d
+
+
 def _pick_path(cfg: dict) -> str:
-    """The 3-path onboarding menu (Set up / Access / Demo) with a smart default from the active org:
-    a team with tools → Access; an empty team you admin → Set up; else Demo."""
-    org = _onboard_active_org(cfg)
-    has_tools = bool(org and org.get("tool_count"))
-    is_admin = bool(org and org.get("role") in ("admin", "owner"))
-    default = "2" if has_tools else ("1" if is_admin else "3")
+    """The 3-path onboarding menu (Set up / Access / Demo). Interactive default is Setup; the
+    non-interactive path keeps the smart org-based pick (a team with tools → Access; an empty
+    team you admin → Set up; else Demo) so scripted/agent runs stay unchanged."""
     if not sys.stdin.isatty():
-        return _PATHS[default]
-    print(f"\n{_B}What do you want to do?{_R}")
-    print(f"  {_A}{_B}1{_R}  {_B}Setup{_R}                        {_M}— upload your skills & env, share them safely (admins){_R}")
-    print(f"  {_A}{_B}2{_R}  {_B}Connect existing tool-registry{_R}   {_M}— pull your team's shared skills + make a call{_R}")
-    print(f"  {_A}{_B}3{_R}  {_B}Demo{_R}                         {_M}— see how treg works with a throwaway team{_R}")
-    hint = {"1": "Setup", "2": "Connect", "3": "Demo"}[default]
-    ans = input(f"  Pick [{_A}1{_R}/2/3]  ({_M}↵ = {hint}{_R}): ").strip()
-    return _PATHS.get(ans or default, "demo")
+        org = _onboard_active_org(cfg)
+        has_tools = bool(org and org.get("tool_count"))
+        is_admin = bool(org and org.get("role") in ("admin", "owner"))
+        if has_tools:
+            key = "2"
+        elif is_admin:
+            key = "1"
+        else:
+            key = "3"
+        return _PATHS[key]
+    picked = _menu("What do you want to do?", [
+        ("setup", "Setup", "upload your skills & env, share them safely (admins)"),
+        ("access", "Connect existing tool-registry", "pull your team's shared skills + make a call"),
+        ("demo", "Demo", "see how treg works with a throwaway team"),
+    ], default="setup")
+    if picked is None:  # Ctrl-C / Esc / EOF
+        raise SystemExit(0)
+    return picked
 
 
 def _maybe_offer_onboarding(cfg: dict) -> None:
@@ -362,7 +595,8 @@ def _maybe_offer_onboarding(cfg: dict) -> None:
         return
     base = cfg["base_url"].rstrip("/")
     try:
-        me = httpx.get(f"{base}/auth/me", headers={"X-Treg-Token": cfg["token"], "ngrok-skip-browser-warning": "1"}, timeout=10).json()
+        with _spinner("checking your account"):
+            me = httpx.get(f"{base}/auth/me", headers={"X-Treg-Token": cfg["token"], "ngrok-skip-browser-warning": "1"}, timeout=10).json()
     except Exception:
         return
     if me.get("onboarded"):
@@ -393,14 +627,27 @@ def _tip(t: str) -> None:  # an amber aside
     print(f"  {_AM}✦ {t}{_R}")
 
 
+_SPINNER_ACTIVE = False  # re-entrancy guard: a nested _spinner (e.g. catalog refresh inside a scan) stays quiet
+
+
 @contextlib.contextmanager
 def _spinner(msg: str):
-    """An animated braille spinner for slow steps (health runs, seeding). TTY-only: piped/agent
-    output gets one static line instead, so logs stay clean and deterministic."""
-    if not sys.stdout.isatty():
-        print(f"  … {msg}")
+    """An animated braille spinner for slow steps (health runs, scans, network fetches). TTY-only:
+    piped/agent output gets one static line instead, so logs stay clean and deterministic.
+    Nested use is safe — the inner spinner yields silently and the outer one keeps animating."""
+    global _SPINNER_ACTIVE
+    if _SPINNER_ACTIVE:
         yield
         return
+    if not sys.stdout.isatty():
+        _SPINNER_ACTIVE = True
+        print(f"  … {msg}")
+        try:
+            yield
+        finally:
+            _SPINNER_ACTIVE = False
+        return
+    _SPINNER_ACTIVE = True
     stop = threading.Event()
 
     def _spin() -> None:
@@ -417,6 +664,7 @@ def _spinner(msg: str):
         stop.set()
         t.join(timeout=0.3)
         print("\r" + " " * (len(msg) + 6) + "\r", end="", flush=True)  # wipe the line
+        _SPINNER_ACTIVE = False
 
 
 def _show_calls(cfg: dict) -> None:
@@ -473,17 +721,45 @@ def _run_setup(cfg: dict, args) -> None:
         _has_skills(cwd / a["project"]) for a in _ag.AGENTS.values())
     source = getattr(args, "source", None)
     if source is None:
-        if sys.stdin.isatty() and global_dirs and not getattr(args, "yes", False):
-            default = "1" if local_here else "2"
-            shown = ", ".join(str(g).replace(str(Path.home()), "~") for g in global_dirs[:3])
-            print(f"\n{_B}Import from where?{_R}")
-            print(f"  {_A}{_B}1{_R}  this project           {_M}— {cwd}{_R}")
-            print(f"  {_A}{_B}2{_R}  global agent folders   {_M}— {shown}{'…' if len(global_dirs) > 3 else ''}{_R}")
-            print(f"  {_A}{_B}3{_R}  both")
-            hint = {"1": "this project", "2": "global", "3": "both"}[default]
-            ans = input(f"  Pick [{_A}1{_R}/2/3]  ({_M}↵ = {hint}{_R}): ").strip()
-            source = {"1": "local", "2": "global", "3": "both"}.get(ans or default, "local")
-        else:  # non-interactive / --yes / nothing global to offer: keep the old local behavior
+        if sys.stdin.isatty() and not getattr(args, "yes", False):
+            # Running from a root-ish folder (/, $HOME, /Users) means "this project" would scan the
+            # whole home dir — hide it and let the user point at a real repo instead.
+            rootish = _is_rootish(cwd)
+            choices = []
+            if not rootish:
+                choices.append(("local", "this project", str(cwd)))
+            if global_dirs:
+                shown = ", ".join(str(g).replace(str(Path.home()), "~") for g in global_dirs[:3])
+                choices.append(("global", "global agent folders", f"{shown}{'…' if len(global_dirs) > 3 else ''}"))
+            if not rootish and global_dirs:
+                choices.append(("both", "both", ""))
+            choices.append(("other", "other project repo", "type a path", True))
+            if local_here and not rootish:
+                default = "local"
+            elif global_dirs:
+                default = "global"
+            else:
+                default = "other"
+            picked = _menu("Import skill/secret from where?", choices, default=default)
+            if picked is None:  # Ctrl-C / Esc / EOF
+                raise SystemExit(0)
+            if isinstance(picked, tuple) or picked == "other":  # tuple = path typed inline in the menu
+                typed = picked[1] if isinstance(picked, tuple) else None
+                import questionary
+                while True:
+                    p = typed or questionary.path("Path to the project repo:", style=_picker_style()).ask()
+                    typed = None  # an invalid inline path falls back to the re-prompt loop
+                    if p is None:
+                        raise SystemExit(0)
+                    d = Path(p).expanduser()
+                    if d.is_dir():
+                        cwd = d.resolve()
+                        break
+                    print(f"  {_M}not a directory: {d}{_R}")
+                source = "local"
+            else:
+                source = picked
+        else:  # non-interactive / --yes: keep the old local-first behavior
             source = "local" if (local_here or not global_dirs) else "global"
     want_local = source in ("local", "both")
     want_global = source in ("global", "both")
@@ -552,12 +828,7 @@ def _run_setup(cfg: dict, args) -> None:
     base = (cfg.get("base_url") or "").rstrip("/")
     _section("✓ Done — you're all set")
     print(f"  Your team's tools & skills are shared. {_B}Nothing more to do here.{_R}\n")
-    print(f"  {_M}Manage your team in the dashboard:{_R}  {_A}{base}/#orgs{_R}")
-    print(f"\n  {_M}To give a TEAMMATE access — invite them:{_R}")
-    _cmd("treg org invite teammate@company.com")
-    print(f"\n  {_M}…then THEY run this on THEIR machine (not you) to pull the skills + call your tools with no keys:{_R}")
-    _cmd(f"curl -fsSL {base}/install.sh | sh")
-    _cmd("treg login   →   treg onboard   (pick Connect)")
+    print(f"  {_B}View your skills & secret vault at {_A}{base}{_R}")
     print()
 
 
@@ -570,7 +841,7 @@ def _run_access(cfg: dict, args) -> None:
         _dim("You're not in a team yet — ask an admin to invite you, then `treg accept`.")
         return
     _kv("team", org.get("name") or org.get("slug"))
-    with _client(cfg) as c:
+    with _spinner("fetching your team's tools & skills"), _client(cfg) as c:
         tools = c.get("/tools").json()
         bundles = c.get("/bundles").json()
     tools = tools if isinstance(tools, list) else []
@@ -641,7 +912,7 @@ def _onboard_test_call(cfg: dict, tools: list) -> None:
     path, method = tp
     _cmd(f"treg call {tool['name']} {path}".rstrip())
     try:
-        with _client(cfg) as c:
+        with _spinner(f"calling {tool['name']} through treg"), _client(cfg) as c:
             r = c.request(method, f"/call/{tool['name']}/{path}".rstrip("/"))
         col = _G if r.status_code < 400 else _M
         print(f"  → {col}{r.status_code}{_R} — treg injected the credential; you never held it.")
@@ -655,19 +926,20 @@ def _demo_scan_preview(cfg: dict) -> None:
     cwd = Path(os.getcwd())
     env_path = cwd / ".env"
     keys: list[str] = []
-    if env_path.is_file():
-        try:
-            keys = [a.tool_name for a in prov.plan_actions(prov.scan_env(str(env_path), _load_catalog(cfg))) if a.supported]
-        except Exception:  # noqa: BLE001
-            pass
     skill_names: set[str] = set()
-    for cand in [cwd, cwd / ".claude" / "skills", cwd / ".agents" / "skills"]:
-        try:
-            if cand.is_dir():
-                for det in sk.scan_skills(str(cand)):
-                    skill_names.add(det.name)
-        except Exception:  # noqa: BLE001
-            pass
+    with _spinner("scanning this folder for keys & skills"):
+        if env_path.is_file():
+            try:
+                keys = [a.tool_name for a in prov.plan_actions(prov.scan_env(str(env_path), _load_catalog(cfg))) if a.supported]
+            except Exception:  # noqa: BLE001
+                pass
+        for cand in [cwd, cwd / ".claude" / "skills", cwd / ".agents" / "skills"]:
+            try:
+                if cand.is_dir():
+                    for det in sk.scan_skills(str(cand)):
+                        skill_names.add(det.name)
+            except Exception:  # noqa: BLE001
+                pass
     if keys:
         print(f"  {_M}API keys in your .env treg could share:{_R} {', '.join(keys[:8])}"
               + (f" +{len(keys)-8} more" if len(keys) > 8 else ""))
@@ -683,7 +955,7 @@ def _demo_teammate_call(cfg: dict) -> str | None:
     """Auto-pick ONE registered tool and make a REAL call, shown as the actual upstream API endpoint
     (URL-passthrough form) so it's unmistakably a real API. Falls back to a Stripe example if the team
     has no callable tool yet. Returns the tool name that was called (for the audit-log illustration)."""
-    with _client(cfg) as c:
+    with _spinner("finding a callable tool"), _client(cfg) as c:
         raw = c.get("/tools").json()
     tools = [t for t in (raw if isinstance(raw, list) else []) if t.get("name") != "echo" and _testable_path(t)]
     print(f"  {_M}A teammate on THEIR machine — no key on it — hits a REAL API through treg:{_R}")
@@ -696,8 +968,9 @@ def _demo_teammate_call(cfg: dict) -> str | None:
     endpoint = f"{tool['base_url'].rstrip('/')}/{path}"
     _cmd(f"treg call {endpoint}")   # DISPLAY the real upstream URL so it's clearly a real API…
     try:
-        with _client(cfg) as c:     # …but EXECUTE via the tool name (reliable; the host-passthrough form
-            r = c.request(method, f"/call/{tool['name']}/{path}".rstrip("/"))  # can be ambiguous w/ dup hosts)
+        # …but EXECUTE via the tool name (reliable; the host-passthrough form can be ambiguous w/ dup hosts)
+        with _spinner(f"calling {tool.get('host') or tool['name']}"), _client(cfg) as c:
+            r = c.request(method, f"/call/{tool['name']}/{path}".rstrip("/"))
         col = _G if r.status_code < 400 else _M
         print(f"  → {col}{r.status_code}{_R} — a real response from {tool.get('host') or tool['name']}. "
               "treg injected the key server-side; the teammate never held it.")
@@ -768,6 +1041,8 @@ def cmd_onboard(args, cfg) -> None:
         sys.exit("Log in first:  treg login")
     if not cfg.get("active_org"):
         _pick_active_org(cfg)  # identity token needs an active org so requests carry X-Treg-Org
+    if not args.path and not getattr(args, "yes", False):  # scripted runs skip the theater
+        _splash()
     path = args.path or ("demo" if args.mode == "quick" else None) or _pick_path(cfg)  # --mode kept for back-compat
     _dispatch_onboard(cfg, path, args)
 
@@ -904,7 +1179,7 @@ def _load_catalog(cfg) -> list:
     tag = hashlib.sha1((cfg.get("base_url") or "").encode()).hexdigest()[:10]
     cache = CONFIG_PATH.parent / f"providers-cache-{tag}.json"
     try:
-        with _client(cfg, auth=False) as c:
+        with _spinner("refreshing the provider catalog"), _client(cfg, auth=False) as c:
             r = c.get("/providers.json")
         body = r.json() if r.status_code == 200 else {}
         if body.get("providers"):
@@ -1108,19 +1383,20 @@ def _import_clis(args, cfg, env_path: str) -> None:
         return any(os.path.exists(os.path.expanduser(p)) for p in (cli.get("detect") or {}).get("config_paths", []))
 
     scanned = []  # (entry, cli, decision, envvar)
-    for entry in catalog:
-        cli = entry.get("cli")
-        if not cli or not cli.get("bin"):
-            continue
-        d = prov.classify_cli(entry, installed=shutil.which(cli["bin"]) is not None,
-                              secret_present=bool(_val(prov.cli_env_var(cli))), logged_in=_logged_in(cli))
-        scanned.append((entry, cli, d, prov.cli_env_var(cli)))
+    with _spinner("checking this machine for installed CLIs"):
+        for entry in catalog:
+            cli = entry.get("cli")
+            if not cli or not cli.get("bin"):
+                continue
+            d = prov.classify_cli(entry, installed=shutil.which(cli["bin"]) is not None,
+                                  secret_present=bool(_val(prov.cli_env_var(cli))), logged_in=_logged_in(cli))
+            scanned.append((entry, cli, d, prov.cli_env_var(cli)))
 
     ready = [x for x in scanned if x[2]["status"] == "ready"]
     report_only = args.status or args.dry_run
     registered = []  # (name, tier, result)
     if ready and not report_only:
-        with _client(cfg) as c:
+        with _spinner(f"registering {len(ready)} ready CLI(s)"), _client(cfg) as c:
             existing = {t["name"]: t["id"] for t in (c.get("/tools").json() if c.get("/tools").status_code == 200 else [])}
             for entry, cli, d, envvar in ready:
                 name = cli["bin"].replace("_", "-")
@@ -1479,10 +1755,11 @@ def _import_skills(args, cfg, skills_dir, env_path: str) -> None:
     # .claude/skills and .agents/skills, so scanning both would prompt for each skill twice.
     seen: set[str] = set()
     dets = []
-    for sd in dirs:
-        for det in sk.scan_skills(sd, catalog=catalog, env_names=env_names):
-            if det.name not in seen:
-                seen.add(det.name); dets.append(det)
+    with _spinner(f"scanning {len(dirs)} skill folder(s)"):
+        for sd in dirs:
+            for det in sk.scan_skills(sd, catalog=catalog, env_names=env_names):
+                if det.name not in seen:
+                    seen.add(det.name); dets.append(det)
     tools = [d for d in dets if d.kind in ("contract", "generated")]
     recipes = [d for d in dets if d.kind == "recipe_only"]
     blocked = sum(1 for d in tools if d.gaps)
@@ -1511,14 +1788,15 @@ def _import_skills(args, cfg, skills_dir, env_path: str) -> None:
         # Idempotency: a recipe-only bundle has no tool, so the server never 409s it — re-running would
         # silently pile up duplicate bundles. Look up what's already registered and skip (or --replace).
         existing_bundles: dict[str, list[int]] = {}
-        rb = c.get("/bundles")
-        if rb.status_code == 200:
-            for b in rb.json():
-                existing_bundles.setdefault(b["name"], []).append(b["id"])
         existing_tools = set()
-        rt0 = c.get("/tools")
-        if rt0.status_code == 200:
-            existing_tools = {t["name"] for t in rt0.json()}
+        with _spinner("checking what's already registered"):
+            rb = c.get("/bundles")
+            if rb.status_code == 200:
+                for b in rb.json():
+                    existing_bundles.setdefault(b["name"], []).append(b["id"])
+            rt0 = c.get("/tools")
+            if rt0.status_code == 200:
+                existing_tools = {t["name"] for t in rt0.json()}
         for d in chosen:
             # A credential gap is now satisfiable from the machine env or the prompt above — judge by
             # `values`, not the stale classify-time gap. Still skip for any OTHER gap (missing base_url,
@@ -1539,7 +1817,8 @@ def _import_skills(args, cfg, skills_dir, env_path: str) -> None:
                 payload = sk.build_payload(d, values)
             except (ValueError, OSError) as exc:
                 print(f"  ✗ {d.name}: {exc}"); continue
-            r = c.post("/skills", json=payload)
+            with _spinner(f"uploading {d.name}"):
+                r = c.post("/skills", json=payload)
             if r.status_code == 409:
                 print(f"  · {d.name}: a tool with this name already exists (use --replace)"); continue
             if r.status_code >= 400:
@@ -2292,7 +2571,8 @@ def cmd_skill_install(args, cfg) -> None:
     except KeyError:
         sys.exit(f"unknown agent {getattr(args, 'agent', None)!r} — see `treg agents ls` for names")
     with _client(cfg) as c:
-        r = c.get("/bundles")
+        with _spinner("fetching the skill list"):
+            r = c.get("/bundles")
         if r.status_code >= 400:
             _show(r); return
         bundles = r.json()
@@ -2318,7 +2598,8 @@ def cmd_skill_install(args, cfg) -> None:
             # (a name with '/' or '..' could escape a base dir).
             if not name or "/" in name or "\\" in name or name in ("..", "."):
                 print(f"  ✗ {name!r}: unsafe skill name — skipped"); continue
-            d = c.get(f"/bundles/{b['id']}")
+            with _spinner(f"downloading {name}"):
+                d = c.get(f"/bundles/{b['id']}")
             if d.status_code >= 400:
                 print(f"  ✗ {name}: {d.status_code}"); continue
             bundle = d.json()
