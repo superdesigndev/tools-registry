@@ -225,6 +225,15 @@ async def test_login_page_renders_the_pairing_code_input(web):
     assert 'id="paircode"' in (await web.get(f"/login?cli={LID}")).text  # the code field is always present
 
 
+async def test_login_page_confirms_a_fragment_code_instead_of_typing(web):
+    """`treg login` puts the code in the URL fragment; the page's JS swaps the typed input for a
+    read-only display (visual confirm). The fragment never reaches the server, so this checks the
+    JS carries the swap logic, not a server-side render."""
+    body = (await web.get(f"/login?cli={LID}")).text
+    assert "location.hash" in body and "paircode-show" in body
+    assert "pairCode()" in body  # approve()/createTeam() read the fragment code, else the typed input
+
+
 async def test_start_mints_a_login_id_and_code(web):
     d = (await web.post("/auth/cli/start")).json()
     assert len(d["login_id"]) >= 8 and len(d["code"]) == 4  # server issues both; the code is short
