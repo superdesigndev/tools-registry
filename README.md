@@ -10,10 +10,10 @@ with **no key on your machine** — the registry injects auth server-side. Run a
 
 Built for the Superdesign team, live at **`https://treg.superdesign.dev`** — anyone can self-host.
 
-**The mental model — a coat check:** you hand over your coat (the secret) once and get a ticket;
-later anyone with a valid ticket says "table 5's coat" and the attendant fetches the right one,
-they never carry it themselves. The proxy swaps a **tool reference** for the **real secret** on the
-way out.
+**The mental model - a bank teller:** you slide a request across the counter ("pay this invoice
+from my account"); the teller does the transaction inside the vault and slides back the result.
+You never enter the vault, and nothing in it ever crosses the counter - the proxy swaps your
+**tool reference** for the **real secret** server-side, on the way out to the upstream.
 
 - **tool** = something the registry calls for you with the org's credential. Two kinds:
   - **endpoint** - an upstream `base_url` + credential **bindings** (each binding injects one
