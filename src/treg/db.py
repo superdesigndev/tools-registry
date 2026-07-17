@@ -89,6 +89,9 @@ def _migrate_to_orgs(conn) -> None:
     _ensure_bool_col(conn, insp, tables, "user", "demo")
     _ensure_bool_col(conn, insp, tables, "org", "demo")
 
+    # (A15) additive: org.public_demo — a team whose member token is published; locked to /call + reads.
+    _ensure_bool_col(conn, insp, tables, "org", "public_demo")
+
     # (A4) additive: tool.examples (JSON list of {method,path,note}) for the dashboard
     if "tool" in tables and "examples" not in {c["name"] for c in insp.get_columns("tool")}:
         conn.execute(text("ALTER TABLE tool ADD COLUMN examples JSON"))
@@ -163,7 +166,7 @@ def _migrate_to_orgs(conn) -> None:
 
     if legacy_users:
         conn.execute(
-            text("INSERT INTO org (name, slug, suspended, demo, created_at) VALUES ('superdesign', 'superdesign', false, false, :t)"),
+            text("INSERT INTO org (name, slug, suspended, demo, public_demo, created_at) VALUES ('superdesign', 'superdesign', false, false, false, :t)"),
             {"t": now},
         )
         org_id = conn.execute(text("SELECT id FROM org WHERE slug = 'superdesign'")).scalar()

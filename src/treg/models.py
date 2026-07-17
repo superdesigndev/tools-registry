@@ -36,6 +36,9 @@ class Org(SQLModel, table=True):
     slug: str = Field(index=True, unique=True)
     suspended: bool = Field(default=False)  # a suspended org's members are locked out (403)
     demo: bool = Field(default=False)  # a sandbox team seeded by onboarding — labeled + one-click removable
+    # A team whose token is published (e.g. on the landing page): non-admin members are locked to
+    # /call + reads, and may never act as a user (see api.require_member / require_identity).
+    public_demo: bool = Field(default=False)
     created_at: datetime = Field(default_factory=_now)
 
 

@@ -19,6 +19,7 @@ them distinct from the onboarding demo teams (also `demo`, but team-named). Self
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from datetime import datetime, timedelta, timezone
@@ -29,6 +30,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from . import crypto, injectors
 from .models import Bundle, CallRecord, Invite, Membership, Org, PendingOAuth, Secret, Tool, User
+from .pubfeed import ADJECTIVES as _ADJ, ANIMALS as _ANIMALS  # wordlists shared with the live feed (leaf module, no cycle)
 
 SANDBOX_DOMAIN = "sandbox.treg.local"     # throwaway visitor identities live here (can never log in)
 SANDBOX_TTL_MIN = 60
@@ -45,10 +47,32 @@ MAX_SECRETS = 3
 # prefilled with the real PostHog API + this placeholder and the visitor's first action is a single Add.
 DEFAULTS = [
     {"secret": "STRIPE_KEY",  "value": "sk_live_DEMO0000PLACEHOLDER", "tool": "stripe",
-     "base": "https://api.stripe.com",  "host": "api.stripe.com",
-     "example": {"method": "GET", "path": "v1/charges", "note": "list charges"}},
+     "base": "https://api.stripe.com/v1/charges",  "host": "api.stripe.com",
+     "example": {"method": "GET", "path": "", "note": "list charges"}},
     {"secret": "POSTHOG_KEY", "value": "phx_DEMO0000PLACEHOLDER"},  # vault-only (no tool); the add-row uses it
 ]
+
+# ---- the ONE live wire ----------------------------------------------------------------------
+# The seeded stripe tool above is special: when TREG_DEMO_STRIPE_KEY is configured, a sandbox call
+# to a tool matching this EXACT fingerprint relays to the real Stripe test API — with the key
+# injected from env, so no sandbox org ever holds it. Edit anything about the tool (base_url,
+# bindings, a lookalike) and it stops matching, silently falling back to synthesize(): tampering
+# can't exfiltrate a key that isn't there. The base is pinned to the charges resource, so the only
+# reachable surface is list/create test charges (the key is also Stripe-restricted to Charges).
+LIVE_HOST = "api.stripe.com"
+LIVE_BASE = "https://api.stripe.com/v1/charges"
+
+def is_live_tool(tool: Tool) -> bool:
+    """Does this sandbox tool match the seeded live-wire fingerprint exactly?"""
+    return tool.host == LIVE_HOST and (tool.base_url or "").rstrip("/") == LIVE_BASE
+
+
+def visitor_name(slug: str) -> str:
+    """Deterministic adjective-animal-nn identity for a sandbox org, derived from its slug. The
+    server injects it into every live charge as `metadata[visitor]`, overriding anything the
+    caller sent — so the name on the landing feed is always server-chosen."""
+    h = int(hashlib.sha256((slug or "").encode()).hexdigest(), 16)
+    return f"{_ADJ[h % len(_ADJ)]}-{_ANIMALS[(h // 100) % len(_ANIMALS)]}-{h % 1000}"
 
 # Brand-shaped dummy payloads so "what the API received" feels like the real endpoint (keyed by host).
 SAMPLE_BODIES = {
@@ -109,6 +133,7 @@ async def mint(db: AsyncSession) -> dict:
     return {
         "token": token,
         "org_slug": org.slug,
+        "visitor": visitor_name(org.slug),  # the identity live charges carry (metadata[visitor])
         "max_tools": MAX_TOOLS,
         "max_secrets": MAX_SECRETS,
         "ttl_min": SANDBOX_TTL_MIN,

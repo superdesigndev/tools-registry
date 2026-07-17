@@ -34,7 +34,7 @@ import httpx
 from pathlib import Path
 
 from fastapi import Cookie, Depends, FastAPI, Header, HTTPException, Request
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
@@ -42,7 +42,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
 from . import audit, crypto, demo as demo_seed, email as email_sender, health, injectors, localrun, oauth
-from . import ratestore, runner, sandbox as demo_sandbox, session as sess
+from . import pubfeed, ratestore, runner, sandbox as demo_sandbox, session as sess
 from .config import get_settings
 from .db import get_session, init_db
 from .models import ROLE_RANK, Bundle, CallRecord, Invite, Membership, Org, PendingOAuth, RunRecord, Secret, Tool, User
@@ -1156,6 +1156,14 @@ async def require_identity(
     """Just *who* the caller is (no org): a token's user, or a session user. 401 otherwise."""
     if x_treg_token:
         m = await _membership_by_token(x_treg_token, db)
+        if m is not None:
+            # A published public-demo token must never act as a USER — user-level endpoints mint
+            # identity tokens (/auth/cli-token), create real orgs, and accept invites, all of which
+            # would let a stranger escape the demo org. Admin+ (the real operator) is exempt.
+            org = await db.get(Org, m.org_id)
+            if org is not None and org.public_demo and not _role_at_least(m.role, "admin"):
+                raise HTTPException(status_code=403, detail=(
+                    "this is a public demo token — it can only call the demo team's tools"))
         user = await db.get(User, m.user_id) if m else await _user_from_identity_token(x_treg_token, db)
         if user is not None and not user.suspended:
             return user
@@ -1210,6 +1218,7 @@ async def _user_from_identity_token(token: str, db: AsyncSession) -> User | None
 
 
 async def require_member(
+    request: Request,
     x_treg_token: str = Header(default=""),
     x_treg_org: str = Header(default=""),
     treg_session: str = Cookie(default=""),
@@ -1244,6 +1253,13 @@ async def require_member(
         raise HTTPException(status_code=403, detail="account suspended")
     if org.suspended:
         raise HTTPException(status_code=403, detail="org suspended")
+    # Public-demo lockdown: the published token (non-admin roles) may ONLY call tools and read.
+    # Centralized here — not per-endpoint — so every mutation (tools, secrets, skills, members,
+    # leave, runs) is frozen no matter what routes are added later. Admin+ keeps full control.
+    if org.public_demo and not _role_at_least(membership.role, "admin"):
+        if not (request.url.path.startswith("/call/") or request.method in ("GET", "HEAD", "OPTIONS")):
+            raise HTTPException(status_code=403, detail=(
+                "this is a public demo team — its token can only call tools and read"))
     return Caller(membership=membership, user=user, org=org)
 
 
@@ -1877,6 +1893,12 @@ SANDBOX_HIT_NS = "sandbox_hit"
 SANDBOX_RATE_MAX = 12          # sandboxes per IP per window
 SANDBOX_RATE_WINDOW_S = 3600   # 1 hour
 
+# Per-IP limiter for /call with a PUBLIC-DEMO token (the landing page publishes one shared member
+# token, so the per-user daily cap is meaningless there — thousands of strangers are one "user").
+PUBLIC_DEMO_HIT_NS = "pubdemo_call"
+PUBLIC_DEMO_RATE_MAX = 10      # calls per IP per window
+PUBLIC_DEMO_RATE_WINDOW_S = 60
+
 
 def _client_ip(request: Request) -> str:
     """Best-effort client IP — first hop of X-Forwarded-For behind the reverse proxy (Render), else the socket peer."""
@@ -1884,6 +1906,20 @@ def _client_ip(request: Request) -> str:
     if xff:
         return xff.split(",")[0].strip()
     return request.client.host if request.client else "?"
+
+
+async def _enforce_public_demo_ip_cap(request: Request, db: AsyncSession) -> None:
+    """Per-IP cap for a call made with a SHARED public credential — the published demo token or
+    the sandbox live wire. Both are one identity for thousands of strangers, so meter by client IP
+    rather than by user. Commits the sweep + recorded hit (get_session never auto-commits) and
+    raises 429 when the window is exhausted."""
+    await ratestore.sweep(db, PUBLIC_DEMO_HIT_NS)
+    allowed = await ratestore.rate_check(
+        db, PUBLIC_DEMO_HIT_NS, [(_client_ip(request), PUBLIC_DEMO_RATE_MAX)], PUBLIC_DEMO_RATE_WINDOW_S)
+    await db.commit()
+    if not allowed:
+        raise HTTPException(status_code=429, detail=(
+            f"demo limit reached ({PUBLIC_DEMO_RATE_MAX} calls/min per IP) — try again in a minute"))
 
 
 async def _enforce_sandbox_cap(caller: Caller, model, cap: int, noun: str, db: AsyncSession) -> None:
@@ -2001,7 +2037,50 @@ async def demo_sandbox_mint(request: Request, db: AsyncSession = Depends(get_ses
         raise HTTPException(status_code=429, detail="too many demo sandboxes from here — try again later")
     await db.commit()  # persist the recorded hit before minting
     await demo_sandbox.gc(db)  # opportunistic reap of expired sandboxes
-    return await demo_sandbox.mint(db)
+    out = await demo_sandbox.mint(db)
+    out["live"] = bool(get_settings().demo_stripe_key)  # is the seeded stripe tool a real wire?
+    return out
+
+
+@app.get("/demo/sandbox/live")
+async def demo_sandbox_live(caller: Caller = Depends(require_member)) -> dict:
+    """Live-wire facts for an EXISTING sandbox (the browser reuses one via localStorage, so it may
+    predate the mint response carrying them): is the wire on, and who am I in the feed."""
+    if not demo_sandbox.is_sandbox(caller.org):
+        raise HTTPException(status_code=400, detail="live-wire info is for the landing-page sandbox only")
+    return {"live": bool(get_settings().demo_stripe_key),
+            "visitor": demo_sandbox.visitor_name(caller.org.slug)}
+
+
+# ---- landing-page live payments feed (the public Stripe demo — see pubfeed.py) --------------
+@app.post("/stripe/webhook", include_in_schema=False)
+async def stripe_webhook(request: Request) -> dict:
+    """Stripe → treg: a signed event from the demo sandbox account. Only `charge.succeeded` feeds
+    the landing ticker; everything else is acknowledged and dropped. 404 when unconfigured, so a
+    deploy without the secret exposes no unauthenticated POST surface."""
+    secret = get_settings().demo_stripe_webhook_secret
+    if not secret:
+        raise HTTPException(status_code=404)
+    payload = await request.body()
+    if not pubfeed.verify_signature(payload, request.headers.get("stripe-signature", ""), secret):
+        raise HTTPException(status_code=400, detail="bad signature")
+    try:
+        event = json.loads(payload)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="bad payload")
+    if event.get("type") == "charge.succeeded":
+        pubfeed.push_charge(event.get("data", {}).get("object", {}) or {})
+    return {"received": True}
+
+
+@app.get("/landing/stripe-feed", include_in_schema=False)
+async def landing_stripe_feed() -> StreamingResponse:
+    """SSE stream for the landing demo pane: recent charges, then live ones. Unauthenticated by
+    design — it carries only server-chosen fields (amount/currency/created/id-suffix)."""
+    return StreamingResponse(pubfeed.stream(), media_type="text/event-stream", headers={
+        "Cache-Control": "no-cache",
+        "X-Accel-Buffering": "no",  # tell the reverse proxy not to buffer the stream
+    })
 
 
 @app.get("/demo/sandbox/skill")
@@ -2325,6 +2404,63 @@ async def delete_org(
     return {"deleted_org": org_id}
 
 
+# ---- public demo token: a publishable, call-only credential for this org -------------------
+PUBLIC_DEMO_DOMAIN = "public-demo.treg.local"  # unroutable — the public identity can never log in
+
+
+def _public_demo_email(org: Org) -> str:
+    return f"pub-{org.slug}@{PUBLIC_DEMO_DOMAIN}"
+
+
+@app.post("/orgs/{org_id}/public-token")
+async def create_public_token(
+    org_id: int, caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session)
+) -> dict:
+    """Mint (or ROTATE) the org's publishable token: flips the org to `public_demo` and returns a
+    viewer-role token bound to a dedicated can't-log-in identity. Safe to print on a web page:
+    the lockdown in require_member/require_identity limits it to /call + reads, /call is per-IP
+    rate-limited, and calling this endpoint again replaces the token (instant revocation of the
+    old one). Owner-only — publishing a credential is an org-level decision."""
+    _require_owner_of(org_id, caller)
+    org = caller.org
+    email = _public_demo_email(org)
+    user = (await db.execute(select(User).where(User.email == email))).scalar_one_or_none()
+    if user is None:
+        user = User(email=email, demo=True)  # demo: excluded from stats; the domain can't receive mail
+        db.add(user)
+        await db.flush()
+    token = crypto.new_token()
+    membership = (await db.execute(select(Membership).where(
+        Membership.user_id == user.id, Membership.org_id == org_id))).scalar_one_or_none()
+    if membership is None:
+        db.add(Membership(user_id=user.id, org_id=org_id, role="viewer", token_hash=crypto.hash_token(token)))
+    else:
+        membership.token_hash = crypto.hash_token(token)  # rotate: the previous published token dies here
+    org.public_demo = True
+    await db.commit()
+    return {"token": token, "org": org.slug, "role": "viewer", "email": email,
+            "rate_limit": f"{PUBLIC_DEMO_RATE_MAX} calls per {PUBLIC_DEMO_RATE_WINDOW_S}s per IP",
+            "note": "this token can only call this org's tools and read — safe to publish; POST again to rotate"}
+
+
+@app.delete("/orgs/{org_id}/public-token")
+async def delete_public_token(
+    org_id: int, caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session)
+) -> dict:
+    """Revoke the publishable token and lift the org's public_demo lockdown."""
+    _require_owner_of(org_id, caller)
+    org = caller.org
+    user = (await db.execute(select(User).where(User.email == _public_demo_email(org)))).scalar_one_or_none()
+    if user is not None:
+        membership = (await db.execute(select(Membership).where(
+            Membership.user_id == user.id, Membership.org_id == org_id))).scalar_one_or_none()
+        if membership is not None:
+            await db.delete(membership)
+    org.public_demo = False
+    await db.commit()
+    return {"public_token_revoked": True, "org": org.slug}
+
+
 # ---- secrets (values are write-only — never returned) -------------------------------------
 @app.post("/secrets")
 async def create_secret(
@@ -2365,6 +2501,7 @@ async def update_secret(
         raise HTTPException(status_code=404, detail="secret not found")
     if not _can_manage(caller, secret):
         raise HTTPException(status_code=403, detail="only the creator or an admin can edit this secret")
+    _require_not_live_demo_secret(caller, secret)
     fields = body.model_dump(exclude_unset=True)
     for k in ("name", "value", "kind"):  # these map to NOT-NULL columns; explicit null is a 422, not a 500
         if k in fields and fields[k] is None:
@@ -2398,6 +2535,7 @@ async def delete_secret(
         raise HTTPException(status_code=404, detail="secret not found")
     if not _can_manage(caller, secret):
         raise HTTPException(status_code=403, detail="only the creator or an admin can delete this secret")
+    _require_not_live_demo_secret(caller, secret)
     # bindings live in a JSON column — scan tools IN THIS ORG (registry-scale N is small).
     tools = (await db.execute(select(Tool).where(Tool.org_id == caller.org_id))).scalars().all()
     if any(b.get("secret_id") == secret_id for t in tools for b in t.bindings):
@@ -2409,6 +2547,25 @@ async def delete_secret(
     await db.delete(secret)
     await db.commit()
     return {"deleted": secret_id}
+
+
+def _require_not_live_demo_tool(caller: Caller, tool: Tool) -> None:
+    """The sandbox's seeded live-wire tool (`stripe`, pinned base) is the demo's centerpiece —
+    editing or removing it would break the visitor's own live pane, so refuse. Only the seeded
+    name is frozen; visitor-created tools stay fully editable. No-op outside sandboxes / with
+    the wire off."""
+    if (demo_sandbox.is_sandbox(caller.org) and get_settings().demo_stripe_key
+            and tool.name == "stripe" and demo_sandbox.is_live_tool(tool)):
+        raise HTTPException(status_code=403, detail=(
+            "the live stripe demo endpoint is part of the sandbox — add your own endpoints instead"))
+
+
+def _require_not_live_demo_secret(caller: Caller, secret: Secret) -> None:
+    """Companion guard for the seeded STRIPE_KEY the live tool is bound to."""
+    if (demo_sandbox.is_sandbox(caller.org) and get_settings().demo_stripe_key
+            and secret.name == "STRIPE_KEY"):
+        raise HTTPException(status_code=403, detail=(
+            "STRIPE_KEY powers the live stripe demo — add your own keys instead"))
 
 
 # ---- tools --------------------------------------------------------------------------------
@@ -2588,6 +2745,7 @@ async def update_tool(
         raise HTTPException(status_code=404, detail="tool not found")
     if not _can_manage(caller, tool):
         raise HTTPException(status_code=403, detail="only the creator or an admin can edit this tool")
+    _require_not_live_demo_tool(caller, tool)
     fields = body.model_dump(exclude_unset=True)
     if "base_url" in fields and fields["base_url"] is None:  # NOT-NULL column + feeds _host_of — 422, not 500
         raise HTTPException(status_code=422, detail="base_url cannot be null")
@@ -2621,6 +2779,7 @@ async def delete_tool(
         raise HTTPException(status_code=404, detail="tool not found")
     if not _can_manage(caller, tool):
         raise HTTPException(status_code=403, detail="only the creator or an admin can delete this tool")
+    _require_not_live_demo_tool(caller, tool)
     await db.delete(tool)
     await db.commit()
     return {"deleted": tool_id}
@@ -3617,7 +3776,31 @@ async def _resolve_call(rest: str, org_id: int, db: AsyncSession) -> tuple[Tool,
     ).scalar_one_or_none()
     if tool is None:
         raise HTTPException(status_code=404, detail=f"no tool {name!r} in this org")
-    return tool, f"{tool.base_url.rstrip('/')}/{path.lstrip('/')}"
+    base = tool.base_url.rstrip("/")
+    # No path → the base URL itself, WITHOUT a trailing slash: a base pinned to a full resource
+    # (e.g. .../v1/charges) must relay as-is — Stripe 404s `/v1/charges/`.
+    return tool, (f"{base}/{path.lstrip('/')}" if path else base)
+
+
+async def _relay_live_demo(request: Request, upstream_url: str, key: str, visitor: str):
+    """The sandbox's ONE real upstream call (the landing live wire). Deliberately narrower than
+    relay(): form-encoded only, auth header built here from the env key (never from a sandbox
+    secret), and `metadata[visitor]` is OVERRIDDEN server-side so the landing feed's name is
+    always ours, whatever the caller put in the body."""
+    from urllib.parse import parse_qsl, urlencode
+    http: httpx.AsyncClient = request.app.state.http
+    headers = {"Authorization": f"Bearer {key}"}
+    content = None
+    if request.method == "POST":
+        body = (await request.body()).decode("utf-8", "replace")
+        pairs = [(k, v) for k, v in parse_qsl(body, keep_blank_values=True) if k != "metadata[visitor]"]
+        pairs.append(("metadata[visitor]", visitor))
+        content = urlencode(pairs)
+        headers["Content-Type"] = "application/x-www-form-urlencoded"
+    r = await http.request(request.method, upstream_url, params=request.query_params.multi_items(),
+                           content=content, headers=headers)
+    return Response(content=r.content, status_code=r.status_code,
+                    media_type=r.headers.get("content-type", "application/json"))
 
 
 @app.api_route(
@@ -3642,6 +3825,8 @@ async def call_tool(
     tool, upstream_url = await _resolve_call(rest, caller.org_id, db)
     _require_tool_access(caller, tool.name)  # per-member tool ACL (NULL access = all; admins exempt)
     await _enforce_daily_cap(caller, db)  # per-user daily cap (skips sandbox + unmetered members)
+    if caller.org.public_demo and not _role_at_least(caller.role, "admin"):
+        await _enforce_public_demo_ip_cap(request, db)  # shared token → meter by client IP, not user
 
     def _audit(status_code: int) -> None:  # audit the attempt too — failures are results worth recording
         audit.record_call(
@@ -3649,10 +3834,22 @@ async def call_tool(
             method=request.method, path=upstream_url, status_code=status_code,
         )
 
-    # Landing-page sandbox: never touch the network. Run the REAL injectors, return a labelled dummy
-    # response (see sandbox.synthesize). Same code path serves the browser demo AND a `treg call` from
-    # the visitor's terminal, so both behave identically for the TTL.
+    # Landing-page sandbox: never touch the network — EXCEPT the one live wire. A call to the
+    # exact seeded stripe tool (fingerprint-matched; see sandbox.is_live_tool) relays to the real
+    # Stripe test API with the env-held demo key. Any tampered/lookalike tool falls through to
+    # synthesize below, so there is never a key to exfiltrate from a sandbox org.
     if demo_sandbox.is_sandbox(caller.org):
+        live_key = get_settings().demo_stripe_key
+        if live_key and demo_sandbox.is_live_tool(tool) and request.method in ("GET", "POST"):
+            await _enforce_public_demo_ip_cap(request, db)  # one shared wire → meter by client IP
+            try:
+                response = await _relay_live_demo(
+                    request, upstream_url, live_key, demo_sandbox.visitor_name(caller.org.slug))
+            except httpx.RequestError as exc:
+                _audit(502)
+                raise HTTPException(status_code=502, detail=f"upstream request failed: {exc}")
+            _audit(response.status_code)
+            return response
         secrets = {}
         for sid in {b.get("secret_id") for b in tool.bindings if b.get("secret_id") is not None}:
             s = await db.get(Secret, sid)
