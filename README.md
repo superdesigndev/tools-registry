@@ -2,7 +2,7 @@
 
 ![treg — share skills & secrets without leaking keys](docs/assets/treg-hero.png)
 
-**Stop pasting API keys into agent contexts and Slack DMs.** Treg is your team's shared registry
+**Stop pasting API keys & skills into agent contexts and Slack DMs.** Treg is your team's shared registry
 of skills, CLIs, endpoints, and secrets. Agents call Stripe, PostHog, `gh` directly - auth
 injected server-side, every call logged. Nothing to paste, nothing to leak.
 
@@ -253,8 +253,8 @@ JSON token file, pull a field) · `oauth` (a JSON OAuth token, auto-refreshed if
 
 1. hop-by-hop transport headers (re-derived per hop),
 2. treg's own control + edge-forwarding headers (`x-treg-token`, `x-treg-org`,
- `ngrok-skip-browser-warning`, `x-forwarded-*`, `via`, …) and treg's session cookie — all stripped,
- never leak upstream,
+`ngrok-skip-browser-warning`, `x-forwarded-*`, `via`, …) and treg's session cookie — all stripped,
+never leak upstream,
 3. the injected credential(s).
 
 **OAuth, three ways to get the first token:** *manual upload* (drop in a `token.json`) ·
