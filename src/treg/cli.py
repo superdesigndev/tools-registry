@@ -227,10 +227,10 @@ def cmd_login(args, cfg) -> None:
     # session with one click, else offers every configured door (GitHub / Google / email code).
     import secrets as _secrets
     base = cfg["base_url"].rstrip("/")
-    # Ask the SERVER to start the login: it mints the login_id AND a short pairing code shown only here
-    # (never in the URL). The browser must echo the code back before it finishes, so a login you didn't
-    # start — someone mailing you a /login?cli=… link — can't be approved into a token for them. If the
-    # server is too old to know /start, fall back to a locally-minted id (no code) so login still works.
+    # Ask the SERVER to start the login: it mints the login_id AND a short pairing code. The browser
+    # must echo the code back before it finishes, so a login you didn't start — someone mailing you a
+    # /login?cli=… link — can't be approved into a token for them. If the server is too old to know
+    # /start, fall back to a locally-minted id (no code) so login still works.
     code = None
     try:
         st = httpx.post(f"{base}/auth/cli/start", headers={"ngrok-skip-browser-warning": "1"}, timeout=10)
@@ -240,10 +240,13 @@ def cmd_login(args, cfg) -> None:
             lid = _secrets.token_urlsafe(18)
     except Exception:
         lid = _secrets.token_urlsafe(18)
-    url = f"{base}/login?cli={lid}"
+    # The code rides in the URL FRAGMENT (never sent to the server, so it stays out of request logs):
+    # the /login page displays it for a visual match against this terminal instead of making the user
+    # type it. The server still validates the code at approve time — the guard itself is unchanged.
+    url = f"{base}/login?cli={lid}" + (f"#code={code}" if code else "")
     print(f"Opening your browser to sign in…\nIf it doesn't open, visit:\n  {url}\n")
     if code:
-        print(f"  Enter this code in the browser to confirm it's you:  {_B}{_TEAL}{code}{_R}\n")
+        print(f"  The sign-in page shows this code — check it matches:  {_B}{_TEAL}{code}{_R}\n")
     print("Waiting for authorization…")
     try:
         webbrowser.open(url)
@@ -307,12 +310,15 @@ def _select(message: str, choices, **kw):
                               instruction="↑↓ move, enter confirm", **kw)
 
 
-def _menu(message: str, options: list[tuple], default=None):
+def _menu(message: str, options: list[tuple], default=None, ambient=None):
     """House arrow-key picker: bold titles, dim `— description` tails, hovered row bolded behind
     the ❯ cursor — per-part styling questionary's select can't combine with hover (a styled title
     bypasses its `highlighted` class). options = [(value, title, desc)], or (value, title, desc, True)
     for a type-in row: arrowing onto it focuses an inline input — printable keys type into it,
     backspace edits, ↵ submits (value, typed_text). ↑↓/jk move, 1-9 jump-pick, ↵ confirms.
+    ambient = (rows_above_title, frame_iter): while idle, the line that many rows above the menu
+    title is redrawn from frame_iter every ~90ms (the looping relay) — one-row rewrites, and the
+    loop stops the moment a key resolves the menu.
     Returns the chosen value ((value, text) for a type-in row), or None on Ctrl-C / Ctrl-D / Esc."""
     try:
         import termios
@@ -366,18 +372,30 @@ def _menu(message: str, options: list[tuple], default=None):
             d = f"  {_M}— {desc}{_R}" if desc else ""
         return f"\x1b[2K{pre}{t}{d}"
 
+    def _place_cursor() -> None:
+        """From the parked (below-frame) spot: park the real cursor at the type-in row's input
+        point — after ` ❯ {title}  — {buf}` — where it blinks; plain rows keep it hidden."""
+        if _is_text(idx):
+            col = 3 + len(options[idx][1]) + 4 + len(buf)
+            sys.stdout.write(f"\x1b[{n - idx}A\r\x1b[{col}C\x1b[?25h")
+        else:
+            sys.stdout.write("\x1b[?25l")
+
     def _draw(redraw: bool) -> None:
         if redraw:
             sys.stdout.write("\x1b8")  # jump back to the parked spot below the frame
             sys.stdout.write(f"\x1b[{n}A")
         sys.stdout.write("\n".join(_row(i) for i in range(n)) + "\n")
         sys.stdout.write("\x1b7")  # park: remember the below-frame position for the next redraw
-        if _is_text(idx):
-            # put the real (blinking) terminal cursor at the input point: after ` ❯ {title}  — {buf}`
-            col = 3 + len(options[idx][1]) + 4 + len(buf)
-            sys.stdout.write(f"\x1b[{n - idx}A\r\x1b[{col}C\x1b[?25h")
-        else:
-            sys.stdout.write("\x1b[?25l")
+        _place_cursor()
+        sys.stdout.flush()
+
+    def _tick_ambient() -> None:
+        """Repaint the ambient line (rows_above_title above the menu title) with the next frame,
+        then put the cursor back exactly where the menu left it."""
+        up = n + 1 + ambient[0]
+        sys.stdout.write(f"\x1b8\x1b[{up}A\r\x1b[2K" + next(ambient[1]) + "\x1b8")
+        _place_cursor()
         sys.stdout.flush()
 
     fd = sys.stdin.fileno()
@@ -392,6 +410,9 @@ def _menu(message: str, options: list[tuple], default=None):
         # keys come via os.read on the fd — sys.stdin's buffer would swallow the tail of an
         # escape sequence and make the select() lookahead below lie
         while True:
+            if ambient:
+                while not select.select([fd], [], [], 0.09)[0]:
+                    _tick_ambient()  # idle → advance the relay one frame
             c = os.read(fd, 1).decode(errors="replace")
             if c == "\x1b":  # arrow keys arrive as ESC [ A/B/C; a bare ESC cancels
                 if select.select([fd], [], [], 0.05)[0] and os.read(fd, 1) == b"[":
@@ -446,26 +467,53 @@ def _menu(message: str, options: list[tuple], default=None):
     return picked
 
 
-def _splash() -> None:
-    """`treg onboard`'s opening beat (~2s, any key skips): the wordmark decrypts behind a ░▒▓
-    wavefront, then a spark runs the keyless relay — you → vault → api ✓ — and only the answer
-    comes back. TTY-only with color on; agents, pipes, dumb terminals and NO_COLOR never see it."""
-    if not (sys.stdin.isatty() and sys.stdout.isatty()) or os.environ.get("TERM") == "dumb" or not _A:
-        return
-    try:
-        import termios
-        import tty
-    except ImportError:
-        return
-    title, sub = "tools-registry", " — your team's vault"
-    text = f"▚ {title}{sub}"
-    d1, d2 = 8, 12  # dash runs: you ──▚ vault ──── api
+_D1, _D2 = 8, 12  # relay dash runs: you ──▚ vault ──── api
 
-    def _title_line(front: int) -> str:
+
+def _relay_frame(spark: int = -1, hit: bool = True, back: int = -1) -> str:
+    """One frame of the keyless relay: `you ──●──▚ vault ────── api ✓`. spark = forward ember
+    dot position, back = amber response position (both dash-indexed), hit lights the api ✓."""
+    parts = [f"  {_M}you {_R}"]
+    for i in range(_D1):
+        parts.append(f"{_A}{_B}●{_R}" if spark == i else f"{_M}─{_R}")
+    parts.append(f"{_A}{_B}▚{_R}{_M} vault {_R}")
+    for i in range(_D2):
+        j = _D1 + 1 + i
+        if spark == j:
+            parts.append(f"{_A}{_B}●{_R}")
+        elif back == j:
+            parts.append(f"{_AM}●{_R}")  # the response riding home, amber
+        else:
+            parts.append(f"{_M}─{_R}")
+    parts.append(f" {_B}api{_R} {_G}✓{_R}" if hit else f"{_M} api{_R}")
+    return "".join(parts)
+
+
+def _relay_loop():
+    """Endless spark cycle for the ambient loop behind the onboarding menu: call → ✓ → response
+    home → rest → again. One yielded line per ~90ms tick — a single-row rewrite, spinner-cheap."""
+    while True:
+        for i in range(_D1):
+            yield _relay_frame(spark=i, hit=False)
+        for i in range(_D2):
+            yield _relay_frame(spark=_D1 + 1 + i, hit=False)
+        for _ in range(3):
+            yield _relay_frame(hit=True)
+        for i in range(_D2 - 1, -1, -2):
+            yield _relay_frame(hit=True, back=_D1 + 1 + i)
+        for _ in range(8):
+            yield _relay_frame(hit=True)
+
+
+def _dither_frames(chars: list[tuple[str, str]]) -> list[str]:
+    """Dither-reveal a styled line: chars = [(ch, ansi_prefix)]. A ░▒▓ wavefront sweeps left to
+    right; behind it every char lands in its final style. Returns the frame list (last = final)."""
+    frames = []
+    for front in range(0, len(chars) + 7, 3):
         out = []
-        for i, ch in enumerate(text):
+        for i, (ch, st) in enumerate(chars):
             d = front - i
-            if d < 0:
+            if d < 0 or (d < 6 and ch == " "):
                 out.append(" ")
             elif d < 2:
                 out.append(f"{_M}░{_R}")
@@ -473,43 +521,37 @@ def _splash() -> None:
                 out.append(f"{_M}▒{_R}")
             elif d < 6:
                 out.append(f"{_A}▓{_R}")
-            elif i == 0:
-                out.append(f"{_A}{_B}▚{_R}")
-            elif i <= len(title) + 1:
-                out.append(f"{_B}{ch}{_R}")
             else:
-                out.append(f"{_M}{ch}{_R}")
-        return "".join(out)
+                out.append(f"{st}{ch}{_R}" if ch != " " else " ")
+        frames.append("".join(out))
+    return frames
 
-    def _relay_line(spark: int, hit: bool, back: int) -> str:
-        parts = [f"  {_M}◇ you {_R}"]
-        for i in range(d1):
-            parts.append(f"{_A}{_B}●{_R}" if spark == i else f"{_M}─{_R}")
-        parts.append(f"{_A}{_B}▚{_R}{_M} vault {_R}")
-        for i in range(d2):
-            j = d1 + 1 + i
-            if spark == j:
-                parts.append(f"{_A}{_B}●{_R}")
-            elif back == j:
-                parts.append(f"{_AM}●{_R}")  # the response riding home, amber
-            else:
-                parts.append(f"{_M}─{_R}")
-        parts.append(f" {_B}api{_R} {_G}✓{_R}" if hit else f"{_M} api{_R}")
-        return "".join(parts)
 
-    caption = " " * (8 + d1) + "└ keys stay here"
+def _splash() -> bool:
+    """`treg onboard`'s opening beat (~1.5s, any key skips): the wordmark, then the keyless-relay
+    diagram, each decrypting behind a ░▒▓ wavefront. Returns True when it played, so the menu can
+    keep the relay spark looping above it. TTY-only with color on; agents, pipes, dumb terminals
+    and NO_COLOR never see a frame."""
+    if not (sys.stdin.isatty() and sys.stdout.isatty()) or os.environ.get("TERM") == "dumb" or not _A:
+        return False
+    try:
+        import termios
+        import tty
+    except ImportError:
+        return False
+    title, sub = "tools-registry", " — your team's vault"
+    title_chars = ([("▚", f"{_A}{_B}"), (" ", "")] + [(c, _B) for c in title] + [(c, _M) for c in sub])
+    relay_plain = "  you " + "─" * _D1 + "▚ vault " + "─" * _D2 + " api"
+    relay_chars = [(ch, f"{_A}{_B}" if ch == "▚" else _M) for ch in relay_plain]
+    caption = f"{_M}{' ' * (6 + _D1)}└ the key never left{_R}"
+
     frames: list[tuple[str, str, str]] = []
-    for front in range(0, len(text) + 7, 3):  # phase 1 — dither reveal
-        frames.append((_title_line(front), "", ""))
-    done = _title_line(len(text) + 6)
-    for i in range(d1):  # phase 2 — the relay run
-        frames.append((done, _relay_line(i, False, -1), ""))
-    for i in range(d2):
-        frames.append((done, _relay_line(d1 + 1 + i, False, -1), f"{_M}{caption}{_R}"))
-    frames += [(done, _relay_line(-1, True, -1), f"{_M}{caption}{_R}")] * 2
-    for i in range(d2 - 1, -1, -2):
-        frames.append((done, _relay_line(-1, True, d1 + 1 + i), f"{_M}{caption}{_R}"))
-    final = (done, _relay_line(-1, True, -1), f"{_M}{' ' * (8 + d1)}└ the key never left{_R}")
+    for t in _dither_frames(title_chars):  # 1 — the wordmark decrypts
+        frames.append((t, "", ""))
+    done = frames[-1][0]
+    for r in _dither_frames(relay_chars):  # 2 — the relay diagram decrypts
+        frames.append((done, r, ""))
+    final = (done, _relay_frame(), caption)
     frames.append(final)
 
     fd = sys.stdin.fileno()
@@ -535,6 +577,7 @@ def _splash() -> None:
         termios.tcsetattr(fd, termios.TCSANOW, old)
         sys.stdout.write("\x1b[?25h")
         sys.stdout.flush()
+    return True
 
 
 def _brand(sub: str) -> None: print(f"\n{_A}{_B}▚ tools-registry{_R} {_M}— {sub}{_R}")
@@ -589,10 +632,11 @@ def _is_rootish(d: Path) -> bool:
     return d == home or d == home.parent or d.parent == d
 
 
-def _pick_path(cfg: dict) -> str:
+def _pick_path(cfg: dict, splashed: bool = False) -> str:
     """The 3-path onboarding menu (Set up / Access / Demo). Interactive default is Setup; the
     non-interactive path keeps the smart org-based pick (a team with tools → Access; an empty
-    team you admin → Set up; else Demo) so scripted/agent runs stay unchanged."""
+    team you admin → Set up; else Demo) so scripted/agent runs stay unchanged. After the splash,
+    the relay diagram (3 rows above the menu title: blank, caption, relay) keeps looping."""
     if not sys.stdin.isatty():
         org = _onboard_active_org(cfg)
         has_tools = bool(org and org.get("tool_count"))
@@ -608,7 +652,7 @@ def _pick_path(cfg: dict) -> str:
         ("setup", "Setup", "upload your skills & env, share them safely (admins)"),
         ("access", "Connect existing tool-registry", "pull your team's shared skills + make a call"),
         ("demo", "Demo", "see how treg works with a throwaway team"),
-    ], default="setup")
+    ], default="setup", ambient=(3, _relay_loop()) if splashed else None)
     if picked is None:  # Ctrl-C / Esc / EOF
         raise SystemExit(0)
     return picked
@@ -1066,9 +1110,10 @@ def cmd_onboard(args, cfg) -> None:
         sys.exit("Log in first:  treg login")
     if not cfg.get("active_org"):
         _pick_active_org(cfg)  # identity token needs an active org so requests carry X-Treg-Org
+    splashed = False
     if not args.path and not getattr(args, "yes", False):  # scripted runs skip the theater
-        _splash()
-    path = args.path or ("demo" if args.mode == "quick" else None) or _pick_path(cfg)  # --mode kept for back-compat
+        splashed = _splash()
+    path = args.path or ("demo" if args.mode == "quick" else None) or _pick_path(cfg, splashed)  # --mode kept for back-compat
     _dispatch_onboard(cfg, path, args)
 
 
