@@ -23,7 +23,7 @@
   const CONCEPTS = [
     { h: "Email is your identity",
       p: "You <b>are</b> a verified email. Three doors prove it - GitHub, an emailed <b>one-time code</b>, or an <b>invite code</b>. First proof registers you; every proof after is a login. No separate sign-up." },
-    { h: "The proxy = a coat check",
+    { h: "The proxy = a bank teller",
       p: "You call the real upstream API <i>through</i> the registry. It swaps your tool reference for the real secret and injects it server-side. The key never lands on your machine; your token authorises the call." },
     { h: "A token = a (you, org) pair",
       p: "A <b>User</b> is an identity; an <b>Org</b> is a team that owns resources; a <b>Membership</b> links them with a role. Your <b>identity token</b> works across every org you belong to - <code>org use</code> picks the active one." },
