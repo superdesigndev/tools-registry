@@ -27,7 +27,7 @@ was tested):
 - **Email is your identity.** You *are* a verified email. Three doors prove it - **GitHub**, an emailed
   **one-time code** (OTP), or an **invite code**. The first time you prove an email you're *registered*;
   every proof after is a *login*. There is no separate sign-up (and no more `treg register`).
-- **The proxy = a coat check.** You call the real upstream API *through* the registry. It swaps your tool
+- **The proxy = a bank teller.** You call the real upstream API *through* the registry. It swaps your tool
   reference for the real secret and injects it server-side. The key never lands on your machine; your
   token authorises the call.
 - **A token = a (you, org) pair.** A **User** is an identity; an **Org** is a team that owns resources; a
