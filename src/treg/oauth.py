@@ -13,7 +13,7 @@ import asyncio
 import json
 import time
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from urllib.parse import urlencode
 
 import httpx
@@ -127,6 +127,74 @@ async def exchange_code(p: PendingOAuth, code: str, client: httpx.AsyncClient) -
     }
 
 
+# ---- expiry, as an axis separate from health ---------------------------------------------
+# health_status answers "does this credential work". Expiry answers "how long will it keep
+# working" — and for a NON-refreshable token those are different questions with different
+# answers. A LinkedIn token at the non-partner tier reports perfectly healthy right up until it
+# silently dies at ~60 days, so expiry has to be surfaced on its own or the user gets no warning.
+
+EXPIRING_SOON_DAYS = 7
+
+
+def expiry_of(blob: dict) -> datetime | None:
+    """The token's absolute expiry as a UTC-naive datetime (matching how treg stores timestamps)."""
+    ts = _expires_at(blob)
+    if ts is None:
+        return None
+    return datetime.fromtimestamp(ts, tz=timezone.utc).replace(tzinfo=None)
+
+
+def expiry_state(expires_at: datetime | None, refreshable: bool, now: datetime | None = None) -> str:
+    """fresh | expiring | expired | unknown.
+
+    A refreshable credential is always `fresh`: treg mints a new access token on demand, so its
+    short expiry is an implementation detail the user should never be nagged about. Only a
+    credential treg CANNOT renew by itself gets an expiry warning."""
+    if refreshable:
+        return "fresh"
+    if expires_at is None:
+        return "unknown"
+    now = now or datetime.now(timezone.utc).replace(tzinfo=None)
+    if expires_at <= now:
+        return "expired"
+    if expires_at - now <= timedelta(days=EXPIRING_SOON_DAYS):
+        return "expiring"
+    return "fresh"
+
+
+def secret_is_refreshable(secret: Secret) -> bool:
+    """Whether treg can renew this credential unattended. Decrypts server-side; the blob never
+    leaves this function. A non-oauth secret is never auto-renewable."""
+    if secret.kind != "oauth":
+        return False
+    try:
+        return is_refreshable(json.loads(crypto.decrypt(secret.value)))
+    except Exception:  # noqa: BLE001 — an unreadable blob is reported as not-refreshable, not a 500
+        return False
+
+
+def connection_view(secret: Secret) -> dict:
+    """Everything the dashboard/CLI needs about one connection. Returns metadata only — no token
+    material — so it is safe to hand to any org member."""
+    refreshable = secret_is_refreshable(secret)
+    return {
+        "id": secret.id,
+        "name": secret.name,
+        "kind": secret.kind,
+        "provider": secret.provider,
+        "resource_ref": secret.resource_ref,
+        "scopes": secret.granted_scopes.split() if secret.granted_scopes else [],
+        "health": secret.health_status,
+        "refreshable": refreshable,
+        "expiry_state": expiry_state(secret.expires_at, refreshable),
+        "expires_at": secret.expires_at.isoformat() if secret.expires_at else None,
+        "last_refresh_at": secret.last_refresh_at.isoformat() if secret.last_refresh_at else None,
+        "last_error": secret.last_error,
+        "owner": secret.owner,
+        "created_at": secret.created_at.isoformat(),
+    }
+
+
 async def ensure_fresh(secret: Secret, db: AsyncSession, client: httpx.AsyncClient) -> None:
     """If `secret` is a stale oauth credential, refresh + persist it before it's used. No-op for
     non-oauth kinds and for still-valid tokens. Raises on a failed refresh (caller decides)."""
@@ -146,13 +214,27 @@ async def ensure_fresh(secret: Secret, db: AsyncSession, client: httpx.AsyncClie
         blob = json.loads(crypto.decrypt(old_value))
         if not is_stale(blob):
             return
-        fresh = await refresh(blob, client)
+        try:
+            fresh = await refresh(blob, client)
+        except Exception as exc:  # noqa: BLE001
+            # Record WHY renewal failed. Without this a revoked refresh_token just 401s on every
+            # call forever with nothing on the connection explaining it.
+            await db.execute(
+                update(Secret).where(Secret.id == secret.id).values(last_error=str(exc)[:300])
+            )
+            await db.commit()
+            raise
         # Cross-process safety: the in-process lock only serializes THIS worker. Write conditionally
         # on the ciphertext we refreshed from, so a second worker that already rotated the
         # refresh_token can't be clobbered with our now-stale token; then reload whichever won.
         await db.execute(
             update(Secret).where(Secret.id == secret.id, Secret.value == old_value)
-            .values(value=crypto.encrypt(json.dumps(fresh)))
+            .values(
+                value=crypto.encrypt(json.dumps(fresh)),
+                expires_at=expiry_of(fresh),
+                last_refresh_at=datetime.now(timezone.utc).replace(tzinfo=None),
+                last_error="",
+            )
         )
         await db.commit()
         await db.refresh(secret)  # adopt the winning blob (ours or the other worker's) for injection

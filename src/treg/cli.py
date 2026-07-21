@@ -2984,6 +2984,26 @@ def cmd_oauth_providers(args, cfg) -> None:
         _show(c.get("/oauth/providers"))
 
 
+def cmd_connections_ls(args, cfg) -> None:
+    with _client(cfg) as c:
+        _show(c.get("/connections"))
+
+
+def cmd_connections_resources(args, cfg) -> None:
+    with _client(cfg) as c:
+        _show(c.get(f"/connections/{args.id}/resources"))
+
+
+def cmd_connections_use(args, cfg) -> None:
+    with _client(cfg) as c:
+        _show(c.post(f"/connections/{args.id}/resource", json={"resource_ref": args.resource}))
+
+
+def cmd_connections_rm(args, cfg) -> None:
+    with _client(cfg) as c:
+        _show(c.delete(f"/connections/{args.id}"))
+
+
 def _byo_body(args) -> dict:
     """Bring-your-own-app: read the provider's OAuth client JSON off disk."""
     if not args.name:
@@ -3406,6 +3426,21 @@ def build_parser() -> argparse.ArgumentParser:
     oc.add_argument("--client-secret", help="path to your own OAuth client-secret JSON (bring-your-own-app)")
     oc.add_argument("--scopes", nargs="+", default=[], help="one or more OAuth scopes (with --client-secret)")
     oc.set_defaults(fn=cmd_oauth_connect)
+
+    cn = mk(sub, "connections", "Your connected accounts: health, expiry, and what they act on.",
+            "treg connections ls", "treg connections resources 12",
+            "treg connections use 12 sc-domain:example.com", "treg connections rm 12",
+            ).add_subparsers(dest="sub", required=True, metavar="<subcommand>")
+    mk(cn, "ls", "List connections with health + expiry.", "treg connections ls").set_defaults(fn=cmd_connections_ls)
+    cr = mk(cn, "resources", "What this connection can act on (sites/properties/accounts).",
+            "treg connections resources 12")
+    cr.add_argument("id", type=int); cr.set_defaults(fn=cmd_connections_resources)
+    cu = mk(cn, "use", "Select which resource this connection acts on.",
+            "treg connections use 12 sc-domain:example.com")
+    cu.add_argument("id", type=int); cu.add_argument("resource"); cu.set_defaults(fn=cmd_connections_use)
+    cd = mk(cn, "rm", "Disconnect (bound tools stay, but stop working until reconnected).",
+            "treg connections rm 12")
+    cd.add_argument("id", type=int); cd.set_defaults(fn=cmd_connections_rm)
 
     # ---- super-admin ----
     ad = mk(sub, "admin", "Super-admin (cross-tenant): platform-wide view + control.",

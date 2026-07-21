@@ -3372,6 +3372,34 @@ async def list_runs(
 
 
 # ---- OAuth connect flow (Phase C): mint the first token via browser consent --------------
+async def _autoprovision_provider_tool(
+    provider, secret: Secret, pending: PendingOAuth, db: AsyncSession
+) -> None:
+    """Bind the freshly-connected credential to the provider's API as a callable tool.
+
+    Idempotent by (org, name): reconnecting the same provider rebinds the existing tool to the new
+    credential rather than piling up duplicates."""
+    existing = (
+        await db.execute(
+            select(Tool).where(Tool.org_id == secret.org_id, Tool.name == provider.service)
+        )
+    ).scalars().first()
+    binding = {
+        "secret_id": secret.id, "injector": "oauth", "location": "header",
+        "name": "Authorization", "format": "Bearer {secret}", "secret_field": "access_token",
+    }
+    if existing is not None:
+        existing.bindings = [binding]
+        existing.base_url = provider.base_url
+        existing.host = _host_of(provider.base_url)
+        return
+    db.add(Tool(
+        org_id=secret.org_id, name=provider.service, owner=pending.owner,
+        base_url=provider.base_url, host=_host_of(provider.base_url),
+        bindings=[binding],
+    ))
+
+
 @app.get("/oauth/providers")
 async def oauth_providers_list() -> list[dict]:
     """Providers treg holds its own approved app for. `configured` is false when this deployment
@@ -3419,7 +3447,7 @@ async def oauth_start(
         org_id=caller.org_id, state=state, name=name, owner=caller.email,
         client_id=client_id, client_secret=crypto.encrypt(client_secret),
         auth_uri=auth_uri, token_uri=token_uri, scopes=" ".join(scopes),
-        redirect_uri=redirect_uri,
+        redirect_uri=redirect_uri, provider=body.provider or "",
     )
     db.add(pending)
     await db.commit()
@@ -3451,12 +3479,21 @@ async def oauth_callback(
         return _auth_page("Connect failed", "Authorization failed. You can close this tab and try again.", ok=False, status=400)
     try:
         blob = await oauth.exchange_code(pending, code, request.app.state.http)
+        provider = oauth_providers.get(pending.provider) if pending.provider else None
         secret = Secret(
             org_id=pending.org_id, name=pending.name, owner=pending.owner, kind="oauth",
             value=crypto.encrypt(json.dumps(blob)),
+            provider=pending.provider or "",
+            granted_scopes=pending.scopes,
+            expires_at=oauth.expiry_of(blob),
         )
         db.add(secret)
         await db.flush()
+        # A connect that yields no callable tool is a dead end — the user consented and got
+        # nothing. Auto-provision the provider's tool bound to this credential so the very next
+        # thing they can do is make a real proxied call.
+        if provider and provider.base_url:
+            await _autoprovision_provider_tool(provider, secret, pending, db)
         pending.status, pending.secret_id, pending.detail = "done", secret.id, "connected"
         await db.commit()
     except Exception as exc:  # noqa: BLE001
@@ -3465,6 +3502,95 @@ async def oauth_callback(
         await db.commit()
         return _auth_page("Connect failed", "Token exchange failed. You can close this tab and try again.", ok=False, status=502)
     return _auth_page("Connected", "You can close this tab and return to the terminal.")
+
+
+@app.get("/connections")
+async def list_connections(
+    caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session)
+) -> list[dict]:
+    """Every OAuth credential in the org, with health AND expiry. Metadata only — no token material."""
+    rows = (
+        await db.execute(
+            select(Secret).where(Secret.org_id == caller.org_id, Secret.kind == "oauth")
+        )
+    ).scalars().all()
+    out = [oauth.connection_view(s) for s in rows]
+    out.sort(key=lambda c: (c["provider"] or "~", c["name"]))
+    return out
+
+
+async def _owned_connection(secret_id: int, caller: Caller, db: AsyncSession) -> Secret:
+    secret = (
+        await db.execute(
+            select(Secret).where(Secret.id == secret_id, Secret.org_id == caller.org_id)
+        )
+    ).scalars().first()
+    if secret is None or secret.kind != "oauth":
+        raise HTTPException(status_code=404, detail="unknown connection")
+    return secret
+
+
+@app.get("/connections/{secret_id}/resources")
+async def connection_resources(
+    secret_id: int, request: Request,
+    caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
+) -> dict:
+    """What this connection can act on — GSC sites, and later GA properties / Ads accounts.
+
+    Live-fetched rather than stored: the answer changes when the user gains or loses access
+    upstream, and a stale picker is worse than no picker."""
+    secret = await _owned_connection(secret_id, caller, db)
+    provider = oauth_providers.get(secret.provider)
+    if provider is None or not provider.supports_discovery:
+        raise HTTPException(status_code=422, detail="this provider does not support resource discovery")
+    await oauth.ensure_fresh(secret, db, request.app.state.http)
+    blob = json.loads(crypto.decrypt(secret.value))
+    token = blob.get("access_token") or blob.get("token")
+    resp = await request.app.state.http.get(
+        f"{provider.base_url.rstrip('/')}{provider.discover_path}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    if resp.status_code >= 400:
+        raise HTTPException(status_code=502, detail=f"discovery failed upstream ({resp.status_code})")
+    rows = resp.json().get(provider.discover_key) or []
+    label_field = provider.discover_label_field or provider.discover_id_field
+    return {
+        "provider": provider.service,
+        "selected": secret.resource_ref,
+        "resources": [
+            {"id": r.get(provider.discover_id_field), "label": r.get(label_field), "raw": r}
+            for r in rows if isinstance(r, dict)
+        ],
+    }
+
+
+class ResourceRefIn(BaseModel):
+    resource_ref: str
+
+
+@app.post("/connections/{secret_id}/resource")
+async def set_connection_resource(
+    secret_id: int, body: ResourceRefIn,
+    caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
+) -> dict:
+    secret = await _owned_connection(secret_id, caller, db)
+    secret.resource_ref = body.resource_ref
+    await db.commit()
+    await db.refresh(secret)
+    return oauth.connection_view(secret)
+
+
+@app.delete("/connections/{secret_id}")
+async def revoke_connection(
+    secret_id: int, caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session)
+) -> dict:
+    """Disconnect. Tools bound to this credential are left in place but will fail until
+    reconnected — deleting them would silently discard a user's own tool configuration."""
+    _require_can_register(caller)
+    secret = await _owned_connection(secret_id, caller, db)
+    await db.delete(secret)
+    await db.commit()
+    return {"deleted": secret_id}
 
 
 @app.get("/oauth/status/{state}")

@@ -150,6 +150,27 @@ def _migrate_to_orgs(conn) -> None:
     if "invite" in tables and "landing" not in {c["name"] for c in insp.get_columns("invite")}:
         conn.execute(text("ALTER TABLE invite ADD COLUMN landing VARCHAR"))
 
+    # (A16) additive: connection metadata on secret — which registry provider minted it, the scopes
+    # actually granted, the resource it acts on, and the expiry axis (see models.Secret). All
+    # nullable/defaulted: an existing uploaded secret simply has no provider and no expiry.
+    if "secret" in tables:
+        cols = {c["name"] for c in insp.get_columns("secret")}
+        for col, ddl in (
+            ("provider", "VARCHAR NOT NULL DEFAULT ''"),
+            ("granted_scopes", "VARCHAR NOT NULL DEFAULT ''"),
+            ("resource_ref", "VARCHAR NOT NULL DEFAULT ''"),
+            ("expires_at", "TIMESTAMP"),
+            ("last_refresh_at", "TIMESTAMP"),
+            ("last_error", "VARCHAR NOT NULL DEFAULT ''"),
+        ):
+            if col not in cols:
+                conn.execute(text(f"ALTER TABLE secret ADD COLUMN {col} {ddl}"))
+
+    # (A17) additive: pendingoauth.provider — carried through the redirect so the callback knows
+    # which registry provider to attribute the credential to and auto-provision a tool for.
+    if "pendingoauth" in tables and "provider" not in {c["name"] for c in insp.get_columns("pendingoauth")}:
+        conn.execute(text("ALTER TABLE pendingoauth ADD COLUMN provider VARCHAR NOT NULL DEFAULT ''"))
+
     # (B) legacy backfill — guarded
     if "org" not in tables:
         return  # defensive: create_all should have made it

@@ -202,6 +202,9 @@ class PendingOAuth(SQLModel, table=True):
     token_uri: str
     scopes: str = ""  # space-joined
     redirect_uri: str
+    # The registry service this connect came from ("" for a bring-your-own-app connect). Carried
+    # through the redirect so the callback knows which provider's tool to auto-provision.
+    provider: str = Field(default="")
     status: str = Field(default="pending")  # pending | done | error
     secret_id: int | None = Field(default=None)
     detail: str = Field(default="")
@@ -225,6 +228,21 @@ class Secret(SQLModel, table=True):
     health_status: str = Field(default="unknown")
     health_detail: str = Field(default="")
     health_checked_at: datetime | None = Field(default=None)
+
+    # Connection metadata (registry connects — see oauth_providers.py). Empty `provider` means this
+    # credential did not come from the registry (uploaded, or a bring-your-own-app connect).
+    provider: str = Field(default="", index=True)
+    granted_scopes: str = Field(default="")  # space-joined; what the user ACTUALLY consented to
+    resource_ref: str = Field(default="")  # the chosen site / property / account this connection acts on
+
+    # Expiry is a SEPARATE axis from health_status. health answers "does this credential work";
+    # expiry answers "how long will it keep working". A non-refreshable token (LinkedIn issues no
+    # refresh_token at the non-partner tier) is perfectly healthy right up until it silently dies,
+    # so it has to be surfaced on its own or the user gets no warning at all.
+    expires_at: datetime | None = Field(default=None)
+    last_refresh_at: datetime | None = Field(default=None)
+    last_error: str = Field(default="")
+
     created_at: datetime = Field(default_factory=_now)
 
 

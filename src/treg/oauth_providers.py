@@ -39,9 +39,21 @@ class OAuthProvider:
     base_url: str = ""  # upstream API root, so a successful connect can auto-provision the tool
     docs_url: str = ""
 
+    # Resource discovery: after consent, which sites/properties/accounts can this credential act on?
+    # `discover_path` is relative to base_url; `discover_key` is the JSON list field in the response;
+    # `discover_id_field`/`discover_label_field` name the id and human label inside each row.
+    discover_path: str = ""
+    discover_key: str = ""
+    discover_id_field: str = "id"
+    discover_label_field: str = ""
+
     @property
     def capabilities(self) -> list[str]:
         return sorted(self.scopes)
+
+    @property
+    def supports_discovery(self) -> bool:
+        return bool(self.discover_path and self.base_url)
 
     def scopes_for(self, capability: str) -> list[str]:
         try:
@@ -72,6 +84,11 @@ GOOGLE_SEARCH_CONSOLE = OAuthProvider(
     client_secret_setting="google_client_secret",
     base_url="https://searchconsole.googleapis.com",
     docs_url="https://developers.google.com/webmaster-tools/v1/api_reference_index",
+    # GSC returns {"siteEntry": [{"siteUrl": "...", "permissionLevel": "..."}]}
+    discover_path="/webmasters/v3/sites",
+    discover_key="siteEntry",
+    discover_id_field="siteUrl",
+    discover_label_field="siteUrl",
 )
 
 REGISTRY: dict[str, OAuthProvider] = {p.service: p for p in (GOOGLE_SEARCH_CONSOLE,)}

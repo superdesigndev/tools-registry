@@ -12,3 +12,6 @@ dist/
 /.playwright-cli
 scripts/.dev-home/
 .claude/
+.superdesign/tmp/
+/videos
+docs/proposals/

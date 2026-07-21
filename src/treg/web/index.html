@@ -691,6 +691,7 @@ th{background:rgba(0,0,0,.25)}
         <div class="side-nav">
           <button class="nav" :class="{active:view==='tools'}" @click="go('tools')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>Tools</button>
           <button v-if="canRegister" class="nav" :class="{active:view==='secrets'}" @click="go('secrets')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Secrets</button>
+          <button v-if="canRegister" class="nav" :class="{active:view==='connections'}" @click="go('connections')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>Connections</button>
           <button class="nav" :class="{active:view==='activity'}" @click="go('activity')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Activity</button>
           <button v-if="canAdmin" class="nav" :class="{active:view==='usage'}" @click="go('usage')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Usage</button>
           <button class="nav" :class="{active:view==='orgs'}" @click="go('orgs')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Team</button>
@@ -724,6 +725,62 @@ th{background:rgba(0,0,0,.25)}
         </div>
 
         <!-- TOOLS -->
+        <template v-if="view==='connections'">
+          <div class="tut-head">
+            <div><h1>Connections in {{activeName}}</h1><p class="sub" style="margin:0">Connect an account once. treg holds the credential server-side and injects it on every call — nothing lands on your machine.</p></div>
+            <div class="tut-actions"><button class="btn sm" @click="loadConnections">Refresh</button></div>
+          </div>
+          <div v-if="connErr" class="banner" style="margin-top:12px">{{connErr}}</div>
+
+          <div class="tgroup">
+            <div class="tgh">Available <span class="tgh-n">{{providers.length}}</span><span class="tgh-hint">treg holds the approved app — you supply nothing</span></div>
+            <div class="ttable-wrap"><table class="ttable">
+              <tr v-for="p in providers" :key="p.service">
+                <td class="tn"><b>{{p.display_name}}</b><span class="sub" style="display:block;font-size:11px">{{p.service}}</span></td>
+                <td class="th"><span class="mono">{{p.base_url}}</span></td>
+                <td class="ta"><span v-if="!p.configured" class="chip warn" title="This server has no client credentials for the provider">not configured</span><span v-else class="chip ok">ready</span></td>
+                <td class="tx" @click.stop>
+                  <button v-for="cap in p.capabilities" :key="cap" class="btn sm" :disabled="!p.configured || connBusy" @click="connectProvider(p, cap)" :title="'Request only the scopes '+cap+' needs'">Connect · {{cap}}</button>
+                </td>
+              </tr>
+            </table></div>
+          </div>
+
+          <div class="tgroup" v-if="connections.length">
+            <div class="tgh">Connected <span class="tgh-n">{{connections.length}}</span><span class="tgh-hint">health is “does it work”; expiry is “how long will it keep working”</span></div>
+            <div class="ttable-wrap"><table class="ttable">
+              <tr v-for="c in connections" :key="c.id">
+                <td class="tn"><b>{{c.name}}</b><span class="sub" style="display:block;font-size:11px">{{c.resource_ref||'no resource selected'}}</span></td>
+                <td class="th"><span class="mono">{{(c.scopes||[]).length}} scope{{(c.scopes||[]).length===1?'':'s'}}</span></td>
+                <td class="ta">
+                  <span class="chip" :class="c.health==='ok'?'ok':(c.health==='invalid'?'warn':'')">{{c.health}}</span>
+                  <span v-if="c.expiry_state==='expired'" class="chip warn" title="This credential has expired — reconnect">expired</span>
+                  <span v-else-if="c.expiry_state==='expiring'" class="chip warn" :title="'Expires '+c.expires_at">expiring</span>
+                  <span v-if="!c.refreshable" class="chip" title="treg cannot renew this one unattended — it must be reconnected by hand when it expires">manual renew</span>
+                </td>
+                <td class="tx" @click.stop>
+                  <button v-if="c.provider" class="btn sm" @click="openResources(c)" title="Choose which site/property this acts on">Resource</button>
+                  <button class="btn sm ico" :class="{danger:confirmDisc===c.id}" @click="disconnect(c)" :title="confirmDisc===c.id?'Click again to disconnect':'Disconnect'">✕</button>
+                </td>
+              </tr>
+            </table></div>
+          </div>
+
+          <div v-if="resPick" class="modalwrap" @click.self="resPick=null">
+            <div class="modal" style="padding:16px">
+              <h3 style="margin:0 0 10px">Select a resource</h3>
+              <p class="sub" v-if="!resPick.rows.length" style="margin:0 0 10px">Nothing found for this connection.</p>
+              <div class="ttable-wrap" v-else><table class="ttable">
+                <tr v-for="r in resPick.rows" :key="r.id">
+                  <td class="tn"><b>{{r.label||r.id}}</b></td>
+                  <td class="tx"><button class="btn sm" :class="{primary:r.id===resPick.selected}" @click="chooseResource(r)">{{r.id===resPick.selected?'Selected':'Use'}}</button></td>
+                </tr>
+              </table></div>
+              <div style="margin-top:12px;text-align:right"><button class="btn sm" @click="resPick=null">Close</button></div>
+            </div>
+          </div>
+        </template>
+
         <template v-if="view==='tools'">
           <div v-if="orgMsg" class="tut-notice" style="max-width:660px;margin-bottom:14px;display:flex;justify-content:space-between;gap:12px;align-items:flex-start">
             <span>{{orgMsg}}</span><button class="btn sm ico" @click="orgMsg=''" aria-label="Dismiss">✕</button>
@@ -1808,6 +1865,9 @@ createApp({
       newTool:false, toolBusy:false, toolErr:'', confirmDelTool:null, confirmDelSecret:null,
       tForm:{id:null, name:'', base_url:'', bindings:[]},
       addToolMenu:false,  // the ＋ Add tool [endpoint | cli] chooser
+      // Connections: registry OAuth connects (see oauth_providers.py). `providers` is what treg
+      // holds an approved app for; `connections` is what this org has actually connected.
+      providers:[], connections:[], connErr:'', connBusy:false, confirmDisc:null, resPick:null,
       cfgMenu:false,  // detail-page ⚙ Configure tool-picker (skills with >1 tool)
       tryMenu:false,  // detail-page ▶ Try it tool-picker (skills with >1 tool)
       catalogClis:null,  // bin → catalog default deny patterns (lazy, from /providers.json)
@@ -2585,6 +2645,56 @@ createApp({
       if(!this.connected(o.slug)){ this.addOrg=true; return; }
       this.cfg.active=o.slug; this.save(); this.loadAll(); },
     copyStart(text, tag){ navigator.clipboard.writeText(text).then(()=>{ this.startCopied=tag; setTimeout(()=>{ if(this.startCopied===tag) this.startCopied=''; },1400); }).catch(()=>{}); },
+    // ---- connections (registry OAuth) ----
+    async loadConnections(){
+      this.connErr='';
+      try{
+        const [ps, cs]=await Promise.all([
+          fetch('/oauth/providers').then(r=>r.json()).catch(()=>[]),
+          this.api('/connections').catch(()=>[]),
+        ]);
+        this.providers=ps||[]; this.connections=cs||[];
+      }catch(e){ this.connErr=String(e.message||e); }
+    },
+    async connectProvider(p, capability){
+      // Consent happens in a popup so the dashboard keeps its state; we poll for the result
+      // rather than depending on the popup being able to talk back to us.
+      this.connErr=''; this.connBusy=true;
+      try{
+        const d=await this.api('/oauth/start',{method:'POST',headers:{'content-type':'application/json'},
+          body:JSON.stringify({provider:p.service, capability})});
+        const w=window.open(d.consent_url,'treg-connect','width=560,height=720');
+        if(!w){ this.connErr='Popup blocked — allow popups, or open: '+d.consent_url; this.connBusy=false; return; }
+        for(let i=0;i<150;i++){
+          await new Promise(r=>setTimeout(r,2000));
+          let s; try{ s=await this.api('/oauth/status/'+d.state); }catch(e){ continue; }
+          if(s.status==='done'){ try{w.close();}catch(e){} await this.loadConnections(); await this.refresh(); this.connBusy=false; return; }
+          if(s.status==='error'){ this.connErr='Connect failed: '+(s.detail||'unknown'); this.connBusy=false; return; }
+        }
+        this.connErr='Timed out waiting for authorization.';
+      }catch(e){ this.connErr=String(e.message||e); }
+      this.connBusy=false;
+    },
+    async openResources(c){
+      this.connErr='';
+      try{
+        const d=await this.api('/connections/'+c.id+'/resources');
+        this.resPick={id:c.id, rows:d.resources||[], selected:d.selected||''};
+      }catch(e){ this.connErr='Could not list resources: '+String(e.message||e); }
+    },
+    async chooseResource(r){
+      try{
+        await this.api('/connections/'+this.resPick.id+'/resource',{method:'POST',
+          headers:{'content-type':'application/json'}, body:JSON.stringify({resource_ref:r.id})});
+        this.resPick=null; await this.loadConnections();
+      }catch(e){ this.connErr=String(e.message||e); }
+    },
+    async disconnect(c){
+      if(this.confirmDisc!==c.id){ this.confirmDisc=c.id; setTimeout(()=>{ if(this.confirmDisc===c.id) this.confirmDisc=null; },4000); return; }
+      this.confirmDisc=null;
+      try{ await this.api('/connections/'+c.id,{method:'DELETE'}); await this.loadConnections(); await this.refresh(); }
+      catch(e){ this.connErr=String(e.message||e); }
+    },
     copyMd(url){ fetch(url).then(r=>r.text()).then(t=>navigator.clipboard.writeText(t)).catch(()=>{}); },  // copy raw markdown
     openMd(url){ window.open(url,'_blank'); },  // open the .md in a new tab (method, not a template global)
     copyLlms(){ navigator.clipboard.writeText(this.proxy+'/llms.txt').then(()=>{ this.llmsCopied=true; setTimeout(()=>{ this.llmsCopied=false; },1500); }).catch(()=>{}); },
@@ -2651,7 +2761,7 @@ createApp({
       this.go('orgs'); },
     resetConfirms(){ this.confirmDelTool=null; this.confirmDelSecret=null; this.confirmDelBundle=null; this.confirmRemove=null; this.confirmLeave=false; this.confirmDel=''; this.confirmAdmUser=null; this.confirmAdmOrg=null; },
     go(v, fromPop){ this.resetConfirms();  // stale inline "Confirm" states must not survive a view switch (accidental-delete risk)
-      this.detail=null; this.view=v; if(v==='activity')this.loadCalls(); if(v==='admin')this.loadAdmin(); if(v==='orgs'){this.loadOrgAdmin(); this.loadMyUsage();} if(v==='usage')this.loadUsage(); if(v==='secrets')this.loadSecrets();
+      this.detail=null; this.view=v; if(v==='activity')this.loadCalls(); if(v==='admin')this.loadAdmin(); if(v==='orgs'){this.loadOrgAdmin(); this.loadMyUsage();} if(v==='usage')this.loadUsage(); if(v==='secrets')this.loadSecrets(); if(v==='connections')this.loadConnections();
       // push history so browser Back navigates BETWEEN views instead of leaving the app; the '/app'
       // pathname also walks back from a /app/skills/<x> detail URL so reload doesn't reopen the detail
       if(!fromPop) history.pushState({view:v}, '', '/app#'+v); },
@@ -2759,6 +2869,7 @@ createApp({
             || ((this.isPersonal(a)?1:0)-(this.isPersonal(b)?1:0)) );
           this.activeSlug=byTools[0].slug; localStorage.setItem('treg-active',this.activeSlug);
         }
+        this.loadConnections();  // fire-and-forget: connections must never block the tools view
         const [tools, health, bundles]=await Promise.all([this.api('/tools'), this.api('/health').catch(()=>[]), this.api('/bundles').catch(()=>[])]);
         this.tools=tools; this.bundles=bundles||[]; this.health={}; (health||[]).forEach(h=>this.health[h.secret_id]=h.status);
         // isAdmin (super-admin) comes from /auth/me at boot - NOT a /admin/stats probe, which 403s on
