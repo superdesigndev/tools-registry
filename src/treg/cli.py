@@ -2979,7 +2979,15 @@ def cmd_admin_rm_org(args, cfg) -> None:
         _show(c.delete(f"/admin/orgs/{args.org_id}"))
 
 
-def cmd_oauth_connect(args, cfg) -> None:
+def cmd_oauth_providers(args, cfg) -> None:
+    with _client(cfg) as c:
+        _show(c.get("/oauth/providers"))
+
+
+def _byo_body(args) -> dict:
+    """Bring-your-own-app: read the provider's OAuth client JSON off disk."""
+    if not args.name:
+        sys.exit("a name is required when bringing your own client secret")
     try:
         cs = json.loads(Path(args.client_secret).read_text())
     except (OSError, json.JSONDecodeError) as exc:
@@ -2987,9 +2995,23 @@ def cmd_oauth_connect(args, cfg) -> None:
     block = cs.get("installed") or cs.get("web") or cs
     if not isinstance(block, dict) or not block.get("client_id") or not block.get("client_secret"):
         sys.exit("client-secret JSON is missing client_id / client_secret (expected a Google OAuth client file)")
-    body = {"name": args.name, "client_id": block["client_id"], "client_secret": block["client_secret"],
+    return {"name": args.name, "client_id": block["client_id"], "client_secret": block["client_secret"],
             "auth_uri": block.get("auth_uri", "https://accounts.google.com/o/oauth2/auth"),
             "token_uri": block.get("token_uri", "https://oauth2.googleapis.com/token"), "scopes": args.scopes}
+
+
+def cmd_oauth_connect(args, cfg) -> None:
+    if args.provider:  # registry mode — treg's own approved app supplies the credentials
+        body = {"provider": args.provider}
+        if args.name:
+            body["name"] = args.name
+        if args.capability:
+            body["capability"] = args.capability
+    elif args.client_secret:
+        body = _byo_body(args)
+    else:
+        sys.exit("give --provider <service> to use treg's app (see `treg oauth providers`), "
+                 "or --client-secret <file> to bring your own")
     with _client(cfg) as c:
         r = c.post("/oauth/start", json=body)
         if r.status_code != 200:
@@ -3368,13 +3390,22 @@ def build_parser() -> argparse.ArgumentParser:
     he.add_argument("--run", action="store_true", help="run every tool's health check now"); he.set_defaults(fn=cmd_health)
 
     oa = mk(sub, "oauth", "Connect an OAuth credential via the hosted browser-consent flow.",
+            "treg oauth providers",
+            "treg oauth connect --provider google-search-console",
             "treg oauth connect gsc --client-secret ./client_secret.json --scopes https://www.googleapis.com/auth/webmasters.readonly",
             ).add_subparsers(dest="sub", required=True, metavar="<subcommand>")
+    mk(oa, "providers", "List providers treg holds its own OAuth app for.",
+       "treg oauth providers").set_defaults(fn=cmd_oauth_providers)
     oc = mk(oa, "connect", "Mint an auto-refreshed OAuth secret through browser consent.",
-            "treg oauth connect gsc --client-secret ./client_secret.json --scopes <scope> <scope>")
-    oc.add_argument("name", help="a name for the resulting oauth secret")
-    oc.add_argument("--client-secret", required=True, help="path to the OAuth client-secret JSON")
-    oc.add_argument("--scopes", nargs="+", default=[], help="one or more OAuth scopes"); oc.set_defaults(fn=cmd_oauth_connect)
+            "treg oauth connect --provider google-search-console          # treg's app, read scope",
+            "treg oauth connect --provider google-search-console --capability write",
+            "treg oauth connect gsc --client-secret ./client_secret.json --scopes <scope>  # your own app")
+    oc.add_argument("name", nargs="?", help="a name for the resulting oauth secret (default: the provider service)")
+    oc.add_argument("--provider", help="a registry service id — see `treg oauth providers`")
+    oc.add_argument("--capability", help="which scope set to request (default: read)")
+    oc.add_argument("--client-secret", help="path to your own OAuth client-secret JSON (bring-your-own-app)")
+    oc.add_argument("--scopes", nargs="+", default=[], help="one or more OAuth scopes (with --client-secret)")
+    oc.set_defaults(fn=cmd_oauth_connect)
 
     # ---- super-admin ----
     ad = mk(sub, "admin", "Super-admin (cross-tenant): platform-wide view + control.",

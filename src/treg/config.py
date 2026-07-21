@@ -92,6 +92,10 @@ class Settings(BaseSettings):
 
     # Human login via Google OAuth (dashboard sessions). Create a Google "web" OAuth client with an
     # authorized redirect of <public_url>/auth/google/callback; empty disables the Google button.
+    # The SAME client also backs registry connects (oauth_providers.py) — Search Console, Analytics,
+    # Ads, Business Profile — which consent through <public_url>/oauth/callback. Register both
+    # redirect URIs on it. Login asks for openid/email/profile; a connect asks only for the scopes
+    # its capability needs, so the two never share a consent screen.
     google_client_id: str = ""
     google_client_secret: str = ""
     # Overridable for tests; real Google by default.

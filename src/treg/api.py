@@ -42,6 +42,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
 from . import audit, crypto, demo as demo_seed, email as email_sender, health, injectors, localrun, oauth
+from . import oauth_providers
 from . import pubfeed, ratestore, runner, sandbox as demo_sandbox, session as sess
 from .config import get_settings
 from .db import get_session, init_db
@@ -1500,9 +1501,15 @@ class SkillImportIn(BaseModel):
 
 
 class OAuthStartIn(BaseModel):
-    name: str  # the secret name to create on success
-    client_id: str
-    client_secret: str
+    """Two modes. BYO: supply client_id/client_secret/auth_uri/token_uri/scopes yourself.
+    REGISTRY: supply `provider` (+ optional `capability`) and treg fills all of it from its own
+    approved app — see oauth_providers.py."""
+
+    name: str = ""  # the secret name to create on success; defaults to the provider service
+    provider: str | None = None  # registry service id, e.g. "google-search-console"
+    capability: str | None = None  # which scope set to request (default: read)
+    client_id: str = ""
+    client_secret: str = ""
     auth_uri: str = "https://accounts.google.com/o/oauth2/auth"
     token_uri: str = "https://oauth2.googleapis.com/token"
     scopes: list[str] = []
@@ -3365,11 +3372,42 @@ async def list_runs(
 
 
 # ---- OAuth connect flow (Phase C): mint the first token via browser consent --------------
+@app.get("/oauth/providers")
+async def oauth_providers_list() -> list[dict]:
+    """Providers treg holds its own approved app for. `configured` is false when this deployment
+    hasn't set that provider's client credentials — listed, but its flow can't run here."""
+    return oauth_providers.listing()
+
+
 @app.post("/oauth/start")
 async def oauth_start(
     body: OAuthStartIn, caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session)
 ) -> dict:
     _require_can_register(caller)
+    name, client_id, client_secret = body.name, body.client_id, body.client_secret
+    auth_uri, token_uri, scopes = body.auth_uri, body.token_uri, list(body.scopes)
+
+    if body.provider:  # REGISTRY mode — treg's own app supplies everything
+        provider = oauth_providers.get(body.provider)
+        if provider is None:
+            known = ", ".join(sorted(oauth_providers.REGISTRY))
+            raise HTTPException(status_code=404, detail=f"unknown provider {body.provider!r} (known: {known})")
+        capability = body.capability or oauth_providers.DEFAULT_CAPABILITY
+        try:
+            scopes = provider.scopes_for(capability)
+            client_id, client_secret = oauth_providers.credentials(provider)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from None
+        auth_uri, token_uri = provider.auth_uri, provider.token_uri
+        name = name or provider.service
+    elif not (client_id and client_secret):
+        raise HTTPException(
+            status_code=422,
+            detail="supply `provider` for a registry connect, or client_id + client_secret to bring your own app",
+        )
+    if not name:
+        raise HTTPException(status_code=422, detail="name is required")
+
     state = crypto.new_token()
     treg_callback = f"{get_settings().public_url.rstrip('/')}/oauth/callback"
     # The code must come back to treg's OWN callback — a body-supplied redirect_uri pointing elsewhere
@@ -3378,9 +3416,9 @@ async def oauth_start(
         raise HTTPException(status_code=422, detail="redirect_uri must be treg's own /oauth/callback")
     redirect_uri = body.redirect_uri or treg_callback
     pending = PendingOAuth(
-        org_id=caller.org_id, state=state, name=body.name, owner=caller.email,
-        client_id=body.client_id, client_secret=crypto.encrypt(body.client_secret),
-        auth_uri=body.auth_uri, token_uri=body.token_uri, scopes=" ".join(body.scopes),
+        org_id=caller.org_id, state=state, name=name, owner=caller.email,
+        client_id=client_id, client_secret=crypto.encrypt(client_secret),
+        auth_uri=auth_uri, token_uri=token_uri, scopes=" ".join(scopes),
         redirect_uri=redirect_uri,
     )
     db.add(pending)

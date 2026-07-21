@@ -180,7 +180,16 @@ def test_pop_org_flag_missing_value_exits():
 
 
 def test_oauth_connect_missing_file_exits():
-    args = type("A", (), {"client_secret": "/nonexistent/x.json", "name": "g", "scopes": []})()
+    args = type("A", (), {"client_secret": "/nonexistent/x.json", "name": "g", "scopes": [],
+                          "provider": None, "capability": None})()
+    with pytest.raises(SystemExit):
+        cli.cmd_oauth_connect(args, {"base_url": "http://x"})
+
+
+def test_oauth_connect_without_provider_or_client_secret_exits():
+    """Registry mode needs --provider; BYO needs --client-secret. Neither is a usage error."""
+    args = type("A", (), {"client_secret": None, "name": None, "scopes": [],
+                          "provider": None, "capability": None})()
     with pytest.raises(SystemExit):
         cli.cmd_oauth_connect(args, {"base_url": "http://x"})
 
