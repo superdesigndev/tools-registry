@@ -177,16 +177,20 @@ def connection_view(secret: Secret) -> dict:
     """Everything the dashboard/CLI needs about one connection. Returns metadata only — no token
     material — so it is safe to hand to any org member."""
     refreshable = secret_is_refreshable(secret)
+    state = expiry_state(secret.expires_at, refreshable)
     return {
         "id": secret.id,
         "name": secret.name,
         "kind": secret.kind,
         "provider": secret.provider,
+        # The single field a UI or agent should act on: this connection will stop working and
+        # only a human re-consent can fix it.
+        "needs_reconnect": state in ("expiring", "expired"),
         "resource_ref": secret.resource_ref,
         "scopes": secret.granted_scopes.split() if secret.granted_scopes else [],
         "health": secret.health_status,
         "refreshable": refreshable,
-        "expiry_state": expiry_state(secret.expires_at, refreshable),
+        "expiry_state": state,
         "expires_at": secret.expires_at.isoformat() if secret.expires_at else None,
         "last_refresh_at": secret.last_refresh_at.isoformat() if secret.last_refresh_at else None,
         "last_error": secret.last_error,

@@ -731,6 +731,12 @@ th{background:rgba(0,0,0,.25)}
             <div class="tut-actions"><button class="btn sm" @click="loadConnections">Refresh</button></div>
           </div>
           <div v-if="connErr" class="banner" style="margin-top:12px">{{connErr}}</div>
+          <div v-if="staleConns.length" class="banner" style="margin-top:12px">
+            <b>{{staleConns.length}} connection{{staleConns.length===1?'':'s'}} need reconnecting.</b>
+            treg can't renew {{staleConns.length===1?'it':'them'}} automatically — without a fresh consent
+            {{staleConns.length===1?'it':'they'}} will stop working:
+            <span class="mono">{{staleConns.map(c=>c.name).join(', ')}}</span>
+          </div>
 
           <div class="tgroup">
             <div class="tgh">Available <span class="tgh-n">{{providers.length}}</span><span class="tgh-hint">treg holds the approved app — you supply nothing</span></div>
@@ -759,6 +765,7 @@ th{background:rgba(0,0,0,.25)}
                   <span v-if="!c.refreshable" class="chip" title="treg cannot renew this one unattended — it must be reconnected by hand when it expires">manual renew</span>
                 </td>
                 <td class="tx" @click.stop>
+                  <button v-if="c.needs_reconnect && c.provider" class="btn sm primary" @click="reconnect(c)" title="This credential can't be renewed automatically — re-consent to refresh it">Reconnect</button>
                   <button v-if="c.provider" class="btn sm" @click="openResources(c)" title="Choose which site/property this acts on">Resource</button>
                   <button class="btn sm ico" :class="{danger:confirmDisc===c.id}" @click="disconnect(c)" :title="confirmDisc===c.id?'Click again to disconnect':'Disconnect'">✕</button>
                 </td>
@@ -1950,6 +1957,7 @@ createApp({
     recipes(){ const q=this.q.toLowerCase(); const withTool=new Set(this.tools.filter(t=>t.bundle_id!=null).map(t=>t.bundle_id));
       return this.bundles.filter(b=>!withTool.has(b.id) && (!q||b.name.toLowerCase().includes(q))); },
     hasAnyTools(){ return this.endpoints.length||this.skillTools.length||this.recipes.length; },
+    staleConns(){ return (this.connections||[]).filter(c=>c.needs_reconnect); },  // dying credentials treg can't renew itself
     toolGroups(){ return [
       {key:'endpoints', label:'Endpoints/CLI', hint:'APIs and CLIs you registered directly', rows:this.endpoints},
       {key:'skills', label:'Integration Skills', hint:'tools from a skill package (carry a recipe)', rows:this.skillTools},
@@ -2674,6 +2682,13 @@ createApp({
         this.connErr='Timed out waiting for authorization.';
       }catch(e){ this.connErr=String(e.message||e); }
       this.connBusy=false;
+    },
+    async reconnect(c){
+      // Re-run consent for the same provider. The callback rebinds the existing tool to the new
+      // credential, so nothing downstream has to be rewired.
+      const p=this.providers.find(x=>x.service===c.provider);
+      if(!p){ this.connErr='Unknown provider for this connection: '+c.provider; return; }
+      await this.connectProvider(p, (p.capabilities||['read'])[0]);
     },
     async openResources(c){
       this.connErr='';

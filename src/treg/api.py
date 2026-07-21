@@ -3632,18 +3632,9 @@ async def get_health(
     visible = await _visible_secret_ids(caller, db)
     if visible is not None:  # same visibility rule as /secrets — health mustn't leak hidden keys
         rows = [s for s in rows if s.id in visible]
-    return [
-        {
-            "secret_id": s.id,
-            "name": s.name,
-            "owner": s.owner,
-            "kind": s.kind,
-            "status": s.health_status,
-            "detail": s.health_detail,
-            "checked_at": s.health_checked_at.isoformat() if s.health_checked_at else None,
-        }
-        for s in rows
-    ]
+    # health.needs_reconnect rides along so a credential treg cannot renew announces itself BEFORE
+    # it dies. Nothing else surfaces that: it probes green until the moment it stops working.
+    return [{**health._view(s), "needs_reconnect": health.needs_reconnect(s)} for s in rows]
 
 
 # ---- super-admin: cross-tenant read + control (env token OR is_superadmin user) -----------
