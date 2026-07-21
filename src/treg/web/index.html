@@ -756,13 +756,16 @@ th{background:rgba(0,0,0,.25)}
             <div class="tgh">Connected <span class="tgh-n">{{connections.length}}</span><span class="tgh-hint">health is “does it work”; expiry is “how long will it keep working”</span></div>
             <div class="ttable-wrap"><table class="ttable">
               <tr v-for="c in connections" :key="c.id">
-                <td class="tn"><b>{{c.name}}</b><span class="sub" style="display:block;font-size:11px">{{c.resource_ref||'no resource selected'}}</span></td>
+                <td class="tn"><b>{{c.name}}</b><span class="sub" style="display:block;font-size:11px">{{c.resource_ref||'no resource selected'}}</span>
+                  <span v-if="c.extra_credential_note" class="sub" style="display:block;font-size:11px;margin-top:2px">⚠ {{c.extra_credential_note}}</span></td>
                 <td class="th"><span class="mono">{{(c.scopes||[]).length}} scope{{(c.scopes||[]).length===1?'':'s'}}</span></td>
                 <td class="ta">
                   <span class="chip" :class="c.health==='ok'?'ok':(c.health==='invalid'?'warn':'')">{{c.health}}</span>
                   <span v-if="c.expiry_state==='expired'" class="chip warn" title="This credential has expired — reconnect">expired</span>
                   <span v-else-if="c.expiry_state==='expiring'" class="chip warn" :title="'Expires '+c.expires_at">expiring</span>
                   <span v-if="!c.refreshable" class="chip" title="treg cannot renew this one unattended — it must be reconnected by hand when it expires">manual renew</span>
+                  <span v-for="cap in (c.capabilities||[])" :key="cap" class="chip ok">{{cap}}</span>
+                  <span v-for="cap in (c.missing_capabilities||[])" :key="'m'+cap" class="chip" :title="'Not consented to. '+cap+' needs a reconnect — providers never backfill scopes onto an existing grant.'">no {{cap}}</span>
                 </td>
                 <td class="tx" @click.stop>
                   <button v-if="c.needs_reconnect && c.provider" class="btn sm primary" @click="reconnect(c)" title="This credential can't be renewed automatically — re-consent to refresh it">Reconnect</button>

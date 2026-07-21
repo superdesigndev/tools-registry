@@ -39,6 +39,16 @@ class OAuthProvider:
     base_url: str = ""  # upstream API root, so a successful connect can auto-provision the tool
     docs_url: str = ""
 
+    # Per-provider auth quirks. Defaults match Google, which is the common case.
+    auth_params: dict[str, str] | None = None  # extra ?query on the consent URL
+    pkce: bool = False  # S256 challenge/verifier (X requires it)
+    token_endpoint_auth_method: str = "client_secret_post"  # or client_secret_basic (X)
+
+    # Some providers need a SECOND credential alongside the user's OAuth token — Google Ads wants a
+    # developer-token header from an approved MCC. We can't auto-provision a working tool for those,
+    # so we say why instead of creating one that 401s on first use.
+    extra_credential_note: str = ""
+
     # Resource discovery: after consent, which sites/properties/accounts can this credential act on?
     # `discover_path` is relative to base_url; `discover_key` is the JSON list field in the response;
     # `discover_id_field`/`discover_label_field` name the id and human label inside each row.
@@ -52,8 +62,27 @@ class OAuthProvider:
         return sorted(self.scopes)
 
     @property
+    def default_capability(self) -> str:
+        """Prefer the least-privileged capability so a plain connect never over-asks."""
+        return "read" if "read" in self.scopes else self.capabilities[0]
+
+    @property
     def supports_discovery(self) -> bool:
         return bool(self.discover_path and self.base_url)
+
+    @property
+    def can_autoprovision(self) -> bool:
+        """A tool we can build that will actually work with just this credential."""
+        return bool(self.base_url) and not self.extra_credential_note
+
+    def satisfied_capabilities(self, granted: list[str]) -> list[str]:
+        """Which capabilities an existing grant already covers.
+
+        Providers do not backfill scopes onto an issued grant, so adding a capability later means
+        re-consenting. Comparing what was granted against what each capability needs is how we know
+        to prompt for that instead of letting the call fail with an opaque 403."""
+        have = set(granted)
+        return [cap for cap, needed in sorted(self.scopes.items()) if set(needed) <= have]
 
     def scopes_for(self, capability: str) -> list[str]:
         try:
@@ -91,7 +120,99 @@ GOOGLE_SEARCH_CONSOLE = OAuthProvider(
     discover_label_field="siteUrl",
 )
 
-REGISTRY: dict[str, OAuthProvider] = {p.service: p for p in (GOOGLE_SEARCH_CONSOLE,)}
+GOOGLE_ANALYTICS = OAuthProvider(
+    service="google-analytics",
+    display_name="Google Analytics",
+    auth_uri="https://accounts.google.com/o/oauth2/v2/auth",
+    token_uri="https://oauth2.googleapis.com/token",
+    scopes={"read": ["https://www.googleapis.com/auth/analytics.readonly"]},
+    client_id_setting="google_client_id",
+    client_secret_setting="google_client_secret",
+    base_url="https://analyticsdata.googleapis.com",
+    docs_url="https://developers.google.com/analytics/devguides/reporting/data/v1",
+)
+
+GOOGLE_BUSINESS_PROFILE = OAuthProvider(
+    service="google-business-profile",
+    display_name="Google Business Profile",
+    auth_uri="https://accounts.google.com/o/oauth2/v2/auth",
+    token_uri="https://oauth2.googleapis.com/token",
+    # business.manage is NON-SENSITIVE per Google's own console — no scope review. The gate here is
+    # the separate Business Profile API access request, which starts every project at zero quota.
+    scopes={"manage": ["https://www.googleapis.com/auth/business.manage"]},
+    client_id_setting="google_client_id",
+    client_secret_setting="google_client_secret",
+    base_url="https://mybusinessaccountmanagement.googleapis.com",
+    docs_url="https://developers.google.com/my-business",
+    discover_path="/v1/accounts",
+    discover_key="accounts",
+    discover_id_field="name",
+    discover_label_field="accountName",
+)
+
+GOOGLE_ADS = OAuthProvider(
+    service="google-ads",
+    display_name="Google Ads",
+    auth_uri="https://accounts.google.com/o/oauth2/v2/auth",
+    token_uri="https://oauth2.googleapis.com/token",
+    scopes={"manage": ["https://www.googleapis.com/auth/adwords"]},
+    client_id_setting="google_client_id",
+    client_secret_setting="google_client_secret",
+    base_url="https://googleads.googleapis.com",
+    docs_url="https://developers.google.com/google-ads/api/docs/start",
+    # Every Ads request carries TWO credentials: the user's OAuth bearer AND a `developer-token`
+    # header from an approved manager (MCC) account, usually with `login-customer-id` as well.
+    # Auto-provisioning a bearer-only tool would produce something that 401s on first use, so we
+    # connect the credential and let the operator bind the developer token deliberately.
+    extra_credential_note=(
+        "Google Ads also needs a `developer-token` header from your approved MCC (and usually "
+        "`login-customer-id`). Store the developer token as a secret and add it as a second "
+        "binding on the tool."
+    ),
+)
+
+SLACK = OAuthProvider(
+    service="slack",
+    display_name="Slack",
+    auth_uri="https://slack.com/oauth/v2/authorize",
+    token_uri="https://slack.com/api/oauth.v2.access",
+    scopes={
+        "read": ["channels:read", "channels:history", "users:read"],
+        "write": ["channels:read", "chat:write"],
+    },
+    client_id_setting="slack_client_id",
+    client_secret_setting="slack_client_secret",
+    base_url="https://slack.com/api",
+    docs_url="https://api.slack.com/web",
+    auth_params={},  # Slack rejects Google's access_type/prompt params
+)
+
+X = OAuthProvider(
+    service="x",
+    display_name="X (Twitter)",
+    auth_uri="https://x.com/i/oauth2/authorize",
+    token_uri="https://api.x.com/2/oauth2/token",
+    # offline.access is what makes the credential auto-refreshable; without it every connection
+    # becomes a manual-reconnect chore in ~2 hours.
+    scopes={
+        "read": ["tweet.read", "users.read", "offline.access"],
+        "write": ["tweet.read", "tweet.write", "users.read", "offline.access"],
+    },
+    client_id_setting="x_client_id",
+    client_secret_setting="x_client_secret",
+    base_url="https://api.x.com",
+    docs_url="https://docs.x.com/x-api",
+    pkce=True,  # X rejects an authorization code exchanged without a verifier
+    token_endpoint_auth_method="client_secret_basic",  # and rejects the secret in the body
+    auth_params={},
+)
+
+REGISTRY: dict[str, OAuthProvider] = {
+    p.service: p
+    for p in (
+        GOOGLE_SEARCH_CONSOLE, GOOGLE_ANALYTICS, GOOGLE_BUSINESS_PROFILE, GOOGLE_ADS, SLACK, X,
+    )
+}
 
 DEFAULT_CAPABILITY = "read"
 

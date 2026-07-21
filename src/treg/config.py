@@ -98,6 +98,13 @@ class Settings(BaseSettings):
     # its capability needs, so the two never share a consent screen.
     google_client_id: str = ""
     google_client_secret: str = ""
+    # Registry OAuth apps for the non-Google providers (oauth_providers.py). Empty = that provider
+    # is listed as unconfigured rather than failing part-way through a consent.
+    slack_client_id: str = ""
+    slack_client_secret: str = ""
+    x_client_id: str = ""
+    x_client_secret: str = ""
+
     # Overridable for tests; real Google by default.
     google_authorize_url: str = "https://accounts.google.com/o/oauth2/v2/auth"
     google_token_url: str = "https://oauth2.googleapis.com/token"

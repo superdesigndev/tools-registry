@@ -205,6 +205,12 @@ class PendingOAuth(SQLModel, table=True):
     # The registry service this connect came from ("" for a bring-your-own-app connect). Carried
     # through the redirect so the callback knows which provider's tool to auto-provision.
     provider: str = Field(default="")
+    # Per-provider auth quirks, captured at start so the callback exchanges the code the same way
+    # the consent URL was built. `code_verifier` is PKCE (empty = not used); `auth_params` is a JSON
+    # object of extra consent-URL query params.
+    code_verifier: str = Field(default="")
+    auth_params: str = Field(default="")
+    token_endpoint_auth_method: str = Field(default="client_secret_post")
     status: str = Field(default="pending")  # pending | done | error
     secret_id: int | None = Field(default=None)
     detail: str = Field(default="")

@@ -10,6 +10,8 @@ lock per secret id prevents a refresh stampede when many calls hit an expired to
 from __future__ import annotations
 
 import asyncio
+import base64
+import hashlib
 import json
 import time
 from collections import defaultdict
@@ -83,34 +85,50 @@ async def refresh(blob: dict, client: httpx.AsyncClient) -> dict:
 
 
 # ---- connect flow (Phase C): mint the first token via browser consent --------------------
+def pkce_challenge(verifier: str) -> str:
+    """S256 challenge for a PKCE verifier (base64url, no padding)."""
+    digest = hashlib.sha256(verifier.encode()).digest()
+    return base64.urlsafe_b64encode(digest).decode().rstrip("=")
+
+
 def consent_url(p: PendingOAuth) -> str:
-    """The provider consent URL the user opens. access_type=offline + prompt=consent ensure a
-    refresh_token comes back, so the credential lands in auto-refresh mode."""
+    """The provider consent URL the user opens.
+
+    access_type=offline + prompt=consent are Google's way of guaranteeing a refresh_token, so the
+    credential lands in auto-refresh mode. Providers that want different parameters carry them on
+    the registry entry (`auth_params`), which replaces these defaults entirely."""
     q = {
         "client_id": p.client_id,
         "redirect_uri": p.redirect_uri,
         "response_type": "code",
         "scope": p.scopes,
-        "access_type": "offline",
-        "prompt": "consent",
         "state": p.state,
     }
+    q.update(json.loads(p.auth_params) if p.auth_params else {"access_type": "offline", "prompt": "consent"})
+    if p.code_verifier:  # PKCE — X rejects an authorization code exchanged without it
+        q["code_challenge"] = pkce_challenge(p.code_verifier)
+        q["code_challenge_method"] = "S256"
     return f"{p.auth_uri}?{urlencode(q)}"
 
 
 async def exchange_code(p: PendingOAuth, code: str, client: httpx.AsyncClient) -> dict:
     """Trade the authorization code for tokens; return a self-refreshable oauth blob."""
     client_secret = crypto.decrypt(p.client_secret)
-    resp = await client.post(
-        p.token_uri,
-        data={
-            "code": code,
-            "client_id": p.client_id,
-            "client_secret": client_secret,
-            "redirect_uri": p.redirect_uri,
-            "grant_type": "authorization_code",
-        },
-    )
+    data = {
+        "code": code,
+        "client_id": p.client_id,
+        "redirect_uri": p.redirect_uri,
+        "grant_type": "authorization_code",
+    }
+    if p.code_verifier:
+        data["code_verifier"] = p.code_verifier
+    kwargs: dict = {}
+    if p.token_endpoint_auth_method == "client_secret_basic":
+        # X's confidential clients REQUIRE HTTP Basic; sending the secret in the body is rejected.
+        kwargs["auth"] = (p.client_id, client_secret)
+    else:
+        data["client_secret"] = client_secret
+    resp = await client.post(p.token_uri, data=data, **kwargs)
     resp.raise_for_status()
     tok = resp.json()
     access = tok.get("access_token")

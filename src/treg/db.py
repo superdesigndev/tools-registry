@@ -168,8 +168,18 @@ def _migrate_to_orgs(conn) -> None:
 
     # (A17) additive: pendingoauth.provider — carried through the redirect so the callback knows
     # which registry provider to attribute the credential to and auto-provision a tool for.
-    if "pendingoauth" in tables and "provider" not in {c["name"] for c in insp.get_columns("pendingoauth")}:
-        conn.execute(text("ALTER TABLE pendingoauth ADD COLUMN provider VARCHAR NOT NULL DEFAULT ''"))
+    if "pendingoauth" in tables:
+        cols = {c["name"] for c in insp.get_columns("pendingoauth")}
+        for col, ddl in (
+            ("provider", "VARCHAR NOT NULL DEFAULT ''"),
+            # (A18) per-provider auth quirks captured at start, so the callback exchanges the code
+            # exactly the way the consent URL was built (PKCE verifier, basic vs post, extra params).
+            ("code_verifier", "VARCHAR NOT NULL DEFAULT ''"),
+            ("auth_params", "VARCHAR NOT NULL DEFAULT ''"),
+            ("token_endpoint_auth_method", "VARCHAR NOT NULL DEFAULT 'client_secret_post'"),
+        ):
+            if col not in cols:
+                conn.execute(text(f"ALTER TABLE pendingoauth ADD COLUMN {col} {ddl}"))
 
     # (B) legacy backfill — guarded
     if "org" not in tables:

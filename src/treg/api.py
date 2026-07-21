@@ -3414,13 +3414,14 @@ async def oauth_start(
     _require_can_register(caller)
     name, client_id, client_secret = body.name, body.client_id, body.client_secret
     auth_uri, token_uri, scopes = body.auth_uri, body.token_uri, list(body.scopes)
+    code_verifier, auth_params, auth_method = "", "", "client_secret_post"
 
     if body.provider:  # REGISTRY mode — treg's own app supplies everything
         provider = oauth_providers.get(body.provider)
         if provider is None:
             known = ", ".join(sorted(oauth_providers.REGISTRY))
             raise HTTPException(status_code=404, detail=f"unknown provider {body.provider!r} (known: {known})")
-        capability = body.capability or oauth_providers.DEFAULT_CAPABILITY
+        capability = body.capability or provider.default_capability
         try:
             scopes = provider.scopes_for(capability)
             client_id, client_secret = oauth_providers.credentials(provider)
@@ -3428,6 +3429,11 @@ async def oauth_start(
             raise HTTPException(status_code=422, detail=str(exc)) from None
         auth_uri, token_uri = provider.auth_uri, provider.token_uri
         name = name or provider.service
+        auth_method = provider.token_endpoint_auth_method
+        if provider.auth_params is not None:
+            auth_params = json.dumps(provider.auth_params)
+        if provider.pkce:
+            code_verifier = crypto.new_token()
     elif not (client_id and client_secret):
         raise HTTPException(
             status_code=422,
@@ -3448,6 +3454,7 @@ async def oauth_start(
         client_id=client_id, client_secret=crypto.encrypt(client_secret),
         auth_uri=auth_uri, token_uri=token_uri, scopes=" ".join(scopes),
         redirect_uri=redirect_uri, provider=body.provider or "",
+        code_verifier=code_verifier, auth_params=auth_params, token_endpoint_auth_method=auth_method,
     )
     db.add(pending)
     await db.commit()
@@ -3492,7 +3499,7 @@ async def oauth_callback(
         # A connect that yields no callable tool is a dead end — the user consented and got
         # nothing. Auto-provision the provider's tool bound to this credential so the very next
         # thing they can do is make a real proxied call.
-        if provider and provider.base_url:
+        if provider and provider.can_autoprovision:
             await _autoprovision_provider_tool(provider, secret, pending, db)
         pending.status, pending.secret_id, pending.detail = "done", secret.id, "connected"
         await db.commit()
@@ -3514,7 +3521,20 @@ async def list_connections(
             select(Secret).where(Secret.org_id == caller.org_id, Secret.kind == "oauth")
         )
     ).scalars().all()
-    out = [oauth.connection_view(s) for s in rows]
+    out = []
+    for s in rows:
+        view = oauth.connection_view(s)
+        provider = oauth_providers.get(s.provider) if s.provider else None
+        if provider is not None:
+            granted = s.granted_scopes.split()
+            have = provider.satisfied_capabilities(granted)
+            view["capabilities"] = have
+            # Providers don't backfill scopes onto an issued grant, so a capability the user never
+            # consented to can only be added by re-consenting. Naming the gap here is what turns an
+            # opaque upstream 403 into "reconnect to enable write".
+            view["missing_capabilities"] = [c for c in provider.capabilities if c not in have]
+            view["extra_credential_note"] = provider.extra_credential_note
+        out.append(view)
     out.sort(key=lambda c: (c["provider"] or "~", c["name"]))
     return out
 
