@@ -251,6 +251,8 @@ def listing() -> list[dict]:
             "service": p.service,
             "display_name": p.display_name,
             "capabilities": p.capabilities,
+            "default_capability": p.default_capability,
+            "extra_credential_note": p.extra_credential_note,
             "base_url": p.base_url,
             "docs_url": p.docs_url,
             "configured": is_configured(p),

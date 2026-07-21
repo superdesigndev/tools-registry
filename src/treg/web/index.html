@@ -746,7 +746,8 @@ th{background:rgba(0,0,0,.25)}
                 <td class="th"><span class="mono">{{p.base_url}}</span></td>
                 <td class="ta"><span v-if="!p.configured" class="chip warn" title="This server has no client credentials for the provider">not configured</span><span v-else class="chip ok">ready</span></td>
                 <td class="tx" @click.stop>
-                  <button v-for="cap in p.capabilities" :key="cap" class="btn sm" :disabled="!p.configured || connBusy" @click="connectProvider(p, cap)" :title="'Request only the scopes '+cap+' needs'">Connect · {{cap}}</button>
+                  <button class="btn sm primary" :disabled="!p.configured || connBusy" @click="connectProvider(p, p.default_capability)"
+                          :title="'Asks only for what '+p.default_capability+' needs. You can add more later without reconnecting from scratch.'">Connect</button>
                 </td>
               </tr>
             </table></div>
@@ -769,6 +770,8 @@ th{background:rgba(0,0,0,.25)}
                 </td>
                 <td class="tx" @click.stop>
                   <button v-if="c.needs_reconnect && c.provider" class="btn sm primary" @click="reconnect(c)" title="This credential can't be renewed automatically — re-consent to refresh it">Reconnect</button>
+                  <button v-for="cap in (c.missing_capabilities||[])" :key="'e'+cap" class="btn sm" @click="enableCapability(c, cap)"
+                          :title="'Grant '+cap+'. Providers never add scopes to an existing grant, so this re-runs consent.'">Enable {{cap}}</button>
                   <button v-if="c.provider" class="btn sm" @click="openResources(c)" title="Choose which site/property this acts on">Resource</button>
                   <button class="btn sm ico" :class="{danger:confirmDisc===c.id}" @click="disconnect(c)" :title="confirmDisc===c.id?'Click again to disconnect':'Disconnect'">✕</button>
                 </td>
@@ -2679,12 +2682,20 @@ createApp({
         for(let i=0;i<150;i++){
           await new Promise(r=>setTimeout(r,2000));
           let s; try{ s=await this.api('/oauth/status/'+d.state); }catch(e){ continue; }
-          if(s.status==='done'){ try{w.close();}catch(e){} await this.loadConnections(); await this.refresh(); this.connBusy=false; return; }
+          if(s.status==='done'){ try{w.close();}catch(e){} await this.loadConnections(); await this.loadAll(); this.connBusy=false; return; }
           if(s.status==='error'){ this.connErr='Connect failed: '+(s.detail||'unknown'); this.connBusy=false; return; }
         }
         this.connErr='Timed out waiting for authorization.';
       }catch(e){ this.connErr=String(e.message||e); }
       this.connBusy=false;
+    },
+    async enableCapability(c, cap){
+      // Providers never backfill scopes onto an issued grant, so widening access means re-running
+      // consent for the bigger scope set. The callback rebinds the existing tool, so nothing
+      // downstream is rewired — the user just sees the new capability appear.
+      const p=this.providers.find(x=>x.service===c.provider);
+      if(!p){ this.connErr='Unknown provider for this connection: '+c.provider; return; }
+      await this.connectProvider(p, cap);
     },
     async reconnect(c){
       // Re-run consent for the same provider. The callback rebinds the existing tool to the new
@@ -2710,7 +2721,7 @@ createApp({
     async disconnect(c){
       if(this.confirmDisc!==c.id){ this.confirmDisc=c.id; setTimeout(()=>{ if(this.confirmDisc===c.id) this.confirmDisc=null; },4000); return; }
       this.confirmDisc=null;
-      try{ await this.api('/connections/'+c.id,{method:'DELETE'}); await this.loadConnections(); await this.refresh(); }
+      try{ await this.api('/connections/'+c.id,{method:'DELETE'}); await this.loadConnections(); await this.loadAll(); }
       catch(e){ this.connErr=String(e.message||e); }
     },
     copyMd(url){ fetch(url).then(r=>r.text()).then(t=>navigator.clipboard.writeText(t)).catch(()=>{}); },  // copy raw markdown
