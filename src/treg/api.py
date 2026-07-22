@@ -3585,6 +3585,13 @@ async def connection_resources(
             status_code=502,
             detail=f"could not list {provider.resource_plural} ({resp.status_code}): {upstream}".strip(),
         )
+    # A successful discovery call is a real authenticated request to the upstream — the strongest
+    # evidence we get that this credential works. Recording it turns the connection's health from
+    # "unknown" into something earned, instead of waiting for the next health sweep.
+    if secret.health_status != "ok":
+        secret.health_status, secret.health_detail = "ok", "listed upstream resources"
+        secret.health_checked_at = _utcnow_naive()
+        await db.commit()
     rows = resp.json().get(provider.discover_key) or []
     if provider.discover_nested_key:  # e.g. GA4 properties nested inside each account summary
         rows = [n for r in rows if isinstance(r, dict) for n in (r.get(provider.discover_nested_key) or [])]
@@ -3603,6 +3610,7 @@ async def connection_resources(
 
 class ResourceRefIn(BaseModel):
     resource_ref: str
+    resource_name: str = ""  # the human label, so the UI never has to show "properties/384078430"
 
 
 @app.post("/connections/{secret_id}/resource")
@@ -3612,6 +3620,7 @@ async def set_connection_resource(
 ) -> dict:
     secret = await _owned_connection(secret_id, caller, db)
     secret.resource_ref = body.resource_ref
+    secret.resource_name = body.resource_name
     await db.commit()
     await db.refresh(secret)
     return oauth.connection_view(secret)

@@ -240,6 +240,9 @@ class Secret(SQLModel, table=True):
     provider: str = Field(default="", index=True)
     granted_scopes: str = Field(default="")  # space-joined; what the user ACTUALLY consented to
     resource_ref: str = Field(default="")  # the chosen site / property / account this connection acts on
+    # The human name for that ref. Upstream ids are opaque ("properties/384078430"); showing one to
+    # a user tells them nothing about which site they picked, so the label is stored alongside it.
+    resource_name: str = Field(default="")
 
     # Expiry is a SEPARATE axis from health_status. health answers "does this credential work";
     # expiry answers "how long will it keep working". A non-refreshable token (LinkedIn issues no

@@ -757,11 +757,14 @@ th{background:rgba(0,0,0,.25)}
             <div class="tgh">Connected <span class="tgh-n">{{connections.length}}</span><span class="tgh-hint">health is “does it work”; expiry is “how long will it keep working”</span></div>
             <div class="ttable-wrap"><table class="ttable">
               <tr v-for="c in connections" :key="c.id">
-                <td class="tn"><b>{{c.name}}</b><span class="sub" style="display:block;font-size:11px">{{c.resource_ref || (connProvider(c) && connProvider(c).supports_discovery ? 'no '+connProvider(c).resource_label+' chosen yet' : 'whole account')}}</span>
+                <td class="tn"><b>{{c.name}}</b><span class="sub" style="display:block;font-size:11px" :title="c.resource_ref">{{c.resource_name || c.resource_ref || (connProvider(c) && connProvider(c).supports_discovery ? 'no '+connProvider(c).resource_label+' chosen yet' : 'whole account')}}</span>
                   <span v-if="c.extra_credential_note" class="sub" style="display:block;font-size:11px;margin-top:2px">⚠ {{c.extra_credential_note}}</span></td>
                 <td class="th"><span class="mono">{{(c.scopes||[]).length}} scope{{(c.scopes||[]).length===1?'':'s'}}</span></td>
                 <td class="ta">
-                  <span class="chip" :class="c.health==='ok'?'ok':(c.health==='invalid'?'warn':'')">{{c.health}}</span>
+                  <!-- "unknown" just means nothing has called upstream yet — it reads as a problem
+                       and isn't one, so only show a verdict we actually have. -->
+                  <span v-if="c.health==='ok'" class="chip ok" title="A real upstream call succeeded with this credential">working</span>
+                  <span v-else-if="c.health==='invalid'" class="chip warn" :title="c.last_error||'The last upstream call failed'">failing</span>
                   <span v-if="c.expiry_state==='expired'" class="chip warn" title="This credential has expired — reconnect">expired</span>
                   <span v-else-if="c.expiry_state==='expiring'" class="chip warn" :title="'Expires '+c.expires_at">expiring</span>
                   <span v-if="!c.refreshable" class="chip" title="treg cannot renew this one unattended — it must be reconnected by hand when it expires">manual renew</span>
@@ -787,8 +790,8 @@ th{background:rgba(0,0,0,.25)}
               <p class="sub" v-if="!resPick.rows.length" style="margin:0 0 10px">No {{resPick.plural}} found — this Google account may not have access to any.</p>
               <div class="ttable-wrap" v-else><table class="ttable">
                 <tr v-for="r in resPick.rows" :key="r.id">
-                  <td class="tn"><b>{{r.label||r.id}}</b></td>
-                  <td class="tx"><button class="btn sm" :class="{primary:r.id===resPick.selected}" @click="chooseResource(r)">{{r.id===resPick.selected?'Selected':'Use'}}</button></td>
+                  <td class="tn"><b>{{r.label||r.id}}</b><span class="sub" style="display:block;font-size:11px">{{r.id}}</span></td>
+                  <td class="tx"><button class="btn sm" :class="{primary:r.id===resPick.selected}" @click="chooseResource(r)">{{r.id===resPick.selected?'✓ Current':'Use this'}}</button></td>
                 </tr>
               </table></div>
               <div style="margin-top:12px;text-align:right"><button class="btn sm" @click="resPick=null">Close</button></div>
@@ -2684,7 +2687,16 @@ createApp({
         for(let i=0;i<150;i++){
           await new Promise(r=>setTimeout(r,2000));
           let s; try{ s=await this.api('/oauth/status/'+d.state); }catch(e){ continue; }
-          if(s.status==='done'){ try{w.close();}catch(e){} await this.loadConnections(); await this.loadAll(); this.connBusy=false; return; }
+          if(s.status==='done'){
+            try{w.close();}catch(e){}
+            await this.loadConnections(); await this.loadAll(); this.connBusy=false;
+            // Connecting is only half the job — a connection with no target can't be used. If this
+            // provider has something to choose between, ask straight away rather than leaving the
+            // user staring at a row that looks finished but isn't.
+            const fresh=(this.connections||[]).find(c=>c.id===s.secret_id);
+            if(fresh && p.supports_discovery && !fresh.resource_ref) await this.openResources(fresh);
+            return;
+          }
           if(s.status==='error'){ this.connErr='Connect failed: '+(s.detail||'unknown'); this.connBusy=false; return; }
         }
         this.connErr='Timed out waiting for authorization.';
@@ -2721,7 +2733,8 @@ createApp({
     async chooseResource(r){
       try{
         await this.api('/connections/'+this.resPick.id+'/resource',{method:'POST',
-          headers:{'content-type':'application/json'}, body:JSON.stringify({resource_ref:r.id})});
+          headers:{'content-type':'application/json'},
+          body:JSON.stringify({resource_ref:r.id, resource_name:r.label||''})});
         this.resPick=null; await this.loadConnections();
       }catch(e){ this.connErr=String(e.message||e); }
     },

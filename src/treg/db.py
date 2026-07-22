@@ -159,6 +159,7 @@ def _migrate_to_orgs(conn) -> None:
             ("provider", "VARCHAR NOT NULL DEFAULT ''"),
             ("granted_scopes", "VARCHAR NOT NULL DEFAULT ''"),
             ("resource_ref", "VARCHAR NOT NULL DEFAULT ''"),
+            ("resource_name", "VARCHAR NOT NULL DEFAULT ''"),
             ("expires_at", "TIMESTAMP"),
             ("last_refresh_at", "TIMESTAMP"),
             ("last_error", "VARCHAR NOT NULL DEFAULT ''"),

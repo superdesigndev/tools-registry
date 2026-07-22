@@ -144,3 +144,19 @@ async def test_another_orgs_connection_is_not_reachable(clients: AsyncClient):
     hdr = {"X-Treg-Token": other.json()["token"]}
     r = await clients.get(f"/connections/{st['secret_id']}/resources", headers=hdr)
     assert r.status_code == 404
+
+
+# ---- the chosen resource must be human-readable -------------------------------------------
+async def test_selecting_a_resource_stores_its_readable_name(clients: AsyncClient, treg_google_app):
+    """Upstream ids are opaque ("properties/384078430"). Showing one to a user says nothing about
+    which property they picked, so the label is stored next to the ref."""
+    st = await _connect_byo(clients, provider="google-search-console", name="google-search-console")
+    sid = st["secret_id"]
+    r = await clients.post(f"/connections/{sid}/resource", json={
+        "resource_ref": "properties/384078430", "resource_name": "ai-jason.com",
+    })
+    assert r.status_code == 200
+    assert r.json()["resource_name"] == "ai-jason.com"
+    conns = {c["id"]: c for c in (await clients.get("/connections")).json()}
+    assert conns[sid]["resource_name"] == "ai-jason.com"
+    assert conns[sid]["resource_ref"] == "properties/384078430"  # the id is still what we call with

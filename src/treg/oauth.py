@@ -201,6 +201,7 @@ def connection_view(secret: Secret) -> dict:
         "name": secret.name,
         "kind": secret.kind,
         "provider": secret.provider,
+        "resource_name": secret.resource_name,
         # The single field a UI or agent should act on: this connection will stop working and
         # only a human re-consent can fix it.
         "needs_reconnect": state in ("expiring", "expired"),
