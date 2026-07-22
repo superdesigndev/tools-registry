@@ -51,10 +51,24 @@ class OAuthProvider:
     extra_credential_note: str = ""
     extra_credential_label: str = ""  # what to call it in the UI, e.g. "Developer token"
     extra_credential_header: str = ""  # the header it's injected as, e.g. "developer-token"
+    # Settings attribute holding TREG's own value for it. When set, users supply nothing and the
+    # tool is provisioned with a platform binding; the per-user prompt is only the fallback.
+    extra_credential_setting: str = ""
 
     @property
     def needs_extra_credential(self) -> bool:
         return bool(self.extra_credential_header)
+
+    @property
+    def platform_extra_credential(self) -> str:
+        """treg's own value for the second credential, if this deployment has one."""
+        if not self.extra_credential_setting:
+            return ""
+        return getattr(get_settings(), self.extra_credential_setting, "") or ""
+
+    @property
+    def extra_credential_is_platform(self) -> bool:
+        return bool(self.platform_extra_credential)
 
     # Resource discovery: after consent, which sites/properties/accounts can this credential act on?
     # `resource_label` is what the thing is CALLED to a human — "site", "property", "account".
@@ -95,7 +109,9 @@ class OAuthProvider:
     @property
     def can_autoprovision(self) -> bool:
         """A tool we can build that will actually work with just this credential."""
-        return bool(self.base_url) and not self.needs_extra_credential
+        return bool(self.base_url) and (
+            not self.needs_extra_credential or self.extra_credential_is_platform
+        )
 
     def satisfied_capabilities(self, granted: list[str]) -> list[str]:
         """Which capabilities an existing grant already covers.
@@ -205,6 +221,12 @@ GOOGLE_ADS = OAuthProvider(
     ),
     extra_credential_label="Developer token",
     extra_credential_header="developer-token",
+    extra_credential_setting="google_ads_developer_token",
+    # Which ad account should this connection act on? listAccessibleCustomers returns the accounts
+    # the CONNECTED USER can reach — never ours.
+    resource_label="account",
+    discover_path="/v21/customers:listAccessibleCustomers",
+    discover_key="resourceNames",
 )
 
 SLACK = OAuthProvider(

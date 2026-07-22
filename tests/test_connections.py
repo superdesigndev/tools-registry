@@ -240,3 +240,49 @@ async def test_revoke_keeps_a_user_built_tool_but_drops_the_dead_binding(clients
     await clients.delete(f"/connections/{sid}")
     tool = _mine((await clients.get("/tools")).json())
     assert [b["secret_id"] for b in tool["bindings"]] == [other["id"]], "keeps the surviving credential"
+
+
+# ---- treg's own credentials, not the user's ------------------------------------------------
+async def test_platform_credential_is_bound_from_settings_not_an_org_secret(
+    clients: AsyncClient, treg_google_app, monkeypatch
+):
+    """Google Ads needs a developer token that takes WEEKS of Google approval to obtain. Making
+    each user supply their own would defeat the point of a hosted registry — so treg supplies it,
+    and it must never land in the tenant's secret store where they could read or extract it."""
+    from treg import oauth_providers as P
+    from treg.config import get_settings
+
+    monkeypatch.setenv("TREG_GOOGLE_ADS_DEVELOPER_TOKEN", "treg-dev-token")
+    get_settings.cache_clear()
+    try:
+        assert P.GOOGLE_ADS.can_autoprovision, "with treg's token, Ads needs nothing from the user"
+        await _connect_byo(clients, provider="google-ads", name="google-ads")
+
+        tool = next(t for t in (await clients.get("/tools")).json() if t["name"] == "google-ads")
+        by_name = {b["name"]: b for b in tool["bindings"]}
+        assert by_name["Authorization"]["secret_id"], "the user's OAuth is still per-org"
+        dev = by_name["developer-token"]
+        assert dev.get("platform_setting") == "google_ads_developer_token"
+        assert "secret_id" not in dev or dev["secret_id"] is None
+
+        names = [s["name"] for s in (await clients.get("/secrets")).json()]
+        assert not any("developer-token" in n for n in names), \
+            "treg's credential must not be copied into the org's secrets"
+    finally:
+        get_settings.cache_clear()
+
+
+async def test_without_a_platform_token_the_user_is_asked(clients: AsyncClient, treg_google_app, monkeypatch):
+    """A self-hosted deployment with no developer token of its own falls back to prompting."""
+    from treg import oauth_providers as P
+    from treg.config import get_settings
+
+    monkeypatch.setenv("TREG_GOOGLE_ADS_DEVELOPER_TOKEN", "")
+    get_settings.cache_clear()
+    try:
+        assert P.GOOGLE_ADS.can_autoprovision is False
+        st = await _connect_byo(clients, provider="google-ads", name="google-ads")
+        conn = {c["id"]: c for c in (await clients.get("/connections")).json()}[st["secret_id"]]
+        assert conn["needs_extra_credential"] is True
+    finally:
+        get_settings.cache_clear()

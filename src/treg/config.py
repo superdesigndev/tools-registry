@@ -100,6 +100,12 @@ class Settings(BaseSettings):
     google_client_secret: str = ""
     # Registry OAuth apps for the non-Google providers (oauth_providers.py). Empty = that provider
     # is listed as unconfigured rather than failing part-way through a consent.
+    # treg's own Google Ads developer token, from OUR approved manager account. Ads needs it on
+    # every call ALONGSIDE the user's OAuth — it identifies the calling application, not the user,
+    # and grants no access to our ad accounts. Holding it centrally is the whole point: a user
+    # would otherwise wait weeks for Google to approve one of their own.
+    google_ads_developer_token: str = ""
+
     slack_client_id: str = ""
     slack_client_secret: str = ""
     x_client_id: str = ""

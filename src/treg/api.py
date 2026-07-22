@@ -3384,19 +3384,27 @@ async def _autoprovision_provider_tool(
             select(Tool).where(Tool.org_id == secret.org_id, Tool.name == provider.service)
         )
     ).scalars().first()
-    binding = {
+    bindings = [{
         "secret_id": secret.id, "injector": "oauth", "location": "header",
         "name": "Authorization", "format": "Bearer {secret}", "secret_field": "access_token",
-    }
+    }]
+    # A provider needing a second credential that TREG holds (Google Ads' developer token) gets it
+    # as a platform binding — read from settings at call time, never copied into the org's secrets.
+    # This is the point of the registry: the user waits weeks for their own, or uses ours instantly.
+    if provider.needs_extra_credential and provider.extra_credential_is_platform:
+        bindings.append({
+            "platform_setting": provider.extra_credential_setting, "injector": "env",
+            "location": "header", "name": provider.extra_credential_header, "format": "{secret}",
+        })
     if existing is not None:
-        existing.bindings = [binding]
+        existing.bindings = bindings
         existing.base_url = provider.base_url
         existing.host = _host_of(provider.base_url)
         return
     db.add(Tool(
         org_id=secret.org_id, name=provider.service, owner=pending.owner,
         base_url=provider.base_url, host=_host_of(provider.base_url),
-        bindings=[binding],
+        bindings=bindings,
     ))
 
 
@@ -3533,11 +3541,12 @@ async def list_connections(
             # consented to can only be added by re-consenting. Naming the gap here is what turns an
             # opaque upstream 403 into "reconnect to enable write".
             view["missing_capabilities"] = [c for c in provider.capabilities if c not in have]
-            view["extra_credential_note"] = provider.extra_credential_note
+            if not provider.extra_credential_is_platform:
+                view["extra_credential_note"] = provider.extra_credential_note
             view["extra_credential_label"] = provider.extra_credential_label
             # Outstanding only while no tool exists for this provider — once one does, the second
             # credential has been supplied and the connection is callable.
-            if provider.needs_extra_credential:
+            if provider.needs_extra_credential and not provider.extra_credential_is_platform:
                 built = (await db.execute(
                     select(Tool).where(Tool.org_id == caller.org_id, Tool.name == provider.service)
                 )).scalars().first()
@@ -3577,9 +3586,12 @@ async def connection_resources(
     await oauth.ensure_fresh(secret, db, request.app.state.http)
     blob = json.loads(crypto.decrypt(secret.value))
     token = blob.get("access_token") or blob.get("token")
+    disc_headers = {"Authorization": f"Bearer {token}"}
+    if provider.needs_extra_credential:  # Ads won't list accounts without the developer token
+        disc_headers[provider.extra_credential_header] = provider.platform_extra_credential
     resp = await request.app.state.http.get(
         f"{provider.discovery_base.rstrip('/')}{provider.discover_path}",
-        headers={"Authorization": f"Bearer {token}"},
+        headers=disc_headers,
     )
     if resp.status_code >= 400:
         # Pass the upstream's own words through. "discovery failed (403)" sends the user hunting;
@@ -3605,8 +3617,12 @@ async def connection_resources(
         rows = [n for r in rows if isinstance(r, dict) for n in (r.get(provider.discover_nested_key) or [])]
     label_field = provider.discover_label_field or provider.discover_id_field
     resources = [
-        {"id": r.get(provider.discover_id_field), "label": r.get(label_field), "raw": r}
-        for r in rows if isinstance(r, dict)
+        # A row is usually an object, but some providers return bare strings — Google Ads'
+        # listAccessibleCustomers gives ["customers/6186675831", …]. Treat the string as both id
+        # and label rather than silently dropping every row.
+        {"id": r, "label": r.rsplit("/", 1)[-1], "raw": r} if isinstance(r, str)
+        else {"id": r.get(provider.discover_id_field), "label": r.get(label_field), "raw": r}
+        for r in rows if isinstance(r, (dict, str))
     ]
     # Self-heal a connection whose target was chosen before we stored labels (or via the API, which
     # has no label to give). We're already holding the upstream's own naming — resolving it here
@@ -4157,7 +4173,8 @@ async def call_tool(
     try:
         # Load every secret the bindings need (api does the DB work; proxy stays I/O-free).
         secrets: dict[int, Secret] = {}
-        for sid in {b["secret_id"] for b in tool.bindings}:
+        # A platform binding carries no secret_id — its value comes from settings at relay time.
+        for sid in {b["secret_id"] for b in tool.bindings if b.get("secret_id") is not None}:
             secret = await db.get(Secret, sid)
             if secret is None or secret.org_id != caller.org_id:
                 raise HTTPException(status_code=409, detail="a bound secret is missing")

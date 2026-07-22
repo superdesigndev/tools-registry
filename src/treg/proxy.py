@@ -18,11 +18,12 @@ httpx client (rule 1: keepalive). Secrets are passed already-loaded (api does th
 from __future__ import annotations
 
 import httpx
-from fastapi import Request
+from fastapi import HTTPException, Request
 from fastapi.responses import StreamingResponse
 from starlette.background import BackgroundTask
 
 from . import crypto, injectors
+from .config import get_settings
 from .models import Secret, Tool
 
 # Connection-level headers that belong to a single hop and must NOT be forwarded as-is.
@@ -89,6 +90,17 @@ async def relay(
 
     # Apply every binding (a request may need several credentials at once).
     for binding in tool.bindings:
+        # A PLATFORM binding injects one of treg's own credentials (Google Ads' developer token),
+        # read from settings rather than an org secret. Keeping it out of the org's secret store
+        # matters: it's treg's credential, not the tenant's, so it must not be readable by them or
+        # extractable through a local run.
+        setting = binding.get("platform_setting")
+        if setting:
+            value = getattr(get_settings(), setting, "") or ""
+            if not value:
+                raise HTTPException(status_code=502, detail=f"this server has no {setting} configured")
+            injectors.inject(headers, params, binding, value)
+            continue
         secret = secrets[binding["secret_id"]]
         injectors.inject(headers, params, binding, crypto.decrypt(secret.value))
 
@@ -101,9 +113,7 @@ async def relay(
     )
     # Call-time SSRF guard: resolve the upstream host NOW and refuse an internal target — defeats DNS
     # rebinding (base_url was public at registration, its DNS now points at 169.254.169.254 / localhost).
-    from . import health
-    from .config import get_settings
-    from fastapi import HTTPException
+    from . import health  # local: health imports proxy-adjacent modules, so keep the cycle lazy
     if get_settings().proxy_ssrf_check and not health.host_is_public(upstream_req.url.host):
         raise HTTPException(status_code=502, detail="upstream host resolves to a non-public address")
     upstream_resp = await client.send(upstream_req, stream=True)
