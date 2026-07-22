@@ -50,10 +50,17 @@ class OAuthProvider:
     extra_credential_note: str = ""
 
     # Resource discovery: after consent, which sites/properties/accounts can this credential act on?
-    # `discover_path` is relative to base_url; `discover_key` is the JSON list field in the response;
-    # `discover_id_field`/`discover_label_field` name the id and human label inside each row.
+    # `resource_label` is what the thing is CALLED to a human — "site", "property", "account".
+    # Never show the user the word "resource"; it means nothing outside this file.
+    resource_label: str = "resource"
+    resource_label_plural: str = ""  # defaults to label + "s"; set it when that's wrong ("properties")
+    # Listing often lives on a different host than the data API (GA4 reports come from
+    # analyticsdata, but its properties are listed by analyticsadmin), so discovery can override
+    # the base URL. `discover_nested_key` expands a list nested inside each row.
+    discover_base_url: str = ""  # defaults to base_url
     discover_path: str = ""
     discover_key: str = ""
+    discover_nested_key: str = ""
     discover_id_field: str = "id"
     discover_label_field: str = ""
 
@@ -67,8 +74,16 @@ class OAuthProvider:
         return "read" if "read" in self.scopes else self.capabilities[0]
 
     @property
+    def resource_plural(self) -> str:
+        return self.resource_label_plural or f"{self.resource_label}s"
+
+    @property
+    def discovery_base(self) -> str:
+        return self.discover_base_url or self.base_url
+
+    @property
     def supports_discovery(self) -> bool:
-        return bool(self.discover_path and self.base_url)
+        return bool(self.discover_path and self.discovery_base)
 
     @property
     def can_autoprovision(self) -> bool:
@@ -114,6 +129,7 @@ GOOGLE_SEARCH_CONSOLE = OAuthProvider(
     base_url="https://searchconsole.googleapis.com",
     docs_url="https://developers.google.com/webmaster-tools/v1/api_reference_index",
     # GSC returns {"siteEntry": [{"siteUrl": "...", "permissionLevel": "..."}]}
+    resource_label="site",
     discover_path="/webmasters/v3/sites",
     discover_key="siteEntry",
     discover_id_field="siteUrl",
@@ -130,6 +146,16 @@ GOOGLE_ANALYTICS = OAuthProvider(
     client_secret_setting="google_client_secret",
     base_url="https://analyticsdata.googleapis.com",
     docs_url="https://developers.google.com/analytics/devguides/reporting/data/v1",
+    # GA4 reports come from analyticsdata, but the property LIST lives on analyticsadmin, and the
+    # properties are nested one level down inside each account summary.
+    resource_label="property",
+    resource_label_plural="properties",
+    discover_base_url="https://analyticsadmin.googleapis.com",
+    discover_path="/v1beta/accountSummaries",
+    discover_key="accountSummaries",
+    discover_nested_key="propertySummaries",
+    discover_id_field="property",
+    discover_label_field="displayName",
 )
 
 GOOGLE_BUSINESS_PROFILE = OAuthProvider(
@@ -144,6 +170,7 @@ GOOGLE_BUSINESS_PROFILE = OAuthProvider(
     client_secret_setting="google_client_secret",
     base_url="https://mybusinessaccountmanagement.googleapis.com",
     docs_url="https://developers.google.com/my-business",
+    resource_label="account",
     discover_path="/v1/accounts",
     discover_key="accounts",
     discover_id_field="name",
@@ -252,6 +279,9 @@ def listing() -> list[dict]:
             "display_name": p.display_name,
             "capabilities": p.capabilities,
             "default_capability": p.default_capability,
+            "resource_label": p.resource_label,
+            "resource_plural": p.resource_plural,
+            "supports_discovery": p.supports_discovery,
             "extra_credential_note": p.extra_credential_note,
             "base_url": p.base_url,
             "docs_url": p.docs_url,

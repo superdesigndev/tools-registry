@@ -3562,20 +3562,37 @@ async def connection_resources(
     secret = await _owned_connection(secret_id, caller, db)
     provider = oauth_providers.get(secret.provider)
     if provider is None or not provider.supports_discovery:
-        raise HTTPException(status_code=422, detail="this provider does not support resource discovery")
+        raise HTTPException(
+            status_code=422,
+            detail=f"{secret.provider or 'this provider'} has nothing to choose between — it acts on your whole account",
+        )
     await oauth.ensure_fresh(secret, db, request.app.state.http)
     blob = json.loads(crypto.decrypt(secret.value))
     token = blob.get("access_token") or blob.get("token")
     resp = await request.app.state.http.get(
-        f"{provider.base_url.rstrip('/')}{provider.discover_path}",
+        f"{provider.discovery_base.rstrip('/')}{provider.discover_path}",
         headers={"Authorization": f"Bearer {token}"},
     )
     if resp.status_code >= 400:
-        raise HTTPException(status_code=502, detail=f"discovery failed upstream ({resp.status_code})")
+        # Pass the upstream's own words through. "discovery failed (403)" sends the user hunting;
+        # Google's actual message usually names the missing API or permission outright.
+        upstream = ""
+        try:
+            upstream = (resp.json().get("error") or {}).get("message", "")
+        except Exception:  # noqa: BLE001
+            upstream = (resp.text or "")[:200]
+        raise HTTPException(
+            status_code=502,
+            detail=f"could not list {provider.resource_plural} ({resp.status_code}): {upstream}".strip(),
+        )
     rows = resp.json().get(provider.discover_key) or []
+    if provider.discover_nested_key:  # e.g. GA4 properties nested inside each account summary
+        rows = [n for r in rows if isinstance(r, dict) for n in (r.get(provider.discover_nested_key) or [])]
     label_field = provider.discover_label_field or provider.discover_id_field
     return {
         "provider": provider.service,
+        "resource_label": provider.resource_label,
+        "resource_plural": provider.resource_plural,
         "selected": secret.resource_ref,
         "resources": [
             {"id": r.get(provider.discover_id_field), "label": r.get(label_field), "raw": r}
