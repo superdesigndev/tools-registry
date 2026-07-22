@@ -38,6 +38,11 @@ class OAuthProvider:
     client_secret_setting: str
     base_url: str = ""  # upstream API root, so a successful connect can auto-provision the tool
     docs_url: str = ""
+    # A cheap authenticated GET on base_url that proves the credential still works, mirroring the
+    # env-import catalog's `probe`. Registry tools had none, so they showed "unchecked" on the Tools
+    # page forever — health could never say more than "nothing has called this yet". It must live on
+    # base_url, NOT discover_base_url: the probe runs against the provisioned tool's own host.
+    probe_path: str = ""
 
     # Per-provider auth quirks. Defaults match Google, which is the common case.
     auth_params: dict[str, str] | None = None  # extra ?query on the consent URL
@@ -191,6 +196,7 @@ GOOGLE_SEARCH_CONSOLE = OAuthProvider(
     docs_url="https://developers.google.com/webmaster-tools/v1/api_reference_index",
     # GSC returns {"siteEntry": [{"siteUrl": "...", "permissionLevel": "..."}]}
     resource_label="site",
+    probe_path="/webmasters/v3/sites",
     discover_path="/webmasters/v3/sites",
     discover_key="siteEntry",
     discover_id_field="siteUrl",
@@ -207,6 +213,9 @@ GOOGLE_ANALYTICS = OAuthProvider(
     client_secret_setting="google_client_secret",
     base_url="https://analyticsdata.googleapis.com",
     docs_url="https://developers.google.com/analytics/devguides/reporting/data/v1",
+    # No probe_path: the Data API is POST-only (runReport), and a probe must be a cheap GET on
+    # base_url. Don't "fix" this by pointing at analyticsadmin — the probe runs against the
+    # provisioned tool's own host, so it would test a host the tool never calls.
     # GA4 reports come from analyticsdata, but the property LIST lives on analyticsadmin, and the
     # properties are nested one level down inside each account summary.
     resource_label="property",
@@ -232,6 +241,8 @@ GOOGLE_BUSINESS_PROFILE = OAuthProvider(
     base_url="https://mybusinessaccountmanagement.googleapis.com",
     docs_url="https://developers.google.com/my-business",
     resource_label="account",
+    # base_url is mybusinessaccountmanagement, so the probe and the listing share a path here.
+    probe_path="/v1/accounts",
     discover_path="/v1/accounts",
     discover_key="accounts",
     discover_id_field="name",
@@ -263,6 +274,7 @@ GOOGLE_ADS = OAuthProvider(
     # Which ad account should this connection act on? listAccessibleCustomers returns the accounts
     # the CONNECTED USER can reach — never ours.
     resource_label="account",
+    probe_path="/v21/customers:listAccessibleCustomers",
     discover_path="/v21/customers:listAccessibleCustomers",
     discover_key="resourceNames",
     enrich_path="/v21/customers/{id}/googleAds:search",
@@ -302,6 +314,10 @@ YOUTUBE = OAuthProvider(
     client_secret_setting="google_client_secret",
     base_url="https://youtube.googleapis.com",
     docs_url="https://developers.google.com/youtube/v3/docs",
+    # channels.list is 1 quota unit whatever `part` asks for, so take snippet: the Tools panel
+    # prefills from this path, and a channel title reads better than an opaque UC… id. It 401s on a
+    # dead token rather than returning an empty-but-successful list the way a bad filter would.
+    probe_path="/youtube/v3/channels?part=snippet&mine=true",
     # Which channel does this connection post to? channels.list?mine=true answers for the connected
     # account. The title lives one level down in snippet, so the label is a dotted path.
     resource_label="channel",
@@ -327,6 +343,9 @@ LINKEDIN = OAuthProvider(
     docs_url="https://learn.microsoft.com/en-us/linkedin/consumer/integrations/self-serve/share-on-linkedin",
     auth_params={},  # LinkedIn rejects Google's access_type/prompt
     resource_label="member",
+    # userinfo is the one LinkedIn path that needs no LinkedIn-Version header, so it survives their
+    # quarterly version deprecations — a probe that rots is worse than no probe.
+    probe_path="/v2/userinfo",
     identity_path="/v2/userinfo",
     identity_id_path="sub",
     identity_label_path="name",
@@ -347,6 +366,7 @@ SLACK = OAuthProvider(
     client_secret_setting="slack_client_secret",
     base_url="https://slack.com/api",
     docs_url="https://api.slack.com/web",
+    probe_path="/auth.test",  # Slack's canonical "is this token good" call
     auth_params={},  # Slack rejects Google's access_type/prompt params
 )
 
@@ -368,6 +388,13 @@ X = OAuthProvider(
     pkce=True,  # X rejects an authorization code exchanged without a verifier
     token_endpoint_auth_method="client_secret_basic",  # and rejects the secret in the body
     auth_params={},
+    resource_label="account",
+    # Same path as the identity lookup and the Try-panel sample: cheap, authenticated, and it
+    # returns the handle rather than an opaque id.
+    probe_path="/2/users/me",
+    identity_path="/2/users/me",
+    identity_id_path="data.id",
+    identity_label_path="data.username",
 )
 
 REGISTRY: dict[str, OAuthProvider] = {

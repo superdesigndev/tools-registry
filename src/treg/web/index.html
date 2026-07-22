@@ -801,7 +801,11 @@ th{background:rgba(0,0,0,.25)}
                 Widening it later means going through Google's consent screen again.</p>
               <div class="ttable-wrap"><table class="ttable">
                 <tr v-for="cap in capAsk.provider.capabilities" :key="cap">
-                  <td class="tn"><b>{{capLabel(cap)}}</b><span class="sub" style="display:block;font-size:11px">{{capHelp(cap)}}</span></td>
+                  <!-- Deliberately NOT .tn: that class is nowrap, which is right for a name column
+                       but here the help text shares the cell. Unwrapped, a long capability
+                       description widens the table past the modal and .ttable-wrap's overflow:hidden
+                       clips the Choose button clean off — the choice becomes unclickable. -->
+                  <td style="white-space:normal"><b>{{capLabel(cap)}}</b><span class="sub" style="display:block;font-size:11px;margin-top:3px">{{capHelp(cap)}}</span></td>
                   <td class="tx"><button class="btn sm" :class="{primary:cap===capAsk.provider.default_capability}"
                                           @click="chooseCapability(cap)">Choose</button></td>
                 </tr>
@@ -2755,9 +2759,13 @@ createApp({
       await this.connectProvider(p, (p.capabilities||['read'])[0]);
     },
     article(w){ return /^[aeiou]/i.test(w||'') ? 'an' : 'a'; },  // "an account", not "a account"
-    capLabel(cap){ return {read:'Read only', write:'Read and write', manage:'Full access'}[cap] || cap; },
+    capLabel(cap){ return {read:'Read only', post:'Read and publish', write:'Read and write', manage:'Full access'}[cap] || cap; },
     capHelp(cap){ return {
       read:'Your agent can view data. It can never change anything.',
+      // `post` is the YouTube middle ground: uploading a video and being able to edit or delete
+      // one are separate Google scopes, so publish-without-touching-the-back-catalogue is a real
+      // choice rather than a hedge.
+      post:'Your agent can view data and publish new content. It cannot edit or delete anything already there.',
       write:'Your agent can view data and also create, update or publish.',
       manage:'Your agent can view and manage everything in the account.',
     }[cap] || 'Requests the '+cap+' scopes.'; },
@@ -3017,7 +3025,13 @@ createApp({
       return ({'httpbin.org':'headers','postman-echo.com':'get',
         'api.intercom.io':'me','api.stripe.com':'balance','api.render.com':'services?limit=1',
         'api.vercel.com':'v2/user','app.posthog.com':'api/projects/@current','eu.posthog.com':'api/projects/@current',
-        'searchconsole.googleapis.com':'webmasters/v3/sites','googleads.googleapis.com':'v21/customers:listAccessibleCustomers'})[host]||''; },
+        'searchconsole.googleapis.com':'webmasters/v3/sites','googleads.googleapis.com':'v21/customers:listAccessibleCustomers',
+        // part=snippet rather than the probe's part=id: same 1 quota unit, but it returns the channel
+        // title, so the panel shows something a human recognises instead of an opaque UC… id.
+        'youtube.googleapis.com':'youtube/v3/channels?part=snippet&mine=true',
+        // identity endpoints: cheap, and they return a handle/name a human recognises
+        'api.x.com':'2/users/me','api.linkedin.com':'v2/userinfo',
+        'mybusinessaccountmanagement.googleapis.com':'v1/accounts','slack.com':'auth.test'})[host]||''; },
     openCopy(t){ this.copyTool=t; this.snippetTab='cURL'; this.copied=false;
       // Prefer a real, runnable sample path so a copied snippet returns a result: a declared example,
       // else the health-check path, else a known-good sample for a well-known host, else the placeholder.
