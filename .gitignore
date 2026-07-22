@@ -12,6 +12,31 @@ dist/
 /.playwright-cli
 scripts/.dev-home/
 .claude/
-.superdesign/tmp/
+.superdesign/
 /videos
 docs/proposals/
+# Launch/marketing drafts and UI scratch. Useful locally, not part of the product, and a draft
+# published by accident reads as a claim we made on purpose.
+docs/hn-launch-post.md
+/prototypes/
+
+# Video-production skills. They belong to how we make launch material, not to treg, and they carry
+# ~3.6MB of third-party font and brand assets — including CD Projekt Red fan-kit files whose own
+# terms forbid commercial use. Nothing here should ship in a public repo for a commercial service.
+.agents/skills/embedded-captions/
+.agents/skills/faceless-explainer/
+.agents/skills/general-video/
+.agents/skills/hyperframes*/
+.agents/skills/media-use/
+.agents/skills/motion-graphics/
+.agents/skills/music-to-video/
+.agents/skills/pr-to-video/
+.agents/skills/product-launch-video/
+.agents/skills/remotion-to-hyperframes/
+.agents/skills/slideshow/
+.agents/skills/talking-head-recut/
+.agents/skills/video-craft/
+.agents/skills/figma/
+# Machine-local symlinks into .agents/skills — they resolve only on the machine that made them.
+/.claude/
+skills-lock.json
