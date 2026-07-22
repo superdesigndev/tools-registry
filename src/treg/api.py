@@ -981,6 +981,13 @@ def _spa_with_og(kind: str, name: str):
     return HTMLResponse(html, headers={"Cache-Control": "no-cache"})
 
 
+@app.get("/app/marketplace/{service}", include_in_schema=False)
+async def dashboard_marketplace(service: str):  # noqa: ARG001 — the SPA reads the path itself
+    """One integration's page. Served as the plain SPA: unlike /app/skills/<x> there is no og meta
+    to add, because a marketplace page is only meaningful to a signed-in member of the org."""
+    return await dashboard()
+
+
 @app.get("/app/skills/{name}", include_in_schema=False)
 async def dashboard_skill_page(name: str):
     return _spa_with_og("skills", name)

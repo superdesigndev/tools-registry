@@ -43,6 +43,10 @@ class OAuthProvider:
     # default lands it in "Other", which is visible enough to get noticed and fixed.
     # CATEGORY_ORDER below decides the order the shelves appear in.
     category: str = "Other"
+    # One line for the marketplace card: what an agent can actually DO with this connected, in
+    # plain terms. Not a tagline — someone scanning a grid of twenty is deciding whether this is
+    # the thing that answers their question.
+    summary: str = ""
     # ---- how the credential is obtained --------------------------------------------------
     # "oauth"  — treg holds an approved app; the user consents and supplies nothing.
     # "token"  — the user brings their OWN bot/app token. Correct where a workspace-scoped bot
@@ -239,6 +243,9 @@ GOOGLE_SEARCH_CONSOLE = OAuthProvider(
     client_id_setting="google_client_id",
     client_secret_setting="google_client_secret",
     category="SEO",
+    summary=(
+        "Which queries and pages bring you organic traffic, what's indexed, and how rankings move over time."
+    ),
     base_url="https://searchconsole.googleapis.com",
     docs_url="https://developers.google.com/webmaster-tools/v1/api_reference_index",
     # GSC returns {"siteEntry": [{"siteUrl": "...", "permissionLevel": "..."}]}
@@ -259,6 +266,9 @@ GOOGLE_ANALYTICS = OAuthProvider(
     client_id_setting="google_client_id",
     client_secret_setting="google_client_secret",
     category="SEO",
+    summary=(
+        "Sessions, users, conversions and traffic sources — run any GA4 report your agent can describe."
+    ),
     base_url="https://analyticsdata.googleapis.com",
     docs_url="https://developers.google.com/analytics/devguides/reporting/data/v1",
     # No probe_path: the Data API is POST-only (runReport), and a probe must be a cheap GET on
@@ -287,6 +297,9 @@ GOOGLE_BUSINESS_PROFILE = OAuthProvider(
     client_id_setting="google_client_id",
     client_secret_setting="google_client_secret",
     category="SEO",
+    summary=(
+        "Your listings, reviews and local posts. Read what customers are saying and reply as the business."
+    ),
     base_url="https://mybusinessaccountmanagement.googleapis.com",
     docs_url="https://developers.google.com/my-business",
     resource_label="account",
@@ -307,6 +320,9 @@ GOOGLE_ADS = OAuthProvider(
     client_id_setting="google_client_id",
     client_secret_setting="google_client_secret",
     category="Advertising",
+    summary=(
+        "Campaign spend, performance and keyword data across your accounts — and change campaigns when you're ready."
+    ),
     base_url="https://googleads.googleapis.com",
     docs_url="https://developers.google.com/google-ads/api/docs/start",
     # Every Ads request carries TWO credentials: the user's OAuth bearer AND a `developer-token`
@@ -363,6 +379,9 @@ YOUTUBE = OAuthProvider(
     client_id_setting="google_client_id",
     client_secret_setting="google_client_secret",
     category="Social media",
+    summary=(
+        "Channel, video and playlist data with watch time and revenue reports. Upload and manage videos too."
+    ),
     base_url="https://youtube.googleapis.com",
     docs_url="https://developers.google.com/youtube/v3/docs",
     # channels.list is 1 quota unit whatever `part` asks for, so take snippet: the Tools panel
@@ -391,6 +410,9 @@ LINKEDIN = OAuthProvider(
     client_id_setting="linkedin_client_id",
     client_secret_setting="linkedin_client_secret",
     category="Social media",
+    summary=(
+        "Post to your feed as yourself and read back how it performed."
+    ),
     base_url="https://api.linkedin.com",
     docs_url="https://learn.microsoft.com/en-us/linkedin/consumer/integrations/self-serve/share-on-linkedin",
     auth_params={},  # LinkedIn rejects Google's access_type/prompt
@@ -429,6 +451,9 @@ SLACK = OAuthProvider(
     scopes={},  # scopes live in the manifest above; there is no consent screen to size
     client_id_setting="", client_secret_setting="",
     category="Community",
+    summary=(
+        "Read and post messages in your workspace with a bot you create and control."
+    ),
     base_url="https://slack.com/api",
     docs_url="https://api.slack.com/web",
     probe_path="/auth.test",
@@ -457,6 +482,9 @@ X = OAuthProvider(
     client_id_setting="x_client_id",
     client_secret_setting="x_client_secret",
     category="Social media",
+    summary=(
+        "Read posts and timelines, and publish as your account."
+    ),
     base_url="https://api.x.com",
     docs_url="https://docs.x.com/x-api",
     pkce=True,  # X rejects an authorization code exchanged without a verifier
@@ -498,6 +526,9 @@ TIKTOK = OAuthProvider(
     client_id_setting="tiktok_client_id",
     client_secret_setting="tiktok_client_secret",
     category="Social media",
+    summary=(
+        "Your videos, follower and engagement stats, plus direct publishing."
+    ),
     base_url="https://open.tiktokapis.com",
     docs_url="https://developers.tiktok.com/doc/login-kit-web/",
     client_id_param="client_key",  # not client_id — TikTok ignores the OAuth2 spelling
@@ -539,6 +570,9 @@ FACEBOOK = OAuthProvider(
     client_id_setting="meta_client_id",
     client_secret_setting="meta_client_secret",
     category="Social media",
+    summary=(
+        "Your Pages' posts, comments and reach — and publishing to them."
+    ),
     base_url=_META_BASE,
     docs_url="https://developers.facebook.com/docs/pages-api",
     auth_params={},  # Meta ignores Google's access_type/prompt; sending them just noises the URL
@@ -573,6 +607,9 @@ INSTAGRAM = OAuthProvider(
     client_id_setting="meta_client_id",
     client_secret_setting="meta_client_secret",
     category="Social media",
+    summary=(
+        "Your Instagram media, comments and insights, plus publishing to your account."
+    ),
     base_url=_META_BASE,
     docs_url="https://developers.facebook.com/docs/instagram-platform/instagram-graph-api",
     auth_params={},
@@ -605,6 +642,9 @@ META_ADS = OAuthProvider(
     client_id_setting="meta_client_id",
     client_secret_setting="meta_client_secret",
     category="Advertising",
+    summary=(
+        "Ad accounts, campaigns and performance across Facebook and Instagram, with full campaign management."
+    ),
     base_url=_META_BASE,
     docs_url="https://developers.facebook.com/docs/marketing-apis",
     auth_params={},
@@ -666,6 +706,76 @@ def is_configured(provider: OAuthProvider) -> bool:
     return True
 
 
+# Plain English for every scope we request. The raw string is what the provider returns and what
+# the consent screen shows in fine print; this is what a human needs to decide whether to grant it.
+# Keyed by the scope alone — safe today because no two providers request the same string with
+# different meanings, and the OIDC ones (openid/profile/email) mean the same thing everywhere.
+# `test_every_requested_scope_has_a_label` fails if a provider adds a scope and forgets the copy.
+SCOPE_LABELS: dict[str, str] = {
+    # Google — Search Console
+    "https://www.googleapis.com/auth/webmasters.readonly":
+        "See your verified sites, search performance, indexing status and sitemaps",
+    "https://www.googleapis.com/auth/webmasters":
+        "Submit and delete sitemaps, and manage your sites",
+    # Google — Analytics / Ads / Business Profile
+    "https://www.googleapis.com/auth/analytics.readonly":
+        "Read your Analytics properties and run reports",
+    "https://www.googleapis.com/auth/business.manage":
+        "Manage your business listings, reviews and posts",
+    "https://www.googleapis.com/auth/adwords":
+        "Read campaigns, spend and performance, and manage campaigns",
+    # Google — YouTube
+    "https://www.googleapis.com/auth/youtube.readonly":
+        "See your channel, videos and playlists",
+    "https://www.googleapis.com/auth/yt-analytics.readonly":
+        "Read your channel's views, watch time and revenue reports",
+    "https://www.googleapis.com/auth/youtube.upload": "Upload videos to your channel",
+    "https://www.googleapis.com/auth/youtube": "Manage your channel, videos and playlists",
+    "https://www.googleapis.com/auth/youtube.force-ssl":
+        "Manage your videos, comments and captions",
+    # LinkedIn
+    "openid": "Confirm who you are",
+    "profile": "See your name and profile picture",
+    "email": "See your email address",
+    "w_member_social": "Post, comment and react as you",
+    # X
+    "tweet.read": "Read posts and timelines",
+    "users.read": "See profiles, including your own",
+    "offline.access": "Stay connected without asking you to sign in again",
+    "tweet.write": "Post, reply and delete as you",
+    # TikTok
+    "user.info.basic": "See your account's basic profile",
+    "user.info.profile": "See your display name, bio and avatar",
+    "user.info.stats": "See your follower, like and video counts",
+    "video.list": "List your published videos",
+    "video.upload": "Upload videos to your account as drafts",
+    "video.publish": "Publish videos directly to your account",
+    # Meta — Facebook Pages
+    "pages_show_list": "See which Pages you manage",
+    "pages_read_engagement": "Read your Pages' posts, comments and reactions",
+    "read_insights": "Read your Pages' reach and engagement insights",
+    "pages_manage_posts": "Create, edit and delete posts on your Pages",
+    # Meta — Instagram
+    "instagram_basic": "See your Instagram account, media and comments",
+    "instagram_manage_insights": "Read your Instagram reach and engagement insights",
+    "instagram_content_publish": "Publish posts to your Instagram account",
+    # Meta — Ads
+    "ads_read": "Read your ad accounts, campaigns and performance",
+    "business_management": "See the businesses and ad accounts you have access to",
+    "ads_management": "Create and change campaigns, ad sets and ads",
+}
+
+
+def scope_label(scope: str) -> str:
+    """Plain English for a scope, falling back to the raw string.
+
+    Falling back rather than raising matters: a provider can grant a scope we never asked for
+    (Slack adds implied ones), and a connection page that 500s because of unfamiliar copy would be
+    a far worse failure than showing the raw string for one line.
+    """
+    return SCOPE_LABELS.get(scope, scope)
+
+
 def listing() -> list[dict]:
     """Every known provider, flagged with whether this deployment can actually run its flow."""
     return [
@@ -673,6 +783,13 @@ def listing() -> list[dict]:
             "service": p.service,
             "display_name": p.display_name,
             "category": p.category,
+            "summary": p.summary,
+            # capability -> the scopes it needs, each already in plain English, so the marketplace
+            # can show what a Connect will ask for BEFORE the user is bounced to a consent screen.
+            "scope_detail": {
+                cap: [{"scope": sc, "label": scope_label(sc)} for sc in scopes]
+                for cap, scopes in sorted(p.scopes.items())
+            },
             "capabilities": p.capabilities,
             "default_capability": p.default_capability,
             "resource_label": p.resource_label,

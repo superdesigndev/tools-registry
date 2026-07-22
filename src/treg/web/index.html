@@ -44,6 +44,36 @@
      thin bars), and monochrome ones like X vanish on one theme if left bare — one shared surface
      fixes all three and keeps the column optically even. object-fit keeps a mark with odd
      proportions (YouTube is wider than tall) inside the same box. */
+  /* Marketplace. minmax(0,1fr) on the tracks, not just auto-fill: a long base_url or summary in
+     one card must not widen every column and push the grid past the viewport. */
+  .mk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,290px),1fr));gap:12px}
+  .mk-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px;
+    display:flex;flex-direction:column;gap:10px;cursor:pointer;min-width:0;
+    transition:border-color .12s ease,transform .12s ease}
+  .mk-card:hover{border-color:var(--muted);transform:translateY(-1px)}
+  .mk-card:focus-visible{outline:2px solid var(--muted);outline-offset:2px}
+  .mk-top{display:flex;align-items:center;gap:11px;min-width:0}
+  .mk-top b{display:block;line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .mk-cat{display:block;font-size:11px;color:var(--muted)}
+  /* Clamped so a long summary can't make one card twice the height of its neighbours. */
+  .mk-sum{margin:0;font-size:12.5px;line-height:1.5;color:var(--muted);flex:1;
+    display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  .mk-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;
+    border-top:1px solid var(--line);padding-top:10px;font-size:11px}
+  .mk-quiet{color:var(--muted)} .mk-auth{color:var(--muted)}
+  .mk-filters{display:flex;flex-wrap:wrap;gap:7px;margin:16px 0 4px}
+  .mk-chip{background:var(--panel);border:1px solid var(--line);color:var(--ink);border-radius:999px;
+    padding:5px 12px;font-size:12px;font-family:inherit;cursor:pointer}
+  .mk-chip span{color:var(--muted);margin-left:5px}
+  .mk-chip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+  .mk-chip.on span{color:var(--bg);opacity:.65}
+  .mk-empty{border:1px dashed var(--line);border-radius:var(--r);padding:16px;color:var(--muted);font-size:13px}
+  .mk-perms{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:12px}
+  .mk-perm{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:13px}
+  .mk-perm-h{display:flex;align-items:center;gap:8px;margin-bottom:9px;font-size:12px}
+  .mk-perm-l{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+  .mk-perm-l li{font-size:12.5px;line-height:1.45;color:var(--muted);display:flex;gap:7px;align-items:flex-start}
+  .mk-tick{color:var(--ok,#7bbf7b);flex:0 0 auto}
   .plogo-tile{width:30px;height:30px;flex:0 0 30px;border-radius:8px;background:#fbfaf7;
     border:1px solid rgba(0,0,0,.07);display:flex;align-items:center;justify-content:center}
   .plogo{width:19px;height:19px;object-fit:contain;display:block}
@@ -769,46 +799,40 @@ th{background:rgba(0,0,0,.25)}
             <span class="mono">{{staleConns.map(c=>c.name).join(', ')}}</span>
           </div>
 
-          <div class="tgroup" v-for="g in providerGroups" :key="g.category">
-            <div class="tgh">{{g.category}} <span class="tgh-n">{{g.items.length}}</span><span class="tgh-hint">{{g.hint}}</span></div>
-            <div class="ttable-wrap"><table class="ttable">
-              <tr v-for="p in g.items" :key="p.service">
-                <td class="tn"><div class="pl-row"><span class="plogo-tile"><img class="plogo" :src="'/logos/'+p.service+'.svg'" alt="" aria-hidden="true" @error="$event.target.style.visibility='hidden'"></span><div><b>{{p.display_name}}</b><span class="sub" style="display:block;font-size:11px">{{p.service}}</span></div></div></td>
-                <td class="th"><span class="mono">{{p.base_url}}</span></td>
-                <td class="ta"><span v-if="!p.configured" class="chip warn" title="This server has no client credentials for the provider">not configured</span><span v-else class="chip ok">ready</span></td>
-                <td class="tx" @click.stop>
-                  <button class="btn sm primary" :disabled="!p.configured || connBusy" @click="startConnect(p)">Connect</button>
-                </td>
-              </tr>
-            </table></div>
+          <div class="mk-filters">
+            <button class="mk-chip" :class="{on:mkCat===''}" @click="mkCat=''">All <span>{{providers.length}}</span></button>
+            <button v-for="g in providerGroups" :key="g.category" class="mk-chip"
+                    :class="{on:mkCat===g.category}" @click="mkCat=g.category">{{g.category}} <span>{{g.items.length}}</span></button>
           </div>
 
-          <div class="tgroup" v-if="connections.length">
-            <div class="tgh">Connected <span class="tgh-n">{{connections.length}}</span><span class="tgh-hint">health is “does it work”; expiry is “how long will it keep working”</span></div>
-            <div class="ttable-wrap"><table class="ttable">
-              <tr v-for="c in connections" :key="c.id">
-                <td class="tn"><div class="pl-row"><span v-if="c.provider" class="plogo-tile"><img class="plogo" :src="'/logos/'+c.provider+'.svg'" alt="" aria-hidden="true" @error="$event.target.style.visibility='hidden'"></span><div style="min-width:0"><b>{{c.name}}</b><span class="sub" style="display:block;font-size:11px;overflow-wrap:anywhere" :title="c.resource_ref">{{c.resource_name || c.resource_ref || (connProvider(c) && connProvider(c).supports_discovery ? 'no '+connProvider(c).resource_label+' chosen yet' : 'whole account')}}</span></div></div></td>
-                <td class="th"><span class="mono">{{(c.scopes||[]).length}} scope{{(c.scopes||[]).length===1?'':'s'}}</span></td>
-                <td class="ta">
-                  <!-- "unknown" just means nothing has called upstream yet — it reads as a problem
-                       and isn't one, so only show a verdict we actually have. -->
-                  <span v-if="c.health==='ok'" class="chip ok" title="A real upstream call succeeded with this credential">working</span>
-                  <span v-else-if="c.health==='invalid'" class="chip warn" :title="c.last_error||'The last upstream call failed'">failing</span>
-                  <span v-if="c.expiry_state==='expired'" class="chip warn" title="This credential has expired — reconnect">expired</span>
-                  <span v-else-if="c.expiry_state==='expiring'" class="chip warn" :title="'Expires '+c.expires_at">expiring</span>
-                  <span v-if="!c.refreshable" class="chip" title="treg cannot renew this one unattended — it must be reconnected by hand when it expires">manual renew</span>
-                  <span v-if="c.extra_credential_note" class="chip warn" :title="c.extra_credential_note">needs a second credential</span>
-                  <span v-for="cap in (c.capabilities||[])" :key="cap" class="chip ok">{{cap}}</span>
-                </td>
-                <td class="tx" @click.stop>
-                  <button v-if="c.needs_reconnect && c.provider" class="btn sm primary" @click="reconnect(c)" title="This credential can't be renewed automatically — re-consent to refresh it">Reconnect</button>
-                  <button v-if="connProvider(c) && connProvider(c).supports_discovery" class="btn sm" @click="openResources(c)"
-                          :title="'Choose which '+connProvider(c).resource_label+' this connection acts on'">Choose {{connProvider(c).resource_label}}</button>
-                  <button class="btn sm ico" :class="{danger:confirmDisc===c.id}" @click="disconnect(c)" :title="confirmDisc===c.id?'Click again to disconnect':'Disconnect'">✕</button>
-                </td>
-              </tr>
-            </table></div>
+          <div class="tgroup" v-for="g in shownGroups" :key="g.category">
+            <div class="tgh">{{g.category}} <span class="tgh-n">{{g.items.length}}</span><span class="tgh-hint">{{g.hint}}</span></div>
+            <div class="mk-grid">
+              <!-- The whole card is the target. A card that only responds on a small "Open" link
+                   makes the grid feel broken, and there is nothing else in it to click. -->
+              <div v-for="p in g.items" :key="p.service" class="mk-card" tabindex="0" role="button"
+                   :aria-label="'Open '+p.display_name"
+                   @click="openProvider(p.service)" @keyup.enter="openProvider(p.service)">
+                <div class="mk-top">
+                  <span class="plogo-tile"><img class="plogo" :src="'/logos/'+p.service+'.svg'" alt="" aria-hidden="true" @error="$event.target.style.visibility='hidden'"></span>
+                  <div style="min-width:0">
+                    <b>{{p.display_name}}</b>
+                    <span class="mk-cat">{{p.category}}</span>
+                  </div>
+                </div>
+                <p class="mk-sum">{{p.summary}}</p>
+                <div class="mk-foot">
+                  <!-- Connected count is the one fact that changes what you'd do next, so it wins
+                       the slot the mockup gives to latency. -->
+                  <span v-if="connCount[p.service]" class="chip ok">{{connCount[p.service]}} connected</span>
+                  <span v-else-if="!p.configured" class="chip warn" title="This server has no client credentials for the provider">not configured</span>
+                  <span v-else class="mk-quiet">Not connected</span>
+                  <span class="mk-auth">{{p.auth_kind==='token'?'your own bot':'one-click'}}</span>
+                </div>
+              </div>
+            </div>
           </div>
+
 
           <div v-if="tokenAsk" class="scrim" role="dialog" aria-modal="true" @click.self="tokenAsk=null">
             <div class="modal" style="padding:16px">
@@ -875,6 +899,93 @@ th{background:rgba(0,0,0,.25)}
                 </tr>
               </table></div>
               <div style="margin-top:12px;text-align:right"><button class="btn sm" @click="resPick=null">Close</button></div>
+            </div>
+          </div>
+        </template>
+
+        <!-- MARKETPLACE: one integration -->
+        <template v-if="view==='provider' && mkProvider">
+          <div class="tut-head">
+            <div style="min-width:0">
+              <button class="btn sm" style="margin-bottom:10px" @click="go('connections')">← Marketplace</button>
+              <div class="pl-row" style="gap:13px">
+                <span class="plogo-tile" style="width:44px;height:44px;flex:0 0 44px;border-radius:11px">
+                  <img class="plogo" style="width:27px;height:27px" :src="'/logos/'+mkProvider.service+'.svg'" alt="" aria-hidden="true" @error="$event.target.style.visibility='hidden'">
+                </span>
+                <div style="min-width:0">
+                  <h1 style="margin:0">{{mkProvider.display_name}}</h1>
+                  <p class="sub" style="margin:0">{{mkProvider.category}} · <span class="mono">{{mkProvider.base_url}}</span></p>
+                </div>
+              </div>
+              <p class="sub" style="margin:12px 0 0;max-width:64ch">{{mkProvider.summary}}</p>
+            </div>
+            <div class="tut-actions">
+              <a v-if="mkProvider.docs_url" class="btn sm" :href="mkProvider.docs_url" target="_blank" rel="noopener">API docs ↗</a>
+              <button class="btn sm primary" :disabled="!mkProvider.configured || connBusy" @click="startConnect(mkProvider)">
+                {{mkConns.length ? 'Add account' : 'Connect'}}
+              </button>
+            </div>
+          </div>
+
+          <div v-if="connErr" class="banner" style="margin-top:12px">{{connErr}}</div>
+          <div v-if="!mkProvider.configured" class="banner" style="margin-top:12px">
+            This server holds no client credentials for {{mkProvider.display_name}}, so the connect flow can't run here.
+          </div>
+
+          <div class="tgroup">
+            <div class="tgh">Connected accounts <span class="tgh-n">{{mkConns.length}}</span>
+              <span class="tgh-hint">each account gets its own tool name, so an agent can call a specific one</span></div>
+            <div v-if="!mkConns.length" class="mk-empty">
+              No accounts yet. Connecting takes you to {{mkProvider.display_name}} to approve — treg keeps the
+              credential server-side and injects it on every call.
+            </div>
+            <div class="ttable-wrap" v-else><table class="ttable">
+              <tr v-for="c in mkConns" :key="c.id">
+                <td class="tn">
+                  <b>{{c.identity_label || c.name}}</b>
+                  <span class="sub" style="display:block;font-size:11px;overflow-wrap:anywhere" :title="c.resource_ref">
+                    {{c.resource_name || c.resource_ref || (mkProvider.supports_discovery ? 'no '+mkProvider.resource_label+' chosen yet' : 'whole account')}}
+                  </span>
+                </td>
+                <td class="th">
+                  <!-- The tool name is the whole point of several accounts: it is what the agent types. -->
+                  <span class="mono" :title="'treg call '+c.name">{{c.name}}</span>
+                </td>
+                <td class="ta">
+                  <span v-if="c.health==='ok'" class="chip ok" title="A real upstream call succeeded with this credential">working</span>
+                  <span v-else-if="c.health==='invalid'" class="chip warn" :title="c.last_error||'The last upstream call failed'">failing</span>
+                  <span v-if="c.expiry_state==='expired'" class="chip warn" title="This credential has expired — reconnect">expired</span>
+                  <span v-else-if="c.expiry_state==='expiring'" class="chip warn" :title="'Expires '+c.expires_at">expiring</span>
+                  <span v-if="!c.refreshable" class="chip" title="treg cannot renew this one unattended — it must be reconnected by hand when it expires">manual renew</span>
+                  <span v-for="cap in (c.capabilities||[])" :key="cap" class="chip ok">{{cap}}</span>
+                </td>
+                <td class="tx" @click.stop>
+                  <button v-if="(c.missing_capabilities||[]).length" class="btn sm" @click="startConnect(mkProvider, c)"
+                          :title="'Ask for '+c.missing_capabilities.join(', ')+' as well'">Add {{c.missing_capabilities.join(' + ')}}</button>
+                  <button v-if="mkProvider.supports_discovery" class="btn sm" @click="openResources(c)"
+                          :title="'Choose which '+mkProvider.resource_label+' this account acts on'">Choose {{mkProvider.resource_label}}</button>
+                  <button class="btn sm" @click="startConnect(mkProvider, c)" title="Re-consent to refresh this account">Reconnect</button>
+                  <button class="btn sm ico" :class="{danger:confirmDisc===c.id}" @click="disconnect(c)" :title="confirmDisc===c.id?'Click again to disconnect':'Disconnect'">✕</button>
+                </td>
+              </tr>
+            </table></div>
+          </div>
+
+          <div class="tgroup">
+            <div class="tgh">Permissions <span class="tgh-hint">what {{mkProvider.display_name}} is asked to grant — hover a line for the exact scope</span></div>
+            <div class="mk-perms">
+              <div v-for="cap in mkProvider.capabilities" :key="cap" class="mk-perm">
+                <div class="mk-perm-h">
+                  <b>{{cap}}</b>
+                  <span v-if="mkGranted.has(cap)" class="chip ok">granted</span>
+                  <span v-else class="mk-quiet">not requested yet</span>
+                </div>
+                <ul class="mk-perm-l">
+                  <li v-for="d in (mkProvider.scope_detail||{})[cap]" :key="d.scope" :title="d.scope">
+                    <span class="mk-tick">✓</span>{{d.label}}
+                  </li>
+                </ul>
+              </div>
             </div>
           </div>
         </template>
@@ -1966,6 +2077,7 @@ createApp({
       // Connections: registry OAuth connects (see oauth_providers.py). `providers` is what treg
       // holds an approved app for; `connections` is what this org has actually connected.
       providers:[], connections:[], connErr:'', connBusy:false, confirmDisc:null, resPick:null,
+      mkCat:'', mkService:null,  // marketplace: active category filter, and the open integration
       capAsk:null,  // the access question, asked when Connect is clicked
       tokenAsk:null,  // bring-your-own-bot setup (Slack): a form, not a redirect
       extraCred:{}, extraBusy:null,  // second credential a provider needs on top of OAuth (Google Ads' developer token)
@@ -2024,6 +2136,15 @@ createApp({
       }
       return out;
     },
+    // Filter chips narrow the shelves rather than flattening them — with one category picked the
+    // single remaining shelf header still says which, so the page never loses its place.
+    shownGroups(){ return this.mkCat ? this.providerGroups.filter(g=>g.category===this.mkCat) : this.providerGroups; },
+    connCount(){ const m={}; for(const c of this.connections){ if(c.provider) m[c.provider]=(m[c.provider]||0)+1; } return m; },
+    mkProvider(){ return this.providers.find(p=>p.service===this.mkService)||null; },
+    mkConns(){ return this.connections.filter(c=>c.provider===this.mkService); },
+    // Which capabilities ANY account here already holds — a page-level "you have this" summary,
+    // since the permission list describes the integration, not one account.
+    mkGranted(){ const s=new Set(); for(const c of this.mkConns) for(const cap of (c.capabilities||[])) s.add(cap); return s; },
     catalogDeny(){ const c=this.tForm.cli; return (c && this.catalogClis && this.catalogClis[c.bin]) || []; },
     catalogExtra(){  // catalog patterns not already in the own list — the union dedupes at run time, so showing both would double up
       const own=new Set((this.tForm.cli&&this.tForm.cli.deny||[]).map(p=>p.trim())); return this.catalogDeny.filter(p=>!own.has(p)); },
@@ -2216,7 +2337,8 @@ createApp({
     connected(slug){ return this.sessionMode || !!this.cfg.orgs[slug]; },
     toggleTheme(){ this.theme=this.theme==='dark'?'light':'dark'; document.documentElement.dataset.theme=this.theme; localStorage.setItem('treg-theme',this.theme); },
     _stashNext(){  // OAuth callbacks land on /app, losing a /app/skills/<x> deep link — stash it to restore after boot
-      const d=this.routeFromPath(location.pathname); if(d) localStorage.setItem('treg-next', location.pathname); },
+      const d=this.routeFromPath(location.pathname)||this.mkFromPath(location.pathname);
+      if(d) localStorage.setItem('treg-next', location.pathname); },
     githubLogin(){ this._stashNext(); location.href='/auth/github'; },
     googleLogin(){ this._stashNext(); location.href='/auth/google'; },
     demoScroll(){ this.$refs.demo && this.$refs.demo.scrollIntoView({behavior:'smooth',block:'start'}); },
@@ -2777,13 +2899,14 @@ createApp({
         this.providers=ps||[]; this.connections=cs||[];
       }catch(e){ this.connErr=String(e.message||e); }
     },
-    async connectProvider(p, capability){
+    async connectProvider(p, capability, conn){
       // Consent happens in a popup so the dashboard keeps its state; we poll for the result
       // rather than depending on the popup being able to talk back to us.
       this.connErr=''; this.connBusy=true;
       try{
         const d=await this.api('/oauth/start',{method:'POST',headers:{'content-type':'application/json'},
-          body:JSON.stringify({provider:p.service, capability})});
+          // connection_id present = reconnect/widen THAT account; absent = attach another one.
+          body:JSON.stringify({provider:p.service, capability, connection_id:conn?conn.id:null})});
         const w=window.open(d.consent_url,'treg-connect','width=560,height=720');
         if(!w){ this.connErr='Popup blocked — allow popups, or open: '+d.consent_url; this.connBusy=false; return; }
         for(let i=0;i<150;i++){
@@ -2835,12 +2958,12 @@ createApp({
       write:'Your agent can view data and also create, update or publish.',
       manage:'Your agent can view and manage everything in the account.',
     }[cap] || 'Requests the '+cap+' scopes.'; },
-    startConnect(p){
+    startConnect(p, conn){
       // A token provider has no consent screen — the user brings their own bot, so setup is a form.
-      if(p.auth_kind==='token') return void (this.tokenAsk={provider:p, token:'', err:'', busy:false});
+      if(p.auth_kind==='token') return void (this.tokenAsk={provider:p, token:'', err:'', busy:false, conn});
       // One capability means there's nothing to ask — don't put a dialog in the way.
-      if((p.capabilities||[]).length<2) return this.connectProvider(p, p.default_capability);
-      this.capAsk={provider:p};
+      if((p.capabilities||[]).length<2) return this.connectProvider(p, p.default_capability, conn);
+      this.capAsk={provider:p, conn};
     },
     async submitToken(){
       const t=this.tokenAsk; if(!t.token.trim()) return;
@@ -2852,8 +2975,8 @@ createApp({
       }catch(e){ t.err=(e.detail||e.message||e); t.busy=false; }
     },
     async chooseCapability(cap){
-      const p=this.capAsk.provider; this.capAsk=null;
-      await this.connectProvider(p, cap);
+      const p=this.capAsk.provider, conn=this.capAsk.conn; this.capAsk=null;
+      await this.connectProvider(p, cap, conn);
     },
     connProvider(c){ return (this.providers||[]).find(p=>p.service===c.provider)||null; },
     async saveExtraCred(c){
@@ -2974,6 +3097,17 @@ createApp({
     // ---- detail pages (shareable deep links) ----
     routeFromPath(path){ const m=/^\/app\/(skills|tools)\/(.+)$/.exec(path||'');
       return m ? {kind:m[1]==='skills'?'skill':'tool', name:decodeURIComponent(m[2])} : null; },
+    // Marketplace deep links are their own route: they resolve against `providers` (already in
+    // memory) rather than fetching a detail payload, so they can't share openDetail's loader.
+    mkFromPath(path){ const m=/^\/app\/marketplace\/([^/]+)$/.exec(path||'');
+      return m ? decodeURIComponent(m[1]) : null; },
+    openProvider(service, fromPop){ this.resetConfirms();
+      this.detail=null; this.mkService=service; this.view='provider';
+      if(!fromPop) history.pushState({mk:service}, '', '/app/marketplace/'+encodeURIComponent(service));
+      // The consent popup can return before /connections has been re-read, and a deep link may
+      // arrive before the first load — either way the page needs the data it renders from.
+      if(!this.connections.length || !this.providers.length) this.loadConnections();
+      window.scrollTo(0,0); },
     openDetail(kind, name, fromPop){ this.resetConfirms();
       this.detail={kind, name}; this.view='detail'; this.detailFile='SKILL.md'; this.detailCopied=''; this.detailNote='';
       if(!fromPop) history.pushState({detail:{kind,name}}, '', '/app/'+(kind==='skill'?'skills':'tools')+'/'+encodeURIComponent(name));
@@ -3195,6 +3329,8 @@ createApp({
     window.addEventListener('scroll', ()=>{ if(this.orgMenu) this.placeOrgMenu(); }, true);
     window.addEventListener('resize', ()=>{ if(this.orgMenu) this.placeOrgMenu(); });
     window.addEventListener('popstate', e=>{  // browser Back moves between views (was exiting the app)
+      const mk=(e.state&&e.state.mk)||this.mkFromPath(location.pathname);
+      if(mk){ this.openProvider(mk, true); return; }
       const d=(e.state&&e.state.detail)||this.routeFromPath(location.pathname);
       if(d){ this.openDetail(d.kind, d.name, true); return; }
       const v=(e.state&&e.state.view)||(location.hash||'').replace('#','')||'tools';
@@ -3216,13 +3352,19 @@ createApp({
     // A shared detail deep link (/app/skills/<x>, /app/tools/<x>) — from the URL itself, or stashed
     // before an OAuth hop (the callback always lands on /app, which would otherwise drop the path).
     let route=this.routeFromPath(location.pathname);
+    let mkRoute=this.mkFromPath(location.pathname);
     const stashed=localStorage.getItem('treg-next');
-    if(stashed){ localStorage.removeItem('treg-next'); if(!route){ route=this.routeFromPath(stashed); if(route) history.replaceState(null,'',stashed); } }
+    if(stashed){ localStorage.removeItem('treg-next');
+      if(!route && !mkRoute){
+        route=this.routeFromPath(stashed); mkRoute=this.mkFromPath(stashed);
+        if(route||mkRoute) history.replaceState(null,'',stashed);
+      } }
     const me = await fetch('/auth/me',{credentials:'include',headers:{'ngrok-skip-browser-warning':'1'}}).then(r=>r.ok?r.json():null).catch(()=>null);
     if(me){ this.sessionMode=true; this.me=me.email; this.isAdmin=!!me.is_superadmin; this.onboarded=!!me.onboarded; await this.loadAll();
       // Share-born arrival (/app/skills/x?invite_org=N from the invite email): accept silently and
       // enter that team — the emailed "Sign in & accept" click was the consent. Otherwise the normal
       // first-run / invite-banner flow.
+      if(mkRoute){ this.maybeOnboard(); this.openProvider(mkRoute, true); return; }
       let landed=false;
       if(route) landed=await this.autoAcceptShare(route);
       if(!landed) this.maybeOnboard();
@@ -3231,7 +3373,11 @@ createApp({
         if(!landed && inv && this.me && inv.toLowerCase()!==this.me.toLowerCase())
           this.detailNote='This share link was sent to '+inv+' — you’re signed in as '+this.me+'. Sign out (⏻) and sign in with that email to accept the invite.'; }
       return; }  // GitHub/email session
-    if(this.token){ await this.loadAll(); if(route) this.openDetail(route.kind, route.name, true); return; }      // token-in-browser fallback
+    if(this.token){ await this.loadAll();
+      if(mkRoute) this.openProvider(mkRoute, true); else if(route) this.openDetail(route.kind, route.name, true);
+      return; }      // token-in-browser fallback
+    // A marketplace link is only meaningful to a member, so a logged-out visitor gets the front
+    // door rather than the share gate (which exists to accept skill/tool shares).
     if(!inv && !linkOrg && !route && !qs.get('invite_expired')){ location.replace('/'); return; }  // logged-out plain visit → the marketing landing owns the front door
     if(route){ this.shareGate=route; this.demo.signin=true; }  // shared link while logged out: the focused gate (no sandbox mint, no tour); after sign-in the boot lands on it (email verify reloads in place; OAuth restores via the treg-next stash)
     else this.sbxInit();                            // other logged-out flows → the in-app landing + sign-in modal
