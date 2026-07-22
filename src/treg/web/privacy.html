@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Privacy Policy — tools-registry</title>
+<meta name="description" content="What tools-registry (treg) stores, why, who it's shared with, and how to get it deleted."/>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist+Pixel&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/legal.css"/>
+</head>
+<body>
+
+<div class="topbar"><div class="in">
+  <a class="brand" href="/"><span class="glyph">▚</span> tools-registry</a>
+  <span class="sp"></span>
+  <a class="nav" href="/terms">terms</a>
+  <a class="nav on" href="/privacy">privacy</a>
+  <a class="nav" href="/tutorial">docs</a>
+</div></div>
+
+<div class="page">
+<div class="doc">
+
+  <div class="eyebrow">Legal</div>
+  <h1>Privacy Policy</h1>
+  <div class="stamp">
+    <span>Last updated: 22 July 2026</span>
+    <span>Effective: 22 July 2026</span>
+  </div>
+
+  <div class="summary">
+    <h2>The short version</h2>
+    <ul>
+      <li><b>We collect almost nothing about you.</b> An email address to sign in, the teams you're in, and a log of which tools were called. That's the account.</li>
+      <li><b>Your credentials are encrypted and never returned.</b> No stored secret value is ever sent back to a client, shown in the dashboard, or read by us.</li>
+      <li><b>We don't store what flows through the proxy.</b> A call's request and response bodies pass through and are gone. We keep the method, path, status code, and timestamp — not the content.</li>
+      <li><b>No trackers.</b> No analytics scripts, no advertising pixels, no third-party cookies. One session cookie, and that's it.</li>
+      <li><b>No training, no selling.</b> Your credentials, skills, and connected-account data are never sold and never used to train models.</li>
+    </ul>
+  </div>
+
+  <h2 class="sec" id="s1"><span class="n">01</span>Who this covers</h2>
+  <p>This policy explains how <b>Superdesign</b> ("we", "us") handles personal data in the hosted
+  tools-registry ("treg") service at <code>treg.superdesign.dev</code>. For that service, we are the
+  data controller.</p>
+  <div class="note">
+    <p><b>Self-hosted instances are not covered.</b> If you or your employer run treg on your own
+    infrastructure, your data never reaches us and this policy doesn't apply — the operator of that
+    instance is the controller.</p>
+  </div>
+  <p>Contact for anything privacy-related:
+  <a href="mailto:jason@superdesign.dev">jason@superdesign.dev</a>.</p>
+
+  <h2 class="sec" id="s2"><span class="n">02</span>What we collect</h2>
+
+  <h3>Account and identity</h3>
+  <ul>
+    <li>Your <b>email address</b> — the only identifier we require. Used to sign you in, send one-time
+      codes and team invitations, and attribute actions in the audit log.</li>
+    <li>Team names, your role in each team, and when you joined.</li>
+    <li><b>Token hashes.</b> We store a SHA-256 hash of each access token, never the token itself.</li>
+    <li>Short-lived sign-in codes and rate-limit counters, which expire automatically.</li>
+  </ul>
+  <p>We do not ask for your name, phone number, address, photo, date of birth, or payment details —
+  the Service is free and we take no payment data at all.</p>
+
+  <h3>Credentials and connections</h3>
+  <ul>
+    <li><b>Secret values you store</b> (API keys, tokens, credential files), <b>encrypted at rest</b>
+      with authenticated encryption. These are never returned through the API and never displayed
+      after they're saved.</li>
+    <li><b>OAuth tokens</b> from accounts you connect, plus the metadata needed to use them: the
+      provider, the scopes you actually granted, the specific property or account you selected and
+      its display name, and expiry/refresh timestamps.</li>
+    <li>Health status for each credential ("does this key still work"), from periodic validity checks.</li>
+  </ul>
+
+  <h3>Usage and audit records</h3>
+  <ul>
+    <li>For each proxied or local-run call: the caller's email, the tool name, HTTP method, request
+      path, status code, and timestamp.</li>
+    <li>For each server-side CLI run: the caller's email, the tool name, the command arguments, exit
+      code, and duration. Secret values are injected as environment variables, never as command-line
+      arguments, so they don't appear here.</li>
+  </ul>
+  <div class="note">
+    <p><b>We do not record request or response bodies.</b> The data you fetch from an upstream API
+    passes through the proxy and is not written down. What survives a call is the metadata listed
+    above — enough for a team admin to see who used what, and no more.</p>
+  </div>
+
+  <h3>Content you create</h3>
+  <p>Skills (SKILL.md text and companion files), tool definitions, and their upstream URLs. Treat
+  skill text as visible to everyone in the team it lives in — don't put secrets there.</p>
+
+  <h3>Technical data</h3>
+  <p>Our hosting provider processes standard server logs (IP address, user agent, request line,
+  timestamp) for security and abuse prevention, retained on their default schedule. We don't build
+  profiles from them.</p>
+
+  <h2 class="sec" id="s3"><span class="n">03</span>Why we're allowed to hold it (legal bases)</h2>
+  <div class="tw"><table>
+    <tr><th>Data</th><th>Purpose</th><th>Basis (GDPR Art. 6)</th></tr>
+    <tr><td>Email, team membership</td><td>Provide the account; sign-in; invitations</td><td>Contract</td></tr>
+    <tr><td>Stored credentials, OAuth tokens</td><td>Execute the calls you ask for; keep them valid</td><td>Contract</td></tr>
+    <tr><td>Call and run audit records</td><td>Show teams who used what; enforce caps; investigate abuse</td><td>Legitimate interests / Contract</td></tr>
+    <tr><td>Server logs, rate-limit counters</td><td>Security, abuse prevention, service reliability</td><td>Legitimate interests</td></tr>
+    <tr><td>Skills and tool definitions</td><td>Store and share what you asked us to share</td><td>Contract</td></tr>
+  </table></div>
+
+  <h2 class="sec" id="s4"><span class="n">04</span>What we never do</h2>
+  <ul>
+    <li>We never <b>sell</b> personal data, credentials, or anything reached through them.</li>
+    <li>We never use your credentials, connected-account data, or skill content to <b>train machine
+      learning models</b> — ours or anyone else's.</li>
+    <li>We never run <b>advertising, analytics, or tracking scripts</b> on our pages. There is no
+      Google Analytics, no pixel, no session-replay, no third-party cookie.</li>
+    <li>We never use your stored credentials for anything other than the call you or a permitted
+      teammate initiated, plus automated health checks and token refreshes.</li>
+  </ul>
+
+  <h2 class="sec" id="s5"><span class="n">05</span>Google user data — Limited Use</h2>
+  <p>When you connect Google Search Console, Google Analytics, Google Business Profile, or Google
+  Ads, treg's use of information received from Google APIs adheres to the
+  <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener">Google API Services User Data Policy</a>,
+  including the <b>Limited Use</b> requirements. Specifically:</p>
+  <ul>
+    <li>Google user data is used <b>only</b> to provide and improve the features you connected it for
+      — making the API calls you or your team initiate.</li>
+    <li>It is <b>not</b> transferred to others except as necessary to provide those features, to
+      comply with applicable law, or as part of a merger or acquisition with notice to you.</li>
+    <li>It is <b>not</b> used for advertising, and is <b>not</b> used to train generalized AI or ML
+      models.</li>
+    <li>No human at Superdesign reads your Google user data, except with your explicit consent for a
+      specific support issue, for security purposes, to comply with applicable law, or where the data
+      is aggregated and anonymized.</li>
+    <li>Disconnecting the provider in treg deletes the stored token. You can also revoke treg's
+      access at any time from your
+      <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">Google account permissions</a> page.</li>
+  </ul>
+  <p>The same commitments apply to every other provider you connect (LinkedIn, Slack, X, or an API
+  you register yourself).</p>
+
+  <h2 class="sec" id="s6"><span class="n">06</span>Who we share it with</h2>
+  <p>Only the processors we need to run the Service, plus the upstream providers you deliberately
+  point us at.</p>
+  <div class="tw"><table>
+    <tr><th>Recipient</th><th>What they get</th><th>Why</th><th>Where</th></tr>
+    <tr><td>Render</td><td>Application hosting and the managed database — all stored data</td><td>Runs the Service</td><td>USA (Oregon)</td></tr>
+    <tr><td>Resend</td><td>Your email address and the message body</td><td>Sends sign-in codes and invitations</td><td>USA</td></tr>
+    <tr><td>Google Fonts</td><td>Your IP address, when you load a treg web page</td><td>Serves the site's typefaces</td><td>USA</td></tr>
+    <tr><td>Upstream APIs you connect</td><td>Whatever your call sends them</td><td>The call you asked us to make</td><td>Varies by provider</td></tr>
+  </table></div>
+  <p>We'll also disclose data where legally required, or where necessary to protect the Service or
+  its users from a live security threat. If we're ever compelled to hand over data about you, we'll
+  tell you unless we're legally barred from doing so.</p>
+  <p>If treg is ever acquired or merged, data may transfer as part of that transaction — you'd be
+  notified in advance and this policy would continue to apply until replaced by one that is no less
+  protective.</p>
+
+  <h2 class="sec" id="s7"><span class="n">07</span>Cookies</h2>
+  <p>One cookie: <code>treg_session</code>. It's HTTP-only, SameSite=Lax, and secure over HTTPS. It
+  holds a signed session reference and nothing else. It's strictly necessary to keep you signed in,
+  so there's no consent banner and nothing to opt out of short of signing out.</p>
+  <p>There are no analytics, advertising, or third-party tracking cookies anywhere on the Service.</p>
+
+  <h2 class="sec" id="s8"><span class="n">08</span>How we protect it</h2>
+  <ul>
+    <li>Secret values and OAuth tokens are <b>encrypted at rest</b> with a key held outside the
+      database.</li>
+    <li>Access tokens are stored only as <b>SHA-256 hashes</b>; a database leak doesn't yield usable
+      tokens.</li>
+    <li>All traffic is over <b>HTTPS</b>. Every record is scoped to an organization, and access is
+      checked per request against your membership, role, and per-member tool list.</li>
+    <li>Server-side runs execute in a <b>sandbox</b> with filesystem and network egress restrictions.</li>
+    <li>Bumping your token version <b>revokes every token you hold</b> at once, immediately.</li>
+  </ul>
+  <p>No system is perfectly secure. If we become aware of a breach affecting your personal data,
+  we'll notify affected users and any required regulator without undue delay.</p>
+
+  <h2 class="sec" id="s9"><span class="n">09</span>How long we keep it</h2>
+  <div class="tw"><table>
+    <tr><th>Data</th><th>Retention</th></tr>
+    <tr><td>Account, teams, memberships</td><td>Until you delete the account</td></tr>
+    <tr><td>Credentials and OAuth tokens</td><td>Until you delete them, disconnect the provider, or delete the team</td></tr>
+    <tr><td>Skills and tool definitions</td><td>Until deleted by you or a team admin</td></tr>
+    <tr><td>Call and run audit records</td><td>While the owning team exists; deleted with it</td></tr>
+    <tr><td>Sign-in codes, rate-limit counters</td><td>Minutes — expired rows are swept automatically</td></tr>
+    <tr><td>Invitations</td><td>Until accepted, revoked, or expired</td></tr>
+    <tr><td>Hosting server logs</td><td>Our provider's default window (short)</td></tr>
+  </table></div>
+  <p>Deletions are permanent in the live database. Encrypted backups may retain a copy for a short
+  period before rotating out.</p>
+
+  <h2 class="sec" id="s10"><span class="n">10</span>Your rights</h2>
+  <p>Wherever you live, you can ask us to <b>access</b>, <b>correct</b>, <b>export</b>, or
+  <b>delete</b> your data, and to <b>restrict</b> or <b>object to</b> processing. Depending on your
+  location (EEA/UK under the GDPR, California under the CCPA/CPRA, and similar laws elsewhere) some
+  of these are formal legal rights; we honour all of them for everyone regardless.</p>
+  <ul>
+    <li><b>Self-serve:</b> the dashboard lets you delete credentials, tools, skills, and whole teams,
+      and revoke all your tokens.</li>
+    <li><b>Everything else:</b> email <a href="mailto:jason@superdesign.dev">jason@superdesign.dev</a>.
+      We'll respond within 30 days and won't charge you or treat you differently for asking.</li>
+  </ul>
+  <p>California residents: we do not sell or share personal information as those terms are defined by
+  the CPRA, and we have not done so in the preceding 12 months.</p>
+  <p>EEA/UK residents: you also have the right to lodge a complaint with your local supervisory
+  authority. Data is processed in the United States; where a transfer mechanism is required, we rely
+  on the Standard Contractual Clauses offered by our processors.</p>
+
+  <h2 class="sec" id="s11"><span class="n">11</span>Children</h2>
+  <p>The Service isn't intended for anyone under 16, and we don't knowingly collect their data. If
+  you believe a child has created an account, email us and we'll delete it.</p>
+
+  <h2 class="sec" id="s12"><span class="n">12</span>Changes to this policy</h2>
+  <p>We'll update this page when our practices change, and the "last updated" date always reflects the
+  current version. For material changes — new categories of data, a new processor, or a new purpose —
+  we'll notify account holders by email or an in-app notice before the change takes effect.</p>
+
+  <h2 class="sec" id="s13"><span class="n">13</span>Contact</h2>
+  <p>Privacy questions, requests, or complaints:
+  <a href="mailto:jason@superdesign.dev">jason@superdesign.dev</a>. Security vulnerabilities:
+  <a href="https://github.com/superdesigndev/tools-registry/blob/main/SECURITY.md" target="_blank" rel="noopener">SECURITY.md</a>.</p>
+
+  <hr/>
+  <p style="font-size:12.5px;color:var(--ink55)">See also the
+  <a href="/terms">Terms of Service</a>. treg is open source — if you'd rather verify than trust, the
+  <a href="https://github.com/superdesigndev/tools-registry" target="_blank" rel="noopener">code that does all of the above</a>
+  is public.</p>
+
+</div>
+
+<nav class="toc">
+  <div class="lbl">On this page</div>
+  <a href="#s1">Who this covers</a>
+  <a href="#s2">What we collect</a>
+  <a href="#s3">Legal bases</a>
+  <a href="#s4">What we never do</a>
+  <a href="#s5">Google Limited Use</a>
+  <a href="#s6">Who we share with</a>
+  <a href="#s7">Cookies</a>
+  <a href="#s8">Security</a>
+  <a href="#s9">Retention</a>
+  <a href="#s10">Your rights</a>
+  <a href="#s11">Children</a>
+  <a href="#s12">Changes</a>
+  <a href="#s13">Contact</a>
+</nav>
+</div>
+
+<footer><div class="foot-in">
+  <span class="brand"><span class="glyph">▚</span> tools-registry</span>
+  <span class="muted">— 100% open source</span>
+  <span class="sp"></span>
+  <a href="/terms">terms</a>
+  <a href="/privacy">privacy</a>
+  <a href="/tutorial">docs</a>
+  <a href="https://github.com/superdesigndev/tools-registry" target="_blank" rel="noopener">github ↗</a>
+</div></footer>
+
+<script>
+// Highlight the TOC entry for whichever section is currently on screen.
+const links = [...document.querySelectorAll('.toc a')];
+const byId = new Map(links.map(a => [a.getAttribute('href').slice(1), a]));
+const seen = new Set();
+const io = new IntersectionObserver(entries => {
+  entries.forEach(e => e.isIntersecting ? seen.add(e.target.id) : seen.delete(e.target.id));
+  const first = [...byId.keys()].find(id => seen.has(id));
+  links.forEach(a => a.classList.toggle('on', a === byId.get(first)));
+}, {rootMargin: '-72px 0px -70% 0px'});
+document.querySelectorAll('h2.sec').forEach(h => io.observe(h));
+</script>
+
+</body>
+</html>

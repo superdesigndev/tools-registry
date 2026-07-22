@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Terms of Service — tools-registry</title>
+<meta name="description" content="The terms that govern use of the hosted tools-registry (treg) service."/>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist+Pixel&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/legal.css"/>
+</head>
+<body>
+
+<div class="topbar"><div class="in">
+  <a class="brand" href="/"><span class="glyph">▚</span> tools-registry</a>
+  <span class="sp"></span>
+  <a class="nav on" href="/terms">terms</a>
+  <a class="nav" href="/privacy">privacy</a>
+  <a class="nav" href="/tutorial">docs</a>
+</div></div>
+
+<div class="page">
+<div class="doc">
+
+  <div class="eyebrow">Legal</div>
+  <h1>Terms of Service</h1>
+  <div class="stamp">
+    <span>Last updated: 22 July 2026</span>
+    <span>Effective: 22 July 2026</span>
+  </div>
+
+  <div class="summary">
+    <h2>The short version</h2>
+    <ul>
+      <li><b>What this is.</b> tools-registry ("treg") holds your API keys and OAuth connections server-side and lets your teammates and AI agents use them through a revocable token — without the key ever landing on a machine.</li>
+      <li><b>Your credentials stay yours.</b> We store them encrypted, use them only to make the calls you or your team ask for, and never sell or mine them.</li>
+      <li><b>You are responsible for what you connect.</b> Only upload credentials you have the right to use, and follow the terms of whatever upstream API sits behind them.</li>
+      <li><b>Free, and offered as-is.</b> The hosted service is in early access with no uptime promise. Don't make it the only copy of anything you can't lose.</li>
+      <li><b>Self-hosting is separate.</b> If you run your own registry, the source license governs — not this document.</li>
+    </ul>
+    <p style="margin-top:14px;font-size:12.5px;color:var(--ink55)">This summary is for orientation only. The numbered sections below are the actual agreement.</p>
+  </div>
+
+  <h2 class="sec" id="s1"><span class="n">01</span>Who we are, and what these terms cover</h2>
+  <p>tools-registry (also called <b>treg</b>) is operated by <b>Superdesign</b> ("we", "us"). These
+  Terms of Service (the "Terms") are a binding agreement between us and you — the person or
+  organization using the service (<b>"you"</b>).</p>
+  <p>They cover the <b>hosted service</b> we run at <code>treg.superdesign.dev</code>: the web
+  dashboard, the API, the call proxy, the <code>treg</code> CLI when pointed at our servers, and
+  everything reachable from them (together, the <b>"Service"</b>).</p>
+  <div class="note">
+    <p><b>They do not cover self-hosted instances.</b> If you install treg on your own
+    infrastructure, your relationship with us is governed by the
+    <a href="https://github.com/superdesigndev/tools-registry/blob/main/LICENSE" target="_blank" rel="noopener">source license</a>
+    alone. We have no access to your data and take on no obligations for that deployment.</p>
+  </div>
+  <p>By creating an account, signing in, or making a call through the Service, you accept these
+  Terms. If you are accepting on behalf of a company, you confirm you're authorized to bind it.</p>
+
+  <h2 class="sec" id="s2"><span class="n">02</span>Your account</h2>
+  <p>You sign in with an email address, either by one-time code or through a supported identity
+  provider. You must be at least 16 years old and give a real, working address — invite links and
+  sign-in codes go there, so a wrong address is a security problem, not a typo.</p>
+  <ul>
+    <li>Keep your inbox and your treg tokens secure. Anyone holding a valid token can make calls as
+      you, within whatever access your role and per-member tool list allow.</li>
+    <li>You can revoke every token you hold at once from the dashboard, and we'll do the same on
+      request if you believe a token has leaked.</li>
+    <li>Tell us promptly at <a href="mailto:jason@superdesign.dev">jason@superdesign.dev</a> if you
+      suspect unauthorized access.</li>
+  </ul>
+
+  <h2 class="sec" id="s3"><span class="n">03</span>Teams, roles, and who controls what</h2>
+  <p>Every account gets a personal team, and you can create or join others. Within a team:</p>
+  <ul>
+    <li><b>Owners and admins</b> can add and remove credentials and tools, invite and remove members,
+      set each member's tool access and daily call cap, and delete the team and everything in it.</li>
+    <li><b>Members</b> can call the tools they've been granted and read the team's skills. They never
+      see raw secret values — the Service is built so a stored credential is never returned to a
+      client.</li>
+    <li><b>Every call is logged</b> — who, which tool, which method and path, the status code, and when.
+      Team admins can see that log. If that isn't acceptable to you, don't call through a team you
+      don't control.</li>
+  </ul>
+  <p>If you join a team you don't own, the team's owner effectively controls that workspace: they can
+  revoke your access, see your call history in it, and delete shared content. Choose your teams
+  accordingly.</p>
+
+  <h2 class="sec" id="s4"><span class="n">04</span>Credentials, and what we do with them</h2>
+  <p>The point of the Service is holding credentials so you don't have to hand them out. Concretely:</p>
+  <ul>
+    <li>Secret values are <b>encrypted at rest</b> and are never returned through the API or shown in
+      the dashboard after they're stored.</li>
+    <li>We inject them <b>only</b> into calls that an authenticated member of the owning team makes to
+      a tool they have access to — through the call proxy, a local-run grant, or a server-side run.</li>
+    <li>We do <b>not</b> read, mine, sell, or use your credentials or the data they reach for any
+      purpose other than performing the call you asked for and keeping the credential healthy
+      (periodic validity checks and OAuth token refresh).</li>
+  </ul>
+  <p><b>Your obligations.</b> You must have the right to store and use every credential you add, and
+  the authority to grant your teammates and agents access through it. You are responsible for the
+  calls made with your credentials — including calls made by AI agents you've pointed at the Service.
+  An agent acting under your token is you, as far as these Terms are concerned.</p>
+  <div class="note warn">
+    <p>Treat treg as a working vault, not a system of record. Keep your own copy of any credential
+    you can't re-issue, and revoke upstream if you ever suspect compromise — revoking at the source is
+    always faster and more complete than anything we can do for you.</p>
+  </div>
+
+  <h2 class="sec" id="s5"><span class="n">05</span>Upstream APIs and connected accounts</h2>
+  <p>When you connect an account (Google Search Console, Google Analytics, Google Business Profile,
+  Google Ads, LinkedIn, Slack, X, or any API you register yourself), calls made through the Service
+  are subject to <b>that provider's</b> terms as well as these. We are not a party to your
+  relationship with them.</p>
+  <ul>
+    <li>Only grant the scopes you actually need — the connect flow asks you to pick a capability for
+      exactly this reason.</li>
+    <li>Rate limits, quotas, billing, and enforcement are the upstream provider's. If they suspend or
+      revoke your access, we can't restore it.</li>
+    <li>Disconnecting a provider in treg deletes the stored token on our side; revoking treg's access
+      in the provider's own settings is the belt-and-braces version, and we recommend both.</li>
+  </ul>
+
+  <h2 class="sec" id="s6"><span class="n">06</span>Skills and content you upload</h2>
+  <p>Skills, tool definitions, and their companion files are yours. You keep all rights in them; you
+  grant us only the limited licence needed to store them, show them to the teammates you've shared
+  them with, and run them when you ask us to. We don't use your skill content to train models.</p>
+  <p>You're responsible for what you put in them. Don't upload content you don't have the rights to,
+  and don't put secrets in a skill's text — that's what the vault is for, and skill text is visible to
+  every member of the team it lives in.</p>
+
+  <h2 class="sec" id="s7"><span class="n">07</span>Acceptable use</h2>
+  <p>Don't use the Service to:</p>
+  <ul>
+    <li>store or use credentials you don't have permission to use, or access accounts that aren't
+      yours to access;</li>
+    <li>break the terms, rate limits, or anti-abuse measures of any upstream API — including using
+      treg to disguise the origin of automated traffic;</li>
+    <li>attack, overload, or probe the Service or the infrastructure it runs on, or attempt to reach
+      another team's data;</li>
+    <li>run malware, mine cryptocurrency, send spam or bulk unsolicited email, or host illegal
+      content;</li>
+    <li>use server-side runs to execute code intended to escape the sandbox, or to proxy traffic to
+      destinations unrelated to a registered tool;</li>
+    <li>resell or repackage the hosted Service as your own product — see §11.</li>
+  </ul>
+  <p>We apply per-member daily call caps, egress restrictions, and sandboxing to protect the Service.
+  Circumventing them is a breach of these Terms.</p>
+
+  <h2 class="sec" id="s8"><span class="n">08</span>Early access, availability, and changes</h2>
+  <p>The Service is in <b>early access</b>. It's free today, it changes often, and features can be
+  added, altered, or withdrawn. We may change or discontinue the Service, and we'll make a reasonable
+  effort to give notice before anything that would cause you to lose data.</p>
+  <p>There is <b>no uptime commitment and no support commitment</b>. We aim to be reliable and we
+  answer email, but nothing here is an SLA.</p>
+  <p>If we introduce paid plans, we'll say so clearly in advance and no charge will apply to you
+  without your explicit agreement.</p>
+
+  <h2 class="sec" id="s9"><span class="n">09</span>Suspension, termination, and deletion</h2>
+  <p>You can leave at any time: delete a team from the dashboard, or email us to delete your account
+  entirely. Deleting a team destroys its stored credentials, tools, and skills.</p>
+  <p>We may suspend or terminate an account or team — with notice where practical, immediately where
+  necessary — if it breaches these Terms, endangers the Service or other users, or if we're required
+  to by law. If we terminate you without cause, we'll give you a reasonable chance to export your
+  content first.</p>
+  <p>On termination, your right to use the Service ends. Sections 04 (your obligations), 10, 12, 13,
+  and 14 survive.</p>
+
+  <h2 class="sec" id="s10"><span class="n">10</span>No warranty</h2>
+  <p>THE SERVICE IS PROVIDED <b>"AS IS" AND "AS AVAILABLE"</b>, WITHOUT WARRANTIES OF ANY KIND, EXPRESS
+  OR IMPLIED, INCLUDING MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND NON-INFRINGEMENT.
+  We do not warrant that the Service will be uninterrupted, error-free, or secure against every
+  attack, or that any call made through it will succeed.</p>
+  <p>Nothing in these Terms excludes liability that cannot lawfully be excluded, including for fraud
+  or for death or personal injury caused by negligence.</p>
+
+  <h2 class="sec" id="s11"><span class="n">11</span>Open source and self-hosting</h2>
+  <p>treg's source is public under the
+  <a href="https://github.com/superdesigndev/tools-registry/blob/main/LICENSE" target="_blank" rel="noopener">tools-registry License</a>
+  (Apache 2.0 plus additional terms). You may run your own registry for your own organization — that's
+  expressly encouraged. You may <b>not</b> offer treg to third parties as a hosted, managed, or
+  embedded service without our prior written authorization. The source licence, not these Terms,
+  governs your use of the code itself.</p>
+
+  <h2 class="sec" id="s12"><span class="n">12</span>Limitation of liability</h2>
+  <p>To the maximum extent permitted by law, neither party is liable for indirect, incidental,
+  special, consequential, or punitive damages, or for lost profits, revenue, goodwill, or data,
+  however caused.</p>
+  <p>Our total aggregate liability arising out of or relating to the Service is limited to the greater
+  of (a) the amount you paid us for the Service in the twelve months before the claim, or (b) US$100.
+  While the Service is free, that means US$100.</p>
+
+  <h2 class="sec" id="s13"><span class="n">13</span>Indemnity</h2>
+  <p>You'll defend and indemnify us against claims, losses, and costs arising from your use of the
+  Service in breach of these Terms — in particular, claims that you stored or used a credential you
+  weren't entitled to use, or that calls you made violated an upstream provider's terms.</p>
+
+  <h2 class="sec" id="s14"><span class="n">14</span>Governing law and disputes</h2>
+  <p>These Terms are governed by the laws of the <b>State of Delaware, USA</b>, without regard to its
+  conflict-of-laws rules. The state and federal courts located in Delaware have exclusive jurisdiction,
+  and both parties consent to venue there. If you're a consumer, this doesn't deprive you of the
+  protection of mandatory laws in your country of residence.</p>
+
+  <h2 class="sec" id="s15"><span class="n">15</span>Changes to these Terms</h2>
+  <p>We may update these Terms. If a change is material we'll notify account holders by email or an
+  in-app notice before it takes effect, and the "last updated" date at the top always reflects the
+  current version. Continuing to use the Service after a change means you accept it; if you don't,
+  stop using the Service and delete your account.</p>
+
+  <h2 class="sec" id="s16"><span class="n">16</span>Contact</h2>
+  <p>Questions about these Terms, or anything else:
+  <a href="mailto:jason@superdesign.dev">jason@superdesign.dev</a>.
+  Security reports are welcome and taken seriously — see
+  <a href="https://github.com/superdesigndev/tools-registry/blob/main/SECURITY.md" target="_blank" rel="noopener">SECURITY.md</a>.</p>
+
+  <hr/>
+  <p style="font-size:12.5px;color:var(--ink55)">See also the
+  <a href="/privacy">Privacy Policy</a>, which explains what data we hold and why.</p>
+
+</div>
+
+<nav class="toc">
+  <div class="lbl">On this page</div>
+  <a href="#s1">Scope</a>
+  <a href="#s2">Your account</a>
+  <a href="#s3">Teams and roles</a>
+  <a href="#s4">Credentials</a>
+  <a href="#s5">Upstream APIs</a>
+  <a href="#s6">Skills you upload</a>
+  <a href="#s7">Acceptable use</a>
+  <a href="#s8">Early access</a>
+  <a href="#s9">Termination</a>
+  <a href="#s10">No warranty</a>
+  <a href="#s11">Open source</a>
+  <a href="#s12">Liability</a>
+  <a href="#s13">Indemnity</a>
+  <a href="#s14">Governing law</a>
+  <a href="#s15">Changes</a>
+  <a href="#s16">Contact</a>
+</nav>
+</div>
+
+<footer><div class="foot-in">
+  <span class="brand"><span class="glyph">▚</span> tools-registry</span>
+  <span class="muted">— 100% open source</span>
+  <span class="sp"></span>
+  <a href="/terms">terms</a>
+  <a href="/privacy">privacy</a>
+  <a href="/tutorial">docs</a>
+  <a href="https://github.com/superdesigndev/tools-registry" target="_blank" rel="noopener">github ↗</a>
+</div></footer>
+
+<script>
+// Highlight the TOC entry for whichever section is currently on screen.
+const links = [...document.querySelectorAll('.toc a')];
+const byId = new Map(links.map(a => [a.getAttribute('href').slice(1), a]));
+const seen = new Set();
+const io = new IntersectionObserver(entries => {
+  entries.forEach(e => e.isIntersecting ? seen.add(e.target.id) : seen.delete(e.target.id));
+  const first = [...byId.keys()].find(id => seen.has(id));
+  links.forEach(a => a.classList.toggle('on', a === byId.get(first)));
+}, {rootMargin: '-72px 0px -70% 0px'});
+document.querySelectorAll('h2.sec').forEach(h => io.observe(h));
+</script>
+
+</body>
+</html>

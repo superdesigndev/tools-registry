@@ -1,0 +1,98 @@
+/* Shared skin for the legal pages (/terms, /privacy). Tokens lifted from the landing page's
+   final "monologue" skin so the legal pages read as the same product, not a bolted-on doc. */
+:root{
+  --bg:#151412; --deep:#0d0c0b; --panel:#1c1b19; --panel2:#252422;
+  --line:rgba(255,255,255,.09); --line2:rgba(255,255,255,.14);
+  --ink:#f2efe8; --ink70:rgba(242,239,232,.72); --ink55:rgba(242,239,232,.55);
+  --link:#19D0E8; --tint:rgba(25,208,232,.12); --green:#A6EE98;
+  --display:"Geist Pixel","Instrument Serif",Georgia,serif;
+  --body:"DM Mono",ui-monospace,"SF Mono",Menlo,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);
+  font-size:14.5px;line-height:1.72;-webkit-font-smoothing:antialiased}
+/* film grain, same as the landing */
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;
+  background:repeating-linear-gradient(180deg,transparent 0 3px,rgba(255,255,255,.012) 3px 4px)}
+a{color:var(--link);text-decoration:none}
+a:hover{text-decoration:underline}
+code{font-family:var(--body);background:var(--panel2);border:1px solid var(--line);
+  border-radius:5px;padding:1px 6px;font-size:.92em;color:var(--ink)}
+
+/* ---------- top bar ---------- */
+.topbar{position:sticky;top:0;z-index:20;background:rgba(21,20,18,.86);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--line)}
+.topbar .in{max-width:1000px;margin:0 auto;padding:14px 28px;display:flex;align-items:center;gap:18px}
+.brand{display:inline-flex;align-items:center;gap:9px;color:var(--ink);font-weight:500;font-size:14px}
+.brand .glyph{font-family:var(--display);font-size:18px;line-height:1}
+.topbar .sp{flex:1}
+.topbar a.nav{color:var(--ink55);font-size:12.5px;letter-spacing:.02em}
+.topbar a.nav:hover{color:var(--ink);text-decoration:none}
+.topbar a.nav.on{color:var(--ink)}
+
+/* ---------- layout ---------- */
+.page{max-width:1000px;margin:0 auto;padding:56px 28px 120px;position:relative;z-index:2;
+  display:grid;grid-template-columns:1fr 216px;gap:56px;align-items:start}
+.doc{min-width:0}
+h1{font-family:var(--display);font-weight:400;font-size:clamp(30px,4vw,46px);line-height:1.14;
+  letter-spacing:-.02em;margin:0}
+.eyebrow{font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--link);
+  margin-bottom:16px}
+.stamp{margin-top:18px;font-size:12.5px;color:var(--ink55);display:flex;gap:16px;flex-wrap:wrap}
+.summary{margin-top:34px;background:var(--panel);border:1px solid var(--line);border-radius:16px;
+  padding:22px 24px}
+.summary h2{font-family:var(--body);font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--ink55);margin:0 0 12px;font-weight:500}
+.summary ul{margin:0;padding-left:20px}
+.summary li{margin:7px 0;color:var(--ink70)}
+.summary li b{color:var(--ink);font-weight:500}
+
+h2.sec{font-family:var(--display);font-weight:400;font-size:24px;letter-spacing:-.01em;
+  margin:52px 0 0;scroll-margin-top:80px}
+h2.sec .n{color:var(--ink55);font-size:.72em;margin-right:12px}
+h3{font-family:var(--body);font-weight:500;font-size:14.5px;color:var(--ink);margin:26px 0 0}
+p{color:var(--ink70);margin:12px 0 0}
+ul,ol{color:var(--ink70);margin:12px 0 0;padding-left:22px}
+li{margin:6px 0}
+li b,p b{color:var(--ink);font-weight:500}
+hr{border:0;border-top:1px solid var(--line);margin:44px 0 0}
+
+/* a callout for the load-bearing promises */
+.note{margin-top:20px;border-left:2px solid var(--link);background:var(--tint);
+  border-radius:0 12px 12px 0;padding:14px 18px}
+.note p{margin:0;color:var(--ink)}
+.note.warn{border-left-color:#E8B419;background:rgba(232,180,25,.10)}
+
+/* Wide tables scroll inside their own box rather than pushing the page sideways. Cells wrap —
+   nowrap would make the retention/subprocessor tables far wider than any viewport. */
+.tw{overflow-x:auto;margin-top:18px}
+/* table-layout:fixed is load-bearing — with auto layout the long "purpose" cells blow past
+   width:100% inside the scroll container instead of wrapping, and the last columns get clipped. */
+table{width:100%;min-width:440px;border-collapse:collapse;font-size:13px;
+  table-layout:fixed;overflow-wrap:anywhere}
+th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--ink55);font-weight:500;font-size:11.5px;letter-spacing:.1em;text-transform:uppercase}
+td{color:var(--ink70)}
+td:first-child{color:var(--ink)}
+
+/* ---------- sticky table of contents ---------- */
+.toc{position:sticky;top:88px;font-size:12.5px}
+.toc .lbl{color:var(--ink55);font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+  margin-bottom:12px}
+.toc a{display:block;color:var(--ink55);padding:4px 0 4px 12px;border-left:1px solid var(--line)}
+.toc a:hover{color:var(--ink);text-decoration:none;border-left-color:var(--line2)}
+.toc a.on{color:var(--ink);border-left-color:var(--link)}
+
+footer{border-top:1px solid var(--line);background:var(--deep);position:relative;z-index:2}
+.foot-in{max-width:1000px;margin:0 auto;padding:30px 28px 40px;display:flex;align-items:center;
+  gap:22px;flex-wrap:wrap;font-size:12.5px}
+.foot-in a{color:var(--ink55)}
+.foot-in a:hover{color:var(--ink);text-decoration:none}
+.foot-in .sp{flex:1}
+.foot-in .muted{color:var(--ink55)}
+
+@media(max-width:860px){
+  .page{grid-template-columns:1fr;gap:0;padding-top:38px}
+  .toc{display:none}
+}
