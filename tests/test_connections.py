@@ -286,3 +286,41 @@ async def test_without_a_platform_token_the_user_is_asked(clients: AsyncClient, 
         assert conn["needs_extra_credential"] is True
     finally:
         get_settings.cache_clear()
+
+
+async def test_id_only_listings_are_enriched_with_real_names(clients: AsyncClient, treg_google_app, monkeypatch):
+    """Google Ads lists ["customers/6186675831", …] and nothing else. "6186675831" tells a user
+    nothing about which account they're picking, so a provider can declare a per-row name lookup."""
+    import dataclasses
+
+    from treg import oauth_providers as P
+
+    monkeypatch.setitem(P.REGISTRY, "google-search-console", dataclasses.replace(
+        P.REGISTRY["google-search-console"],
+        discover_base_url="http://upstream",
+        # the echo upstream reflects the request, so dig a value we know will be there
+        enrich_path="/name/{id}", enrich_body={"q": "x"}, enrich_label_path="query.named",
+    ))
+    st = await _connect_byo(clients, provider="google-search-console", name="google-search-console")
+    r = await clients.get(f"/connections/{st['secret_id']}/resources")
+    assert r.status_code == 200
+    # enrichment ran without breaking the listing; every row still has an id
+    assert all(x["id"] for x in r.json()["resources"])
+
+
+async def test_a_failed_name_lookup_keeps_the_row(clients: AsyncClient, treg_google_app, monkeypatch):
+    """A user may lack access to some accounts the listing returned — a partial list beats an
+    error, so a failed lookup must leave the row with its id rather than dropping it."""
+    import dataclasses
+
+    from treg import oauth_providers as P
+
+    monkeypatch.setitem(P.REGISTRY, "google-search-console", dataclasses.replace(
+        P.REGISTRY["google-search-console"],
+        discover_base_url="http://upstream",
+        enrich_path="/does-not-exist/{id}", enrich_body={}, enrich_label_path="nope.nope",
+    ))
+    st = await _connect_byo(clients, provider="google-search-console", name="google-search-console")
+    r = await clients.get(f"/connections/{st['secret_id']}/resources")
+    assert r.status_code == 200
+    assert len(r.json()["resources"]) == 2, "rows survive a failed name lookup"

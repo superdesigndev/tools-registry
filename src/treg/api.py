@@ -11,6 +11,7 @@ scoped to the caller's org; `owner` (creator email) drives the member-vs-admin r
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import gzip
 import hashlib
@@ -3567,6 +3568,51 @@ async def _owned_connection(secret_id: int, caller: Caller, db: AsyncSession) ->
     return secret
 
 
+def _dig(obj, dotted: str):
+    """Walk a dotted path through dicts and list indices; None if any hop is missing."""
+    for part in dotted.split("."):
+        if isinstance(obj, list):
+            try:
+                obj = obj[int(part)]
+            except (ValueError, IndexError):
+                return None
+        elif isinstance(obj, dict):
+            obj = obj.get(part)
+        else:
+            return None
+        if obj is None:
+            return None
+    return obj
+
+
+async def _enrich_resource_labels(provider, resources: list[dict], token: str, client) -> None:
+    """Replace id-only labels with the upstream's human name, in place.
+
+    Runs the lookups concurrently — six sequential round-trips to Google would make the picker feel
+    broken. A row whose lookup fails keeps its id: a partial list beats an error, since the user may
+    not have access to every account the listing returned."""
+    async def one(row: dict) -> None:
+        bare = str(row["id"]).rsplit("/", 1)[-1]
+        headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+        if provider.needs_extra_credential:
+            headers[provider.extra_credential_header] = provider.platform_extra_credential
+        if provider.enrich_header_name:
+            headers[provider.enrich_header_name] = provider.enrich_header_value.format(id=bare)
+        try:
+            resp = await client.post(
+                f"{provider.discovery_base.rstrip('/')}{provider.enrich_path.format(id=bare)}",
+                headers=headers, json=provider.enrich_body or {},
+            )
+            if resp.status_code == 200:
+                label = _dig(resp.json(), provider.enrich_label_path)
+                if label:
+                    row["label"] = str(label)
+        except Exception:  # noqa: BLE001 — a naming lookup must never break the picker
+            pass
+
+    await asyncio.gather(*(one(r) for r in resources if r.get("id")))
+
+
 @app.get("/connections/{secret_id}/resources")
 async def connection_resources(
     secret_id: int, request: Request,
@@ -3624,6 +3670,8 @@ async def connection_resources(
         else {"id": r.get(provider.discover_id_field), "label": r.get(label_field), "raw": r}
         for r in rows if isinstance(r, (dict, str))
     ]
+    if provider.supports_enrichment:
+        await _enrich_resource_labels(provider, resources, token, request.app.state.http)
     # Self-heal a connection whose target was chosen before we stored labels (or via the API, which
     # has no label to give). We're already holding the upstream's own naming — resolving it here
     # spares the user a pointless re-pick just to make the row readable.

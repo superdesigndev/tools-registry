@@ -85,6 +85,20 @@ class OAuthProvider:
     discover_id_field: str = "id"
     discover_label_field: str = ""
 
+    # Some listings return only ids — Google Ads' listAccessibleCustomers gives
+    # ["customers/6186675831", …] and nothing else. "6186675831" tells a user nothing about which
+    # account they're choosing, so a provider can declare a per-row lookup for the human name.
+    # `{id}` is the bare id (the last path segment of the resource id).
+    enrich_path: str = ""  # POSTed to discovery_base + this
+    enrich_body: dict | None = None
+    enrich_label_path: str = ""  # dotted path into the response, e.g. "results.0.customer.name"
+    enrich_header_name: str = ""  # optional per-row header, e.g. login-customer-id
+    enrich_header_value: str = "{id}"
+
+    @property
+    def supports_enrichment(self) -> bool:
+        return bool(self.enrich_path and self.enrich_label_path)
+
     @property
     def capabilities(self) -> list[str]:
         return sorted(self.scopes)
@@ -227,6 +241,10 @@ GOOGLE_ADS = OAuthProvider(
     resource_label="account",
     discover_path="/v21/customers:listAccessibleCustomers",
     discover_key="resourceNames",
+    enrich_path="/v21/customers/{id}/googleAds:search",
+    enrich_body={"query": "SELECT customer.descriptive_name FROM customer LIMIT 1"},
+    enrich_label_path="results.0.customer.descriptiveName",
+    enrich_header_name="login-customer-id",
 )
 
 SLACK = OAuthProvider(

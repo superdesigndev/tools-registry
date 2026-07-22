@@ -800,7 +800,7 @@ th{background:rgba(0,0,0,.25)}
 
           <div v-if="resPick" class="scrim" role="dialog" aria-modal="true" @click.self="resPick=null">
             <div class="modal" style="padding:16px">
-              <h3 style="margin:0 0 10px">Choose a {{resPick.label}}</h3>
+              <h3 style="margin:0 0 10px">Choose {{article(resPick.label)}} {{resPick.label}}</h3>
               <p class="sub" style="margin:0 0 10px">Which {{resPick.label}} should this connection act on? Your agent uses it as the default target.</p>
               <div v-if="resPick.loading" class="ttable-wrap">
                 <div style="padding:22px;text-align:center;color:var(--muted);font-family:var(--mono);font-size:12.5px">
@@ -2741,6 +2741,7 @@ createApp({
       if(!p){ this.connErr='Unknown provider for this connection: '+c.provider; return; }
       await this.connectProvider(p, (p.capabilities||['read'])[0]);
     },
+    article(w){ return /^[aeiou]/i.test(w||'') ? 'an' : 'a'; },  // "an account", not "a account"
     connProvider(c){ return (this.providers||[]).find(p=>p.service===c.provider)||null; },
     async saveExtraCred(c){
       const v=(this.extraCred[c.id]||'').trim(); if(!v) return;
