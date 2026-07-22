@@ -3868,6 +3868,12 @@ async def connect_with_token(
         db.add(secret)
     else:
         secret.value = crypto.encrypt(token)
+    # A token provider has no consent response to read scopes from, so take them from the probe's
+    # response header — otherwise the connection reports "0 scopes" while holding a scoped token.
+    if provider.token_scopes_header:
+        granted = resp.headers.get(provider.token_scopes_header, "")
+        if granted:
+            secret.granted_scopes = " ".join(x.strip() for x in granted.split(",") if x.strip())
     secret.last_error = ""
     secret.health_status, secret.health_detail = "ok", "token verified at connect"
     secret.health_checked_at = _utcnow_naive()

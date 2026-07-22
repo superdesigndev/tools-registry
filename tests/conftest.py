@@ -31,6 +31,7 @@ for _k in (
 
 import pytest  # noqa: E402
 from fastapi import FastAPI, Request  # noqa: E402
+from fastapi.responses import JSONResponse  # noqa: E402
 from httpx import ASGITransport, AsyncClient  # noqa: E402
 
 from treg.api import app  # noqa: E402
@@ -62,12 +63,16 @@ def make_upstream(hook_hits: list | None = None) -> FastAPI:
         }
 
     @up.get("/auth.test")
-    async def slack_auth_test(request: Request) -> dict:
+    async def slack_auth_test(request: Request):
         # Faithful Slack stand-in: it answers HTTP 200 even for a DEAD token and signals failure
         # only via {"ok": false}. Checking the status alone would happily accept a bad token.
+        # It also reports the token's scopes in a response HEADER, not the body.
         if "good" in request.headers.get("authorization", ""):
-            return {"ok": True, "team": "Acme Workspace", "team_id": "T0ACME", "user": "treg"}
-        return {"ok": False, "error": "invalid_auth"}
+            return JSONResponse(
+                {"ok": True, "team": "Acme Workspace", "team_id": "T0ACME", "user": "treg"},
+                headers={"x-oauth-scopes": "chat:write,channels:read,users:read"},
+            )
+        return JSONResponse({"ok": False, "error": "invalid_auth"})
 
     @up.post("/hook")
     async def hook(request: Request) -> dict:

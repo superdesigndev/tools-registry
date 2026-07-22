@@ -52,6 +52,10 @@ class OAuthProvider:
     setup_action_label: str = ""
     setup_steps: tuple[str, ...] = ()
     setup_note: str = ""
+    # Where a token provider reports the scopes it was actually granted. There is no consent
+    # response to read them from, so without this a connection claims "0 scopes" while holding a
+    # perfectly well-scoped token.
+    token_scopes_header: str = ""
     base_url: str = ""  # upstream API root, so a successful connect can auto-provision the tool
     docs_url: str = ""
     # A cheap authenticated GET on base_url that proves the credential still works, mirroring the
@@ -401,6 +405,7 @@ SLACK = OAuthProvider(
         "NOT the App-Level Token (xapp-…).",
     ),
     setup_note="Public channels work immediately. For a private channel, /invite the bot first.",
+    token_scopes_header="x-oauth-scopes",
     auth_uri="", token_uri="",
     scopes={},  # scopes live in the manifest above; there is no consent screen to size
     client_id_setting="", client_secret_setting="",

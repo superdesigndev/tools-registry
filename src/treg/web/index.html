@@ -843,7 +843,8 @@ th{background:rgba(0,0,0,.25)}
           <div v-if="resPick" class="scrim" role="dialog" aria-modal="true" @click.self="resPick=null">
             <div class="modal" style="padding:16px">
               <h3 style="margin:0 0 10px">Choose {{article(resPick.label)}} {{resPick.label}}</h3>
-              <p class="sub" style="margin:0 0 10px">Which {{resPick.label}} should this connection act on? Your agent uses it as the default target.</p>
+              <p class="sub" style="margin:0 0 10px">The {{resPick.label}} your agent uses by default.
+                It can still use another one per call — this just saves it guessing.</p>
               <div v-if="resPick.loading" class="ttable-wrap">
                 <div style="padding:22px;text-align:center;color:var(--muted);font-family:var(--mono);font-size:12.5px">
                   <span class="spin" aria-hidden="true"></span> Asking the provider which {{resPick.plural}} you can use…

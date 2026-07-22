@@ -526,3 +526,17 @@ async def test_slack_style_ok_false_is_reported_not_swallowed(clients: AsyncClie
     got = await clients.get(f"/connections/{sid}/resources")
     assert got.status_code == 502
     assert "invalid_auth" in got.text, "the upstream's own reason must reach the user"
+
+
+async def test_token_scopes_come_from_the_response_header(clients: AsyncClient, monkeypatch):
+    """There is no consent response for a bring-your-own-token provider, so without reading the
+    header the connection claims "0 scopes" while holding a perfectly well-scoped token."""
+    import dataclasses
+
+    from treg import oauth_providers as P
+
+    monkeypatch.setitem(P.REGISTRY, "slack", dataclasses.replace(
+        P.REGISTRY["slack"], base_url="http://upstream", discover_path=""))
+    r = await clients.post("/connections/token", json={"provider": "slack", "token": "xoxb-good"})
+    assert r.status_code == 200
+    assert set(r.json()["scopes"]) == {"chat:write", "channels:read", "users:read"}
