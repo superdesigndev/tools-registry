@@ -412,15 +412,15 @@ SLACK = OAuthProvider(
     base_url="https://slack.com/api",
     docs_url="https://api.slack.com/web",
     probe_path="/auth.test",
-    resource_label="channel",
-    # auth.test names the workspace and the bot, so a connection says which Slack it is.
+    # No channel picker. `chat.postMessage` takes the channel per call, and the agent can list
+    # channels itself through the proxy — so choosing one here duplicated a capability it already
+    # has in order to store a preference nothing enforces. Providers where the resource is in the
+    # request URL (a Search Console site, a GA property) keep theirs: there the human is making a
+    # real choice the agent would otherwise have to guess on every call.
+    # auth.test names the workspace and the bot, so a connection still says which Slack it is.
     identity_path="/auth.test",
     identity_id_path="team_id",
     identity_label_path="team",
-    discover_path="/conversations.list?limit=200&exclude_archived=true&types=public_channel,private_channel",
-    discover_key="channels",
-    discover_id_field="id",
-    discover_label_field="name",
 )
 
 X = OAuthProvider(

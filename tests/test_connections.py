@@ -540,3 +540,13 @@ async def test_token_scopes_come_from_the_response_header(clients: AsyncClient, 
     r = await clients.post("/connections/token", json={"provider": "slack", "token": "xoxb-good"})
     assert r.status_code == 200
     assert set(r.json()["scopes"]) == {"chat:write", "channels:read", "users:read"}
+
+
+def test_slack_has_no_resource_picker():
+    """chat.postMessage takes the channel per call, and the agent can list channels itself through
+    the proxy — so a picker here duplicated a capability it already has, to store a preference
+    nothing enforces. Providers whose resource sits in the request URL keep theirs."""
+    from treg import oauth_providers as P
+    assert P.SLACK.supports_discovery is False
+    assert P.SLACK.has_identity is True, "which workspace this is still matters"
+    assert P.GOOGLE_SEARCH_CONSOLE.supports_discovery is True, "the site IS the request path"

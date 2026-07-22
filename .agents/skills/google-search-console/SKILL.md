@@ -18,10 +18,18 @@ treg connections ls                                   # check health + expiry
 
 Connecting auto-creates a `google-search-console` tool, so a call works immediately after consent.
 
-**Pick which site to query** (a Google account often has many):
+**Which site to query.** A Google account often has many, so the human picks one and treg
+remembers it. **Read it before every query — do not guess, and do not ask:**
 
 ```bash
-treg connections resources <id>                       # list verified sites
+treg connections ls
+# the google-search-console row's resource_ref IS the site to use, e.g. sc-domain:example.com
+```
+
+If `resource_ref` is empty, list the options and ask which one:
+
+```bash
+treg connections resources <id>                       # verified sites
 treg connections use <id> sc-domain:example.com       # remember the choice
 ```
 
