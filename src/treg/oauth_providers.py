@@ -192,9 +192,9 @@ GOOGLE_ADS = OAuthProvider(
     # Auto-provisioning a bearer-only tool would produce something that 401s on first use, so we
     # connect the credential and let the operator bind the developer token deliberately.
     extra_credential_note=(
-        "Google Ads also needs a `developer-token` header from your approved MCC (and usually "
-        "`login-customer-id`). Store the developer token as a secret and add it as a second "
-        "binding on the tool."
+        "Google Ads needs a developer token from your Google Ads manager (MCC) account as well as "
+        "this sign-in. Add the token under Secrets, then bind it to the google-ads tool as a "
+        "developer-token header."
     ),
 )
 
