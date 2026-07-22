@@ -761,13 +761,7 @@ th{background:rgba(0,0,0,.25)}
                 <td class="th"><span class="mono">{{p.base_url}}</span></td>
                 <td class="ta"><span v-if="!p.configured" class="chip warn" title="This server has no client credentials for the provider">not configured</span><span v-else class="chip ok">ready</span></td>
                 <td class="tx" @click.stop>
-                  <select v-if="(p.capabilities||[]).length>1" class="bindinput" style="max-width:120px"
-                          v-model="connCap[p.service]" :disabled="!p.configured || connBusy"
-                          title="What this connection may do. Pick before connecting — widening it later means consenting again.">
-                    <option v-for="cap in p.capabilities" :key="cap" :value="cap">{{cap}}</option>
-                  </select>
-                  <button class="btn sm primary" :disabled="!p.configured || connBusy"
-                          @click="connectProvider(p, connCap[p.service]||p.default_capability)">Connect</button>
+                  <button class="btn sm primary" :disabled="!p.configured || connBusy" @click="startConnect(p)">Connect</button>
                 </td>
               </tr>
             </table></div>
@@ -798,6 +792,22 @@ th{background:rgba(0,0,0,.25)}
                 </td>
               </tr>
             </table></div>
+          </div>
+
+          <div v-if="capAsk" class="scrim" role="dialog" aria-modal="true" @click.self="capAsk=null">
+            <div class="modal" style="padding:16px">
+              <h3 style="margin:0 0 6px">Connect {{capAsk.provider.display_name}}</h3>
+              <p class="sub" style="margin:0 0 14px">What should your agent be allowed to do with this account?
+                Widening it later means going through Google's consent screen again.</p>
+              <div class="ttable-wrap"><table class="ttable">
+                <tr v-for="cap in capAsk.provider.capabilities" :key="cap">
+                  <td class="tn"><b>{{capLabel(cap)}}</b><span class="sub" style="display:block;font-size:11px">{{capHelp(cap)}}</span></td>
+                  <td class="tx"><button class="btn sm" :class="{primary:cap===capAsk.provider.default_capability}"
+                                          @click="chooseCapability(cap)">Choose</button></td>
+                </tr>
+              </table></div>
+              <div style="margin-top:12px;text-align:right"><button class="btn sm" @click="capAsk=null">Cancel</button></div>
+            </div>
           </div>
 
           <div v-if="resPick" class="scrim" role="dialog" aria-modal="true" @click.self="resPick=null">
@@ -1909,7 +1919,7 @@ createApp({
       // Connections: registry OAuth connects (see oauth_providers.py). `providers` is what treg
       // holds an approved app for; `connections` is what this org has actually connected.
       providers:[], connections:[], connErr:'', connBusy:false, confirmDisc:null, resPick:null,
-      connCap:{},  // capability chosen per provider BEFORE connecting
+      capAsk:null,  // the access question, asked when Connect is clicked
       extraCred:{}, extraBusy:null,  // second credential a provider needs on top of OAuth (Google Ads' developer token)
       cfgMenu:false,  // detail-page ⚙ Configure tool-picker (skills with >1 tool)
       tryMenu:false,  // detail-page ▶ Try it tool-picker (skills with >1 tool)
@@ -2699,7 +2709,6 @@ createApp({
           this.api('/connections').catch(()=>[]),
         ]);
         this.providers=ps||[]; this.connections=cs||[];
-        (this.providers||[]).forEach(p=>{ if(!this.connCap[p.service]) this.connCap[p.service]=p.default_capability; });
       }catch(e){ this.connErr=String(e.message||e); }
     },
     async connectProvider(p, capability){
@@ -2746,6 +2755,21 @@ createApp({
       await this.connectProvider(p, (p.capabilities||['read'])[0]);
     },
     article(w){ return /^[aeiou]/i.test(w||'') ? 'an' : 'a'; },  // "an account", not "a account"
+    capLabel(cap){ return {read:'Read only', write:'Read and write', manage:'Full access'}[cap] || cap; },
+    capHelp(cap){ return {
+      read:'Your agent can view data. It can never change anything.',
+      write:'Your agent can view data and also create, update or publish.',
+      manage:'Your agent can view and manage everything in the account.',
+    }[cap] || 'Requests the '+cap+' scopes.'; },
+    startConnect(p){
+      // One capability means there's nothing to ask — don't put a dialog in the way.
+      if((p.capabilities||[]).length<2) return this.connectProvider(p, p.default_capability);
+      this.capAsk={provider:p};
+    },
+    async chooseCapability(cap){
+      const p=this.capAsk.provider; this.capAsk=null;
+      await this.connectProvider(p, cap);
+    },
     connProvider(c){ return (this.providers||[]).find(p=>p.service===c.provider)||null; },
     async saveExtraCred(c){
       const v=(this.extraCred[c.id]||'').trim(); if(!v) return;
