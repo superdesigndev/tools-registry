@@ -461,3 +461,68 @@ def test_slack_is_offerable_without_deployment_credentials():
     assert P.is_configured(P.SLACK) is True
     assert "xoxb" in P.SLACK.token_placeholder
     assert P.SLACK.setup_url.startswith("https://api.slack.com/apps?new_app=1")
+
+
+async def test_token_connections_appear_in_the_list(clients: AsyncClient, monkeypatch):
+    """A connection is "what a registry connect produced", not "an oauth blob". Filtering the list
+    on kind=="oauth" created bring-your-own-token connections successfully and then hid them."""
+    import dataclasses
+
+    from treg import oauth_providers as P
+
+    monkeypatch.setitem(P.REGISTRY, "slack", dataclasses.replace(
+        P.REGISTRY["slack"], base_url="http://upstream", discover_path=""))
+    r = await clients.post("/connections/token", json={"provider": "slack", "token": "xoxb-good"})
+    assert r.status_code == 200
+
+    listed = [c for c in (await clients.get("/connections")).json() if c["provider"] == "slack"]
+    assert len(listed) == 1, "a token connection must be visible after it succeeds"
+    assert listed[0]["kind"] == "env"
+
+    # and it must be reachable by id, or revoke and the picker would 404 on it
+    assert (await clients.delete(f"/connections/{listed[0]['id']}")).status_code == 200
+
+
+async def test_discovery_works_for_a_token_connection(clients: AsyncClient, monkeypatch):
+    """A bring-your-own-token secret is a plain string. Discovery used to json.loads it as an
+    oauth blob and 500 before reaching the upstream at all."""
+    import dataclasses
+
+    from treg import oauth_providers as P
+
+    monkeypatch.setitem(P.REGISTRY, "slack", dataclasses.replace(
+        P.REGISTRY["slack"], base_url="http://upstream",
+        discover_path="/conversations.list", discover_key="channels",
+        discover_id_field="id", discover_label_field="name"))
+    r = await clients.post("/connections/token", json={"provider": "slack", "token": "xoxb-good"})
+    sid = r.json()["id"]
+
+    got = await clients.get(f"/connections/{sid}/resources")
+    assert got.status_code == 200, got.text  # the bug was a 500 here, not an upstream failure
+
+
+async def test_slack_style_ok_false_is_reported_not_swallowed(clients: AsyncClient, monkeypatch):
+    """Slack answers 200 with {"ok": false, "error": "missing_scope"}. Trusting the status alone
+    shows an empty picker instead of naming the scope the bot lacks."""
+    import dataclasses
+
+    from treg import oauth_providers as P
+
+    monkeypatch.setitem(P.REGISTRY, "slack", dataclasses.replace(
+        P.REGISTRY["slack"], base_url="http://upstream", discover_path="/auth.test"))
+    r = await clients.post("/connections/token", json={"provider": "slack", "token": "xoxb-good"})
+    sid = r.json()["id"]
+
+    # /auth.test returns ok:false unless the token contains "good"; swap in a bad one to trigger it
+    async with __import__("treg").db.session_maker() as db:
+        from sqlmodel import select as _select
+
+        from treg import crypto as _crypto
+        from treg.models import Secret as _S
+        sec = (await db.execute(_select(_S).where(_S.id == sid))).scalars().one()
+        sec.value = _crypto.encrypt("xoxb-bad")
+        await db.commit()
+
+    got = await clients.get(f"/connections/{sid}/resources")
+    assert got.status_code == 502
+    assert "invalid_auth" in got.text, "the upstream's own reason must reach the user"

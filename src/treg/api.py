@@ -27,7 +27,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from urllib.parse import quote, urlsplit
 
-from sqlalchemy import func
+from sqlalchemy import func, or_
 
 INVITE_TTL_DAYS = 7  # invite codes are one-time AND expire after this many days
 
@@ -3596,7 +3596,13 @@ async def list_connections(
     """Every OAuth credential in the org, with health AND expiry. Metadata only — no token material."""
     rows = (
         await db.execute(
-            select(Secret).where(Secret.org_id == caller.org_id, Secret.kind == "oauth")
+            select(Secret).where(
+                Secret.org_id == caller.org_id,
+                # A connection is "something a registry connect produced", NOT "an oauth blob".
+                # Bring-your-own-token providers (Slack) store a plain string with kind "env", so a
+                # kind=="oauth" filter created them successfully and then hid them from the list.
+                or_(Secret.kind == "oauth", Secret.provider != ""),
+            )
         )
     ).scalars().all()
     out = []
@@ -3632,7 +3638,7 @@ async def _owned_connection(secret_id: int, caller: Caller, db: AsyncSession) ->
             select(Secret).where(Secret.id == secret_id, Secret.org_id == caller.org_id)
         )
     ).scalars().first()
-    if secret is None or secret.kind != "oauth":
+    if secret is None or (secret.kind != "oauth" and not secret.provider):
         raise HTTPException(status_code=404, detail="unknown connection")
     return secret
 
@@ -3723,23 +3729,36 @@ async def connection_resources(
             status_code=422,
             detail=f"{secret.provider or 'this provider'} has nothing to choose between — it acts on your whole account",
         )
-    await oauth.ensure_fresh(secret, db, request.app.state.http)
-    blob = json.loads(crypto.decrypt(secret.value))
-    token = blob.get("access_token") or blob.get("token")
-    disc_headers = {"Authorization": f"Bearer {token}"}
+    await oauth.ensure_fresh(secret, db, request.app.state.http)  # no-op for a non-oauth secret
+    # A bring-your-own-token secret is a PLAIN STRING, not an oauth blob — json.loads on it throws.
+    raw = crypto.decrypt(secret.value)
+    if provider.is_token_kind:
+        disc_headers = {provider.token_header: provider.token_format.format(secret=raw)}
+    else:
+        blob = json.loads(raw)
+        token = blob.get("access_token") or blob.get("token")
+        disc_headers = {"Authorization": f"Bearer {token}"}
     if provider.needs_extra_credential:  # Ads won't list accounts without the developer token
         disc_headers[provider.extra_credential_header] = provider.platform_extra_credential
     resp = await request.app.state.http.get(
         f"{provider.discovery_base.rstrip('/')}{provider.discover_path}",
         headers=disc_headers,
     )
-    if resp.status_code >= 400:
-        # Pass the upstream's own words through. "discovery failed (403)" sends the user hunting;
-        # Google's actual message usually names the missing API or permission outright.
+    body = {}
+    try:
+        body = resp.json()
+    except Exception:  # noqa: BLE001
+        body = {}
+    # Slack answers 200 with {"ok": false, "error": "missing_scope"} — status alone would report an
+    # empty picker instead of naming the scope the bot is missing.
+    if resp.status_code >= 400 or body.get("ok") is False:
         upstream = ""
-        try:
-            upstream = (resp.json().get("error") or {}).get("message", "")
-        except Exception:  # noqa: BLE001
+        err = body.get("error")
+        if isinstance(err, dict):
+            upstream = err.get("message", "")
+        elif isinstance(err, str):
+            upstream = err
+        if not upstream:
             upstream = (resp.text or "")[:200]
         raise HTTPException(
             status_code=502,
@@ -3752,7 +3771,7 @@ async def connection_resources(
         secret.health_status, secret.health_detail = "ok", "listed upstream resources"
         secret.health_checked_at = _utcnow_naive()
         await db.commit()
-    rows = resp.json().get(provider.discover_key) or []
+    rows = body.get(provider.discover_key) or []
     if provider.discover_nested_key:  # e.g. GA4 properties nested inside each account summary
         rows = [n for r in rows if isinstance(r, dict) for n in (r.get(provider.discover_nested_key) or [])]
     label_field = provider.discover_label_field or provider.discover_id_field
