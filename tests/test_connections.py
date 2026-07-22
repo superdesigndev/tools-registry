@@ -207,3 +207,36 @@ async def test_successful_discovery_marks_the_connection_working(clients: AsyncC
 
     assert (await clients.get(f"/connections/{sid}/resources")).status_code == 200
     assert {c["id"]: c for c in (await clients.get("/connections")).json()}[sid]["health"] == "ok"
+
+
+# ---- disconnecting must not leave a broken tool behind -------------------------------------
+async def test_revoke_removes_the_provider_tool_it_provisioned(clients: AsyncClient, treg_google_app):
+    """A tool bound to a deleted credential isn't "still configured", it's broken — and it only
+    says so at call time with "a bound secret is missing"."""
+    st = await _connect_byo(clients, provider="google-search-console", name="google-search-console")
+    sid = st["secret_id"]
+    assert any(t["name"] == "google-search-console" for t in (await clients.get("/tools")).json())
+
+    r = await clients.delete(f"/connections/{sid}")
+    assert r.status_code == 200
+    assert r.json()["removed_tools"] == ["google-search-console"]
+    assert not any(t["name"] == "google-search-console" for t in (await clients.get("/tools")).json())
+
+
+async def test_revoke_keeps_a_user_built_tool_but_drops_the_dead_binding(clients: AsyncClient):
+    """Their own tool with several credentials must survive — minus the one that's gone."""
+    st = await _connect_byo(clients)  # BYO: no provider, so no auto-provisioned tool
+    sid = st["secret_id"]
+    other = (await clients.post("/secrets", json={"name": "OTHER", "value": "k"})).json()
+    mine = (await clients.post("/tools", json={
+        "name": "mine", "base_url": "http://upstream",
+        "bindings": [{"secret_id": sid}, {"secret_id": other["id"], "name": "X-Other"}],
+    })).json()
+    def _mine(tools):
+        return next(t for t in tools if t["name"] == "mine")
+
+    assert len(_mine((await clients.get("/tools")).json())["bindings"]) == 2
+
+    await clients.delete(f"/connections/{sid}")
+    tool = _mine((await clients.get("/tools")).json())
+    assert [b["secret_id"] for b in tool["bindings"]] == [other["id"]], "keeps the surviving credential"

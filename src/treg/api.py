@@ -3534,6 +3534,14 @@ async def list_connections(
             # opaque upstream 403 into "reconnect to enable write".
             view["missing_capabilities"] = [c for c in provider.capabilities if c not in have]
             view["extra_credential_note"] = provider.extra_credential_note
+            view["extra_credential_label"] = provider.extra_credential_label
+            # Outstanding only while no tool exists for this provider — once one does, the second
+            # credential has been supplied and the connection is callable.
+            if provider.needs_extra_credential:
+                built = (await db.execute(
+                    select(Tool).where(Tool.org_id == caller.org_id, Tool.name == provider.service)
+                )).scalars().first()
+                view["needs_extra_credential"] = built is None
         out.append(view)
     out.sort(key=lambda c: (c["provider"] or "~", c["name"]))
     return out
@@ -3635,17 +3643,91 @@ async def set_connection_resource(
     return oauth.connection_view(secret)
 
 
+class ExtraCredentialIn(BaseModel):
+    value: str
+
+
+@app.post("/connections/{secret_id}/extra-credential")
+async def set_extra_credential(
+    secret_id: int, body: ExtraCredentialIn,
+    caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
+) -> dict:
+    """Supply the second credential a provider needs, and finish building its tool.
+
+    Google Ads takes the user's OAuth bearer AND a developer-token header from an approved manager
+    account. treg can't invent the latter, so the connect deliberately stops short of a tool. This
+    is the other half: store the extra credential and provision the tool with BOTH bindings, so the
+    connection goes from "connected but uncallable" to actually usable."""
+    _require_can_register(caller)
+    secret = await _owned_connection(secret_id, caller, db)
+    provider = oauth_providers.get(secret.provider)
+    if provider is None or not provider.needs_extra_credential:
+        raise HTTPException(status_code=422, detail="this provider needs no extra credential")
+    value = body.value.strip()
+    if not value:
+        raise HTTPException(status_code=422, detail=f"{provider.extra_credential_label} is required")
+
+    name = f"{provider.service}-{provider.extra_credential_header}"
+    extra = (await db.execute(
+        select(Secret).where(Secret.org_id == caller.org_id, Secret.name == name)
+    )).scalars().first()
+    if extra is None:
+        extra = Secret(org_id=caller.org_id, name=name, owner=caller.email, kind="env",
+                       value=crypto.encrypt(value))
+        db.add(extra)
+        await db.flush()
+    else:  # re-supplying replaces it — the usual reason is a rotated token
+        extra.value = crypto.encrypt(value)
+
+    bindings = [
+        {"secret_id": secret.id, "injector": "oauth", "location": "header",
+         "name": "Authorization", "format": "Bearer {secret}", "secret_field": "access_token"},
+        {"secret_id": extra.id, "injector": "env", "location": "header",
+         "name": provider.extra_credential_header, "format": "{secret}"},
+    ]
+    tool = (await db.execute(
+        select(Tool).where(Tool.org_id == caller.org_id, Tool.name == provider.service)
+    )).scalars().first()
+    if tool is None:
+        tool = Tool(org_id=caller.org_id, name=provider.service, owner=caller.email,
+                    base_url=provider.base_url, host=_host_of(provider.base_url), bindings=bindings)
+        db.add(tool)
+    else:
+        tool.bindings = bindings
+    await db.commit()
+    await db.refresh(secret)
+    return {**oauth.connection_view(secret), "tool": provider.service, "ready": True}
+
+
 @app.delete("/connections/{secret_id}")
 async def revoke_connection(
     secret_id: int, caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session)
 ) -> dict:
-    """Disconnect. Tools bound to this credential are left in place but will fail until
-    reconnected — deleting them would silently discard a user's own tool configuration."""
+    """Disconnect, and take the provider's own tool with it.
+
+    A tool left bound to a deleted credential isn't "still configured" — it's broken, and it says so
+    only at call time with "a bound secret is missing". We remove the tool treg auto-provisioned for
+    this provider (that's treg's creation, not the user's) and drop the dead binding from any tool
+    the user built themselves, leaving their other bindings intact."""
     _require_can_register(caller)
     secret = await _owned_connection(secret_id, caller, db)
+    provider_service = secret.provider
+    removed_tools: list[str] = []
+
+    tools = (await db.execute(select(Tool).where(Tool.org_id == caller.org_id))).scalars().all()
+    for tool in tools:
+        bindings = [b for b in (tool.bindings or []) if b.get("secret_id") != secret_id]
+        if len(bindings) == len(tool.bindings or []):
+            continue  # this tool never used the credential
+        if tool.name == provider_service or not bindings:
+            await db.delete(tool)  # treg's own auto-provisioned tool, or nothing left to inject
+            removed_tools.append(tool.name)
+        else:
+            tool.bindings = bindings  # a user-built tool keeps its other credentials
+
     await db.delete(secret)
     await db.commit()
-    return {"deleted": secret_id}
+    return {"deleted": secret_id, "removed_tools": removed_tools}
 
 
 @app.get("/oauth/status/{state}")

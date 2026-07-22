@@ -45,9 +45,16 @@ class OAuthProvider:
     token_endpoint_auth_method: str = "client_secret_post"  # or client_secret_basic (X)
 
     # Some providers need a SECOND credential alongside the user's OAuth token — Google Ads wants a
-    # developer-token header from an approved MCC. We can't auto-provision a working tool for those,
-    # so we say why instead of creating one that 401s on first use.
+    # developer-token header from an approved MCC. We can't auto-provision a working tool from the
+    # OAuth alone, so we say what's missing and let the user supply it; once they do, the tool is
+    # built with BOTH bindings and the connection becomes callable.
     extra_credential_note: str = ""
+    extra_credential_label: str = ""  # what to call it in the UI, e.g. "Developer token"
+    extra_credential_header: str = ""  # the header it's injected as, e.g. "developer-token"
+
+    @property
+    def needs_extra_credential(self) -> bool:
+        return bool(self.extra_credential_header)
 
     # Resource discovery: after consent, which sites/properties/accounts can this credential act on?
     # `resource_label` is what the thing is CALLED to a human — "site", "property", "account".
@@ -88,7 +95,7 @@ class OAuthProvider:
     @property
     def can_autoprovision(self) -> bool:
         """A tool we can build that will actually work with just this credential."""
-        return bool(self.base_url) and not self.extra_credential_note
+        return bool(self.base_url) and not self.needs_extra_credential
 
     def satisfied_capabilities(self, granted: list[str]) -> list[str]:
         """Which capabilities an existing grant already covers.
@@ -196,6 +203,8 @@ GOOGLE_ADS = OAuthProvider(
         "this sign-in. Add the token under Secrets, then bind it to the google-ads tool as a "
         "developer-token header."
     ),
+    extra_credential_label="Developer token",
+    extra_credential_header="developer-token",
 )
 
 SLACK = OAuthProvider(
@@ -283,6 +292,8 @@ def listing() -> list[dict]:
             "resource_plural": p.resource_plural,
             "supports_discovery": p.supports_discovery,
             "extra_credential_note": p.extra_credential_note,
+            "extra_credential_label": p.extra_credential_label,
+            "needs_extra_credential": p.needs_extra_credential,
             "base_url": p.base_url,
             "docs_url": p.docs_url,
             "configured": is_configured(p),

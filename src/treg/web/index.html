@@ -736,8 +736,15 @@ th{background:rgba(0,0,0,.25)}
           </div>
           <div v-if="connErr" class="banner" style="margin-top:12px">{{connErr}}</div>
           <div v-for="c in needSecondCred" :key="'n'+c.id" class="banner" style="margin-top:12px">
-            <b>{{c.name}}</b> is connected, but can't call the API on its own yet.
-            {{c.extra_credential_note}}
+            <div><b>{{c.name}}</b> is connected, but can't call the API on its own yet. {{c.extra_credential_note}}</div>
+            <div style="display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap">
+              <input class="bindinput" style="flex:1;min-width:220px" type="password"
+                     :placeholder="c.extra_credential_label||'Second credential'"
+                     v-model="extraCred[c.id]" @keyup.enter="saveExtraCred(c)"/>
+              <button class="btn sm primary" :disabled="!extraCred[c.id] || extraBusy===c.id" @click="saveExtraCred(c)">
+                {{extraBusy===c.id?'Saving…':'Save & finish setup'}}
+              </button>
+            </div>
           </div>
           <div v-if="staleConns.length" class="banner" style="margin-top:12px">
             <b>{{staleConns.length}} connection{{staleConns.length===1?'':'s'}} need reconnecting.</b>
@@ -1900,6 +1907,7 @@ createApp({
       // Connections: registry OAuth connects (see oauth_providers.py). `providers` is what treg
       // holds an approved app for; `connections` is what this org has actually connected.
       providers:[], connections:[], connErr:'', connBusy:false, confirmDisc:null, resPick:null,
+      extraCred:{}, extraBusy:null,  // second credential a provider needs on top of OAuth (Google Ads' developer token)
       cfgMenu:false,  // detail-page ⚙ Configure tool-picker (skills with >1 tool)
       tryMenu:false,  // detail-page ▶ Try it tool-picker (skills with >1 tool)
       catalogClis:null,  // bin → catalog default deny patterns (lazy, from /providers.json)
@@ -2734,6 +2742,16 @@ createApp({
       await this.connectProvider(p, (p.capabilities||['read'])[0]);
     },
     connProvider(c){ return (this.providers||[]).find(p=>p.service===c.provider)||null; },
+    async saveExtraCred(c){
+      const v=(this.extraCred[c.id]||'').trim(); if(!v) return;
+      this.extraBusy=c.id; this.connErr='';
+      try{
+        await this.api('/connections/'+c.id+'/extra-credential',{method:'POST',
+          headers:{'content-type':'application/json'}, body:JSON.stringify({value:v})});
+        this.extraCred[c.id]=''; await this.loadConnections(); await this.loadAll();
+      }catch(e){ this.connErr=(e.detail||e.message||e); }
+      this.extraBusy=null;
+    },
     async openResources(c){
       this.connErr='';
       const pv=this.connProvider(c)||{}; const label=pv.resource_label||'resource'; const plural=pv.resource_plural||(label+'s');

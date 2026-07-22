@@ -77,6 +77,13 @@ async def relay(
         [(k, v) for k, v in request.headers.raw if k.decode("latin-1").lower() not in req_drop]
     )
     _scrub_treg_cookies(headers)  # keep caller cookies, drop treg's own session cookie
+    # Mirror the caller's compression choice. We relay the upstream body RAW (aiter_raw), so if the
+    # upstream compresses, the caller receives compressed bytes. httpx supplies its own
+    # `Accept-Encoding: gzip,…` whenever the request doesn't carry one — which would make us hand
+    # gzip to a caller who never asked for it (binary garbage to any plain HTTP client or agent).
+    # Asking for identity keeps what the caller gets matching what the caller requested.
+    if "accept-encoding" not in headers:
+        headers["accept-encoding"] = "identity"
     # Query: a list of pairs preserves duplicate keys verbatim (?tag=a&tag=b).
     params: list[tuple[str, str]] = list(request.query_params.multi_items())
 
