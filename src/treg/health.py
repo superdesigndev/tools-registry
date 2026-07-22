@@ -122,7 +122,13 @@ async def _probe(tool: Tool, smap: dict[int, Secret], client: httpx.AsyncClient)
             if s is None:
                 continue
             injectors.inject(headers, params, b, crypto.decrypt(s.value))  # a bad binding must not 500 the run
-        r = await client.request(hc.get("method", "GET"), url, headers=headers, params=params, timeout=15.0)
+        # Merge onto the URL rather than passing params=: httpx REPLACES a URL's existing query
+        # string whenever params is given (even an empty list), which would silently strip a probe
+        # path's own query — e.g. YouTube's ?part=id&mine=true — and fail a healthy credential.
+        probe_url = httpx.URL(url)
+        for k, v in params:
+            probe_url = probe_url.copy_add_param(k, v)
+        r = await client.request(hc.get("method", "GET"), probe_url, headers=headers, timeout=15.0)
     except (ValueError, KeyError, IndexError, AttributeError) as exc:
         return "invalid", f"injection failed: {exc}"  # a bad binding IS a credential/config problem
     except Exception as exc:  # noqa: BLE001 — transport/timeout says nothing about the credential
