@@ -122,9 +122,9 @@
       teammate initiated, plus automated health checks and token refreshes.</li>
   </ul>
 
-  <h2 class="sec" id="s5"><span class="n">05</span>Google user data — Limited Use</h2>
-  <p>When you connect Google Search Console, Google Analytics, Google Business Profile, or Google
-  Ads, treg's use of information received from Google APIs adheres to the
+  <h2 class="sec" id="s5"><span class="n">05</span>Google and YouTube user data — Limited Use</h2>
+  <p>When you connect Google Search Console, Google Analytics, Google Business Profile, Google
+  Ads, or YouTube, treg's use of information received from Google APIs adheres to the
   <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener">Google API Services User Data Policy</a>,
   including the <b>Limited Use</b> requirements. Specifically:</p>
   <ul>
@@ -140,6 +140,29 @@
     <li>Disconnecting the provider in treg deletes the stored token. You can also revoke treg's
       access at any time from your
       <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">Google account permissions</a> page.</li>
+  </ul>
+  <h3>YouTube</h3>
+  <p>The YouTube connection uses <b>YouTube API Services</b>. By connecting a YouTube channel you are
+  additionally agreeing to the
+  <a href="https://www.youtube.com/t/terms" target="_blank" rel="noopener">YouTube Terms of Service</a>,
+  and Google's handling of your data is described in the
+  <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google Privacy Policy</a>.</p>
+  <ul>
+    <li><b>What we receive.</b> Only what the capability you chose asks for: the channels your Google
+      account owns and their titles (so you can pick which channel a connection acts on), the videos
+      you publish through treg and their metadata, and — where you granted it — comments and
+      statistics for your own channel.</li>
+    <li><b>What we store.</b> The OAuth token (encrypted), the scopes you granted, and the channel you
+      selected with its display name. Video files you upload are streamed to YouTube and are not
+      retained by us. We do not copy your video library, your viewers' data, or your analytics into
+      our own store.</li>
+    <li><b>What we do with it.</b> Only the calls you or a permitted teammate initiate, plus token
+      refreshes and health checks. It is never used for advertising, never sold, and never used to
+      train machine learning models.</li>
+    <li><b>Revoking access.</b> Disconnect the provider in treg to delete the stored token, and/or
+      revoke treg's access directly at
+      <a href="https://security.google.com/settings/security/permissions" target="_blank" rel="noopener">Google security settings</a>.
+      Revoking there stops all further access immediately, whatever we hold.</li>
   </ul>
   <p>The same commitments apply to every other provider you connect (LinkedIn, Slack, X, or an API
   you register yourself).</p>
@@ -240,7 +263,7 @@
   <a href="#s2">What we collect</a>
   <a href="#s3">Legal bases</a>
   <a href="#s4">What we never do</a>
-  <a href="#s5">Google Limited Use</a>
+  <a href="#s5">Google &amp; YouTube data</a>
   <a href="#s6">Who we share with</a>
   <a href="#s7">Cookies</a>
   <a href="#s8">Security</a>
