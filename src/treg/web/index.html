@@ -126,6 +126,10 @@
   .cliopt{display:flex;align-items:flex-start;gap:10px;margin:12px 0;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);cursor:pointer}
   .cliopt .tswitch{margin-top:1px} .cliopt b{font-size:12.5px;line-height:1.4} .cliopt .sub{font-size:11px;line-height:1.5;margin:0}
   .scrim{position:fixed;inset:0;background:rgba(20,16,10,.55);display:grid;place-items:center;z-index:50}
+  /* Inline spinner for waits on a live upstream (resource discovery), so a slow round-trip reads
+     as "working" rather than "broken". */
+  .spin{display:inline-block;width:11px;height:11px;margin-right:7px;vertical-align:-1px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:treg-spin .7s linear infinite}
+  @keyframes treg-spin{to{transform:rotate(360deg)}}
   .modal{background:var(--panel);border:1px solid var(--line);border-radius:14px;width:min(680px,94vw);max-height:88vh;overflow:auto}
   /* onboarding - a docked right-side narrative stepper; content is pushed left so nothing overlaps */
   .onb-panel{position:fixed;top:0;right:0;bottom:0;width:360px;z-index:60;display:flex;flex-direction:column;
@@ -787,7 +791,13 @@ th{background:rgba(0,0,0,.25)}
             <div class="modal" style="padding:16px">
               <h3 style="margin:0 0 10px">Choose a {{resPick.label}}</h3>
               <p class="sub" style="margin:0 0 10px">Which {{resPick.label}} should this connection act on? Your agent uses it as the default target.</p>
-              <p class="sub" v-if="!resPick.rows.length" style="margin:0 0 10px">No {{resPick.plural}} found — this Google account may not have access to any.</p>
+              <div v-if="resPick.loading" class="ttable-wrap">
+                <div style="padding:22px;text-align:center;color:var(--muted);font-family:var(--mono);font-size:12.5px">
+                  <span class="spin" aria-hidden="true"></span> Asking the provider which {{resPick.plural}} you can use…
+                </div>
+              </div>
+              <div v-else-if="resPick.err" class="banner" style="margin:0 0 10px">{{resPick.err}}</div>
+              <p class="sub" v-else-if="!resPick.rows.length" style="margin:0 0 10px">No {{resPick.plural}} found — this account may not have access to any.</p>
               <div class="ttable-wrap" v-else><table class="ttable">
                 <tr v-for="r in resPick.rows" :key="r.id">
                   <td class="tn"><b>{{r.label||r.id}}</b><span class="sub" style="display:block;font-size:11px">{{r.id}}</span></td>
@@ -2722,12 +2732,22 @@ createApp({
     async openResources(c){
       this.connErr='';
       const pv=this.connProvider(c)||{}; const label=pv.resource_label||'resource'; const plural=pv.resource_plural||(label+'s');
+      // Open FIRST. Discovery is a live upstream round-trip and can take seconds; waiting for it
+      // before showing anything makes the button look dead and invites a second click.
+      this.resPick={id:c.id, label, plural, rows:[], selected:c.resource_ref||'', loading:true, err:''};
       try{
         const d=await this.api('/connections/'+c.id+'/resources');
-        this.resPick={id:c.id, label:d.resource_label||label, plural:d.resource_plural||(label+'s'), rows:d.resources||[], selected:d.selected||''};
+        if(!this.resPick || this.resPick.id!==c.id) return;  // user closed it or opened another
+        this.resPick={id:c.id, label:d.resource_label||label, plural:d.resource_plural||plural,
+                      rows:d.resources||[], selected:d.selected||'', loading:false, err:''};
+        // Discovery can change the row underneath us — it backfills a missing label and records
+        // that the credential works — so pull the list again rather than leaving stale text on screen.
+        this.loadConnections();
       }catch(e){
         // e.detail carries the server's (and often the upstream's) actual words; e.message is just 'http'.
-        this.connErr='Could not list '+plural+': '+(e.detail||e.message||e);
+        if(!this.resPick || this.resPick.id!==c.id) return;
+        this.resPick.loading=false;
+        this.resPick.err='Could not list '+plural+': '+(e.detail||e.message||e);
       }
     },
     async chooseResource(r){

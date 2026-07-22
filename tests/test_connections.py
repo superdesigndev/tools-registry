@@ -160,3 +160,50 @@ async def test_selecting_a_resource_stores_its_readable_name(clients: AsyncClien
     conns = {c["id"]: c for c in (await clients.get("/connections")).json()}
     assert conns[sid]["resource_name"] == "ai-jason.com"
     assert conns[sid]["resource_ref"] == "properties/384078430"  # the id is still what we call with
+
+
+async def test_discovery_backfills_a_missing_resource_name(clients: AsyncClient, treg_google_app, monkeypatch):
+    """A target chosen before labels existed (or set via the API, which has no label to give)
+    shouldn't force a pointless re-pick just to make the row readable — discovery is already
+    holding the upstream's own naming."""
+    import dataclasses
+
+    from treg import oauth_providers as P
+
+    # point discovery at the in-process upstream, and read a label field distinct from the id
+    test_provider = dataclasses.replace(
+        P.REGISTRY["google-search-console"],
+        discover_base_url="http://upstream", discover_label_field="displayName",
+    )
+    monkeypatch.setitem(P.REGISTRY, "google-search-console", test_provider)
+
+    st = await _connect_byo(clients, provider="google-search-console", name="google-search-console")
+    sid = st["secret_id"]
+    await clients.post(f"/connections/{sid}/resource", json={"resource_ref": "sc-domain:example.com"})
+    conns = {c["id"]: c for c in (await clients.get("/connections")).json()}
+    assert conns[sid]["resource_name"] == "", "no label was supplied, so none is stored yet"
+
+    r = await clients.get(f"/connections/{sid}/resources")
+    assert r.status_code == 200, r.text
+    assert r.json()["resources"][0]["label"] == "Example (production)"
+
+    conns = {c["id"]: c for c in (await clients.get("/connections")).json()}
+    assert conns[sid]["resource_name"] == "Example (production)", "discovery should backfill the label"
+    assert conns[sid]["resource_ref"] == "sc-domain:example.com", "the id we call with must not change"
+
+
+async def test_successful_discovery_marks_the_connection_working(clients: AsyncClient, treg_google_app, monkeypatch):
+    """Listing resources is a real authenticated upstream call — the best evidence we get that a
+    credential works, so it shouldn't be thrown away."""
+    import dataclasses
+
+    from treg import oauth_providers as P
+
+    monkeypatch.setitem(P.REGISTRY, "google-search-console", dataclasses.replace(
+        P.REGISTRY["google-search-console"], discover_base_url="http://upstream"))
+    st = await _connect_byo(clients, provider="google-search-console", name="google-search-console")
+    sid = st["secret_id"]
+    assert {c["id"]: c for c in (await clients.get("/connections")).json()}[sid]["health"] == "unknown"
+
+    assert (await clients.get(f"/connections/{sid}/resources")).status_code == 200
+    assert {c["id"]: c for c in (await clients.get("/connections")).json()}[sid]["health"] == "ok"

@@ -38,6 +38,17 @@ def make_upstream(hook_hits: list | None = None) -> FastAPI:
         # stand-in OAuth token endpoint: serves both refresh + authorization_code exchanges.
         return {"access_token": "REFRESHED", "refresh_token": "NEW-RT", "expires_in": 3600}
 
+    @up.get("/webmasters/v3/sites")
+    async def sites() -> dict:
+        # stand-in for a provider's resource-listing endpoint (GSC's shape), so connection
+        # discovery can be exercised without reaching Google.
+        return {
+            "siteEntry": [
+                {"siteUrl": "sc-domain:example.com", "displayName": "Example (production)"},
+                {"siteUrl": "https://staging.example/", "displayName": "Example (staging)"},
+            ]
+        }
+
     @up.post("/hook")
     async def hook(request: Request) -> dict:
         # records health webhook POSTs so alerting tests can assert the webhook actually fired.

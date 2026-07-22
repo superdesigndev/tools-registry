@@ -3596,15 +3596,24 @@ async def connection_resources(
     if provider.discover_nested_key:  # e.g. GA4 properties nested inside each account summary
         rows = [n for r in rows if isinstance(r, dict) for n in (r.get(provider.discover_nested_key) or [])]
     label_field = provider.discover_label_field or provider.discover_id_field
+    resources = [
+        {"id": r.get(provider.discover_id_field), "label": r.get(label_field), "raw": r}
+        for r in rows if isinstance(r, dict)
+    ]
+    # Self-heal a connection whose target was chosen before we stored labels (or via the API, which
+    # has no label to give). We're already holding the upstream's own naming — resolving it here
+    # spares the user a pointless re-pick just to make the row readable.
+    if secret.resource_ref and not secret.resource_name:
+        match = next((x for x in resources if x["id"] == secret.resource_ref), None)
+        if match and match["label"]:
+            secret.resource_name = match["label"]
+            await db.commit()
     return {
         "provider": provider.service,
         "resource_label": provider.resource_label,
         "resource_plural": provider.resource_plural,
         "selected": secret.resource_ref,
-        "resources": [
-            {"id": r.get(provider.discover_id_field), "label": r.get(label_field), "raw": r}
-            for r in rows if isinstance(r, dict)
-        ],
+        "resources": resources,
     }
 
 
