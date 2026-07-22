@@ -834,73 +834,6 @@ th{background:rgba(0,0,0,.25)}
           </div>
 
 
-          <div v-if="tokenAsk" class="scrim" role="dialog" aria-modal="true" @click.self="tokenAsk=null">
-            <div class="modal" style="padding:16px">
-              <h3 style="margin:0 0 6px"><span class="plogo-tile"><img class="plogo" :src="'/logos/'+tokenAsk.provider.service+'.svg'" alt="" aria-hidden="true" @error="$event.target.style.visibility='hidden'"></span>Connect {{tokenAsk.provider.display_name}}</h3>
-              <p class="sub" style="margin:0 0 12px">You bring your own bot, so it stays yours — treg
-                holds the token server-side and injects it on every call.</p>
-              <a v-if="tokenAsk.provider.setup_url" class="btn sm primary" :href="tokenAsk.provider.setup_url"
-                 target="_blank" rel="noopener">{{tokenAsk.provider.setup_action_label||'Create the app'}}</a>
-              <ol style="margin:12px 0 0;padding-left:20px;color:var(--muted);font-size:12.5px;line-height:1.7">
-                <li v-for="(st,i) in (tokenAsk.provider.setup_steps||[])" :key="i">{{st}}</li>
-              </ol>
-              <div style="margin-top:12px">
-                <label class="labelcls" style="display:block;font-size:11px;color:var(--muted);margin-bottom:4px">{{tokenAsk.provider.token_label||'Token'}}</label>
-                <input class="bindinput" style="width:100%" type="password" autocomplete="off"
-                       :placeholder="tokenAsk.provider.token_placeholder" v-model="tokenAsk.token"
-                       @keyup.enter="submitToken"/>
-              </div>
-              <p v-if="tokenAsk.provider.setup_note" class="sub" style="margin:10px 0 0;font-size:11.5px">{{tokenAsk.provider.setup_note}}</p>
-              <div v-if="tokenAsk.err" class="banner" style="margin-top:10px">{{tokenAsk.err}}</div>
-              <div style="margin-top:14px;text-align:right;display:flex;gap:8px;justify-content:flex-end">
-                <button class="btn sm" @click="tokenAsk=null">Cancel</button>
-                <button class="btn sm primary" :disabled="!tokenAsk.token.trim()||tokenAsk.busy" @click="submitToken">
-                  {{tokenAsk.busy?'Verifying…':'Connect'}}</button>
-              </div>
-            </div>
-          </div>
-
-          <div v-if="capAsk" class="scrim" role="dialog" aria-modal="true" @click.self="capAsk=null">
-            <div class="modal" style="padding:16px">
-              <h3 style="margin:0 0 6px">Connect {{capAsk.provider.display_name}}</h3>
-              <p class="sub" style="margin:0 0 14px">What should your agent be allowed to do with this account?
-                Widening it later means going through Google's consent screen again.</p>
-              <div class="ttable-wrap"><table class="ttable">
-                <tr v-for="cap in capAsk.provider.capabilities" :key="cap">
-                  <!-- Deliberately NOT .tn: that class is nowrap, which is right for a name column
-                       but here the help text shares the cell. Unwrapped, a long capability
-                       description widens the table past the modal and .ttable-wrap's overflow:hidden
-                       clips the Choose button clean off — the choice becomes unclickable. -->
-                  <td style="white-space:normal"><b>{{capLabel(cap)}}</b><span class="sub" style="display:block;font-size:11px;margin-top:3px">{{capHelp(cap)}}</span></td>
-                  <td class="tx"><button class="btn sm" :class="{primary:cap===capAsk.provider.default_capability}"
-                                          @click="chooseCapability(cap)">Choose</button></td>
-                </tr>
-              </table></div>
-              <div style="margin-top:12px;text-align:right"><button class="btn sm" @click="capAsk=null">Cancel</button></div>
-            </div>
-          </div>
-
-          <div v-if="resPick" class="scrim" role="dialog" aria-modal="true" @click.self="resPick=null">
-            <div class="modal" style="padding:16px">
-              <h3 style="margin:0 0 10px">Choose {{article(resPick.label)}} {{resPick.label}}</h3>
-              <p class="sub" style="margin:0 0 10px">The {{resPick.label}} your agent uses by default.
-                It can still use another one per call — this just saves it guessing.</p>
-              <div v-if="resPick.loading" class="ttable-wrap">
-                <div style="padding:22px;text-align:center;color:var(--muted);font-family:var(--mono);font-size:12.5px">
-                  <span class="spin" aria-hidden="true"></span> Asking the provider which {{resPick.plural}} you can use…
-                </div>
-              </div>
-              <div v-else-if="resPick.err" class="banner" style="margin:0 0 10px">{{resPick.err}}</div>
-              <p class="sub" v-else-if="!resPick.rows.length" style="margin:0 0 10px">No {{resPick.plural}} found — this account may not have access to any.</p>
-              <div class="ttable-wrap" v-else><table class="ttable">
-                <tr v-for="r in resPick.rows" :key="r.id">
-                  <td class="tn"><b>{{r.label||r.id}}</b><span class="sub" style="display:block;font-size:11px">{{r.id}}</span></td>
-                  <td class="tx"><button class="btn sm" :class="{primary:r.id===resPick.selected}" @click="chooseResource(r)">{{r.id===resPick.selected?'✓ Current':'Use this'}}</button></td>
-                </tr>
-              </table></div>
-              <div style="margin-top:12px;text-align:right"><button class="btn sm" @click="resPick=null">Close</button></div>
-            </div>
-          </div>
         </template>
 
         <!-- MARKETPLACE: one integration -->
@@ -928,6 +861,17 @@ th{background:rgba(0,0,0,.25)}
           </div>
 
           <div v-if="connErr" class="banner" style="margin-top:12px">{{connErr}}</div>
+          <div v-for="c in mkNeedsCred" :key="'n'+c.id" class="banner" style="margin-top:12px">
+            <div><b>{{c.name}}</b> is connected, but can't call the API on its own yet. {{c.extra_credential_note}}</div>
+            <div style="display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap">
+              <input class="bindinput" style="flex:1;min-width:220px" type="password"
+                     :placeholder="c.extra_credential_label||'Second credential'"
+                     v-model="extraCred[c.id]" @keyup.enter="saveExtraCred(c)"/>
+              <button class="btn sm primary" :disabled="!extraCred[c.id] || extraBusy===c.id" @click="saveExtraCred(c)">
+                {{extraBusy===c.id?'Saving…':'Save & finish setup'}}
+              </button>
+            </div>
+          </div>
           <div v-if="!mkProvider.configured" class="banner" style="margin-top:12px">
             This server holds no client credentials for {{mkProvider.display_name}}, so the connect flow can't run here.
           </div>
@@ -957,6 +901,7 @@ th{background:rgba(0,0,0,.25)}
                   <span v-if="c.expiry_state==='expired'" class="chip warn" title="This credential has expired — reconnect">expired</span>
                   <span v-else-if="c.expiry_state==='expiring'" class="chip warn" :title="'Expires '+c.expires_at">expiring</span>
                   <span v-if="!c.refreshable" class="chip" title="treg cannot renew this one unattended — it must be reconnected by hand when it expires">manual renew</span>
+                  <span v-if="c.extra_credential_note" class="chip warn" :title="c.extra_credential_note">needs a second credential</span>
                   <span v-for="cap in (c.capabilities||[])" :key="cap" class="chip ok">{{cap}}</span>
                 </td>
                 <td class="tx" @click.stop>
@@ -1647,6 +1592,77 @@ th{background:rgba(0,0,0,.25)}
     </div>
 
     <!-- REGISTER SKILL (bundle) -->
+    <!-- Marketplace dialogs. App-ROOT level, like every other dialog: nested inside the
+         view==='connections' template they simply did not render on an integration page, so
+         Connect looked dead and the modal appeared on the list view once you navigated back. -->
+    <div v-if="tokenAsk" class="scrim" role="dialog" aria-modal="true" @click.self="tokenAsk=null">
+      <div class="modal" style="padding:16px">
+        <h3 style="margin:0 0 6px"><span class="plogo-tile"><img class="plogo" :src="'/logos/'+tokenAsk.provider.service+'.svg'" alt="" aria-hidden="true" @error="$event.target.style.visibility='hidden'"></span>Connect {{tokenAsk.provider.display_name}}</h3>
+        <p class="sub" style="margin:0 0 12px">You bring your own bot, so it stays yours — treg
+          holds the token server-side and injects it on every call.</p>
+        <a v-if="tokenAsk.provider.setup_url" class="btn sm primary" :href="tokenAsk.provider.setup_url"
+           target="_blank" rel="noopener">{{tokenAsk.provider.setup_action_label||'Create the app'}}</a>
+        <ol style="margin:12px 0 0;padding-left:20px;color:var(--muted);font-size:12.5px;line-height:1.7">
+          <li v-for="(st,i) in (tokenAsk.provider.setup_steps||[])" :key="i">{{st}}</li>
+        </ol>
+        <div style="margin-top:12px">
+          <label class="labelcls" style="display:block;font-size:11px;color:var(--muted);margin-bottom:4px">{{tokenAsk.provider.token_label||'Token'}}</label>
+          <input class="bindinput" style="width:100%" type="password" autocomplete="off"
+                 :placeholder="tokenAsk.provider.token_placeholder" v-model="tokenAsk.token"
+                 @keyup.enter="submitToken"/>
+        </div>
+        <p v-if="tokenAsk.provider.setup_note" class="sub" style="margin:10px 0 0;font-size:11.5px">{{tokenAsk.provider.setup_note}}</p>
+        <div v-if="tokenAsk.err" class="banner" style="margin-top:10px">{{tokenAsk.err}}</div>
+        <div style="margin-top:14px;text-align:right;display:flex;gap:8px;justify-content:flex-end">
+          <button class="btn sm" @click="tokenAsk=null">Cancel</button>
+          <button class="btn sm primary" :disabled="!tokenAsk.token.trim()||tokenAsk.busy" @click="submitToken">
+            {{tokenAsk.busy?'Verifying…':'Connect'}}</button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="capAsk" class="scrim" role="dialog" aria-modal="true" @click.self="capAsk=null">
+      <div class="modal" style="padding:16px">
+        <h3 style="margin:0 0 6px">Connect {{capAsk.provider.display_name}}</h3>
+        <p class="sub" style="margin:0 0 14px">What should your agent be allowed to do with this account?
+          Widening it later means going through Google's consent screen again.</p>
+        <div class="ttable-wrap"><table class="ttable">
+          <tr v-for="cap in capAsk.provider.capabilities" :key="cap">
+            <!-- Deliberately NOT .tn: that class is nowrap, which is right for a name column
+                 but here the help text shares the cell. Unwrapped, a long capability
+                 description widens the table past the modal and .ttable-wrap's overflow:hidden
+                 clips the Choose button clean off — the choice becomes unclickable. -->
+            <td style="white-space:normal"><b>{{capLabel(cap)}}</b><span class="sub" style="display:block;font-size:11px;margin-top:3px">{{capHelp(cap)}}</span></td>
+            <td class="tx"><button class="btn sm" :class="{primary:cap===capAsk.provider.default_capability}"
+                                    @click="chooseCapability(cap)">Choose</button></td>
+          </tr>
+        </table></div>
+        <div style="margin-top:12px;text-align:right"><button class="btn sm" @click="capAsk=null">Cancel</button></div>
+      </div>
+    </div>
+
+    <div v-if="resPick" class="scrim" role="dialog" aria-modal="true" @click.self="resPick=null">
+      <div class="modal" style="padding:16px">
+        <h3 style="margin:0 0 10px">Choose {{article(resPick.label)}} {{resPick.label}}</h3>
+        <p class="sub" style="margin:0 0 10px">The {{resPick.label}} your agent uses by default.
+          It can still use another one per call — this just saves it guessing.</p>
+        <div v-if="resPick.loading" class="ttable-wrap">
+          <div style="padding:22px;text-align:center;color:var(--muted);font-family:var(--mono);font-size:12.5px">
+            <span class="spin" aria-hidden="true"></span> Asking the provider which {{resPick.plural}} you can use…
+          </div>
+        </div>
+        <div v-else-if="resPick.err" class="banner" style="margin:0 0 10px">{{resPick.err}}</div>
+        <p class="sub" v-else-if="!resPick.rows.length" style="margin:0 0 10px">No {{resPick.plural}} found — this account may not have access to any.</p>
+        <div class="ttable-wrap" v-else><table class="ttable">
+          <tr v-for="r in resPick.rows" :key="r.id">
+            <td class="tn"><b>{{r.label||r.id}}</b><span class="sub" style="display:block;font-size:11px">{{r.id}}</span></td>
+            <td class="tx"><button class="btn sm" :class="{primary:r.id===resPick.selected}" @click="chooseResource(r)">{{r.id===resPick.selected?'✓ Current':'Use this'}}</button></td>
+          </tr>
+        </table></div>
+        <div style="margin-top:12px;text-align:right"><button class="btn sm" @click="resPick=null">Close</button></div>
+      </div>
+    </div>
+
     <div class="scrim" role="dialog" aria-modal="true" v-if="newSkill" @click.self="newSkill=false">
       <div class="modal" style="width:min(680px,95vw)"><div class="hd"><b>Add a skill</b><button class="btn sm ico" @click="newSkill=false" aria-label="Close">✕</button></div>
         <div style="padding:16px 18px">
@@ -2142,6 +2158,7 @@ createApp({
     connCount(){ const m={}; for(const c of this.connections){ if(c.provider) m[c.provider]=(m[c.provider]||0)+1; } return m; },
     mkProvider(){ return this.providers.find(p=>p.service===this.mkService)||null; },
     mkConns(){ return this.connections.filter(c=>c.provider===this.mkService); },
+    mkNeedsCred(){ return this.mkConns.filter(c=>c.extra_credential_note); },
     // Which capabilities ANY account here already holds — a page-level "you have this" summary,
     // since the permission list describes the integration, not one account.
     mkGranted(){ const s=new Set(); for(const c of this.mkConns) for(const cap of (c.capabilities||[])) s.add(cap); return s; },

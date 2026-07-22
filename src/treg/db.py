@@ -182,7 +182,9 @@ def _migrate_to_orgs(conn) -> None:
             # scopes. Defaulted to the OAuth2 spelling, so in-flight connects are unaffected.
             ("client_id_param", "VARCHAR NOT NULL DEFAULT 'client_id'"),
             ("scope_separator", "VARCHAR NOT NULL DEFAULT ' '"),
-            ("long_lived_exchange", "BOOLEAN NOT NULL DEFAULT 0"),
+            # DEFAULT false, not 0 — Postgres rejects an integer default on a BOOLEAN column
+            # (sqlite accepts both, so the test suite cannot catch this; see _ensure_bool_col).
+            ("long_lived_exchange", "BOOLEAN NOT NULL DEFAULT false"),
             # (A20) null means "this consent adds a new connection"; an id means "it replaces that
             # one". Null is the safe default for anything already in flight.
             ("replaces_secret_id", "INTEGER"),
