@@ -550,3 +550,18 @@ def test_slack_has_no_resource_picker():
     assert P.SLACK.supports_discovery is False
     assert P.SLACK.has_identity is True, "which workspace this is still matters"
     assert P.GOOGLE_SEARCH_CONSOLE.supports_discovery is True, "the site IS the request path"
+
+
+def test_every_provider_has_a_logo():
+    """The dashboard resolves logos by convention (/logos/<service>.svg), so a provider added
+    without one silently renders a broken image. Fail here instead."""
+    from pathlib import Path
+    from treg import oauth_providers as P
+    logos = Path(P.__file__).parent / "web" / "logos"
+    missing = [p.service for p in P.REGISTRY.values() if not (logos / f"{p.service}.svg").exists()]
+    assert not missing, f"no logo for: {missing}"
+
+
+async def test_logos_are_served(clients):
+    r = await clients.get("/logos/slack.svg")
+    assert r.status_code == 200 and r.text.lstrip().startswith("<svg")

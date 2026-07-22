@@ -39,6 +39,11 @@
   .frow input:disabled{opacity:.6}
   .bindrow{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:7px 0;padding:8px;background:var(--bg);border:1px solid var(--line);border-radius:8px}
   .bindrow .msel{flex:none} .bindinput{background:var(--panel);border:1px solid var(--line);color:var(--ink);border-radius:6px;padding:5px 8px;font-family:var(--mono);font-size:12px;flex:1;min-width:110px}
+  /* Provider logos. Fixed box + object-fit so a mark with odd intrinsic proportions (YouTube's
+     is wider than tall) still occupies the same slot and the name column stays aligned. */
+  .plogo{width:20px;height:20px;flex:0 0 20px;object-fit:contain;vertical-align:-4px}
+  h3 .plogo{margin-right:7px}
+  .pl-row{display:flex;align-items:center;gap:9px;min-width:0}
   .chip{display:inline-block;font-size:11px;padding:2px 8px;border-radius:6px;border:1px solid var(--line);color:var(--muted)}
   .chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:3px}
   .chip.env{color:var(--amber);border-color:color-mix(in srgb,var(--amber) 42%,var(--line));background:color-mix(in srgb,var(--amber) 10%,transparent)}
@@ -757,7 +762,7 @@ th{background:rgba(0,0,0,.25)}
             <div class="tgh">Available <span class="tgh-n">{{providers.length}}</span><span class="tgh-hint">treg holds the approved app — you supply nothing</span></div>
             <div class="ttable-wrap"><table class="ttable">
               <tr v-for="p in providers" :key="p.service">
-                <td class="tn"><b>{{p.display_name}}</b><span class="sub" style="display:block;font-size:11px">{{p.service}}</span></td>
+                <td class="tn"><div class="pl-row"><img class="plogo" :src="'/logos/'+p.service+'.svg'" alt="" aria-hidden="true" @error="$event.target.style.visibility='hidden'"><div><b>{{p.display_name}}</b><span class="sub" style="display:block;font-size:11px">{{p.service}}</span></div></div></td>
                 <td class="th"><span class="mono">{{p.base_url}}</span></td>
                 <td class="ta"><span v-if="!p.configured" class="chip warn" title="This server has no client credentials for the provider">not configured</span><span v-else class="chip ok">ready</span></td>
                 <td class="tx" @click.stop>
@@ -771,7 +776,7 @@ th{background:rgba(0,0,0,.25)}
             <div class="tgh">Connected <span class="tgh-n">{{connections.length}}</span><span class="tgh-hint">health is “does it work”; expiry is “how long will it keep working”</span></div>
             <div class="ttable-wrap"><table class="ttable">
               <tr v-for="c in connections" :key="c.id">
-                <td class="tn"><b>{{c.name}}</b><span class="sub" style="display:block;font-size:11px;overflow-wrap:anywhere" :title="c.resource_ref">{{c.resource_name || c.resource_ref || (connProvider(c) && connProvider(c).supports_discovery ? 'no '+connProvider(c).resource_label+' chosen yet' : 'whole account')}}</span></td>
+                <td class="tn"><div class="pl-row"><img v-if="c.provider" class="plogo" :src="'/logos/'+c.provider+'.svg'" alt="" aria-hidden="true" @error="$event.target.style.visibility='hidden'"><div style="min-width:0"><b>{{c.name}}</b><span class="sub" style="display:block;font-size:11px;overflow-wrap:anywhere" :title="c.resource_ref">{{c.resource_name || c.resource_ref || (connProvider(c) && connProvider(c).supports_discovery ? 'no '+connProvider(c).resource_label+' chosen yet' : 'whole account')}}</span></div></div></td>
                 <td class="th"><span class="mono">{{(c.scopes||[]).length}} scope{{(c.scopes||[]).length===1?'':'s'}}</span></td>
                 <td class="ta">
                   <!-- "unknown" just means nothing has called upstream yet — it reads as a problem
@@ -796,7 +801,7 @@ th{background:rgba(0,0,0,.25)}
 
           <div v-if="tokenAsk" class="scrim" role="dialog" aria-modal="true" @click.self="tokenAsk=null">
             <div class="modal" style="padding:16px">
-              <h3 style="margin:0 0 6px">Connect {{tokenAsk.provider.display_name}}</h3>
+              <h3 style="margin:0 0 6px"><img class="plogo" :src="'/logos/'+tokenAsk.provider.service+'.svg'" alt="" aria-hidden="true" @error="$event.target.style.visibility='hidden'">Connect {{tokenAsk.provider.display_name}}</h3>
               <p class="sub" style="margin:0 0 12px">You bring your own bot, so it stays yours — treg
                 holds the token server-side and injects it on every call.</p>
               <a v-if="tokenAsk.provider.setup_url" class="btn sm primary" :href="tokenAsk.provider.setup_url"
@@ -3074,6 +3079,10 @@ createApp({
         'youtube.googleapis.com':'youtube/v3/channels?part=snippet&mine=true',
         // identity endpoints: cheap, and they return a handle/name a human recognises
         'api.x.com':'2/users/me','api.linkedin.com':'v2/userinfo',
+        // Both Meta providers share this host, so one entry covers Facebook Pages and Instagram.
+        // /me is the person behind the token and needs no scope, so it prefills usefully whichever
+        // asset the connection ended up bound to.
+        'graph.facebook.com':'me?fields=id,name',
         'mybusinessaccountmanagement.googleapis.com':'v1/accounts','slack.com':'auth.test'})[host]||''; },
     openCopy(t){ this.copyTool=t; this.snippetTab='cURL'; this.copied=false;
       // Prefer a real, runnable sample path so a copied snippet returns a result: a declared example,

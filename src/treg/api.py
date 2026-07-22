@@ -1119,6 +1119,15 @@ async def tutorial_page():
     return FileResponse(page)
 
 
+# Provider logos, resolved by convention: /logos/<service>.svg, matching `service` in
+# oauth_providers.py. Keyed off the name the registry already has, so adding a provider needs no
+# second registration step — drop the file in and it appears. Public and unauthenticated: they are
+# brand marks, not data, and the dashboard renders them before the caller is known.
+_LOGO_DIR = _WEB_DIR / "logos"
+if _LOGO_DIR.exists():
+    app.mount("/logos", StaticFiles(directory=str(_LOGO_DIR)), name="logos")
+
+
 # The interactive dashboard tour (matted screenshots) — served + its WebP images, at /dashboard-tour/.
 _TOUR_DIR = _WEB_DIR / "tour"
 if _TOUR_DIR.exists():
@@ -3472,6 +3481,7 @@ async def oauth_start(
     auth_uri, token_uri, scopes = body.auth_uri, body.token_uri, list(body.scopes)
     code_verifier, auth_params, auth_method = "", "", "client_secret_post"
     cid_param, scope_sep = "client_id", " "
+    long_lived = False
 
     if body.provider:  # REGISTRY mode — treg's own app supplies everything
         provider = oauth_providers.get(body.provider)
@@ -3488,6 +3498,7 @@ async def oauth_start(
         name = name or provider.service
         auth_method = provider.token_endpoint_auth_method
         cid_param, scope_sep = provider.client_id_param, provider.scope_separator
+        long_lived = provider.long_lived_exchange
         if provider.auth_params is not None:
             auth_params = json.dumps(provider.auth_params)
         if provider.pkce:
@@ -3513,7 +3524,7 @@ async def oauth_start(
         auth_uri=auth_uri, token_uri=token_uri, scopes=scope_sep.join(scopes),
         redirect_uri=redirect_uri, provider=body.provider or "",
         code_verifier=code_verifier, auth_params=auth_params, token_endpoint_auth_method=auth_method,
-        client_id_param=cid_param, scope_separator=scope_sep,
+        client_id_param=cid_param, scope_separator=scope_sep, long_lived_exchange=long_lived,
     )
     db.add(pending)
     await db.commit()
