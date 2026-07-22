@@ -7,6 +7,8 @@ These are third-party trademarks, used nominatively to identify which service a 
 to. They are not treg's marks and imply no endorsement by their owners. Sourced from each brand's
 own published icon (Google's product-logo CDN, the services' favicons) and hand-traced to SVG.
 
-**X and TikTok ship as the dark-tile app-icon form on purpose.** Both marks are monochrome, so a
-bare glyph is invisible against one of our two themes; the tile is the form the brand publishes for
-exactly that reason. Everything else is a self-contained colour mark that reads on any background.
+Every mark is the **light-surface form** — the dashboard renders each one inside a uniform
+near-white tile, in both themes. That is deliberate: brand marks are designed against white, they
+vary enormously in ink coverage (LinkedIn is a full-bleed square, Google Analytics is three thin
+bars), and monochrome marks like X and TikTok are invisible on one of our two themes if left bare.
+One shared surface fixes all three at once, and keeps the column optically even.
