@@ -141,3 +141,27 @@ async def test_neither_provider_nor_credentials_is_422(clients: AsyncClient):
     r = await clients.post("/oauth/start", json={"name": "x"})
     assert r.status_code == 422
     assert "provider" in r.text
+
+
+def test_every_requested_scope_has_a_plain_english_label():
+    """The marketplace shows permissions in plain English so a human can decide whether to grant
+    them. A provider added with new scopes and no copy would silently fall back to raw URLs."""
+    from treg import oauth_providers as P
+    unlabelled = sorted({
+        sc for prov in P.REGISTRY.values() for scopes in prov.scopes.values() for sc in scopes
+        if sc not in P.SCOPE_LABELS
+    })
+    assert not unlabelled, f"no plain-English label for: {unlabelled}"
+
+
+def test_every_provider_has_a_card_summary():
+    """A card with no summary is a logo and a name — nothing to decide from."""
+    from treg import oauth_providers as P
+    assert not [p.service for p in P.REGISTRY.values() if not p.summary]
+
+
+def test_scope_label_falls_back_rather_than_raising():
+    """Slack grants implied scopes we never asked for. Showing one raw string beats 500ing the
+    whole connection page over unfamiliar copy."""
+    from treg import oauth_providers as P
+    assert P.scope_label("some:unknown:scope") == "some:unknown:scope"

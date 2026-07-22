@@ -219,6 +219,11 @@ class PendingOAuth(SQLModel, table=True):
     # Snapshotted for the same reason as the fields above — the callback must not have to look the
     # provider up again to know how the token was meant to be obtained.
     long_lived_exchange: bool = Field(default=False)
+    # Which existing connection this consent is REPLACING, if any. Set when the user reconnects or
+    # widens access on a specific account; left null when they are adding another one. Without it
+    # the callback cannot tell "renew this Slack workspace" from "attach a second Slack workspace",
+    # and has to guess — which is why it used to blanket-replace by provider.
+    replaces_secret_id: int | None = Field(default=None)
     status: str = Field(default="pending")  # pending | done | error
     secret_id: int | None = Field(default=None)
     detail: str = Field(default="")

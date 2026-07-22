@@ -102,9 +102,10 @@ async def test_registry_connect_autoprovisions_a_callable_tool(clients: AsyncCli
 
 async def test_reconnect_rebinds_instead_of_duplicating(clients: AsyncClient, treg_google_app):
     """Reconnecting updates the SAME connection and keeps one tool pointing at it — no duplicate
-    tool, and no second credential for the same provider."""
+    tool, and no second credential for that account."""
     first = await _connect_byo(clients, provider="google-search-console", name="google-search-console")
-    second = await _connect_byo(clients, provider="google-search-console", name="google-search-console")
+    second = await _connect_byo(clients, provider="google-search-console", name="google-search-console",
+                                connection_id=first["secret_id"])
     tools = [t for t in (await clients.get("/tools")).json() if t["name"] == "google-search-console"]
     assert len(tools) == 1, "reconnecting must rebind, not pile up duplicate tools"
     assert first["secret_id"] == second["secret_id"]
@@ -330,22 +331,58 @@ async def test_a_failed_name_lookup_keeps_the_row(clients: AsyncClient, treg_goo
 
 
 # ---- widening access upgrades the connection, it doesn't clone it --------------------------
-async def test_reconnecting_a_provider_replaces_its_connection(clients: AsyncClient, treg_google_app):
+async def test_widening_access_upgrades_the_connection_it_targets(clients: AsyncClient, treg_google_app):
     """Two rows for the same provider — one read-only, one write-only — is not a state a user
-    should ever be able to reach by clicking "Enable write"."""
+    should ever be able to reach by clicking "Enable write". Passing connection_id says WHICH
+    account is being widened, so the callback upgrades rather than guessing."""
     first = await _connect_byo(clients, provider="google-search-console", capability="read")
-    second = await _connect_byo(clients, provider="google-search-console", capability="write")
+    second = await _connect_byo(clients, provider="google-search-console", capability="write",
+                                connection_id=first["secret_id"])
 
     gsc = [c for c in (await clients.get("/connections")).json() if c["provider"] == "google-search-console"]
     assert len(gsc) == 1, "widening access must upgrade the connection, not add another"
     assert first["secret_id"] == second["secret_id"] == gsc[0]["id"]
 
 
+async def test_a_second_account_is_added_not_swapped(clients: AsyncClient, treg_google_app):
+    """The other half of the same decision: with no connection_id the user is attaching ANOTHER
+    account (a second Slack workspace, a client's Ads account), which must not evict the first."""
+    first = await _connect_byo(clients, provider="google-search-console", capability="read", name="")
+    second = await _connect_byo(clients, provider="google-search-console", capability="read", name="")
+
+    gsc = [c for c in (await clients.get("/connections")).json() if c["provider"] == "google-search-console"]
+    assert len(gsc) == 2
+    assert first["secret_id"] != second["secret_id"]
+    # The first account keeps the bare name every skill and doc calls; only the extra is suffixed.
+    assert sorted(c["name"] for c in gsc) == ["google-search-console", "google-search-console-2"]
+
+
+async def test_a_second_account_gets_its_own_tool(clients: AsyncClient, treg_google_app):
+    """A tool name is unique per org, so without a distinct name the second account would either
+    collide or silently rebind the first account's tool to someone else's credential."""
+    first = await _connect_byo(clients, provider="google-search-console", capability="read", name="")
+    second = await _connect_byo(clients, provider="google-search-console", capability="read", name="")
+
+    tools = {t["name"]: t for t in (await clients.get("/tools")).json()}
+    assert tools["google-search-console"]["bindings"][0]["secret_id"] == first["secret_id"]
+    assert tools["google-search-console-2"]["bindings"][0]["secret_id"] == second["secret_id"]
+
+
+async def test_reconnect_cannot_be_aimed_at_another_provider(clients: AsyncClient, treg_google_app):
+    """connection_id comes from the browser. Without the provider check, a Slack consent could be
+    pointed at a Google connection and overwrite it with a token for a different service."""
+    gsc = await _connect_byo(clients, provider="google-search-console", capability="read")
+    r = await clients.post("/oauth/start", json={**BYO, "provider": "linkedin",
+                                                 "connection_id": gsc["secret_id"]})
+    assert r.status_code == 422, r.text
+
+
 async def test_enabling_write_keeps_read(clients: AsyncClient, treg_google_app):
     """A capability is a superset, never a swap — otherwise the connection ends up able to write
     while reporting "no read"."""
-    await _connect_byo(clients, provider="google-search-console", capability="read")
-    await _connect_byo(clients, provider="google-search-console", capability="write")
+    first = await _connect_byo(clients, provider="google-search-console", capability="read")
+    await _connect_byo(clients, provider="google-search-console", capability="write",
+                       connection_id=first["secret_id"])
 
     conn = next(c for c in (await clients.get("/connections")).json()
                 if c["provider"] == "google-search-console")
@@ -354,8 +391,10 @@ async def test_enabling_write_keeps_read(clients: AsyncClient, treg_google_app):
 
 
 async def test_reconnect_rebinds_the_tool_to_the_same_secret(clients: AsyncClient, treg_google_app):
-    await _connect_byo(clients, provider="google-search-console", capability="read")
-    await _connect_byo(clients, provider="google-search-console", capability="write")
+    first = await _connect_byo(clients, provider="google-search-console", capability="read",
+                               name="google-search-console")
+    await _connect_byo(clients, provider="google-search-console", capability="write",
+                       name="google-search-console", connection_id=first["secret_id"])
     tools = [t for t in (await clients.get("/tools")).json() if t["name"] == "google-search-console"]
     conn = next(c for c in (await clients.get("/connections")).json()
                 if c["provider"] == "google-search-console")

@@ -41,7 +41,7 @@ def test_every_provider_is_registered():
     assert set(P.REGISTRY) == {
         "google-search-console", "google-analytics", "google-business-profile",
         "google-ads", "youtube", "linkedin", "slack", "x", "tiktok",
-        "facebook", "instagram",
+        "facebook", "instagram", "meta-ads",
     }
 
 
@@ -275,3 +275,19 @@ def test_instagram_consent_never_mentions_page_publishing():
     'manage your Pages' posts' on the consent screen for authority it never uses."""
     for cap in P.INSTAGRAM.scopes.values():
         assert "pages_manage_posts" not in cap
+
+
+def test_meta_ads_needs_no_second_credential():
+    """Google Ads is gated on a developer token from an approved manager account; Meta has no
+    equivalent, so a Meta Ads connect must yield a callable tool on its own."""
+    assert P.META_ADS.can_autoprovision is True
+    assert P.META_ADS.needs_extra_credential is False
+
+
+def test_meta_ads_read_can_still_list_accounts():
+    """/me/adaccounts is a Business asset listing. Drop business_management from read and the
+    connect consents cleanly, then offers an empty account picker."""
+    for cap in P.META_ADS.scopes.values():
+        assert "business_management" in cap
+    assert set(P.META_ADS.scopes["read"]) < set(P.META_ADS.scopes["manage"])
+    assert "ads_management" not in P.META_ADS.scopes["read"], "read must not be able to spend money"
