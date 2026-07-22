@@ -783,7 +783,7 @@ th{background:rgba(0,0,0,.25)}
             </table></div>
           </div>
 
-          <div v-if="resPick" class="modalwrap" @click.self="resPick=null">
+          <div v-if="resPick" class="scrim" role="dialog" aria-modal="true" @click.self="resPick=null">
             <div class="modal" style="padding:16px">
               <h3 style="margin:0 0 10px">Choose a {{resPick.label}}</h3>
               <p class="sub" style="margin:0 0 10px">Which {{resPick.label}} should this connection act on? Your agent uses it as the default target.</p>
