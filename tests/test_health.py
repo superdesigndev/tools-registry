@@ -9,7 +9,12 @@ from __future__ import annotations
 
 import json
 
-from httpx import AsyncClient
+from fastapi import FastAPI, Request
+from httpx import ASGITransport, AsyncClient
+
+from treg import crypto
+from treg.health import _probe
+from treg.models import Secret, Tool
 
 
 async def test_probe_marks_ok(clients: AsyncClient):
@@ -121,3 +126,41 @@ async def test_malformed_health_check_does_not_500_the_batch(clients: AsyncClien
     health = {h["name"]: h for h in (await clients.get("/health")).json()}
     assert health["good"]["status"] == "ok"       # the healthy tool still validated in the same run
     assert health["weird"]["status"] == "unknown"  # the bad tool contained, not crashed
+
+
+# Module scope on purpose: this file uses `from __future__ import annotations`, so FastAPI resolves
+# a route's `Request` annotation out of module globals. Declared inside the test, it 422s instead.
+_seen: list[dict] = []
+_up = FastAPI()
+
+
+@_up.get("/v3/channels")
+async def _channels(request: Request) -> dict:
+    _seen.append(dict(request.query_params))
+    return {"items": []}
+
+
+async def test_probe_preserves_a_query_string_in_the_probe_path():
+    """httpx REPLACES a URL's query when `params` is passed — even an empty list. A probe path that
+    carries its own query (YouTube's ?part=id&mine=true) must survive that, or a healthy credential
+    gets probed at a bare path, 400s, and is reported invalid."""
+    tool = Tool(
+        name="youtube", base_url="http://up", host="up",
+        health_check={"method": "GET", "path": "/v3/channels?part=id&mine=true"},
+        bindings=[{"secret_id": 1, "injector": "env", "location": "header",
+                   "name": "Authorization", "format": "Bearer {secret}"}],
+    )
+    smap = {1: Secret(id=1, name="yt", value=crypto.encrypt("TOKEN"))}
+    _seen.clear()
+    async with AsyncClient(transport=ASGITransport(app=_up), base_url="http://up") as c:
+        status, detail = await _probe(tool, smap, c)
+    assert status == "ok", detail
+    assert _seen == [{"part": "id", "mine": "true"}]
+
+    # …and an injected query credential must be ADDED to that query, not replace it.
+    tool.bindings = [{"secret_id": 1, "injector": "env", "location": "query", "name": "key"}]
+    _seen.clear()
+    async with AsyncClient(transport=ASGITransport(app=_up), base_url="http://up") as c:
+        status, detail = await _probe(tool, smap, c)
+    assert status == "ok", detail
+    assert _seen == [{"part": "id", "mine": "true", "key": "TOKEN"}]

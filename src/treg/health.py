@@ -82,6 +82,10 @@ def _mark(secret: Secret, status: str, detail: str, when: datetime) -> None:
 
 
 def _view(s: Secret) -> dict:
+    # Expiry rides alongside status because they answer different questions. A credential treg
+    # cannot renew itself reports `ok` right up to the moment it dies; without the expiry fields
+    # the only warning a user gets is the first failed call.
+    refreshable = oauth.secret_is_refreshable(s)
     return {
         "secret_id": s.id,
         "name": s.name,
@@ -90,7 +94,21 @@ def _view(s: Secret) -> dict:
         "status": s.health_status,
         "detail": s.health_detail,
         "checked_at": s.health_checked_at.isoformat() if s.health_checked_at else None,
+        "provider": s.provider,
+        "refreshable": refreshable,
+        "expiry_state": oauth.expiry_state(s.expires_at, refreshable),
+        "expires_at": s.expires_at.isoformat() if s.expires_at else None,
     }
+
+
+def needs_reconnect(s: Secret) -> bool:
+    """A credential heading for silent death: treg can't renew it and it's expiring or gone.
+
+    This is the LinkedIn shape (no refresh_token at the non-partner tier, ~60-day access token).
+    Nothing in the probe path catches it — the token is valid until it abruptly isn't."""
+    if s.kind != "oauth":
+        return False
+    return oauth.expiry_state(s.expires_at, oauth.secret_is_refreshable(s)) in ("expiring", "expired")
 
 
 async def _probe(tool: Tool, smap: dict[int, Secret], client: httpx.AsyncClient) -> tuple[str, str]:
@@ -104,7 +122,13 @@ async def _probe(tool: Tool, smap: dict[int, Secret], client: httpx.AsyncClient)
             if s is None:
                 continue
             injectors.inject(headers, params, b, crypto.decrypt(s.value))  # a bad binding must not 500 the run
-        r = await client.request(hc.get("method", "GET"), url, headers=headers, params=params, timeout=15.0)
+        # Merge onto the URL rather than passing params=: httpx REPLACES a URL's existing query
+        # string whenever params is given (even an empty list), which would silently strip a probe
+        # path's own query — e.g. YouTube's ?part=id&mine=true — and fail a healthy credential.
+        probe_url = httpx.URL(url)
+        for k, v in params:
+            probe_url = probe_url.copy_add_param(k, v)
+        r = await client.request(hc.get("method", "GET"), probe_url, headers=headers, timeout=15.0)
     except (ValueError, KeyError, IndexError, AttributeError) as exc:
         return "invalid", f"injection failed: {exc}"  # a bad binding IS a credential/config problem
     except Exception as exc:  # noqa: BLE001 — transport/timeout says nothing about the credential
@@ -218,10 +242,15 @@ async def run_all(db: AsyncSession, client: httpx.AsyncClient, org_id: int | Non
     # Notify/report only what THIS run actually checked — a secret marked invalid in a past run but
     # no longer bound to any tool would otherwise be re-alerted on every run, forever.
     invalid = [secrets[sid] for sid in evaluated if secrets[sid].health_status == "invalid"]
+    # Expiry is swept over EVERY oauth secret, not just the ones a tool probe touched: a credential
+    # can be unbound, unprobed, and perfectly healthy while still days from dying. That is exactly
+    # the case the probe path cannot see.
+    expiring = [s for s in secrets.values() if needs_reconnect(s)]
     await _notify(invalid, db, client)
     return {
         "checked": len(evaluated),
         "invalid": [_view(s) for s in invalid],
+        "expiring": [_view(s) for s in expiring],
         "all": [_view(s) for s in secrets.values()],
     }
 

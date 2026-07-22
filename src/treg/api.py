@@ -11,6 +11,7 @@ scoped to the caller's org; `owner` (creator email) drives the member-vs-admin r
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import gzip
 import hashlib
@@ -26,7 +27,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from urllib.parse import quote, urlsplit
 
-from sqlalchemy import func
+from sqlalchemy import func, or_
 
 INVITE_TTL_DAYS = 7  # invite codes are one-time AND expire after this many days
 
@@ -42,6 +43,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
 from . import audit, crypto, demo as demo_seed, email as email_sender, health, injectors, localrun, oauth
+from . import oauth_providers
 from . import pubfeed, ratestore, runner, sandbox as demo_sandbox, session as sess
 from .config import get_settings
 from .db import get_session, init_db
@@ -1077,6 +1079,37 @@ async def tutorial_js():
     return FileResponse(js, media_type="application/javascript")
 
 
+@app.get("/legal.css", include_in_schema=False)
+async def legal_css():
+    """The shared skin for /terms and /privacy (landing-page tokens, one copy)."""
+    f = _WEB_DIR / "legal.css"
+    if not f.exists():
+        raise HTTPException(status_code=404, detail="legal.css not bundled")
+    return FileResponse(f, media_type="text/css", headers={"Cache-Control": "no-cache"})
+
+
+def _legal_page(name: str) -> FileResponse:
+    page = _WEB_DIR / name
+    if not page.exists():
+        raise HTTPException(status_code=404, detail=f"{name} not bundled")
+    # no-cache: a legal page must not be served stale after we publish an update.
+    return FileResponse(page, headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/terms", include_in_schema=False)
+async def terms_page():
+    """Terms of Service for the HOSTED registry (self-hosted instances are governed by LICENSE)."""
+    return _legal_page("terms.html")
+
+
+@app.get("/privacy", include_in_schema=False)
+async def privacy_page():
+    """Privacy policy. Also the URL given to OAuth providers at app-registration/verification time
+    (Google requires a reachable privacy policy carrying the Limited Use disclosure), so this path
+    is effectively public API — don't rename it without updating the provider consoles."""
+    return _legal_page("privacy.html")
+
+
 @app.get("/tutorial", include_in_schema=False)
 async def tutorial_page():
     """Standalone shareable interactive tutorial (same STEPS[] as the dashboard Help view)."""
@@ -1084,6 +1117,15 @@ async def tutorial_page():
     if not page.exists():
         return HTMLResponse("<h3>Tutorial not bundled.</h3>")
     return FileResponse(page)
+
+
+# Provider logos, resolved by convention: /logos/<service>.svg, matching `service` in
+# oauth_providers.py. Keyed off the name the registry already has, so adding a provider needs no
+# second registration step — drop the file in and it appears. Public and unauthenticated: they are
+# brand marks, not data, and the dashboard renders them before the caller is known.
+_LOGO_DIR = _WEB_DIR / "logos"
+if _LOGO_DIR.exists():
+    app.mount("/logos", StaticFiles(directory=str(_LOGO_DIR)), name="logos")
 
 
 # The interactive dashboard tour (matted screenshots) — served + its WebP images, at /dashboard-tour/.
@@ -1500,9 +1542,15 @@ class SkillImportIn(BaseModel):
 
 
 class OAuthStartIn(BaseModel):
-    name: str  # the secret name to create on success
-    client_id: str
-    client_secret: str
+    """Two modes. BYO: supply client_id/client_secret/auth_uri/token_uri/scopes yourself.
+    REGISTRY: supply `provider` (+ optional `capability`) and treg fills all of it from its own
+    approved app — see oauth_providers.py."""
+
+    name: str = ""  # the secret name to create on success; defaults to the provider service
+    provider: str | None = None  # registry service id, e.g. "google-search-console"
+    capability: str | None = None  # which scope set to request (default: read)
+    client_id: str = ""
+    client_secret: str = ""
     auth_uri: str = "https://accounts.google.com/o/oauth2/auth"
     token_uri: str = "https://oauth2.googleapis.com/token"
     scopes: list[str] = []
@@ -3365,11 +3413,104 @@ async def list_runs(
 
 
 # ---- OAuth connect flow (Phase C): mint the first token via browser consent --------------
+async def _autoprovision_provider_tool(
+    provider, secret: Secret, pending: PendingOAuth, db: AsyncSession
+) -> None:
+    """Bind the freshly-connected credential to the provider's API as a callable tool.
+
+    Idempotent by (org, name): reconnecting the same provider rebinds the existing tool to the new
+    credential rather than piling up duplicates."""
+    existing = (
+        await db.execute(
+            select(Tool).where(Tool.org_id == secret.org_id, Tool.name == provider.service)
+        )
+    ).scalars().first()
+    # A token provider's secret is a plain string, not an oauth blob — injecting it with
+    # secret_field="access_token" would try to read a JSON field that isn't there.
+    if provider.is_token_kind:
+        bindings = [{
+            "secret_id": secret.id, "injector": "env", "location": "header",
+            "name": provider.token_header, "format": provider.token_format,
+        }]
+    else:
+        bindings = [{
+            "secret_id": secret.id, "injector": "oauth", "location": "header",
+            "name": "Authorization", "format": "Bearer {secret}", "secret_field": "access_token",
+        }]
+    # A provider needing a second credential that TREG holds (Google Ads' developer token) gets it
+    # as a platform binding — read from settings at call time, never copied into the org's secrets.
+    # This is the point of the registry: the user waits weeks for their own, or uses ours instantly.
+    if provider.needs_extra_credential and provider.extra_credential_is_platform:
+        bindings.append({
+            "platform_setting": provider.extra_credential_setting, "injector": "env",
+            "location": "header", "name": provider.extra_credential_header, "format": "{secret}",
+        })
+    # A registry tool with a probe can self-validate on `health --run` instead of sitting at
+    # "unchecked" until something happens to call it.
+    health_check = (
+        {"method": "GET", "path": provider.probe_path, "expect_status": 200}
+        if provider.probe_path else None
+    )
+    if existing is not None:
+        existing.bindings = bindings
+        existing.base_url = provider.base_url
+        existing.host = _host_of(provider.base_url)
+        # Reconnecting is how an already-provisioned tool picks up a probe added since it was made.
+        existing.health_check = health_check or existing.health_check
+        return
+    db.add(Tool(
+        org_id=secret.org_id, name=provider.service, owner=pending.owner,
+        base_url=provider.base_url, host=_host_of(provider.base_url),
+        bindings=bindings, health_check=health_check,
+    ))
+
+
+@app.get("/oauth/providers")
+async def oauth_providers_list() -> list[dict]:
+    """Providers treg holds its own approved app for. `configured` is false when this deployment
+    hasn't set that provider's client credentials — listed, but its flow can't run here."""
+    return oauth_providers.listing()
+
+
 @app.post("/oauth/start")
 async def oauth_start(
     body: OAuthStartIn, caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session)
 ) -> dict:
     _require_can_register(caller)
+    name, client_id, client_secret = body.name, body.client_id, body.client_secret
+    auth_uri, token_uri, scopes = body.auth_uri, body.token_uri, list(body.scopes)
+    code_verifier, auth_params, auth_method = "", "", "client_secret_post"
+    cid_param, scope_sep = "client_id", " "
+    long_lived = False
+
+    if body.provider:  # REGISTRY mode — treg's own app supplies everything
+        provider = oauth_providers.get(body.provider)
+        if provider is None:
+            known = ", ".join(sorted(oauth_providers.REGISTRY))
+            raise HTTPException(status_code=404, detail=f"unknown provider {body.provider!r} (known: {known})")
+        capability = body.capability or provider.default_capability
+        try:
+            scopes = provider.scopes_for(capability)
+            client_id, client_secret = oauth_providers.credentials(provider)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from None
+        auth_uri, token_uri = provider.auth_uri, provider.token_uri
+        name = name or provider.service
+        auth_method = provider.token_endpoint_auth_method
+        cid_param, scope_sep = provider.client_id_param, provider.scope_separator
+        long_lived = provider.long_lived_exchange
+        if provider.auth_params is not None:
+            auth_params = json.dumps(provider.auth_params)
+        if provider.pkce:
+            code_verifier = crypto.new_token()
+    elif not (client_id and client_secret):
+        raise HTTPException(
+            status_code=422,
+            detail="supply `provider` for a registry connect, or client_id + client_secret to bring your own app",
+        )
+    if not name:
+        raise HTTPException(status_code=422, detail="name is required")
+
     state = crypto.new_token()
     treg_callback = f"{get_settings().public_url.rstrip('/')}/oauth/callback"
     # The code must come back to treg's OWN callback — a body-supplied redirect_uri pointing elsewhere
@@ -3378,10 +3519,12 @@ async def oauth_start(
         raise HTTPException(status_code=422, detail="redirect_uri must be treg's own /oauth/callback")
     redirect_uri = body.redirect_uri or treg_callback
     pending = PendingOAuth(
-        org_id=caller.org_id, state=state, name=body.name, owner=caller.email,
-        client_id=body.client_id, client_secret=crypto.encrypt(body.client_secret),
-        auth_uri=body.auth_uri, token_uri=body.token_uri, scopes=" ".join(body.scopes),
-        redirect_uri=redirect_uri,
+        org_id=caller.org_id, state=state, name=name, owner=caller.email,
+        client_id=client_id, client_secret=crypto.encrypt(client_secret),
+        auth_uri=auth_uri, token_uri=token_uri, scopes=scope_sep.join(scopes),
+        redirect_uri=redirect_uri, provider=body.provider or "",
+        code_verifier=code_verifier, auth_params=auth_params, token_endpoint_auth_method=auth_method,
+        client_id_param=cid_param, scope_separator=scope_sep, long_lived_exchange=long_lived,
     )
     db.add(pending)
     await db.commit()
@@ -3413,12 +3556,40 @@ async def oauth_callback(
         return _auth_page("Connect failed", "Authorization failed. You can close this tab and try again.", ok=False, status=400)
     try:
         blob = await oauth.exchange_code(pending, code, request.app.state.http)
-        secret = Secret(
-            org_id=pending.org_id, name=pending.name, owner=pending.owner, kind="oauth",
-            value=crypto.encrypt(json.dumps(blob)),
-        )
-        db.add(secret)
+        provider = oauth_providers.get(pending.provider) if pending.provider else None
+        # Reconnecting a provider REPLACES its connection. Adding a second one produced exactly the
+        # confusion you'd expect: two "google-search-console" rows, one read-only and one
+        # write-only, when the user had simply widened the same connection's access.
+        secret = None
+        if pending.provider:
+            secret = (await db.execute(
+                select(Secret).where(
+                    Secret.org_id == pending.org_id, Secret.provider == pending.provider
+                )
+            )).scalars().first()
+        if secret is None:
+            secret = Secret(org_id=pending.org_id, name=pending.name, owner=pending.owner,
+                            kind="oauth", value=crypto.encrypt(json.dumps(blob)))
+            db.add(secret)
+        else:
+            secret.value = crypto.encrypt(json.dumps(blob))
+            secret.last_error = ""
+        secret.provider = pending.provider or ""
+        # granted_scopes stays canonically SPACE-joined whatever dialect went over the wire, so the
+        # readers (satisfied_capabilities, the health payload) can keep using a plain .split().
+        # TikTok comma-joins its consent scopes; without this normalisation a whole grant would
+        # come back as one bogus scope string and every capability would read as unsatisfied.
+        _sep = pending.scope_separator or " "
+        secret.granted_scopes = " ".join(s for s in pending.scopes.split(_sep) if s)
+        secret.expires_at = oauth.expiry_of(blob)
         await db.flush()
+        # A connect that yields no callable tool is a dead end — the user consented and got
+        # nothing. Auto-provision the provider's tool bound to this credential so the very next
+        # thing they can do is make a real proxied call.
+        if provider and provider.can_autoprovision:
+            await _autoprovision_provider_tool(provider, secret, pending, db)
+        if provider and provider.has_identity:
+            await _record_connected_identity(provider, secret, blob, request.app.state.http)
         pending.status, pending.secret_id, pending.detail = "done", secret.id, "connected"
         await db.commit()
     except Exception as exc:  # noqa: BLE001
@@ -3427,6 +3598,398 @@ async def oauth_callback(
         await db.commit()
         return _auth_page("Connect failed", "Token exchange failed. You can close this tab and try again.", ok=False, status=502)
     return _auth_page("Connected", "You can close this tab and return to the terminal.")
+
+
+@app.get("/connections")
+async def list_connections(
+    caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session)
+) -> list[dict]:
+    """Every OAuth credential in the org, with health AND expiry. Metadata only — no token material."""
+    rows = (
+        await db.execute(
+            select(Secret).where(
+                Secret.org_id == caller.org_id,
+                # A connection is "something a registry connect produced", NOT "an oauth blob".
+                # Bring-your-own-token providers (Slack) store a plain string with kind "env", so a
+                # kind=="oauth" filter created them successfully and then hid them from the list.
+                or_(Secret.kind == "oauth", Secret.provider != ""),
+            )
+        )
+    ).scalars().all()
+    out = []
+    for s in rows:
+        view = oauth.connection_view(s)
+        provider = oauth_providers.get(s.provider) if s.provider else None
+        if provider is not None:
+            granted = s.granted_scopes.split()
+            have = provider.satisfied_capabilities(granted)
+            view["capabilities"] = have
+            # Providers don't backfill scopes onto an issued grant, so a capability the user never
+            # consented to can only be added by re-consenting. Naming the gap here is what turns an
+            # opaque upstream 403 into "reconnect to enable write".
+            view["missing_capabilities"] = [c for c in provider.capabilities if c not in have]
+            if not provider.extra_credential_is_platform:
+                view["extra_credential_note"] = provider.extra_credential_note
+            view["extra_credential_label"] = provider.extra_credential_label
+            # Outstanding only while no tool exists for this provider — once one does, the second
+            # credential has been supplied and the connection is callable.
+            if provider.needs_extra_credential and not provider.extra_credential_is_platform:
+                built = (await db.execute(
+                    select(Tool).where(Tool.org_id == caller.org_id, Tool.name == provider.service)
+                )).scalars().first()
+                view["needs_extra_credential"] = built is None
+        out.append(view)
+    out.sort(key=lambda c: (c["provider"] or "~", c["name"]))
+    return out
+
+
+async def _owned_connection(secret_id: int, caller: Caller, db: AsyncSession) -> Secret:
+    secret = (
+        await db.execute(
+            select(Secret).where(Secret.id == secret_id, Secret.org_id == caller.org_id)
+        )
+    ).scalars().first()
+    if secret is None or (secret.kind != "oauth" and not secret.provider):
+        raise HTTPException(status_code=404, detail="unknown connection")
+    return secret
+
+
+async def _record_connected_identity(provider, secret: Secret, blob: dict, client) -> None:
+    """Ask the provider who just connected, and remember it.
+
+    Providers with nothing to choose between (LinkedIn acts as the one member who consented) would
+    otherwise show a connection with no indication of WHICH account it is. This also captures the
+    id the API actually needs — LinkedIn's person URN — so the agent doesn't re-fetch it on every
+    call. Best-effort: a failed lookup must never fail the connect."""
+    try:
+        resp = await client.get(
+            f"{provider.base_url.rstrip('/')}{provider.identity_path}",
+            headers={"Authorization": f"Bearer {blob.get('access_token')}"},
+        )
+        if resp.status_code != 200:
+            return
+        data = resp.json()
+        ident = _dig(data, provider.identity_id_path)
+        if not ident:
+            return
+        secret.resource_ref = provider.identity_ref_format.format(id=ident)
+        label = _dig(data, provider.identity_label_path) if provider.identity_label_path else None
+        secret.resource_name = str(label) if label else str(ident)
+    except Exception as exc:  # noqa: BLE001
+        print(f"[oauth] identity lookup failed for {provider.service}: {exc}")
+
+
+def _dig(obj, dotted: str):
+    """Walk a dotted path through dicts and list indices; None if any hop is missing."""
+    for part in dotted.split("."):
+        if isinstance(obj, list):
+            try:
+                obj = obj[int(part)]
+            except (ValueError, IndexError):
+                return None
+        elif isinstance(obj, dict):
+            obj = obj.get(part)
+        else:
+            return None
+        if obj is None:
+            return None
+    return obj
+
+
+async def _enrich_resource_labels(provider, resources: list[dict], token: str, client) -> None:
+    """Replace id-only labels with the upstream's human name, in place.
+
+    Runs the lookups concurrently — six sequential round-trips to Google would make the picker feel
+    broken. A row whose lookup fails keeps its id: a partial list beats an error, since the user may
+    not have access to every account the listing returned."""
+    async def one(row: dict) -> None:
+        bare = str(row["id"]).rsplit("/", 1)[-1]
+        headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+        if provider.needs_extra_credential:
+            headers[provider.extra_credential_header] = provider.platform_extra_credential
+        if provider.enrich_header_name:
+            headers[provider.enrich_header_name] = provider.enrich_header_value.format(id=bare)
+        try:
+            resp = await client.post(
+                f"{provider.discovery_base.rstrip('/')}{provider.enrich_path.format(id=bare)}",
+                headers=headers, json=provider.enrich_body or {},
+            )
+            if resp.status_code == 200:
+                label = _dig(resp.json(), provider.enrich_label_path)
+                if label:
+                    row["label"] = str(label)
+        except Exception:  # noqa: BLE001 — a naming lookup must never break the picker
+            pass
+
+    await asyncio.gather(*(one(r) for r in resources if r.get("id")))
+
+
+@app.get("/connections/{secret_id}/resources")
+async def connection_resources(
+    secret_id: int, request: Request,
+    caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
+) -> dict:
+    """What this connection can act on — GSC sites, and later GA properties / Ads accounts.
+
+    Live-fetched rather than stored: the answer changes when the user gains or loses access
+    upstream, and a stale picker is worse than no picker."""
+    secret = await _owned_connection(secret_id, caller, db)
+    provider = oauth_providers.get(secret.provider)
+    if provider is None or not provider.supports_discovery:
+        raise HTTPException(
+            status_code=422,
+            detail=f"{secret.provider or 'this provider'} has nothing to choose between — it acts on your whole account",
+        )
+    await oauth.ensure_fresh(secret, db, request.app.state.http)  # no-op for a non-oauth secret
+    # A bring-your-own-token secret is a PLAIN STRING, not an oauth blob — json.loads on it throws.
+    raw = crypto.decrypt(secret.value)
+    if provider.is_token_kind:
+        disc_headers = {provider.token_header: provider.token_format.format(secret=raw)}
+    else:
+        blob = json.loads(raw)
+        token = blob.get("access_token") or blob.get("token")
+        disc_headers = {"Authorization": f"Bearer {token}"}
+    if provider.needs_extra_credential:  # Ads won't list accounts without the developer token
+        disc_headers[provider.extra_credential_header] = provider.platform_extra_credential
+    resp = await request.app.state.http.get(
+        f"{provider.discovery_base.rstrip('/')}{provider.discover_path}",
+        headers=disc_headers,
+    )
+    body = {}
+    try:
+        body = resp.json()
+    except Exception:  # noqa: BLE001
+        body = {}
+    # Slack answers 200 with {"ok": false, "error": "missing_scope"} — status alone would report an
+    # empty picker instead of naming the scope the bot is missing.
+    if resp.status_code >= 400 or body.get("ok") is False:
+        upstream = ""
+        err = body.get("error")
+        if isinstance(err, dict):
+            upstream = err.get("message", "")
+        elif isinstance(err, str):
+            upstream = err
+        if not upstream:
+            upstream = (resp.text or "")[:200]
+        raise HTTPException(
+            status_code=502,
+            detail=f"could not list {provider.resource_plural} ({resp.status_code}): {upstream}".strip(),
+        )
+    # A successful discovery call is a real authenticated request to the upstream — the strongest
+    # evidence we get that this credential works. Recording it turns the connection's health from
+    # "unknown" into something earned, instead of waiting for the next health sweep.
+    if secret.health_status != "ok":
+        secret.health_status, secret.health_detail = "ok", "listed upstream resources"
+        secret.health_checked_at = _utcnow_naive()
+        await db.commit()
+    rows = body.get(provider.discover_key) or []
+    if provider.discover_nested_key:  # e.g. GA4 properties nested inside each account summary
+        rows = [n for r in rows if isinstance(r, dict) for n in (r.get(provider.discover_nested_key) or [])]
+    label_field = provider.discover_label_field or provider.discover_id_field
+    resources = [
+        # A row is usually an object, but some providers return bare strings — Google Ads'
+        # listAccessibleCustomers gives ["customers/6186675831", …]. Treat the string as both id
+        # and label rather than silently dropping every row.
+        {"id": r, "label": r.rsplit("/", 1)[-1], "raw": r} if isinstance(r, str)
+        # _dig, not .get — YouTube's channel title is nested at snippet.title. A plain key is just
+        # a one-hop path, so every existing provider walks the same code.
+        else {"id": _dig(r, provider.discover_id_field), "label": _dig(r, label_field), "raw": r}
+        for r in rows if isinstance(r, (dict, str))
+    ]
+    if provider.supports_enrichment:
+        await _enrich_resource_labels(provider, resources, token, request.app.state.http)
+    # Self-heal a connection whose target was chosen before we stored labels (or via the API, which
+    # has no label to give). We're already holding the upstream's own naming — resolving it here
+    # spares the user a pointless re-pick just to make the row readable.
+    if secret.resource_ref and not secret.resource_name:
+        match = next((x for x in resources if x["id"] == secret.resource_ref), None)
+        if match and match["label"]:
+            secret.resource_name = match["label"]
+            await db.commit()
+    return {
+        "provider": provider.service,
+        "resource_label": provider.resource_label,
+        "resource_plural": provider.resource_plural,
+        "selected": secret.resource_ref,
+        "resources": resources,
+    }
+
+
+class ResourceRefIn(BaseModel):
+    resource_ref: str
+    resource_name: str = ""  # the human label, so the UI never has to show "properties/384078430"
+
+
+@app.post("/connections/{secret_id}/resource")
+async def set_connection_resource(
+    secret_id: int, body: ResourceRefIn,
+    caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
+) -> dict:
+    secret = await _owned_connection(secret_id, caller, db)
+    secret.resource_ref = body.resource_ref
+    secret.resource_name = body.resource_name
+    await db.commit()
+    await db.refresh(secret)
+    return oauth.connection_view(secret)
+
+
+class TokenConnectIn(BaseModel):
+    provider: str
+    token: str
+
+
+@app.post("/connections/token")
+async def connect_with_token(
+    body: TokenConnectIn, request: Request,
+    caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
+) -> dict:
+    """Connect a provider where the user brings their own bot token (Slack).
+
+    The token is VERIFIED against the provider's probe before anything is stored. Saving an
+    unverified credential just moves the failure to the first real call, by which point the user
+    has left the setup screen and has no idea which of the three steps they got wrong."""
+    _require_can_register(caller)
+    provider = oauth_providers.get(body.provider)
+    if provider is None or not provider.is_token_kind:
+        raise HTTPException(status_code=422, detail="this provider is connected by consent, not a token")
+    token = body.token.strip()
+    if not token:
+        raise HTTPException(status_code=422, detail=f"{provider.token_label or 'Token'} is required")
+
+    headers = {provider.token_header: provider.token_format.format(secret=token)}
+    try:
+        resp = await request.app.state.http.get(
+            f"{provider.base_url.rstrip('/')}{provider.probe_path}", headers=headers
+        )
+        payload = resp.json() if resp.status_code < 500 else {}
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=502, detail=f"could not reach {provider.display_name}: {exc}") from None
+    # Slack answers 200 with {"ok": false, "error": "invalid_auth"} — an HTTP status alone would
+    # happily accept a dead token.
+    if resp.status_code >= 400 or payload.get("ok") is False:
+        why = payload.get("error") or f"HTTP {resp.status_code}"
+        raise HTTPException(status_code=422, detail=f"{provider.display_name} rejected that token ({why})")
+
+    secret = (await db.execute(
+        select(Secret).where(Secret.org_id == caller.org_id, Secret.provider == provider.service)
+    )).scalars().first()
+    if secret is None:
+        secret = Secret(org_id=caller.org_id, name=provider.service, owner=caller.email, kind="env",
+                        value=crypto.encrypt(token), provider=provider.service)
+        db.add(secret)
+    else:
+        secret.value = crypto.encrypt(token)
+    # A token provider has no consent response to read scopes from, so take them from the probe's
+    # response header — otherwise the connection reports "0 scopes" while holding a scoped token.
+    if provider.token_scopes_header:
+        granted = resp.headers.get(provider.token_scopes_header, "")
+        if granted:
+            secret.granted_scopes = " ".join(x.strip() for x in granted.split(",") if x.strip())
+    secret.last_error = ""
+    secret.health_status, secret.health_detail = "ok", "token verified at connect"
+    secret.health_checked_at = _utcnow_naive()
+    # The probe already told us who this is — no second call needed.
+    if provider.has_identity:
+        ident = _dig(payload, provider.identity_id_path)
+        if ident:
+            secret.resource_ref = provider.identity_ref_format.format(id=ident)
+            label = _dig(payload, provider.identity_label_path) if provider.identity_label_path else None
+            secret.resource_name = str(label) if label else str(ident)
+    await db.flush()
+
+    pending = PendingOAuth(org_id=caller.org_id, state="", name=provider.service, owner=caller.email,
+                           client_id="", client_secret="", auth_uri="", token_uri="", redirect_uri="")
+    await _autoprovision_provider_tool(provider, secret, pending, db)
+    await db.commit()
+    await db.refresh(secret)
+    return oauth.connection_view(secret)
+
+
+class ExtraCredentialIn(BaseModel):
+    value: str
+
+
+@app.post("/connections/{secret_id}/extra-credential")
+async def set_extra_credential(
+    secret_id: int, body: ExtraCredentialIn,
+    caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
+) -> dict:
+    """Supply the second credential a provider needs, and finish building its tool.
+
+    Google Ads takes the user's OAuth bearer AND a developer-token header from an approved manager
+    account. treg can't invent the latter, so the connect deliberately stops short of a tool. This
+    is the other half: store the extra credential and provision the tool with BOTH bindings, so the
+    connection goes from "connected but uncallable" to actually usable."""
+    _require_can_register(caller)
+    secret = await _owned_connection(secret_id, caller, db)
+    provider = oauth_providers.get(secret.provider)
+    if provider is None or not provider.needs_extra_credential:
+        raise HTTPException(status_code=422, detail="this provider needs no extra credential")
+    value = body.value.strip()
+    if not value:
+        raise HTTPException(status_code=422, detail=f"{provider.extra_credential_label} is required")
+
+    name = f"{provider.service}-{provider.extra_credential_header}"
+    extra = (await db.execute(
+        select(Secret).where(Secret.org_id == caller.org_id, Secret.name == name)
+    )).scalars().first()
+    if extra is None:
+        extra = Secret(org_id=caller.org_id, name=name, owner=caller.email, kind="env",
+                       value=crypto.encrypt(value))
+        db.add(extra)
+        await db.flush()
+    else:  # re-supplying replaces it — the usual reason is a rotated token
+        extra.value = crypto.encrypt(value)
+
+    bindings = [
+        {"secret_id": secret.id, "injector": "oauth", "location": "header",
+         "name": "Authorization", "format": "Bearer {secret}", "secret_field": "access_token"},
+        {"secret_id": extra.id, "injector": "env", "location": "header",
+         "name": provider.extra_credential_header, "format": "{secret}"},
+    ]
+    tool = (await db.execute(
+        select(Tool).where(Tool.org_id == caller.org_id, Tool.name == provider.service)
+    )).scalars().first()
+    if tool is None:
+        tool = Tool(org_id=caller.org_id, name=provider.service, owner=caller.email,
+                    base_url=provider.base_url, host=_host_of(provider.base_url), bindings=bindings)
+        db.add(tool)
+    else:
+        tool.bindings = bindings
+    await db.commit()
+    await db.refresh(secret)
+    return {**oauth.connection_view(secret), "tool": provider.service, "ready": True}
+
+
+@app.delete("/connections/{secret_id}")
+async def revoke_connection(
+    secret_id: int, caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session)
+) -> dict:
+    """Disconnect, and take the provider's own tool with it.
+
+    A tool left bound to a deleted credential isn't "still configured" — it's broken, and it says so
+    only at call time with "a bound secret is missing". We remove the tool treg auto-provisioned for
+    this provider (that's treg's creation, not the user's) and drop the dead binding from any tool
+    the user built themselves, leaving their other bindings intact."""
+    _require_can_register(caller)
+    secret = await _owned_connection(secret_id, caller, db)
+    provider_service = secret.provider
+    removed_tools: list[str] = []
+
+    tools = (await db.execute(select(Tool).where(Tool.org_id == caller.org_id))).scalars().all()
+    for tool in tools:
+        bindings = [b for b in (tool.bindings or []) if b.get("secret_id") != secret_id]
+        if len(bindings) == len(tool.bindings or []):
+            continue  # this tool never used the credential
+        if tool.name == provider_service or not bindings:
+            await db.delete(tool)  # treg's own auto-provisioned tool, or nothing left to inject
+            removed_tools.append(tool.name)
+        else:
+            tool.bindings = bindings  # a user-built tool keeps its other credentials
+
+    await db.delete(secret)
+    await db.commit()
+    return {"deleted": secret_id, "removed_tools": removed_tools}
 
 
 @app.get("/oauth/status/{state}")
@@ -3468,18 +4031,9 @@ async def get_health(
     visible = await _visible_secret_ids(caller, db)
     if visible is not None:  # same visibility rule as /secrets — health mustn't leak hidden keys
         rows = [s for s in rows if s.id in visible]
-    return [
-        {
-            "secret_id": s.id,
-            "name": s.name,
-            "owner": s.owner,
-            "kind": s.kind,
-            "status": s.health_status,
-            "detail": s.health_detail,
-            "checked_at": s.health_checked_at.isoformat() if s.health_checked_at else None,
-        }
-        for s in rows
-    ]
+    # health.needs_reconnect rides along so a credential treg cannot renew announces itself BEFORE
+    # it dies. Nothing else surfaces that: it probes green until the moment it stops working.
+    return [{**health._view(s), "needs_reconnect": health.needs_reconnect(s)} for s in rows]
 
 
 # ---- super-admin: cross-tenant read + control (env token OR is_superadmin user) -----------
@@ -3865,7 +4419,8 @@ async def call_tool(
     try:
         # Load every secret the bindings need (api does the DB work; proxy stays I/O-free).
         secrets: dict[int, Secret] = {}
-        for sid in {b["secret_id"] for b in tool.bindings}:
+        # A platform binding carries no secret_id — its value comes from settings at relay time.
+        for sid in {b["secret_id"] for b in tool.bindings if b.get("secret_id") is not None}:
             secret = await db.get(Secret, sid)
             if secret is None or secret.org_id != caller.org_id:
                 raise HTTPException(status_code=409, detail="a bound secret is missing")

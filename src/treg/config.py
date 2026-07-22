@@ -92,8 +92,40 @@ class Settings(BaseSettings):
 
     # Human login via Google OAuth (dashboard sessions). Create a Google "web" OAuth client with an
     # authorized redirect of <public_url>/auth/google/callback; empty disables the Google button.
+    # The SAME client also backs registry connects (oauth_providers.py) — Search Console, Analytics,
+    # Ads, Business Profile — which consent through <public_url>/oauth/callback. Register both
+    # redirect URIs on it. Login asks for openid/email/profile; a connect asks only for the scopes
+    # its capability needs, so the two never share a consent screen.
     google_client_id: str = ""
     google_client_secret: str = ""
+    # Registry OAuth apps for the non-Google providers (oauth_providers.py). Empty = that provider
+    # is listed as unconfigured rather than failing part-way through a consent.
+    # treg's own Google Ads developer token, from OUR approved manager account. Ads needs it on
+    # every call ALONGSIDE the user's OAuth — it identifies the calling application, not the user,
+    # and grants no access to our ad accounts. Holding it centrally is the whole point: a user
+    # would otherwise wait weeks for Google to approve one of their own.
+    google_ads_developer_token: str = ""
+
+    linkedin_client_id: str = ""
+    linkedin_client_secret: str = ""
+
+    slack_client_id: str = ""
+    slack_client_secret: str = ""
+    x_client_id: str = ""
+    x_client_secret: str = ""
+    # TikTok issues a separate app (and separate key/secret) per sandbox, so a dev deployment
+    # points at a sandbox client while production points at the reviewed one.
+    tiktok_client_id: str = ""
+    tiktok_client_secret: str = ""
+    # ONE Meta app backs both the facebook and instagram providers. Meta App Review, business
+    # verification and Tech Provider status are all scoped to the app, not to an OAuth client, so a
+    # second client would isolate nothing and would need its own review from zero. Instagram
+    # Business is reached through Facebook Login (graph.facebook.com), not the separate
+    # Instagram-Login API on graph.instagram.com — that is a different token family entirely and
+    # will reject these credentials outright.
+    meta_client_id: str = ""
+    meta_client_secret: str = ""
+
     # Overridable for tests; real Google by default.
     google_authorize_url: str = "https://accounts.google.com/o/oauth2/v2/auth"
     google_token_url: str = "https://oauth2.googleapis.com/token"

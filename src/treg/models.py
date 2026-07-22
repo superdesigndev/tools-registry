@@ -202,6 +202,23 @@ class PendingOAuth(SQLModel, table=True):
     token_uri: str
     scopes: str = ""  # space-joined
     redirect_uri: str
+    # The registry service this connect came from ("" for a bring-your-own-app connect). Carried
+    # through the redirect so the callback knows which provider's tool to auto-provision.
+    provider: str = Field(default="")
+    # Per-provider auth quirks, captured at start so the callback exchanges the code the same way
+    # the consent URL was built. `code_verifier` is PKCE (empty = not used); `auth_params` is a JSON
+    # object of extra consent-URL query params.
+    code_verifier: str = Field(default="")
+    auth_params: str = Field(default="")
+    token_endpoint_auth_method: str = Field(default="client_secret_post")
+    # TikTok spells the client identifier `client_key` and comma-joins scopes. Snapshotted here for
+    # the same reason as the fields above: the callback must speak the dialect the consent URL used.
+    client_id_param: str = Field(default="client_id")
+    scope_separator: str = Field(default=" ")
+    # Meta only: swap the short-lived code-exchange token for a ~60-day one before storing it.
+    # Snapshotted for the same reason as the fields above — the callback must not have to look the
+    # provider up again to know how the token was meant to be obtained.
+    long_lived_exchange: bool = Field(default=False)
     status: str = Field(default="pending")  # pending | done | error
     secret_id: int | None = Field(default=None)
     detail: str = Field(default="")
@@ -225,6 +242,24 @@ class Secret(SQLModel, table=True):
     health_status: str = Field(default="unknown")
     health_detail: str = Field(default="")
     health_checked_at: datetime | None = Field(default=None)
+
+    # Connection metadata (registry connects — see oauth_providers.py). Empty `provider` means this
+    # credential did not come from the registry (uploaded, or a bring-your-own-app connect).
+    provider: str = Field(default="", index=True)
+    granted_scopes: str = Field(default="")  # space-joined; what the user ACTUALLY consented to
+    resource_ref: str = Field(default="")  # the chosen site / property / account this connection acts on
+    # The human name for that ref. Upstream ids are opaque ("properties/384078430"); showing one to
+    # a user tells them nothing about which site they picked, so the label is stored alongside it.
+    resource_name: str = Field(default="")
+
+    # Expiry is a SEPARATE axis from health_status. health answers "does this credential work";
+    # expiry answers "how long will it keep working". A non-refreshable token (LinkedIn issues no
+    # refresh_token at the non-partner tier) is perfectly healthy right up until it silently dies,
+    # so it has to be surfaced on its own or the user gets no warning at all.
+    expires_at: datetime | None = Field(default=None)
+    last_refresh_at: datetime | None = Field(default=None)
+    last_error: str = Field(default="")
+
     created_at: datetime = Field(default_factory=_now)
 
 

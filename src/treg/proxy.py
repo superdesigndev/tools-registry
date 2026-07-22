@@ -18,11 +18,12 @@ httpx client (rule 1: keepalive). Secrets are passed already-loaded (api does th
 from __future__ import annotations
 
 import httpx
-from fastapi import Request
+from fastapi import HTTPException, Request
 from fastapi.responses import StreamingResponse
 from starlette.background import BackgroundTask
 
 from . import crypto, injectors
+from .config import get_settings
 from .models import Secret, Tool
 
 # Connection-level headers that belong to a single hop and must NOT be forwarded as-is.
@@ -77,11 +78,29 @@ async def relay(
         [(k, v) for k, v in request.headers.raw if k.decode("latin-1").lower() not in req_drop]
     )
     _scrub_treg_cookies(headers)  # keep caller cookies, drop treg's own session cookie
+    # Mirror the caller's compression choice. We relay the upstream body RAW (aiter_raw), so if the
+    # upstream compresses, the caller receives compressed bytes. httpx supplies its own
+    # `Accept-Encoding: gzip,…` whenever the request doesn't carry one — which would make us hand
+    # gzip to a caller who never asked for it (binary garbage to any plain HTTP client or agent).
+    # Asking for identity keeps what the caller gets matching what the caller requested.
+    if "accept-encoding" not in headers:
+        headers["accept-encoding"] = "identity"
     # Query: a list of pairs preserves duplicate keys verbatim (?tag=a&tag=b).
     params: list[tuple[str, str]] = list(request.query_params.multi_items())
 
     # Apply every binding (a request may need several credentials at once).
     for binding in tool.bindings:
+        # A PLATFORM binding injects one of treg's own credentials (Google Ads' developer token),
+        # read from settings rather than an org secret. Keeping it out of the org's secret store
+        # matters: it's treg's credential, not the tenant's, so it must not be readable by them or
+        # extractable through a local run.
+        setting = binding.get("platform_setting")
+        if setting:
+            value = getattr(get_settings(), setting, "") or ""
+            if not value:
+                raise HTTPException(status_code=502, detail=f"this server has no {setting} configured")
+            injectors.inject(headers, params, binding, value)
+            continue
         secret = secrets[binding["secret_id"]]
         injectors.inject(headers, params, binding, crypto.decrypt(secret.value))
 
@@ -94,9 +113,7 @@ async def relay(
     )
     # Call-time SSRF guard: resolve the upstream host NOW and refuse an internal target — defeats DNS
     # rebinding (base_url was public at registration, its DNS now points at 169.254.169.254 / localhost).
-    from . import health
-    from .config import get_settings
-    from fastapi import HTTPException
+    from . import health  # local: health imports proxy-adjacent modules, so keep the cycle lazy
     if get_settings().proxy_ssrf_check and not health.host_is_public(upstream_req.url.host):
         raise HTTPException(status_code=502, detail="upstream host resolves to a non-public address")
     upstream_resp = await client.send(upstream_req, stream=True)

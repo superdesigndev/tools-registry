@@ -39,6 +39,16 @@
   .frow input:disabled{opacity:.6}
   .bindrow{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:7px 0;padding:8px;background:var(--bg);border:1px solid var(--line);border-radius:8px}
   .bindrow .msel{flex:none} .bindinput{background:var(--panel);border:1px solid var(--line);color:var(--ink);border-radius:6px;padding:5px 8px;font-family:var(--mono);font-size:12px;flex:1;min-width:110px}
+  /* Provider logos sit in a uniform near-white tile in BOTH themes. Brand marks are drawn for
+     white, they differ wildly in ink coverage (LinkedIn is a full-bleed square, Analytics is three
+     thin bars), and monochrome ones like X vanish on one theme if left bare — one shared surface
+     fixes all three and keeps the column optically even. object-fit keeps a mark with odd
+     proportions (YouTube is wider than tall) inside the same box. */
+  .plogo-tile{width:30px;height:30px;flex:0 0 30px;border-radius:8px;background:#fbfaf7;
+    border:1px solid rgba(0,0,0,.07);display:flex;align-items:center;justify-content:center}
+  .plogo{width:19px;height:19px;object-fit:contain;display:block}
+  h3 .plogo-tile{display:inline-flex;vertical-align:-9px;margin-right:9px}
+  .pl-row{display:flex;align-items:center;gap:11px;min-width:0}
   .chip{display:inline-block;font-size:11px;padding:2px 8px;border-radius:6px;border:1px solid var(--line);color:var(--muted)}
   .chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:3px}
   .chip.env{color:var(--amber);border-color:color-mix(in srgb,var(--amber) 42%,var(--line));background:color-mix(in srgb,var(--amber) 10%,transparent)}
@@ -105,6 +115,12 @@
   .ttable td{padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:middle;font-size:13px}
   .ttable tr:last-child td{border-bottom:0} .ttable tr:hover td{background:var(--panel2)}
   .ttable .tn{width:22%;white-space:nowrap} .ttable .th{color:var(--muted)}
+  /* The global .sub carries margin-bottom:18px for prose. Inside a table cell that is invisible
+     dead space BELOW the text, so vertical-align:middle centres the block 9px too high and the
+     row grows for nothing. Reset it here, and pin both line-heights so the two-line stack is a
+     predictable height for the logo tile to centre against. */
+  .ttable .sub{margin:0;line-height:1.4}
+  .ttable .tn b{display:block;line-height:1.4}
   .ttable .ta{width:1%;white-space:nowrap} .ttable .ta .chip{margin-right:4px}
   .ttable .tx{text-align:right;white-space:nowrap;width:1%} .ttable .tx .btn{margin-left:5px}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:15px}
@@ -126,6 +142,10 @@
   .cliopt{display:flex;align-items:flex-start;gap:10px;margin:12px 0;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);cursor:pointer}
   .cliopt .tswitch{margin-top:1px} .cliopt b{font-size:12.5px;line-height:1.4} .cliopt .sub{font-size:11px;line-height:1.5;margin:0}
   .scrim{position:fixed;inset:0;background:rgba(20,16,10,.55);display:grid;place-items:center;z-index:50}
+  /* Inline spinner for waits on a live upstream (resource discovery), so a slow round-trip reads
+     as "working" rather than "broken". */
+  .spin{display:inline-block;width:11px;height:11px;margin-right:7px;vertical-align:-1px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:treg-spin .7s linear infinite}
+  @keyframes treg-spin{to{transform:rotate(360deg)}}
   .modal{background:var(--panel);border:1px solid var(--line);border-radius:14px;width:min(680px,94vw);max-height:88vh;overflow:auto}
   /* onboarding - a docked right-side narrative stepper; content is pushed left so nothing overlaps */
   .onb-panel{position:fixed;top:0;right:0;bottom:0;width:360px;z-index:60;display:flex;flex-direction:column;
@@ -691,6 +711,7 @@ th{background:rgba(0,0,0,.25)}
         <div class="side-nav">
           <button class="nav" :class="{active:view==='tools'}" @click="go('tools')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>Tools</button>
           <button v-if="canRegister" class="nav" :class="{active:view==='secrets'}" @click="go('secrets')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Secrets</button>
+          <button v-if="canRegister" class="nav" :class="{active:view==='connections'}" @click="go('connections')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>Marketplace</button>
           <button class="nav" :class="{active:view==='activity'}" @click="go('activity')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Activity</button>
           <button v-if="canAdmin" class="nav" :class="{active:view==='usage'}" @click="go('usage')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Usage</button>
           <button class="nav" :class="{active:view==='orgs'}" @click="go('orgs')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Team</button>
@@ -724,6 +745,140 @@ th{background:rgba(0,0,0,.25)}
         </div>
 
         <!-- TOOLS -->
+        <template v-if="view==='connections'">
+          <div class="tut-head">
+            <div><h1>Marketplace in {{activeName}}</h1><p class="sub" style="margin:0">Connect an account once. treg holds the credential server-side and injects it on every call — nothing lands on your machine.</p></div>
+            <div class="tut-actions"><button class="btn sm" @click="loadConnections">Refresh</button></div>
+          </div>
+          <div v-if="connErr" class="banner" style="margin-top:12px">{{connErr}}</div>
+          <div v-for="c in needSecondCred" :key="'n'+c.id" class="banner" style="margin-top:12px">
+            <div><b>{{c.name}}</b> is connected, but can't call the API on its own yet. {{c.extra_credential_note}}</div>
+            <div style="display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap">
+              <input class="bindinput" style="flex:1;min-width:220px" type="password"
+                     :placeholder="c.extra_credential_label||'Second credential'"
+                     v-model="extraCred[c.id]" @keyup.enter="saveExtraCred(c)"/>
+              <button class="btn sm primary" :disabled="!extraCred[c.id] || extraBusy===c.id" @click="saveExtraCred(c)">
+                {{extraBusy===c.id?'Saving…':'Save & finish setup'}}
+              </button>
+            </div>
+          </div>
+          <div v-if="staleConns.length" class="banner" style="margin-top:12px">
+            <b>{{staleConns.length}} connection{{staleConns.length===1?'':'s'}} need reconnecting.</b>
+            treg can't renew {{staleConns.length===1?'it':'them'}} automatically — without a fresh consent
+            {{staleConns.length===1?'it':'they'}} will stop working:
+            <span class="mono">{{staleConns.map(c=>c.name).join(', ')}}</span>
+          </div>
+
+          <div class="tgroup" v-for="g in providerGroups" :key="g.category">
+            <div class="tgh">{{g.category}} <span class="tgh-n">{{g.items.length}}</span><span class="tgh-hint">{{g.hint}}</span></div>
+            <div class="ttable-wrap"><table class="ttable">
+              <tr v-for="p in g.items" :key="p.service">
+                <td class="tn"><div class="pl-row"><span class="plogo-tile"><img class="plogo" :src="'/logos/'+p.service+'.svg'" alt="" aria-hidden="true" @error="$event.target.style.visibility='hidden'"></span><div><b>{{p.display_name}}</b><span class="sub" style="display:block;font-size:11px">{{p.service}}</span></div></div></td>
+                <td class="th"><span class="mono">{{p.base_url}}</span></td>
+                <td class="ta"><span v-if="!p.configured" class="chip warn" title="This server has no client credentials for the provider">not configured</span><span v-else class="chip ok">ready</span></td>
+                <td class="tx" @click.stop>
+                  <button class="btn sm primary" :disabled="!p.configured || connBusy" @click="startConnect(p)">Connect</button>
+                </td>
+              </tr>
+            </table></div>
+          </div>
+
+          <div class="tgroup" v-if="connections.length">
+            <div class="tgh">Connected <span class="tgh-n">{{connections.length}}</span><span class="tgh-hint">health is “does it work”; expiry is “how long will it keep working”</span></div>
+            <div class="ttable-wrap"><table class="ttable">
+              <tr v-for="c in connections" :key="c.id">
+                <td class="tn"><div class="pl-row"><span v-if="c.provider" class="plogo-tile"><img class="plogo" :src="'/logos/'+c.provider+'.svg'" alt="" aria-hidden="true" @error="$event.target.style.visibility='hidden'"></span><div style="min-width:0"><b>{{c.name}}</b><span class="sub" style="display:block;font-size:11px;overflow-wrap:anywhere" :title="c.resource_ref">{{c.resource_name || c.resource_ref || (connProvider(c) && connProvider(c).supports_discovery ? 'no '+connProvider(c).resource_label+' chosen yet' : 'whole account')}}</span></div></div></td>
+                <td class="th"><span class="mono">{{(c.scopes||[]).length}} scope{{(c.scopes||[]).length===1?'':'s'}}</span></td>
+                <td class="ta">
+                  <!-- "unknown" just means nothing has called upstream yet — it reads as a problem
+                       and isn't one, so only show a verdict we actually have. -->
+                  <span v-if="c.health==='ok'" class="chip ok" title="A real upstream call succeeded with this credential">working</span>
+                  <span v-else-if="c.health==='invalid'" class="chip warn" :title="c.last_error||'The last upstream call failed'">failing</span>
+                  <span v-if="c.expiry_state==='expired'" class="chip warn" title="This credential has expired — reconnect">expired</span>
+                  <span v-else-if="c.expiry_state==='expiring'" class="chip warn" :title="'Expires '+c.expires_at">expiring</span>
+                  <span v-if="!c.refreshable" class="chip" title="treg cannot renew this one unattended — it must be reconnected by hand when it expires">manual renew</span>
+                  <span v-if="c.extra_credential_note" class="chip warn" :title="c.extra_credential_note">needs a second credential</span>
+                  <span v-for="cap in (c.capabilities||[])" :key="cap" class="chip ok">{{cap}}</span>
+                </td>
+                <td class="tx" @click.stop>
+                  <button v-if="c.needs_reconnect && c.provider" class="btn sm primary" @click="reconnect(c)" title="This credential can't be renewed automatically — re-consent to refresh it">Reconnect</button>
+                  <button v-if="connProvider(c) && connProvider(c).supports_discovery" class="btn sm" @click="openResources(c)"
+                          :title="'Choose which '+connProvider(c).resource_label+' this connection acts on'">Choose {{connProvider(c).resource_label}}</button>
+                  <button class="btn sm ico" :class="{danger:confirmDisc===c.id}" @click="disconnect(c)" :title="confirmDisc===c.id?'Click again to disconnect':'Disconnect'">✕</button>
+                </td>
+              </tr>
+            </table></div>
+          </div>
+
+          <div v-if="tokenAsk" class="scrim" role="dialog" aria-modal="true" @click.self="tokenAsk=null">
+            <div class="modal" style="padding:16px">
+              <h3 style="margin:0 0 6px"><span class="plogo-tile"><img class="plogo" :src="'/logos/'+tokenAsk.provider.service+'.svg'" alt="" aria-hidden="true" @error="$event.target.style.visibility='hidden'"></span>Connect {{tokenAsk.provider.display_name}}</h3>
+              <p class="sub" style="margin:0 0 12px">You bring your own bot, so it stays yours — treg
+                holds the token server-side and injects it on every call.</p>
+              <a v-if="tokenAsk.provider.setup_url" class="btn sm primary" :href="tokenAsk.provider.setup_url"
+                 target="_blank" rel="noopener">{{tokenAsk.provider.setup_action_label||'Create the app'}}</a>
+              <ol style="margin:12px 0 0;padding-left:20px;color:var(--muted);font-size:12.5px;line-height:1.7">
+                <li v-for="(st,i) in (tokenAsk.provider.setup_steps||[])" :key="i">{{st}}</li>
+              </ol>
+              <div style="margin-top:12px">
+                <label class="labelcls" style="display:block;font-size:11px;color:var(--muted);margin-bottom:4px">{{tokenAsk.provider.token_label||'Token'}}</label>
+                <input class="bindinput" style="width:100%" type="password" autocomplete="off"
+                       :placeholder="tokenAsk.provider.token_placeholder" v-model="tokenAsk.token"
+                       @keyup.enter="submitToken"/>
+              </div>
+              <p v-if="tokenAsk.provider.setup_note" class="sub" style="margin:10px 0 0;font-size:11.5px">{{tokenAsk.provider.setup_note}}</p>
+              <div v-if="tokenAsk.err" class="banner" style="margin-top:10px">{{tokenAsk.err}}</div>
+              <div style="margin-top:14px;text-align:right;display:flex;gap:8px;justify-content:flex-end">
+                <button class="btn sm" @click="tokenAsk=null">Cancel</button>
+                <button class="btn sm primary" :disabled="!tokenAsk.token.trim()||tokenAsk.busy" @click="submitToken">
+                  {{tokenAsk.busy?'Verifying…':'Connect'}}</button>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="capAsk" class="scrim" role="dialog" aria-modal="true" @click.self="capAsk=null">
+            <div class="modal" style="padding:16px">
+              <h3 style="margin:0 0 6px">Connect {{capAsk.provider.display_name}}</h3>
+              <p class="sub" style="margin:0 0 14px">What should your agent be allowed to do with this account?
+                Widening it later means going through Google's consent screen again.</p>
+              <div class="ttable-wrap"><table class="ttable">
+                <tr v-for="cap in capAsk.provider.capabilities" :key="cap">
+                  <!-- Deliberately NOT .tn: that class is nowrap, which is right for a name column
+                       but here the help text shares the cell. Unwrapped, a long capability
+                       description widens the table past the modal and .ttable-wrap's overflow:hidden
+                       clips the Choose button clean off — the choice becomes unclickable. -->
+                  <td style="white-space:normal"><b>{{capLabel(cap)}}</b><span class="sub" style="display:block;font-size:11px;margin-top:3px">{{capHelp(cap)}}</span></td>
+                  <td class="tx"><button class="btn sm" :class="{primary:cap===capAsk.provider.default_capability}"
+                                          @click="chooseCapability(cap)">Choose</button></td>
+                </tr>
+              </table></div>
+              <div style="margin-top:12px;text-align:right"><button class="btn sm" @click="capAsk=null">Cancel</button></div>
+            </div>
+          </div>
+
+          <div v-if="resPick" class="scrim" role="dialog" aria-modal="true" @click.self="resPick=null">
+            <div class="modal" style="padding:16px">
+              <h3 style="margin:0 0 10px">Choose {{article(resPick.label)}} {{resPick.label}}</h3>
+              <p class="sub" style="margin:0 0 10px">The {{resPick.label}} your agent uses by default.
+                It can still use another one per call — this just saves it guessing.</p>
+              <div v-if="resPick.loading" class="ttable-wrap">
+                <div style="padding:22px;text-align:center;color:var(--muted);font-family:var(--mono);font-size:12.5px">
+                  <span class="spin" aria-hidden="true"></span> Asking the provider which {{resPick.plural}} you can use…
+                </div>
+              </div>
+              <div v-else-if="resPick.err" class="banner" style="margin:0 0 10px">{{resPick.err}}</div>
+              <p class="sub" v-else-if="!resPick.rows.length" style="margin:0 0 10px">No {{resPick.plural}} found — this account may not have access to any.</p>
+              <div class="ttable-wrap" v-else><table class="ttable">
+                <tr v-for="r in resPick.rows" :key="r.id">
+                  <td class="tn"><b>{{r.label||r.id}}</b><span class="sub" style="display:block;font-size:11px">{{r.id}}</span></td>
+                  <td class="tx"><button class="btn sm" :class="{primary:r.id===resPick.selected}" @click="chooseResource(r)">{{r.id===resPick.selected?'✓ Current':'Use this'}}</button></td>
+                </tr>
+              </table></div>
+              <div style="margin-top:12px;text-align:right"><button class="btn sm" @click="resPick=null">Close</button></div>
+            </div>
+          </div>
+        </template>
+
         <template v-if="view==='tools'">
           <div v-if="orgMsg" class="tut-notice" style="max-width:660px;margin-bottom:14px;display:flex;justify-content:space-between;gap:12px;align-items:flex-start">
             <span>{{orgMsg}}</span><button class="btn sm ico" @click="orgMsg=''" aria-label="Dismiss">✕</button>
@@ -1808,6 +1963,12 @@ createApp({
       newTool:false, toolBusy:false, toolErr:'', confirmDelTool:null, confirmDelSecret:null,
       tForm:{id:null, name:'', base_url:'', bindings:[]},
       addToolMenu:false,  // the ＋ Add tool [endpoint | cli] chooser
+      // Connections: registry OAuth connects (see oauth_providers.py). `providers` is what treg
+      // holds an approved app for; `connections` is what this org has actually connected.
+      providers:[], connections:[], connErr:'', connBusy:false, confirmDisc:null, resPick:null,
+      capAsk:null,  // the access question, asked when Connect is clicked
+      tokenAsk:null,  // bring-your-own-bot setup (Slack): a form, not a redirect
+      extraCred:{}, extraBusy:null,  // second credential a provider needs on top of OAuth (Google Ads' developer token)
       cfgMenu:false,  // detail-page ⚙ Configure tool-picker (skills with >1 tool)
       tryMenu:false,  // detail-page ▶ Try it tool-picker (skills with >1 tool)
       catalogClis:null,  // bin → catalog default deny patterns (lazy, from /providers.json)
@@ -1845,6 +2006,23 @@ createApp({
     };
   },
   computed:{
+    // Marketplace shelves. /oauth/providers already returns providers grouped-then-alphabetical, so
+    // this walks the list once and starts a shelf whenever the category changes — re-sorting here
+    // would just be a second place to keep the order in step with the registry.
+    providerGroups(){
+      const hints={
+        'SEO':'search, analytics and ads — treg holds the approved app',
+        'Social media':'publish and read back as the connected account',
+        'Community':'bring your own workspace bot',
+      };
+      const out=[];
+      for(const p of this.providers){
+        const cat=p.category||'Other';
+        if(!out.length || out[out.length-1].category!==cat) out.push({category:cat, hint:hints[cat]||'', items:[]});
+        out[out.length-1].items.push(p);
+      }
+      return out;
+    },
     catalogDeny(){ const c=this.tForm.cli; return (c && this.catalogClis && this.catalogClis[c.bin]) || []; },
     catalogExtra(){  // catalog patterns not already in the own list — the union dedupes at run time, so showing both would double up
       const own=new Set((this.tForm.cli&&this.tForm.cli.deny||[]).map(p=>p.trim())); return this.catalogDeny.filter(p=>!own.has(p)); },
@@ -1890,6 +2068,8 @@ createApp({
     recipes(){ const q=this.q.toLowerCase(); const withTool=new Set(this.tools.filter(t=>t.bundle_id!=null).map(t=>t.bundle_id));
       return this.bundles.filter(b=>!withTool.has(b.id) && (!q||b.name.toLowerCase().includes(q))); },
     hasAnyTools(){ return this.endpoints.length||this.skillTools.length||this.recipes.length; },
+    staleConns(){ return (this.connections||[]).filter(c=>c.needs_reconnect); },  // dying credentials treg can't renew itself
+    needSecondCred(){ return (this.connections||[]).filter(c=>c.extra_credential_note); },  // connected, but not yet callable (Google Ads' developer token)
     toolGroups(){ return [
       {key:'endpoints', label:'Endpoints/CLI', hint:'APIs and CLIs you registered directly', rows:this.endpoints},
       {key:'skills', label:'Integration Skills', hint:'tools from a skill package (carry a recipe)', rows:this.skillTools},
@@ -2585,6 +2765,141 @@ createApp({
       if(!this.connected(o.slug)){ this.addOrg=true; return; }
       this.cfg.active=o.slug; this.save(); this.loadAll(); },
     copyStart(text, tag){ navigator.clipboard.writeText(text).then(()=>{ this.startCopied=tag; setTimeout(()=>{ if(this.startCopied===tag) this.startCopied=''; },1400); }).catch(()=>{}); },
+    // ---- connections (registry OAuth) ----
+    async loadConnections(){
+      this.connErr='';
+      try{
+        const [ps, cs]=await Promise.all([
+          fetch('/oauth/providers').then(r=>r.json()).catch(()=>[]),
+          this.api('/connections').catch(()=>[]),
+        ]);
+        this.providers=ps||[]; this.connections=cs||[];
+      }catch(e){ this.connErr=String(e.message||e); }
+    },
+    async connectProvider(p, capability){
+      // Consent happens in a popup so the dashboard keeps its state; we poll for the result
+      // rather than depending on the popup being able to talk back to us.
+      this.connErr=''; this.connBusy=true;
+      try{
+        const d=await this.api('/oauth/start',{method:'POST',headers:{'content-type':'application/json'},
+          body:JSON.stringify({provider:p.service, capability})});
+        const w=window.open(d.consent_url,'treg-connect','width=560,height=720');
+        if(!w){ this.connErr='Popup blocked — allow popups, or open: '+d.consent_url; this.connBusy=false; return; }
+        for(let i=0;i<150;i++){
+          await new Promise(r=>setTimeout(r,2000));
+          let s; try{ s=await this.api('/oauth/status/'+d.state); }catch(e){ continue; }
+          if(s.status==='done'){
+            try{w.close();}catch(e){}
+            await this.loadConnections(); await this.loadAll(); this.connBusy=false;
+            // Connecting is only half the job — a connection with no target can't be used. If this
+            // provider has something to choose between, ask straight away rather than leaving the
+            // user staring at a row that looks finished but isn't.
+            const fresh=(this.connections||[]).find(c=>c.id===s.secret_id);
+            if(fresh && p.supports_discovery && !fresh.resource_ref) await this.openResources(fresh);
+            return;
+          }
+          if(s.status==='error'){ this.connErr='Connect failed: '+(s.detail||'unknown'); this.connBusy=false; return; }
+        }
+        this.connErr='Timed out waiting for authorization.';
+      }catch(e){ this.connErr=String(e.message||e); }
+      this.connBusy=false;
+    },
+    async enableCapability(c, cap){
+      // Providers never backfill scopes onto an issued grant, so widening access means re-running
+      // consent for the bigger scope set. The callback rebinds the existing tool, so nothing
+      // downstream is rewired — the user just sees the new capability appear.
+      const p=this.providers.find(x=>x.service===c.provider);
+      if(!p){ this.connErr='Unknown provider for this connection: '+c.provider; return; }
+      await this.connectProvider(p, cap);
+    },
+    async reconnect(c){
+      // Re-run consent for the same provider. The callback rebinds the existing tool to the new
+      // credential, so nothing downstream has to be rewired.
+      const p=this.providers.find(x=>x.service===c.provider);
+      if(!p){ this.connErr='Unknown provider for this connection: '+c.provider; return; }
+      await this.connectProvider(p, (p.capabilities||['read'])[0]);
+    },
+    article(w){ return /^[aeiou]/i.test(w||'') ? 'an' : 'a'; },  // "an account", not "a account"
+    capLabel(cap){ return {read:'Read only', draft:'Read and draft', post:'Read and publish', write:'Read and write', manage:'Full access'}[cap] || cap; },
+    capHelp(cap){ return {
+      read:'Your agent can view data. It can never change anything.',
+      // TikTok's `draft` is a genuinely weaker grant, not a softer word for post: video.upload can
+      // only drop a video into the creator's inbox for them to finish by hand, and TikTok bins it
+      // after 24h if they don't. Nothing reaches the profile without a human.
+      draft:'Your agent can view data and prepare content, but only as a draft you finish and post yourself.',
+      // `post` is the YouTube middle ground: uploading a video and being able to edit or delete
+      // one are separate Google scopes, so publish-without-touching-the-back-catalogue is a real
+      // choice rather than a hedge.
+      post:'Your agent can view data and publish new content. It cannot edit or delete anything already there.',
+      write:'Your agent can view data and also create, update or publish.',
+      manage:'Your agent can view and manage everything in the account.',
+    }[cap] || 'Requests the '+cap+' scopes.'; },
+    startConnect(p){
+      // A token provider has no consent screen — the user brings their own bot, so setup is a form.
+      if(p.auth_kind==='token') return void (this.tokenAsk={provider:p, token:'', err:'', busy:false});
+      // One capability means there's nothing to ask — don't put a dialog in the way.
+      if((p.capabilities||[]).length<2) return this.connectProvider(p, p.default_capability);
+      this.capAsk={provider:p};
+    },
+    async submitToken(){
+      const t=this.tokenAsk; if(!t.token.trim()) return;
+      t.busy=true; t.err='';
+      try{
+        await this.api('/connections/token',{method:'POST',headers:{'content-type':'application/json'},
+          body:JSON.stringify({provider:t.provider.service, token:t.token.trim()})});
+        this.tokenAsk=null; await this.loadConnections(); await this.loadAll();
+      }catch(e){ t.err=(e.detail||e.message||e); t.busy=false; }
+    },
+    async chooseCapability(cap){
+      const p=this.capAsk.provider; this.capAsk=null;
+      await this.connectProvider(p, cap);
+    },
+    connProvider(c){ return (this.providers||[]).find(p=>p.service===c.provider)||null; },
+    async saveExtraCred(c){
+      const v=(this.extraCred[c.id]||'').trim(); if(!v) return;
+      this.extraBusy=c.id; this.connErr='';
+      try{
+        await this.api('/connections/'+c.id+'/extra-credential',{method:'POST',
+          headers:{'content-type':'application/json'}, body:JSON.stringify({value:v})});
+        this.extraCred[c.id]=''; await this.loadConnections(); await this.loadAll();
+      }catch(e){ this.connErr=(e.detail||e.message||e); }
+      this.extraBusy=null;
+    },
+    async openResources(c){
+      this.connErr='';
+      const pv=this.connProvider(c)||{}; const label=pv.resource_label||'resource'; const plural=pv.resource_plural||(label+'s');
+      // Open FIRST. Discovery is a live upstream round-trip and can take seconds; waiting for it
+      // before showing anything makes the button look dead and invites a second click.
+      this.resPick={id:c.id, label, plural, rows:[], selected:c.resource_ref||'', loading:true, err:''};
+      try{
+        const d=await this.api('/connections/'+c.id+'/resources');
+        if(!this.resPick || this.resPick.id!==c.id) return;  // user closed it or opened another
+        this.resPick={id:c.id, label:d.resource_label||label, plural:d.resource_plural||plural,
+                      rows:d.resources||[], selected:d.selected||'', loading:false, err:''};
+        // Discovery can change the row underneath us — it backfills a missing label and records
+        // that the credential works — so pull the list again rather than leaving stale text on screen.
+        this.loadConnections();
+      }catch(e){
+        // e.detail carries the server's (and often the upstream's) actual words; e.message is just 'http'.
+        if(!this.resPick || this.resPick.id!==c.id) return;
+        this.resPick.loading=false;
+        this.resPick.err='Could not list '+plural+': '+(e.detail||e.message||e);
+      }
+    },
+    async chooseResource(r){
+      try{
+        await this.api('/connections/'+this.resPick.id+'/resource',{method:'POST',
+          headers:{'content-type':'application/json'},
+          body:JSON.stringify({resource_ref:r.id, resource_name:r.label||''})});
+        this.resPick=null; await this.loadConnections();
+      }catch(e){ this.connErr=String(e.message||e); }
+    },
+    async disconnect(c){
+      if(this.confirmDisc!==c.id){ this.confirmDisc=c.id; setTimeout(()=>{ if(this.confirmDisc===c.id) this.confirmDisc=null; },4000); return; }
+      this.confirmDisc=null;
+      try{ await this.api('/connections/'+c.id,{method:'DELETE'}); await this.loadConnections(); await this.loadAll(); }
+      catch(e){ this.connErr=String(e.message||e); }
+    },
     copyMd(url){ fetch(url).then(r=>r.text()).then(t=>navigator.clipboard.writeText(t)).catch(()=>{}); },  // copy raw markdown
     openMd(url){ window.open(url,'_blank'); },  // open the .md in a new tab (method, not a template global)
     copyLlms(){ navigator.clipboard.writeText(this.proxy+'/llms.txt').then(()=>{ this.llmsCopied=true; setTimeout(()=>{ this.llmsCopied=false; },1500); }).catch(()=>{}); },
@@ -2651,7 +2966,7 @@ createApp({
       this.go('orgs'); },
     resetConfirms(){ this.confirmDelTool=null; this.confirmDelSecret=null; this.confirmDelBundle=null; this.confirmRemove=null; this.confirmLeave=false; this.confirmDel=''; this.confirmAdmUser=null; this.confirmAdmOrg=null; },
     go(v, fromPop){ this.resetConfirms();  // stale inline "Confirm" states must not survive a view switch (accidental-delete risk)
-      this.detail=null; this.view=v; if(v==='activity')this.loadCalls(); if(v==='admin')this.loadAdmin(); if(v==='orgs'){this.loadOrgAdmin(); this.loadMyUsage();} if(v==='usage')this.loadUsage(); if(v==='secrets')this.loadSecrets();
+      this.detail=null; this.view=v; if(v==='activity')this.loadCalls(); if(v==='admin')this.loadAdmin(); if(v==='orgs'){this.loadOrgAdmin(); this.loadMyUsage();} if(v==='usage')this.loadUsage(); if(v==='secrets')this.loadSecrets(); if(v==='connections')this.loadConnections();
       // push history so browser Back navigates BETWEEN views instead of leaving the app; the '/app'
       // pathname also walks back from a /app/skills/<x> detail URL so reload doesn't reopen the detail
       if(!fromPop) history.pushState({view:v}, '', '/app#'+v); },
@@ -2759,6 +3074,7 @@ createApp({
             || ((this.isPersonal(a)?1:0)-(this.isPersonal(b)?1:0)) );
           this.activeSlug=byTools[0].slug; localStorage.setItem('treg-active',this.activeSlug);
         }
+        this.loadConnections();  // fire-and-forget: connections must never block the tools view
         const [tools, health, bundles]=await Promise.all([this.api('/tools'), this.api('/health').catch(()=>[]), this.api('/bundles').catch(()=>[])]);
         this.tools=tools; this.bundles=bundles||[]; this.health={}; (health||[]).forEach(h=>this.health[h.secret_id]=h.status);
         // isAdmin (super-admin) comes from /auth/me at boot - NOT a /admin/stats probe, which 403s on
@@ -2785,7 +3101,17 @@ createApp({
       return ({'httpbin.org':'headers','postman-echo.com':'get',
         'api.intercom.io':'me','api.stripe.com':'balance','api.render.com':'services?limit=1',
         'api.vercel.com':'v2/user','app.posthog.com':'api/projects/@current','eu.posthog.com':'api/projects/@current',
-        'searchconsole.googleapis.com':'webmasters/v3/sites','googleads.googleapis.com':'v21/customers:listAccessibleCustomers'})[host]||''; },
+        'searchconsole.googleapis.com':'webmasters/v3/sites','googleads.googleapis.com':'v21/customers:listAccessibleCustomers',
+        // part=snippet rather than the probe's part=id: same 1 quota unit, but it returns the channel
+        // title, so the panel shows something a human recognises instead of an opaque UC… id.
+        'youtube.googleapis.com':'youtube/v3/channels?part=snippet&mine=true',
+        // identity endpoints: cheap, and they return a handle/name a human recognises
+        'api.x.com':'2/users/me','api.linkedin.com':'v2/userinfo',
+        // Both Meta providers share this host, so one entry covers Facebook Pages and Instagram.
+        // /me is the person behind the token and needs no scope, so it prefills usefully whichever
+        // asset the connection ended up bound to.
+        'graph.facebook.com':'me?fields=id,name',
+        'mybusinessaccountmanagement.googleapis.com':'v1/accounts','slack.com':'auth.test'})[host]||''; },
     openCopy(t){ this.copyTool=t; this.snippetTab='cURL'; this.copied=false;
       // Prefer a real, runnable sample path so a copied snippet returns a result: a declared example,
       // else the health-check path, else a known-good sample for a well-known host, else the placeholder.
