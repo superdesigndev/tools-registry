@@ -711,7 +711,7 @@ th{background:rgba(0,0,0,.25)}
         <div class="side-nav">
           <button class="nav" :class="{active:view==='tools'}" @click="go('tools')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>Tools</button>
           <button v-if="canRegister" class="nav" :class="{active:view==='secrets'}" @click="go('secrets')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Secrets</button>
-          <button v-if="canRegister" class="nav" :class="{active:view==='connections'}" @click="go('connections')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>Connections</button>
+          <button v-if="canRegister" class="nav" :class="{active:view==='connections'}" @click="go('connections')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>Marketplace</button>
           <button class="nav" :class="{active:view==='activity'}" @click="go('activity')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Activity</button>
           <button v-if="canAdmin" class="nav" :class="{active:view==='usage'}" @click="go('usage')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Usage</button>
           <button class="nav" :class="{active:view==='orgs'}" @click="go('orgs')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Team</button>
@@ -747,7 +747,7 @@ th{background:rgba(0,0,0,.25)}
         <!-- TOOLS -->
         <template v-if="view==='connections'">
           <div class="tut-head">
-            <div><h1>Connections in {{activeName}}</h1><p class="sub" style="margin:0">Connect an account once. treg holds the credential server-side and injects it on every call — nothing lands on your machine.</p></div>
+            <div><h1>Marketplace in {{activeName}}</h1><p class="sub" style="margin:0">Connect an account once. treg holds the credential server-side and injects it on every call — nothing lands on your machine.</p></div>
             <div class="tut-actions"><button class="btn sm" @click="loadConnections">Refresh</button></div>
           </div>
           <div v-if="connErr" class="banner" style="margin-top:12px">{{connErr}}</div>
@@ -769,10 +769,10 @@ th{background:rgba(0,0,0,.25)}
             <span class="mono">{{staleConns.map(c=>c.name).join(', ')}}</span>
           </div>
 
-          <div class="tgroup">
-            <div class="tgh">Available <span class="tgh-n">{{providers.length}}</span><span class="tgh-hint">treg holds the approved app — you supply nothing</span></div>
+          <div class="tgroup" v-for="g in providerGroups" :key="g.category">
+            <div class="tgh">{{g.category}} <span class="tgh-n">{{g.items.length}}</span><span class="tgh-hint">{{g.hint}}</span></div>
             <div class="ttable-wrap"><table class="ttable">
-              <tr v-for="p in providers" :key="p.service">
+              <tr v-for="p in g.items" :key="p.service">
                 <td class="tn"><div class="pl-row"><span class="plogo-tile"><img class="plogo" :src="'/logos/'+p.service+'.svg'" alt="" aria-hidden="true" @error="$event.target.style.visibility='hidden'"></span><div><b>{{p.display_name}}</b><span class="sub" style="display:block;font-size:11px">{{p.service}}</span></div></div></td>
                 <td class="th"><span class="mono">{{p.base_url}}</span></td>
                 <td class="ta"><span v-if="!p.configured" class="chip warn" title="This server has no client credentials for the provider">not configured</span><span v-else class="chip ok">ready</span></td>
@@ -2006,6 +2006,23 @@ createApp({
     };
   },
   computed:{
+    // Marketplace shelves. /oauth/providers already returns providers grouped-then-alphabetical, so
+    // this walks the list once and starts a shelf whenever the category changes — re-sorting here
+    // would just be a second place to keep the order in step with the registry.
+    providerGroups(){
+      const hints={
+        'SEO':'search, analytics and ads — treg holds the approved app',
+        'Social media':'publish and read back as the connected account',
+        'Community':'bring your own workspace bot',
+      };
+      const out=[];
+      for(const p of this.providers){
+        const cat=p.category||'Other';
+        if(!out.length || out[out.length-1].category!==cat) out.push({category:cat, hint:hints[cat]||'', items:[]});
+        out[out.length-1].items.push(p);
+      }
+      return out;
+    },
     catalogDeny(){ const c=this.tForm.cli; return (c && this.catalogClis && this.catalogClis[c.bin]) || []; },
     catalogExtra(){  // catalog patterns not already in the own list — the union dedupes at run time, so showing both would double up
       const own=new Set((this.tForm.cli&&this.tForm.cli.deny||[]).map(p=>p.trim())); return this.catalogDeny.filter(p=>!own.has(p)); },

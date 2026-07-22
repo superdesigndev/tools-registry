@@ -37,6 +37,12 @@ class OAuthProvider:
     scopes: dict[str, list[str]]  # capability -> the scopes that capability actually needs
     client_id_setting: str
     client_secret_setting: str
+    # Which shelf this sits on in the marketplace. A flat list of eleven providers reads as a pile;
+    # grouped, someone connecting a social account never scans past four analytics tools. It lives
+    # here rather than in the dashboard so a new provider can't be left silently ungrouped — the
+    # default lands it in "Other", which is visible enough to get noticed and fixed.
+    # CATEGORY_ORDER below decides the order the shelves appear in.
+    category: str = "Other"
     # ---- how the credential is obtained --------------------------------------------------
     # "oauth"  — treg holds an approved app; the user consents and supplies nothing.
     # "token"  — the user brings their OWN bot/app token. Correct where a workspace-scoped bot
@@ -232,6 +238,7 @@ GOOGLE_SEARCH_CONSOLE = OAuthProvider(
     },
     client_id_setting="google_client_id",
     client_secret_setting="google_client_secret",
+    category="SEO",
     base_url="https://searchconsole.googleapis.com",
     docs_url="https://developers.google.com/webmaster-tools/v1/api_reference_index",
     # GSC returns {"siteEntry": [{"siteUrl": "...", "permissionLevel": "..."}]}
@@ -251,6 +258,7 @@ GOOGLE_ANALYTICS = OAuthProvider(
     scopes={"read": ["https://www.googleapis.com/auth/analytics.readonly"]},
     client_id_setting="google_client_id",
     client_secret_setting="google_client_secret",
+    category="SEO",
     base_url="https://analyticsdata.googleapis.com",
     docs_url="https://developers.google.com/analytics/devguides/reporting/data/v1",
     # No probe_path: the Data API is POST-only (runReport), and a probe must be a cheap GET on
@@ -278,6 +286,7 @@ GOOGLE_BUSINESS_PROFILE = OAuthProvider(
     scopes={"manage": ["https://www.googleapis.com/auth/business.manage"]},
     client_id_setting="google_client_id",
     client_secret_setting="google_client_secret",
+    category="SEO",
     base_url="https://mybusinessaccountmanagement.googleapis.com",
     docs_url="https://developers.google.com/my-business",
     resource_label="account",
@@ -297,6 +306,7 @@ GOOGLE_ADS = OAuthProvider(
     scopes={"manage": ["https://www.googleapis.com/auth/adwords"]},
     client_id_setting="google_client_id",
     client_secret_setting="google_client_secret",
+    category="SEO",
     base_url="https://googleads.googleapis.com",
     docs_url="https://developers.google.com/google-ads/api/docs/start",
     # Every Ads request carries TWO credentials: the user's OAuth bearer AND a `developer-token`
@@ -352,6 +362,7 @@ YOUTUBE = OAuthProvider(
     },
     client_id_setting="google_client_id",
     client_secret_setting="google_client_secret",
+    category="Social media",
     base_url="https://youtube.googleapis.com",
     docs_url="https://developers.google.com/youtube/v3/docs",
     # channels.list is 1 quota unit whatever `part` asks for, so take snippet: the Tools panel
@@ -379,6 +390,7 @@ LINKEDIN = OAuthProvider(
     scopes={"write": ["openid", "profile", "email", "w_member_social"]},
     client_id_setting="linkedin_client_id",
     client_secret_setting="linkedin_client_secret",
+    category="Social media",
     base_url="https://api.linkedin.com",
     docs_url="https://learn.microsoft.com/en-us/linkedin/consumer/integrations/self-serve/share-on-linkedin",
     auth_params={},  # LinkedIn rejects Google's access_type/prompt
@@ -416,6 +428,7 @@ SLACK = OAuthProvider(
     auth_uri="", token_uri="",
     scopes={},  # scopes live in the manifest above; there is no consent screen to size
     client_id_setting="", client_secret_setting="",
+    category="Community",
     base_url="https://slack.com/api",
     docs_url="https://api.slack.com/web",
     probe_path="/auth.test",
@@ -443,6 +456,7 @@ X = OAuthProvider(
     },
     client_id_setting="x_client_id",
     client_secret_setting="x_client_secret",
+    category="Social media",
     base_url="https://api.x.com",
     docs_url="https://docs.x.com/x-api",
     pkce=True,  # X rejects an authorization code exchanged without a verifier
@@ -483,6 +497,7 @@ TIKTOK = OAuthProvider(
     },
     client_id_setting="tiktok_client_id",
     client_secret_setting="tiktok_client_secret",
+    category="Social media",
     base_url="https://open.tiktokapis.com",
     docs_url="https://developers.tiktok.com/doc/login-kit-web/",
     client_id_param="client_key",  # not client_id — TikTok ignores the OAuth2 spelling
@@ -523,6 +538,7 @@ FACEBOOK = OAuthProvider(
     },
     client_id_setting="meta_client_id",
     client_secret_setting="meta_client_secret",
+    category="Social media",
     base_url=_META_BASE,
     docs_url="https://developers.facebook.com/docs/pages-api",
     auth_params={},  # Meta ignores Google's access_type/prompt; sending them just noises the URL
@@ -556,6 +572,7 @@ INSTAGRAM = OAuthProvider(
     },
     client_id_setting="meta_client_id",
     client_secret_setting="meta_client_secret",
+    category="Social media",
     base_url=_META_BASE,
     docs_url="https://developers.facebook.com/docs/instagram-platform/instagram-graph-api",
     auth_params={},
@@ -581,6 +598,10 @@ REGISTRY: dict[str, OAuthProvider] = {
 }
 
 DEFAULT_CAPABILITY = "read"
+
+# Shelf order in the marketplace. Anything carrying a category not named here sorts last, so a
+# provider added without one is visible rather than lost between the shelves.
+CATEGORY_ORDER = ("SEO", "Social media", "Community", "Other")
 
 
 def get(service: str) -> OAuthProvider | None:
@@ -620,6 +641,7 @@ def listing() -> list[dict]:
         {
             "service": p.service,
             "display_name": p.display_name,
+            "category": p.category,
             "capabilities": p.capabilities,
             "default_capability": p.default_capability,
             "resource_label": p.resource_label,
@@ -640,5 +662,13 @@ def listing() -> list[dict]:
             "docs_url": p.docs_url,
             "configured": is_configured(p),
         }
-        for p in sorted(REGISTRY.values(), key=lambda p: p.display_name)
+        # Grouped first, alphabetical within a shelf — so the dashboard can render the shelves by
+        # walking the list once instead of re-sorting what the registry already knows.
+        for p in sorted(
+            REGISTRY.values(),
+            key=lambda p: (
+                CATEGORY_ORDER.index(p.category) if p.category in CATEGORY_ORDER else len(CATEGORY_ORDER),
+                p.display_name,
+            ),
+        )
     ]
