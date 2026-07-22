@@ -115,6 +115,12 @@
   .ttable td{padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:middle;font-size:13px}
   .ttable tr:last-child td{border-bottom:0} .ttable tr:hover td{background:var(--panel2)}
   .ttable .tn{width:22%;white-space:nowrap} .ttable .th{color:var(--muted)}
+  /* The global .sub carries margin-bottom:18px for prose. Inside a table cell that is invisible
+     dead space BELOW the text, so vertical-align:middle centres the block 9px too high and the
+     row grows for nothing. Reset it here, and pin both line-heights so the two-line stack is a
+     predictable height for the logo tile to centre against. */
+  .ttable .sub{margin:0;line-height:1.4}
+  .ttable .tn b{display:block;line-height:1.4}
   .ttable .ta{width:1%;white-space:nowrap} .ttable .ta .chip{margin-right:4px}
   .ttable .tx{text-align:right;white-space:nowrap;width:1%} .ttable .tx .btn{margin-left:5px}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:15px}
