@@ -361,3 +361,38 @@ async def test_reconnect_rebinds_the_tool_to_the_same_secret(clients: AsyncClien
                 if c["provider"] == "google-search-console")
     assert len(tools) == 1
     assert tools[0]["bindings"][0]["secret_id"] == conn["id"]
+
+
+async def test_identity_providers_record_who_connected(clients: AsyncClient, treg_google_app, monkeypatch):
+    """LinkedIn has no accounts to choose between, so without this the row shows nothing about
+    WHICH member it acts as. The lookup also captures the id the API needs (the person URN), which
+    the agent would otherwise re-fetch on every call."""
+    import dataclasses
+
+    from treg import oauth_providers as P
+
+    # the echo upstream reflects the request, so point the identity lookup at a field we control
+    monkeypatch.setitem(P.REGISTRY, "google-search-console", dataclasses.replace(
+        P.REGISTRY["google-search-console"],
+        base_url="http://upstream",
+        identity_path="/whoami", identity_id_path="headers.authorization",
+        identity_label_path="headers.authorization", identity_ref_format="urn:test:{id}",
+    ))
+    st = await _connect_byo(clients, provider="google-search-console", name="google-search-console")
+    conn = {c["id"]: c for c in (await clients.get("/connections")).json()}[st["secret_id"]]
+    assert conn["resource_ref"].startswith("urn:test:"), "the id the API needs is captured at connect"
+    assert conn["resource_name"], "and something human is shown for it"
+
+
+async def test_a_failed_identity_lookup_still_connects(clients: AsyncClient, treg_google_app, monkeypatch):
+    """Knowing who connected is nice; failing the whole connect over it is not."""
+    import dataclasses
+
+    from treg import oauth_providers as P
+
+    monkeypatch.setitem(P.REGISTRY, "google-search-console", dataclasses.replace(
+        P.REGISTRY["google-search-console"],
+        base_url="http://upstream", identity_path="/whoami", identity_id_path="nope.nope",
+    ))
+    st = await _connect_byo(clients, provider="google-search-console", name="google-search-console")
+    assert st["status"] == "done"

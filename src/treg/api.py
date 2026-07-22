@@ -1079,6 +1079,37 @@ async def tutorial_js():
     return FileResponse(js, media_type="application/javascript")
 
 
+@app.get("/legal.css", include_in_schema=False)
+async def legal_css():
+    """The shared skin for /terms and /privacy (landing-page tokens, one copy)."""
+    f = _WEB_DIR / "legal.css"
+    if not f.exists():
+        raise HTTPException(status_code=404, detail="legal.css not bundled")
+    return FileResponse(f, media_type="text/css", headers={"Cache-Control": "no-cache"})
+
+
+def _legal_page(name: str) -> FileResponse:
+    page = _WEB_DIR / name
+    if not page.exists():
+        raise HTTPException(status_code=404, detail=f"{name} not bundled")
+    # no-cache: a legal page must not be served stale after we publish an update.
+    return FileResponse(page, headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/terms", include_in_schema=False)
+async def terms_page():
+    """Terms of Service for the HOSTED registry (self-hosted instances are governed by LICENSE)."""
+    return _legal_page("terms.html")
+
+
+@app.get("/privacy", include_in_schema=False)
+async def privacy_page():
+    """Privacy policy. Also the URL given to OAuth providers at app-registration/verification time
+    (Google requires a reachable privacy policy carrying the Limited Use disclosure), so this path
+    is effectively public API — don't rename it without updating the provider consoles."""
+    return _legal_page("privacy.html")
+
+
 @app.get("/tutorial", include_in_schema=False)
 async def tutorial_page():
     """Standalone shareable interactive tutorial (same STEPS[] as the dashboard Help view)."""
@@ -3522,6 +3553,8 @@ async def oauth_callback(
         # thing they can do is make a real proxied call.
         if provider and provider.can_autoprovision:
             await _autoprovision_provider_tool(provider, secret, pending, db)
+        if provider and provider.has_identity:
+            await _record_connected_identity(provider, secret, blob, request.app.state.http)
         pending.status, pending.secret_id, pending.detail = "done", secret.id, "connected"
         await db.commit()
     except Exception as exc:  # noqa: BLE001
@@ -3578,6 +3611,31 @@ async def _owned_connection(secret_id: int, caller: Caller, db: AsyncSession) ->
     if secret is None or secret.kind != "oauth":
         raise HTTPException(status_code=404, detail="unknown connection")
     return secret
+
+
+async def _record_connected_identity(provider, secret: Secret, blob: dict, client) -> None:
+    """Ask the provider who just connected, and remember it.
+
+    Providers with nothing to choose between (LinkedIn acts as the one member who consented) would
+    otherwise show a connection with no indication of WHICH account it is. This also captures the
+    id the API actually needs — LinkedIn's person URN — so the agent doesn't re-fetch it on every
+    call. Best-effort: a failed lookup must never fail the connect."""
+    try:
+        resp = await client.get(
+            f"{provider.base_url.rstrip('/')}{provider.identity_path}",
+            headers={"Authorization": f"Bearer {blob.get('access_token')}"},
+        )
+        if resp.status_code != 200:
+            return
+        data = resp.json()
+        ident = _dig(data, provider.identity_id_path)
+        if not ident:
+            return
+        secret.resource_ref = provider.identity_ref_format.format(id=ident)
+        label = _dig(data, provider.identity_label_path) if provider.identity_label_path else None
+        secret.resource_name = str(label) if label else str(ident)
+    except Exception as exc:  # noqa: BLE001
+        print(f"[oauth] identity lookup failed for {provider.service}: {exc}")
 
 
 def _dig(obj, dotted: str):
@@ -3679,7 +3737,9 @@ async def connection_resources(
         # listAccessibleCustomers gives ["customers/6186675831", …]. Treat the string as both id
         # and label rather than silently dropping every row.
         {"id": r, "label": r.rsplit("/", 1)[-1], "raw": r} if isinstance(r, str)
-        else {"id": r.get(provider.discover_id_field), "label": r.get(label_field), "raw": r}
+        # _dig, not .get — YouTube's channel title is nested at snippet.title. A plain key is just
+        # a one-hop path, so every existing provider walks the same code.
+        else {"id": _dig(r, provider.discover_id_field), "label": _dig(r, label_field), "raw": r}
         for r in rows if isinstance(r, (dict, str))
     ]
     if provider.supports_enrichment:

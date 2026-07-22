@@ -99,6 +99,19 @@ class OAuthProvider:
     def supports_enrichment(self) -> bool:
         return bool(self.enrich_path and self.enrich_label_path)
 
+    # Some providers have nothing to CHOOSE between — a LinkedIn connection always acts as the one
+    # member who consented. But which member that is still matters, so a provider can declare a
+    # one-shot identity lookup run at connect time. It also captures the id the API needs (the
+    # member URN), sparing the agent a round-trip it would otherwise make on every post.
+    identity_path: str = ""
+    identity_id_path: str = ""  # dotted path to the id, e.g. "sub"
+    identity_label_path: str = ""  # dotted path to the display name, e.g. "name"
+    identity_ref_format: str = "{id}"  # e.g. "urn:li:person:{id}"
+
+    @property
+    def has_identity(self) -> bool:
+        return bool(self.identity_path and self.identity_id_path)
+
     @property
     def capabilities(self) -> list[str]:
         return sorted(self.scopes)
@@ -258,6 +271,46 @@ GOOGLE_ADS = OAuthProvider(
     enrich_header_name="login-customer-id",
 )
 
+# Every YouTube scope is SENSITIVE — there is no gate-free read the way webmasters.readonly is for
+# Search Console, so this provider only works once the Google app clears verification. Uploads have
+# a second, separate gate: until the project passes YouTube's compliance audit, videos.insert
+# succeeds but the video is locked to private no matter what privacyStatus we send.
+_YOUTUBE_READ = [
+    "https://www.googleapis.com/auth/youtube.readonly",
+    "https://www.googleapis.com/auth/yt-analytics.readonly",
+]
+
+YOUTUBE = OAuthProvider(
+    service="youtube",
+    display_name="YouTube",
+    auth_uri="https://accounts.google.com/o/oauth2/v2/auth",
+    token_uri="https://oauth2.googleapis.com/token",
+    # Three capabilities because the gap between them is the whole story on YouTube: uploading a
+    # video and being able to EDIT or DELETE one are different scopes. youtube.upload alone gets a
+    # connection that can post and then never touch the post again, which is why `manage` exists.
+    scopes={
+        "read": _YOUTUBE_READ,
+        "post": [*_YOUTUBE_READ, "https://www.googleapis.com/auth/youtube.upload"],
+        "manage": [
+            *_YOUTUBE_READ,
+            "https://www.googleapis.com/auth/youtube.upload",
+            "https://www.googleapis.com/auth/youtube",
+            "https://www.googleapis.com/auth/youtube.force-ssl",
+        ],
+    },
+    client_id_setting="google_client_id",
+    client_secret_setting="google_client_secret",
+    base_url="https://youtube.googleapis.com",
+    docs_url="https://developers.google.com/youtube/v3/docs",
+    # Which channel does this connection post to? channels.list?mine=true answers for the connected
+    # account. The title lives one level down in snippet, so the label is a dotted path.
+    resource_label="channel",
+    discover_path="/youtube/v3/channels?part=snippet&mine=true",
+    discover_key="items",
+    discover_id_field="id",
+    discover_label_field="snippet.title",
+)
+
 LINKEDIN = OAuthProvider(
     service="linkedin",
     display_name="LinkedIn",
@@ -273,6 +326,11 @@ LINKEDIN = OAuthProvider(
     base_url="https://api.linkedin.com",
     docs_url="https://learn.microsoft.com/en-us/linkedin/consumer/integrations/self-serve/share-on-linkedin",
     auth_params={},  # LinkedIn rejects Google's access_type/prompt
+    resource_label="member",
+    identity_path="/v2/userinfo",
+    identity_id_path="sub",
+    identity_label_path="name",
+    identity_ref_format="urn:li:person:{id}",
 )
 
 SLACK = OAuthProvider(
@@ -315,7 +373,7 @@ X = OAuthProvider(
 REGISTRY: dict[str, OAuthProvider] = {
     p.service: p
     for p in (
-        GOOGLE_SEARCH_CONSOLE, GOOGLE_ANALYTICS, GOOGLE_BUSINESS_PROFILE, GOOGLE_ADS,
+        GOOGLE_SEARCH_CONSOLE, GOOGLE_ANALYTICS, GOOGLE_BUSINESS_PROFILE, GOOGLE_ADS, YOUTUBE,
         LINKEDIN, SLACK, X,
     )
 }
@@ -361,6 +419,7 @@ def listing() -> list[dict]:
             "resource_label": p.resource_label,
             "resource_plural": p.resource_plural,
             "supports_discovery": p.supports_discovery,
+            "has_identity": p.has_identity,
             "extra_credential_note": p.extra_credential_note,
             "extra_credential_label": p.extra_credential_label,
             "needs_extra_credential": p.needs_extra_credential,

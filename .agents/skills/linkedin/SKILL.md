@@ -26,14 +26,19 @@ the fix is reconnecting, not retrying.
 
 ## Who am I posting as?
 
-Every post needs the member's URN, which you get from the OpenID userinfo endpoint:
+**treg already captured this at connect time** — no lookup needed:
 
 ```bash
-treg call linkedin v2/userinfo
-# → {"sub": "abc123XYZ", "name": "...", "email": "..."}
+treg connections ls
+# the linkedin row's resource_ref IS the author URN, e.g. urn:li:person:_b-03z35D5
+# and resource_name is the member's display name
 ```
 
-The `sub` value is the member id. The author URN is `urn:li:person:<sub>`.
+Use `resource_ref` directly as `author`. If you ever need the raw profile:
+
+```bash
+treg call linkedin v2/userinfo   # → {"sub", "name", "email"}
+```
 
 ## Posting
 
