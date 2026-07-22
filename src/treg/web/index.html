@@ -761,8 +761,13 @@ th{background:rgba(0,0,0,.25)}
                 <td class="th"><span class="mono">{{p.base_url}}</span></td>
                 <td class="ta"><span v-if="!p.configured" class="chip warn" title="This server has no client credentials for the provider">not configured</span><span v-else class="chip ok">ready</span></td>
                 <td class="tx" @click.stop>
-                  <button class="btn sm primary" :disabled="!p.configured || connBusy" @click="connectProvider(p, p.default_capability)"
-                          :title="'Asks only for what '+p.default_capability+' needs. You can add more later without reconnecting from scratch.'">Connect</button>
+                  <select v-if="(p.capabilities||[]).length>1" class="bindinput" style="max-width:120px"
+                          v-model="connCap[p.service]" :disabled="!p.configured || connBusy"
+                          title="What this connection may do. Pick before connecting — widening it later means consenting again.">
+                    <option v-for="cap in p.capabilities" :key="cap" :value="cap">{{cap}}</option>
+                  </select>
+                  <button class="btn sm primary" :disabled="!p.configured || connBusy"
+                          @click="connectProvider(p, connCap[p.service]||p.default_capability)">Connect</button>
                 </td>
               </tr>
             </table></div>
@@ -784,12 +789,9 @@ th{background:rgba(0,0,0,.25)}
                   <span v-if="!c.refreshable" class="chip" title="treg cannot renew this one unattended — it must be reconnected by hand when it expires">manual renew</span>
                   <span v-if="c.extra_credential_note" class="chip warn" :title="c.extra_credential_note">needs a second credential</span>
                   <span v-for="cap in (c.capabilities||[])" :key="cap" class="chip ok">{{cap}}</span>
-                  <span v-for="cap in (c.missing_capabilities||[])" :key="'m'+cap" class="chip" :title="'Not consented to. '+cap+' needs a reconnect — providers never backfill scopes onto an existing grant.'">no {{cap}}</span>
                 </td>
                 <td class="tx" @click.stop>
                   <button v-if="c.needs_reconnect && c.provider" class="btn sm primary" @click="reconnect(c)" title="This credential can't be renewed automatically — re-consent to refresh it">Reconnect</button>
-                  <button v-for="cap in (c.missing_capabilities||[])" :key="'e'+cap" class="btn sm" @click="enableCapability(c, cap)"
-                          :title="'Grant '+cap+'. Providers never add scopes to an existing grant, so this re-runs consent.'">Enable {{cap}}</button>
                   <button v-if="connProvider(c) && connProvider(c).supports_discovery" class="btn sm" @click="openResources(c)"
                           :title="'Choose which '+connProvider(c).resource_label+' this connection acts on'">Choose {{connProvider(c).resource_label}}</button>
                   <button class="btn sm ico" :class="{danger:confirmDisc===c.id}" @click="disconnect(c)" :title="confirmDisc===c.id?'Click again to disconnect':'Disconnect'">✕</button>
@@ -1907,6 +1909,7 @@ createApp({
       // Connections: registry OAuth connects (see oauth_providers.py). `providers` is what treg
       // holds an approved app for; `connections` is what this org has actually connected.
       providers:[], connections:[], connErr:'', connBusy:false, confirmDisc:null, resPick:null,
+      connCap:{},  // capability chosen per provider BEFORE connecting
       extraCred:{}, extraBusy:null,  // second credential a provider needs on top of OAuth (Google Ads' developer token)
       cfgMenu:false,  // detail-page ⚙ Configure tool-picker (skills with >1 tool)
       tryMenu:false,  // detail-page ▶ Try it tool-picker (skills with >1 tool)
@@ -2696,6 +2699,7 @@ createApp({
           this.api('/connections').catch(()=>[]),
         ]);
         this.providers=ps||[]; this.connections=cs||[];
+        (this.providers||[]).forEach(p=>{ if(!this.connCap[p.service]) this.connCap[p.service]=p.default_capability; });
       }catch(e){ this.connErr=String(e.message||e); }
     },
     async connectProvider(p, capability){

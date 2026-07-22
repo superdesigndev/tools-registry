@@ -101,11 +101,14 @@ async def test_registry_connect_autoprovisions_a_callable_tool(clients: AsyncCli
 
 
 async def test_reconnect_rebinds_instead_of_duplicating(clients: AsyncClient, treg_google_app):
+    """Reconnecting updates the SAME connection and keeps one tool pointing at it — no duplicate
+    tool, and no second credential for the same provider."""
     first = await _connect_byo(clients, provider="google-search-console", name="google-search-console")
     second = await _connect_byo(clients, provider="google-search-console", name="google-search-console")
     tools = [t for t in (await clients.get("/tools")).json() if t["name"] == "google-search-console"]
     assert len(tools) == 1, "reconnecting must rebind, not pile up duplicate tools"
-    assert tools[0]["bindings"][0]["secret_id"] == second["secret_id"] != first["secret_id"]
+    assert first["secret_id"] == second["secret_id"]
+    assert tools[0]["bindings"][0]["secret_id"] == second["secret_id"]
 
 
 async def test_byo_connect_provisions_no_tool(clients: AsyncClient):
@@ -324,3 +327,37 @@ async def test_a_failed_name_lookup_keeps_the_row(clients: AsyncClient, treg_goo
     r = await clients.get(f"/connections/{st['secret_id']}/resources")
     assert r.status_code == 200
     assert len(r.json()["resources"]) == 2, "rows survive a failed name lookup"
+
+
+# ---- widening access upgrades the connection, it doesn't clone it --------------------------
+async def test_reconnecting_a_provider_replaces_its_connection(clients: AsyncClient, treg_google_app):
+    """Two rows for the same provider — one read-only, one write-only — is not a state a user
+    should ever be able to reach by clicking "Enable write"."""
+    first = await _connect_byo(clients, provider="google-search-console", capability="read")
+    second = await _connect_byo(clients, provider="google-search-console", capability="write")
+
+    gsc = [c for c in (await clients.get("/connections")).json() if c["provider"] == "google-search-console"]
+    assert len(gsc) == 1, "widening access must upgrade the connection, not add another"
+    assert first["secret_id"] == second["secret_id"] == gsc[0]["id"]
+
+
+async def test_enabling_write_keeps_read(clients: AsyncClient, treg_google_app):
+    """A capability is a superset, never a swap — otherwise the connection ends up able to write
+    while reporting "no read"."""
+    await _connect_byo(clients, provider="google-search-console", capability="read")
+    await _connect_byo(clients, provider="google-search-console", capability="write")
+
+    conn = next(c for c in (await clients.get("/connections")).json()
+                if c["provider"] == "google-search-console")
+    assert set(conn["capabilities"]) == {"read", "write"}
+    assert conn["missing_capabilities"] == []
+
+
+async def test_reconnect_rebinds_the_tool_to_the_same_secret(clients: AsyncClient, treg_google_app):
+    await _connect_byo(clients, provider="google-search-console", capability="read")
+    await _connect_byo(clients, provider="google-search-console", capability="write")
+    tools = [t for t in (await clients.get("/tools")).json() if t["name"] == "google-search-console"]
+    conn = next(c for c in (await clients.get("/connections")).json()
+                if c["provider"] == "google-search-console")
+    assert len(tools) == 1
+    assert tools[0]["bindings"][0]["secret_id"] == conn["id"]

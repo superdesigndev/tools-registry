@@ -46,16 +46,28 @@ async def test_registry_connect_uses_tregs_own_app(clients: AsyncClient, treg_go
     assert q["state"] == [d["state"]]
 
 
-async def test_read_is_the_default_capability(clients: AsyncClient, treg_google_app):
+async def test_the_broadest_capability_is_the_default(clients: AsyncClient, treg_google_app):
+    """A plain Connect asks for write. Least-privilege-by-default meant most users had to connect
+    twice — once for read, then again to widen it — which is worse than one honest consent screen."""
     d = (await clients.post("/oauth/start", json={"provider": "google-search-console"})).json()
+    scope = _consent_query(d)["scope"][0]
+    assert "webmasters" in scope and "webmasters.readonly" in scope
+
+
+async def test_choosing_read_narrows_the_request(clients: AsyncClient, treg_google_app):
+    """The choice is made BEFORE consent — a user who only wants read says so up front."""
+    d = (await clients.post(
+        "/oauth/start", json={"provider": "google-search-console", "capability": "read"}
+    )).json()
     assert _consent_query(d)["scope"] == ["https://www.googleapis.com/auth/webmasters.readonly"]
 
 
-async def test_capability_selects_the_scope_set(clients: AsyncClient, treg_google_app):
-    d = (await clients.post(
-        "/oauth/start", json={"provider": "google-search-console", "capability": "write"}
-    )).json()
-    assert _consent_query(d)["scope"] == ["https://www.googleapis.com/auth/webmasters"]
+async def test_capabilities_are_cumulative(clients: AsyncClient, treg_google_app):
+    """write CONTAINS read. Otherwise picking write would silently cost you read access."""
+    from treg import oauth_providers as P
+    g = P.GOOGLE_SEARCH_CONSOLE
+    assert set(g.scopes_for("read")) < set(g.scopes_for("write"))
+    assert g.satisfied_capabilities(g.scopes_for("write")) == ["read", "write"]
 
 
 async def test_a_search_console_connect_never_requests_ads_or_analytics(

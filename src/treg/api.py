@@ -3496,14 +3496,26 @@ async def oauth_callback(
     try:
         blob = await oauth.exchange_code(pending, code, request.app.state.http)
         provider = oauth_providers.get(pending.provider) if pending.provider else None
-        secret = Secret(
-            org_id=pending.org_id, name=pending.name, owner=pending.owner, kind="oauth",
-            value=crypto.encrypt(json.dumps(blob)),
-            provider=pending.provider or "",
-            granted_scopes=pending.scopes,
-            expires_at=oauth.expiry_of(blob),
-        )
-        db.add(secret)
+        # Reconnecting a provider REPLACES its connection. Adding a second one produced exactly the
+        # confusion you'd expect: two "google-search-console" rows, one read-only and one
+        # write-only, when the user had simply widened the same connection's access.
+        secret = None
+        if pending.provider:
+            secret = (await db.execute(
+                select(Secret).where(
+                    Secret.org_id == pending.org_id, Secret.provider == pending.provider
+                )
+            )).scalars().first()
+        if secret is None:
+            secret = Secret(org_id=pending.org_id, name=pending.name, owner=pending.owner,
+                            kind="oauth", value=crypto.encrypt(json.dumps(blob)))
+            db.add(secret)
+        else:
+            secret.value = crypto.encrypt(json.dumps(blob))
+            secret.last_error = ""
+        secret.provider = pending.provider or ""
+        secret.granted_scopes = pending.scopes
+        secret.expires_at = oauth.expiry_of(blob)
         await db.flush()
         # A connect that yields no callable tool is a dead end — the user consented and got
         # nothing. Auto-provision the provider's tool bound to this credential so the very next

@@ -105,8 +105,14 @@ class OAuthProvider:
 
     @property
     def default_capability(self) -> str:
-        """Prefer the least-privileged capability so a plain connect never over-asks."""
-        return "read" if "read" in self.scopes else self.capabilities[0]
+        """The capability a plain Connect asks for: the BROADEST one.
+
+        Least-privilege-by-default sounds right but played badly. An agent product is asked to DO
+        things, so most users need write eventually, and making them connect twice — once for read,
+        once to widen it — is a worse experience than one honest consent screen. Users who want
+        read-only can still pick it at connect time; capabilities are cumulative, so the broadest
+        one contains the narrower ones."""
+        return max(self.capabilities, key=lambda c: len(self.scopes[c]))
 
     @property
     def resource_plural(self) -> str:
@@ -159,7 +165,12 @@ GOOGLE_SEARCH_CONSOLE = OAuthProvider(
         # webmasters.readonly is NON-SENSITIVE: no Google verification, no OAuth user cap, and no
         # "unverified app" screen. Keep read the default so the common path stays gate-free.
         "read": ["https://www.googleapis.com/auth/webmasters.readonly"],
-        "write": ["https://www.googleapis.com/auth/webmasters"],
+        # write INCLUDES read: a capability is a superset, never a swap. Requesting only the
+        # broader scope would leave a connection that can write but reports "no read".
+        "write": [
+            "https://www.googleapis.com/auth/webmasters.readonly",
+            "https://www.googleapis.com/auth/webmasters",
+        ],
     },
     client_id_setting="google_client_id",
     client_secret_setting="google_client_secret",
@@ -254,7 +265,8 @@ SLACK = OAuthProvider(
     token_uri="https://slack.com/api/oauth.v2.access",
     scopes={
         "read": ["channels:read", "channels:history", "users:read"],
-        "write": ["channels:read", "chat:write"],
+        # cumulative: write is read + posting, so choosing it never costs you read access
+        "write": ["channels:read", "channels:history", "users:read", "chat:write"],
     },
     client_id_setting="slack_client_id",
     client_secret_setting="slack_client_secret",

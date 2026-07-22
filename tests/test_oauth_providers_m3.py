@@ -43,11 +43,17 @@ def test_every_provider_is_registered():
     }
 
 
-def test_default_capability_is_the_least_privileged():
-    """A plain connect must never over-ask; read wins wherever it exists."""
-    assert P.GOOGLE_SEARCH_CONSOLE.default_capability == "read"
-    assert P.X.default_capability == "read"
+def test_default_capability_is_the_broadest():
+    """Connect asks for the fullest capability; a narrower one is chosen up front, not bolted on
+    afterwards. Every provider's write must be a superset of its read for that to be safe."""
+    assert P.GOOGLE_SEARCH_CONSOLE.default_capability == "write"
+    assert P.X.default_capability == "write"
+    assert P.SLACK.default_capability == "write"
     assert P.GOOGLE_ADS.default_capability == "manage"  # it has no read-only mode
+    for provider in P.REGISTRY.values():
+        caps = provider.capabilities
+        if "read" in caps and "write" in caps:
+            assert set(provider.scopes["read"]) < set(provider.scopes["write"]), provider.service
 
 
 def test_google_ads_refuses_to_autoprovision():
