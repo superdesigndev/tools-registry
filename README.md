@@ -38,9 +38,6 @@ treg login
 
 # 3. guided setup - share your skills & keys, or connect to your team's
 treg onboard
-
-# then call a shared tool - no key on your machine
-treg call stripe v1/balance
 ```
 
 Your token identifies you on every call (`X-Treg-Token` header) and is the same for all tools.
