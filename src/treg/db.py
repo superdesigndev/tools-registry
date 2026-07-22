@@ -178,6 +178,10 @@ def _migrate_to_orgs(conn) -> None:
             ("code_verifier", "VARCHAR NOT NULL DEFAULT ''"),
             ("auth_params", "VARCHAR NOT NULL DEFAULT ''"),
             ("token_endpoint_auth_method", "VARCHAR NOT NULL DEFAULT 'client_secret_post'"),
+            # (A19) same idea, one layer lower: TikTok renames the client param and comma-joins
+            # scopes. Defaulted to the OAuth2 spelling, so in-flight connects are unaffected.
+            ("client_id_param", "VARCHAR NOT NULL DEFAULT 'client_id'"),
+            ("scope_separator", "VARCHAR NOT NULL DEFAULT ' '"),
         ):
             if col not in cols:
                 conn.execute(text(f"ALTER TABLE pendingoauth ADD COLUMN {col} {ddl}"))

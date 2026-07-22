@@ -65,9 +65,12 @@ async def refresh(blob: dict, client: httpx.AsyncClient) -> dict:
     rt, cid, csec = blob.get("refresh_token"), blob.get("client_id"), blob.get("client_secret")
     if not (rt and cid and csec):
         raise ValueError("oauth secret missing refresh_token / client_id / client_secret")
+    # TikTok's token endpoint reads `client_key`; the blob records that at exchange time so a
+    # refresh months later still speaks the dialect the grant was minted with.
+    cid_param = blob.get("client_id_param") or "client_id"
     resp = await client.post(
         blob.get("token_uri", _DEFAULT_TOKEN_URI),
-        data={"grant_type": "refresh_token", "refresh_token": rt, "client_id": cid, "client_secret": csec},
+        data={"grant_type": "refresh_token", "refresh_token": rt, cid_param: cid, "client_secret": csec},
     )
     resp.raise_for_status()
     tok = resp.json()
@@ -98,9 +101,12 @@ def consent_url(p: PendingOAuth) -> str:
     credential lands in auto-refresh mode. Providers that want different parameters carry them on
     the registry entry (`auth_params`), which replaces these defaults entirely."""
     q = {
-        "client_id": p.client_id,
+        # TikTok reads `client_key`; everyone else reads the OAuth2 `client_id`.
+        getattr(p, "client_id_param", "") or "client_id": p.client_id,
         "redirect_uri": p.redirect_uri,
         "response_type": "code",
+        # `scopes` is stored in the provider's own delimiter (space, or comma for TikTok), so it
+        # goes onto the URL verbatim — re-joining here would undo that.
         "scope": p.scopes,
         "state": p.state,
     }
@@ -114,9 +120,10 @@ def consent_url(p: PendingOAuth) -> str:
 async def exchange_code(p: PendingOAuth, code: str, client: httpx.AsyncClient) -> dict:
     """Trade the authorization code for tokens; return a self-refreshable oauth blob."""
     client_secret = crypto.decrypt(p.client_secret)
+    cid_param = getattr(p, "client_id_param", "") or "client_id"
     data = {
         "code": code,
-        "client_id": p.client_id,
+        cid_param: p.client_id,
         "redirect_uri": p.redirect_uri,
         "grant_type": "authorization_code",
     }
@@ -134,14 +141,59 @@ async def exchange_code(p: PendingOAuth, code: str, client: httpx.AsyncClient) -
     access = tok.get("access_token")
     if not access:  # a 200 with an error-shaped body — surface the provider's reason, not a KeyError
         raise ValueError(f"token endpoint returned no access_token: {tok.get('error') or tok}")
-    return {
+    blob = {
         "access_token": access,
         "token": access,
         "refresh_token": tok.get("refresh_token"),
+        # Always stored under the canonical key — `is_refreshable` and every reader look for
+        # "client_id". Only the wire spelling differs, and that travels as client_id_param below.
         "client_id": p.client_id,
         "client_secret": client_secret,
         "token_uri": p.token_uri,
         "expires_at": time.time() + float(tok.get("expires_in") or 3600),
+    }
+    if cid_param != "client_id":  # TikTok — refresh must post client_key, not client_id
+        blob["client_id_param"] = cid_param
+    if getattr(p, "long_lived_exchange", False):
+        blob = await _extend_meta_token(blob, client)
+    return blob
+
+
+async def _extend_meta_token(blob: dict, client: httpx.AsyncClient) -> dict:
+    """Swap Meta's short-lived user token for the ~60-day one.
+
+    Meta's authorization-code exchange returns a token good for an hour or two and no
+    refresh_token, so a connection made this way is dead by the time anyone uses it. This second
+    call is the only way to get a durable user credential out of Facebook Login.
+
+    A failure here is deliberately NOT fatal: the short-lived token is still a working credential,
+    and refusing the whole connect would be a worse outcome than a connection the user has to
+    remake sooner. `expires_at` keeps telling the truth either way, which is what `needs_reconnect`
+    reads.
+    """
+    resp = await client.get(
+        blob["token_uri"],
+        params={
+            "grant_type": "fb_exchange_token",
+            "client_id": blob["client_id"],
+            "client_secret": blob["client_secret"],
+            "fb_exchange_token": blob["access_token"],
+        },
+    )
+    if resp.status_code != 200:
+        return blob
+    tok = resp.json()
+    access = tok.get("access_token")
+    if not access:
+        return blob
+    return {
+        **blob,
+        "access_token": access,
+        "token": access,
+        # Meta omits expires_in when it issues a non-expiring token (system users, some business
+        # tokens). Falling back to the 60-day default would then invent an expiry that isn't real
+        # and nag the user to reconnect a credential that never dies.
+        "expires_at": time.time() + float(tok["expires_in"]) if tok.get("expires_in") else None,
     }
 
 

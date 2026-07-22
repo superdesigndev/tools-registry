@@ -113,6 +113,18 @@ class Settings(BaseSettings):
     slack_client_secret: str = ""
     x_client_id: str = ""
     x_client_secret: str = ""
+    # TikTok issues a separate app (and separate key/secret) per sandbox, so a dev deployment
+    # points at a sandbox client while production points at the reviewed one.
+    tiktok_client_id: str = ""
+    tiktok_client_secret: str = ""
+    # ONE Meta app backs both the facebook and instagram providers. Meta App Review, business
+    # verification and Tech Provider status are all scoped to the app, not to an OAuth client, so a
+    # second client would isolate nothing and would need its own review from zero. Instagram
+    # Business is reached through Facebook Login (graph.facebook.com), not the separate
+    # Instagram-Login API on graph.instagram.com — that is a different token family entirely and
+    # will reject these credentials outright.
+    meta_client_id: str = ""
+    meta_client_secret: str = ""
 
     # Overridable for tests; real Google by default.
     google_authorize_url: str = "https://accounts.google.com/o/oauth2/v2/auth"

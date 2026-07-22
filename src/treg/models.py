@@ -211,6 +211,14 @@ class PendingOAuth(SQLModel, table=True):
     code_verifier: str = Field(default="")
     auth_params: str = Field(default="")
     token_endpoint_auth_method: str = Field(default="client_secret_post")
+    # TikTok spells the client identifier `client_key` and comma-joins scopes. Snapshotted here for
+    # the same reason as the fields above: the callback must speak the dialect the consent URL used.
+    client_id_param: str = Field(default="client_id")
+    scope_separator: str = Field(default=" ")
+    # Meta only: swap the short-lived code-exchange token for a ~60-day one before storing it.
+    # Snapshotted for the same reason as the fields above — the callback must not have to look the
+    # provider up again to know how the token was meant to be obtained.
+    long_lived_exchange: bool = Field(default=False)
     status: str = Field(default="pending")  # pending | done | error
     secret_id: int | None = Field(default=None)
     detail: str = Field(default="")
