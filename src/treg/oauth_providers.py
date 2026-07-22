@@ -306,7 +306,7 @@ GOOGLE_ADS = OAuthProvider(
     scopes={"manage": ["https://www.googleapis.com/auth/adwords"]},
     client_id_setting="google_client_id",
     client_secret_setting="google_client_secret",
-    category="SEO",
+    category="Advertising",
     base_url="https://googleads.googleapis.com",
     docs_url="https://developers.google.com/google-ads/api/docs/start",
     # Every Ads request carries TWO credentials: the user's OAuth bearer AND a `developer-token`
@@ -589,11 +589,42 @@ INSTAGRAM = OAuthProvider(
     probe_path="/me?fields=id,name",
 )
 
+META_ADS = OAuthProvider(
+    service="meta-ads",
+    display_name="Meta Ads",
+    auth_uri=_META_AUTH,
+    token_uri=_META_TOKEN,
+    # business_management is in BOTH capabilities, not just manage: /me/adaccounts is a Business
+    # asset listing, so without it a read-only connect consents fine and then has nothing to pick.
+    # Unlike Google Ads this needs no second credential — Meta has no developer-token equivalent, so
+    # a connect here yields a callable tool on its own.
+    scopes={
+        "read": ["ads_read", "business_management"],
+        "manage": ["ads_read", "business_management", "ads_management"],
+    },
+    client_id_setting="meta_client_id",
+    client_secret_setting="meta_client_secret",
+    category="Advertising",
+    base_url=_META_BASE,
+    docs_url="https://developers.facebook.com/docs/marketing-apis",
+    auth_params={},
+    long_lived_exchange=True,
+    resource_label="ad account",
+    resource_label_plural="ad accounts",
+    # Returns act_<id> together with the account's name, so the picker shows "Superdesign Pty Ltd"
+    # rather than an opaque number — no enrichment pass needed, unlike Google Ads.
+    discover_path="/me/adaccounts?fields=id,name,account_id",
+    discover_key="data",
+    discover_id_field="id",
+    discover_label_field="name",
+    probe_path="/me?fields=id,name",
+)
+
 REGISTRY: dict[str, OAuthProvider] = {
     p.service: p
     for p in (
         GOOGLE_SEARCH_CONSOLE, GOOGLE_ANALYTICS, GOOGLE_BUSINESS_PROFILE, GOOGLE_ADS, YOUTUBE,
-        LINKEDIN, SLACK, X, TIKTOK, FACEBOOK, INSTAGRAM,
+        LINKEDIN, SLACK, X, TIKTOK, FACEBOOK, INSTAGRAM, META_ADS,
     )
 }
 
@@ -601,7 +632,7 @@ DEFAULT_CAPABILITY = "read"
 
 # Shelf order in the marketplace. Anything carrying a category not named here sorts last, so a
 # provider added without one is visible rather than lost between the shelves.
-CATEGORY_ORDER = ("SEO", "Social media", "Community", "Other")
+CATEGORY_ORDER = ("SEO", "Advertising", "Social media", "Community", "Other")
 
 
 def get(service: str) -> OAuthProvider | None:
