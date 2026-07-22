@@ -258,6 +258,23 @@ GOOGLE_ADS = OAuthProvider(
     enrich_header_name="login-customer-id",
 )
 
+LINKEDIN = OAuthProvider(
+    service="linkedin",
+    display_name="LinkedIn",
+    auth_uri="https://www.linkedin.com/oauth/v2/authorization",
+    token_uri="https://www.linkedin.com/oauth/v2/accessToken",
+    # One capability: these scopes let the member read their own profile and post as themselves.
+    # A read-only LinkedIn connection could do nothing but identify you, so offering the choice
+    # would be a dialog with no real second option. Organization/page scopes need the Community
+    # Management API on a company-verified app — a separate capability once that app is in use.
+    scopes={"write": ["openid", "profile", "email", "w_member_social"]},
+    client_id_setting="linkedin_client_id",
+    client_secret_setting="linkedin_client_secret",
+    base_url="https://api.linkedin.com",
+    docs_url="https://learn.microsoft.com/en-us/linkedin/consumer/integrations/self-serve/share-on-linkedin",
+    auth_params={},  # LinkedIn rejects Google's access_type/prompt
+)
+
 SLACK = OAuthProvider(
     service="slack",
     display_name="Slack",
@@ -298,7 +315,8 @@ X = OAuthProvider(
 REGISTRY: dict[str, OAuthProvider] = {
     p.service: p
     for p in (
-        GOOGLE_SEARCH_CONSOLE, GOOGLE_ANALYTICS, GOOGLE_BUSINESS_PROFILE, GOOGLE_ADS, SLACK, X,
+        GOOGLE_SEARCH_CONSOLE, GOOGLE_ANALYTICS, GOOGLE_BUSINESS_PROFILE, GOOGLE_ADS,
+        LINKEDIN, SLACK, X,
     )
 }
 

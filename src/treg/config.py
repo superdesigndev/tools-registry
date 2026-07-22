@@ -106,6 +106,9 @@ class Settings(BaseSettings):
     # would otherwise wait weeks for Google to approve one of their own.
     google_ads_developer_token: str = ""
 
+    linkedin_client_id: str = ""
+    linkedin_client_secret: str = ""
+
     slack_client_id: str = ""
     slack_client_secret: str = ""
     x_client_id: str = ""

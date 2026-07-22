@@ -39,7 +39,7 @@ def _q(payload: dict) -> dict:
 def test_every_provider_is_registered():
     assert set(P.REGISTRY) == {
         "google-search-console", "google-analytics", "google-business-profile",
-        "google-ads", "slack", "x",
+        "google-ads", "linkedin", "slack", "x",
     }
 
 
@@ -163,3 +163,26 @@ async def test_byo_connection_has_no_capability_fields(clients: AsyncClient):
     sid = (await clients.get(f"/oauth/status/{state}")).json()["secret_id"]
     conn = {c["id"]: c for c in (await clients.get("/connections")).json()}[sid]
     assert "missing_capabilities" not in conn  # nothing to compare against without a provider
+
+
+# ---- LinkedIn -----------------------------------------------------------------------------
+def test_linkedin_has_one_capability():
+    """These scopes let a member read their own profile and post as themselves. A read-only
+    LinkedIn connection could do nothing but identify you, so there is no second option worth
+    asking about — and a dialog with one real choice is just friction."""
+    assert P.LINKEDIN.capabilities == ["write"]
+    assert "w_member_social" in P.LINKEDIN.scopes_for("write")
+
+
+async def test_linkedin_does_not_get_googles_consent_params(clients: AsyncClient, monkeypatch):
+    monkeypatch.setenv("TREG_LINKEDIN_CLIENT_ID", "li-cid")
+    monkeypatch.setenv("TREG_LINKEDIN_CLIENT_SECRET", "li-csec")
+    get_settings.cache_clear()
+    try:
+        d = (await clients.post("/oauth/start", json={"provider": "linkedin"})).json()
+        q = _q(d)
+        assert q["client_id"] == ["li-cid"]
+        assert "access_type" not in q and "prompt" not in q, "LinkedIn rejects Google's params"
+        assert "w_member_social" in q["scope"][0]
+    finally:
+        get_settings.cache_clear()
