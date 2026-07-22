@@ -33,9 +33,25 @@ class OAuthProvider:
     display_name: str
     auth_uri: str
     token_uri: str
+
     scopes: dict[str, list[str]]  # capability -> the scopes that capability actually needs
     client_id_setting: str
     client_secret_setting: str
+    # ---- how the credential is obtained --------------------------------------------------
+    # "oauth"  — treg holds an approved app; the user consents and supplies nothing.
+    # "token"  — the user brings their OWN bot/app token. Correct where a workspace-scoped bot
+    #            is the natural unit (Slack): our app can't be installed into their workspace on
+    #            their behalf, and a shared app would put treg between them and their own data.
+    #            Setup is a form, not a redirect, so the provider carries the instructions.
+    auth_kind: str = "oauth"
+    token_label: str = ""  # "Bot token"
+    token_placeholder: str = ""  # "xoxb-…"
+    token_header: str = "Authorization"
+    token_format: str = "Bearer {secret}"
+    setup_url: str = ""  # one-click app creation, pre-filled where the platform supports it
+    setup_action_label: str = ""
+    setup_steps: tuple[str, ...] = ()
+    setup_note: str = ""
     base_url: str = ""  # upstream API root, so a successful connect can auto-provision the tool
     docs_url: str = ""
     # A cheap authenticated GET on base_url that proves the credential still works, mirroring the
@@ -48,6 +64,11 @@ class OAuthProvider:
     auth_params: dict[str, str] | None = None  # extra ?query on the consent URL
     pkce: bool = False  # S256 challenge/verifier (X requires it)
     token_endpoint_auth_method: str = "client_secret_post"  # or client_secret_basic (X)
+    # OAuth2 says the client identifier is `client_id` and scopes are space-delimited. TikTok obeys
+    # neither: it reads `client_key` and splits scopes on commas. Both are snapshotted onto the
+    # PendingOAuth so the callback and every later refresh speak the same dialect as the consent URL.
+    client_id_param: str = "client_id"  # TikTok: "client_key"
+    scope_separator: str = " "  # TikTok: ","
 
     # Some providers need a SECOND credential alongside the user's OAuth token — Google Ads wants a
     # developer-token header from an approved MCC. We can't auto-provision a working tool from the
@@ -114,6 +135,10 @@ class OAuthProvider:
     identity_ref_format: str = "{id}"  # e.g. "urn:li:person:{id}"
 
     @property
+    def is_token_kind(self) -> bool:
+        return self.auth_kind == "token"
+
+    @property
     def has_identity(self) -> bool:
         return bool(self.identity_path and self.identity_id_path)
 
@@ -130,6 +155,10 @@ class OAuthProvider:
         once to widen it — is a worse experience than one honest consent screen. Users who want
         read-only can still pick it at connect time; capabilities are cumulative, so the broadest
         one contains the narrower ones."""
+        # A token provider has no consent screen to size, so no capabilities — don't max() an
+        # empty sequence and take the whole /oauth/providers listing down with it.
+        if not self.scopes:
+            return ""
         return max(self.capabilities, key=lambda c: len(self.scopes[c]))
 
     @property
@@ -355,19 +384,38 @@ LINKEDIN = OAuthProvider(
 SLACK = OAuthProvider(
     service="slack",
     display_name="Slack",
-    auth_uri="https://slack.com/oauth/v2/authorize",
-    token_uri="https://slack.com/api/oauth.v2.access",
-    scopes={
-        "read": ["channels:read", "channels:history", "users:read"],
-        # cumulative: write is read + posting, so choosing it never costs you read access
-        "write": ["channels:read", "channels:history", "users:read", "chat:write"],
-    },
-    client_id_setting="slack_client_id",
-    client_secret_setting="slack_client_secret",
+    # Bring-your-own-bot, not a treg-owned OAuth app. A Slack bot is workspace-scoped and belongs
+    # to the workspace it's installed in — a shared treg app would sit between a team and their own
+    # messages, and could never be installed on their behalf anyway. So the user creates a bot
+    # (one click, pre-filled manifest) and pastes its token.
+    auth_kind="token",
+    token_label="Bot token",
+    token_placeholder="xoxb-…",
+    setup_url='https://api.slack.com/apps?new_app=1&manifest_json=%7B%22display_information%22%3A%20%7B%22name%22%3A%20%22treg%22%2C%20%22description%22%3A%20%22Let%20your%20AI%20agent%20read%20and%20post%20in%20Slack%2C%20with%20the%20token%20held%20server-side.%22%7D%2C%20%22features%22%3A%20%7B%22bot_user%22%3A%20%7B%22display_name%22%3A%20%22treg%22%7D%7D%2C%20%22oauth_config%22%3A%20%7B%22scopes%22%3A%20%7B%22bot%22%3A%20%5B%22chat%3Awrite%22%2C%20%22chat%3Awrite.public%22%2C%20%22channels%3Aread%22%2C%20%22groups%3Aread%22%2C%20%22im%3Aread%22%2C%20%22mpim%3Aread%22%2C%20%22channels%3Ahistory%22%2C%20%22groups%3Ahistory%22%2C%20%22users%3Aread%22%2C%20%22reactions%3Aread%22%2C%20%22reactions%3Awrite%22%2C%20%22files%3Aread%22%2C%20%22app_mentions%3Aread%22%5D%7D%7D%7D',
+    setup_action_label="Create the Slack app (pre-filled)",
+    setup_steps=(
+        "Click the button above — it opens Slack with the bot and scopes already configured. "
+        "Pick your workspace and hit Create.",
+        "On the app page click \"Install to Workspace\" and allow it.",
+        "Open OAuth & Permissions and copy the Bot User OAuth Token (xoxb-…) — "
+        "NOT the App-Level Token (xapp-…).",
+    ),
+    setup_note="Public channels work immediately. For a private channel, /invite the bot first.",
+    auth_uri="", token_uri="",
+    scopes={},  # scopes live in the manifest above; there is no consent screen to size
+    client_id_setting="", client_secret_setting="",
     base_url="https://slack.com/api",
     docs_url="https://api.slack.com/web",
-    probe_path="/auth.test",  # Slack's canonical "is this token good" call
-    auth_params={},  # Slack rejects Google's access_type/prompt params
+    probe_path="/auth.test",
+    resource_label="channel",
+    # auth.test names the workspace and the bot, so a connection says which Slack it is.
+    identity_path="/auth.test",
+    identity_id_path="team_id",
+    identity_label_path="team",
+    discover_path="/conversations.list?limit=200&exclude_archived=true&types=public_channel,private_channel",
+    discover_key="channels",
+    discover_id_field="id",
+    discover_label_field="name",
 )
 
 X = OAuthProvider(
@@ -397,11 +445,48 @@ X = OAuthProvider(
     identity_label_path="data.username",
 )
 
+# TikTok grants scopes through PRODUCTS, not à la carte: user.info.basic rides on Login Kit,
+# video.upload on the Content Posting API, and video.publish only appears once that product's
+# "Direct Post" toggle is on. So this scope set is really a statement about the portal config, and
+# the two must be changed together — asking here for a scope the app doesn't carry fails at consent
+# with scope_not_authorized rather than at build time.
+_TIKTOK_READ = ["user.info.basic", "video.list", "user.info.stats"]
+
+TIKTOK = OAuthProvider(
+    service="tiktok",
+    display_name="TikTok",
+    auth_uri="https://www.tiktok.com/v2/auth/authorize/",
+    token_uri="https://open.tiktokapis.com/v2/oauth/token/",
+    # draft and post are a real split, not a nicety: video.upload only puts the video in the
+    # creator's inbox for them to finish by hand (and TikTok discards it after 24h), while
+    # video.publish posts to the profile outright. A caller that wants review-before-publish
+    # genuinely must not hold video.publish.
+    scopes={
+        "read": _TIKTOK_READ,
+        "draft": [*_TIKTOK_READ, "video.upload"],
+        "post": [*_TIKTOK_READ, "video.upload", "video.publish"],
+    },
+    client_id_setting="tiktok_client_id",
+    client_secret_setting="tiktok_client_secret",
+    base_url="https://open.tiktokapis.com",
+    docs_url="https://developers.tiktok.com/doc/login-kit-web/",
+    client_id_param="client_key",  # not client_id — TikTok ignores the OAuth2 spelling
+    scope_separator=",",  # not a space
+    auth_params={},  # TikTok rejects Google's access_type/prompt
+    resource_label="account",
+    # One connection = one authorized creator, so there is nothing to pick; identity_* labels it
+    # instead of showing an empty picker. Cheap, authenticated, and returns a human name.
+    probe_path="/v2/user/info/?fields=open_id,display_name",
+    identity_path="/v2/user/info/?fields=open_id,display_name",
+    identity_id_path="data.user.open_id",
+    identity_label_path="data.user.display_name",
+)
+
 REGISTRY: dict[str, OAuthProvider] = {
     p.service: p
     for p in (
         GOOGLE_SEARCH_CONSOLE, GOOGLE_ANALYTICS, GOOGLE_BUSINESS_PROFILE, GOOGLE_ADS, YOUTUBE,
-        LINKEDIN, SLACK, X,
+        LINKEDIN, SLACK, X, TIKTOK,
     )
 }
 
@@ -428,6 +513,10 @@ def credentials(provider: OAuthProvider) -> tuple[str, str]:
 
 
 def is_configured(provider: OAuthProvider) -> bool:
+    """Whether THIS deployment can offer the provider. A token provider needs nothing from us —
+    the user brings their own — so it is always offerable."""
+    if provider.is_token_kind:
+        return True
     try:
         credentials(provider)
     except ValueError:
@@ -447,6 +536,13 @@ def listing() -> list[dict]:
             "resource_plural": p.resource_plural,
             "supports_discovery": p.supports_discovery,
             "has_identity": p.has_identity,
+            "auth_kind": p.auth_kind,
+            "token_label": p.token_label,
+            "token_placeholder": p.token_placeholder,
+            "setup_url": p.setup_url,
+            "setup_action_label": p.setup_action_label,
+            "setup_steps": list(p.setup_steps),
+            "setup_note": p.setup_note,
             "extra_credential_note": p.extra_credential_note,
             "extra_credential_label": p.extra_credential_label,
             "needs_extra_credential": p.needs_extra_credential,

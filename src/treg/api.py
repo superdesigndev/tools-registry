@@ -3416,10 +3416,18 @@ async def _autoprovision_provider_tool(
             select(Tool).where(Tool.org_id == secret.org_id, Tool.name == provider.service)
         )
     ).scalars().first()
-    bindings = [{
-        "secret_id": secret.id, "injector": "oauth", "location": "header",
-        "name": "Authorization", "format": "Bearer {secret}", "secret_field": "access_token",
-    }]
+    # A token provider's secret is a plain string, not an oauth blob — injecting it with
+    # secret_field="access_token" would try to read a JSON field that isn't there.
+    if provider.is_token_kind:
+        bindings = [{
+            "secret_id": secret.id, "injector": "env", "location": "header",
+            "name": provider.token_header, "format": provider.token_format,
+        }]
+    else:
+        bindings = [{
+            "secret_id": secret.id, "injector": "oauth", "location": "header",
+            "name": "Authorization", "format": "Bearer {secret}", "secret_field": "access_token",
+        }]
     # A provider needing a second credential that TREG holds (Google Ads' developer token) gets it
     # as a platform binding — read from settings at call time, never copied into the org's secrets.
     # This is the point of the registry: the user waits weeks for their own, or uses ours instantly.
@@ -3428,15 +3436,23 @@ async def _autoprovision_provider_tool(
             "platform_setting": provider.extra_credential_setting, "injector": "env",
             "location": "header", "name": provider.extra_credential_header, "format": "{secret}",
         })
+    # A registry tool with a probe can self-validate on `health --run` instead of sitting at
+    # "unchecked" until something happens to call it.
+    health_check = (
+        {"method": "GET", "path": provider.probe_path, "expect_status": 200}
+        if provider.probe_path else None
+    )
     if existing is not None:
         existing.bindings = bindings
         existing.base_url = provider.base_url
         existing.host = _host_of(provider.base_url)
+        # Reconnecting is how an already-provisioned tool picks up a probe added since it was made.
+        existing.health_check = health_check or existing.health_check
         return
     db.add(Tool(
         org_id=secret.org_id, name=provider.service, owner=pending.owner,
         base_url=provider.base_url, host=_host_of(provider.base_url),
-        bindings=bindings,
+        bindings=bindings, health_check=health_check,
     ))
 
 
@@ -3455,6 +3471,7 @@ async def oauth_start(
     name, client_id, client_secret = body.name, body.client_id, body.client_secret
     auth_uri, token_uri, scopes = body.auth_uri, body.token_uri, list(body.scopes)
     code_verifier, auth_params, auth_method = "", "", "client_secret_post"
+    cid_param, scope_sep = "client_id", " "
 
     if body.provider:  # REGISTRY mode — treg's own app supplies everything
         provider = oauth_providers.get(body.provider)
@@ -3470,6 +3487,7 @@ async def oauth_start(
         auth_uri, token_uri = provider.auth_uri, provider.token_uri
         name = name or provider.service
         auth_method = provider.token_endpoint_auth_method
+        cid_param, scope_sep = provider.client_id_param, provider.scope_separator
         if provider.auth_params is not None:
             auth_params = json.dumps(provider.auth_params)
         if provider.pkce:
@@ -3492,9 +3510,10 @@ async def oauth_start(
     pending = PendingOAuth(
         org_id=caller.org_id, state=state, name=name, owner=caller.email,
         client_id=client_id, client_secret=crypto.encrypt(client_secret),
-        auth_uri=auth_uri, token_uri=token_uri, scopes=" ".join(scopes),
+        auth_uri=auth_uri, token_uri=token_uri, scopes=scope_sep.join(scopes),
         redirect_uri=redirect_uri, provider=body.provider or "",
         code_verifier=code_verifier, auth_params=auth_params, token_endpoint_auth_method=auth_method,
+        client_id_param=cid_param, scope_separator=scope_sep,
     )
     db.add(pending)
     await db.commit()
@@ -3545,7 +3564,12 @@ async def oauth_callback(
             secret.value = crypto.encrypt(json.dumps(blob))
             secret.last_error = ""
         secret.provider = pending.provider or ""
-        secret.granted_scopes = pending.scopes
+        # granted_scopes stays canonically SPACE-joined whatever dialect went over the wire, so the
+        # readers (satisfied_capabilities, the health payload) can keep using a plain .split().
+        # TikTok comma-joins its consent scopes; without this normalisation a whole grant would
+        # come back as one bogus scope string and every capability would read as unsatisfied.
+        _sep = pending.scope_separator or " "
+        secret.granted_scopes = " ".join(s for s in pending.scopes.split(_sep) if s)
         secret.expires_at = oauth.expiry_of(blob)
         await db.flush()
         # A connect that yields no callable tool is a dead end — the user consented and got
@@ -3774,6 +3798,72 @@ async def set_connection_resource(
     secret = await _owned_connection(secret_id, caller, db)
     secret.resource_ref = body.resource_ref
     secret.resource_name = body.resource_name
+    await db.commit()
+    await db.refresh(secret)
+    return oauth.connection_view(secret)
+
+
+class TokenConnectIn(BaseModel):
+    provider: str
+    token: str
+
+
+@app.post("/connections/token")
+async def connect_with_token(
+    body: TokenConnectIn, request: Request,
+    caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
+) -> dict:
+    """Connect a provider where the user brings their own bot token (Slack).
+
+    The token is VERIFIED against the provider's probe before anything is stored. Saving an
+    unverified credential just moves the failure to the first real call, by which point the user
+    has left the setup screen and has no idea which of the three steps they got wrong."""
+    _require_can_register(caller)
+    provider = oauth_providers.get(body.provider)
+    if provider is None or not provider.is_token_kind:
+        raise HTTPException(status_code=422, detail="this provider is connected by consent, not a token")
+    token = body.token.strip()
+    if not token:
+        raise HTTPException(status_code=422, detail=f"{provider.token_label or 'Token'} is required")
+
+    headers = {provider.token_header: provider.token_format.format(secret=token)}
+    try:
+        resp = await request.app.state.http.get(
+            f"{provider.base_url.rstrip('/')}{provider.probe_path}", headers=headers
+        )
+        payload = resp.json() if resp.status_code < 500 else {}
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=502, detail=f"could not reach {provider.display_name}: {exc}") from None
+    # Slack answers 200 with {"ok": false, "error": "invalid_auth"} — an HTTP status alone would
+    # happily accept a dead token.
+    if resp.status_code >= 400 or payload.get("ok") is False:
+        why = payload.get("error") or f"HTTP {resp.status_code}"
+        raise HTTPException(status_code=422, detail=f"{provider.display_name} rejected that token ({why})")
+
+    secret = (await db.execute(
+        select(Secret).where(Secret.org_id == caller.org_id, Secret.provider == provider.service)
+    )).scalars().first()
+    if secret is None:
+        secret = Secret(org_id=caller.org_id, name=provider.service, owner=caller.email, kind="env",
+                        value=crypto.encrypt(token), provider=provider.service)
+        db.add(secret)
+    else:
+        secret.value = crypto.encrypt(token)
+    secret.last_error = ""
+    secret.health_status, secret.health_detail = "ok", "token verified at connect"
+    secret.health_checked_at = _utcnow_naive()
+    # The probe already told us who this is — no second call needed.
+    if provider.has_identity:
+        ident = _dig(payload, provider.identity_id_path)
+        if ident:
+            secret.resource_ref = provider.identity_ref_format.format(id=ident)
+            label = _dig(payload, provider.identity_label_path) if provider.identity_label_path else None
+            secret.resource_name = str(label) if label else str(ident)
+    await db.flush()
+
+    pending = PendingOAuth(org_id=caller.org_id, state="", name=provider.service, owner=caller.email,
+                           client_id="", client_secret="", auth_uri="", token_uri="", redirect_uri="")
+    await _autoprovision_provider_tool(provider, secret, pending, db)
     await db.commit()
     await db.refresh(secret)
     return oauth.connection_view(secret)

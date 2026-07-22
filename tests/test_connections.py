@@ -396,3 +396,68 @@ async def test_a_failed_identity_lookup_still_connects(clients: AsyncClient, tre
     ))
     st = await _connect_byo(clients, provider="google-search-console", name="google-search-console")
     assert st["status"] == "done"
+
+
+# ---- bring-your-own-token providers (Slack) ------------------------------------------------
+async def test_a_bad_token_is_rejected_at_paste_time(clients: AsyncClient, monkeypatch):
+    """Slack answers 200 with {"ok": false} for a dead token. Storing it anyway just moves the
+    failure to the first real call, by which point the user has left the setup screen."""
+    import dataclasses
+
+    from treg import oauth_providers as P
+
+    monkeypatch.setitem(P.REGISTRY, "slack", dataclasses.replace(
+        P.REGISTRY["slack"], base_url="http://upstream", discover_path=""))
+    r = await clients.post("/connections/token", json={"provider": "slack", "token": "xoxb-nope"})
+    assert r.status_code == 422, "HTTP 200 + ok:false must still be a rejection"
+    assert "invalid_auth" in r.text
+    assert not [c for c in (await clients.get("/connections")).json() if c["provider"] == "slack"]
+
+
+async def test_token_connect_provisions_a_tool_with_a_plain_binding(clients: AsyncClient, monkeypatch):
+    """A token secret is a plain string — injecting it as an oauth blob would look for an
+    access_token field that isn't there."""
+    import dataclasses
+
+    from treg import oauth_providers as P
+
+    monkeypatch.setitem(P.REGISTRY, "slack", dataclasses.replace(
+        P.REGISTRY["slack"], base_url="http://upstream", discover_path=""))
+    r = await clients.post("/connections/token", json={"provider": "slack", "token": "xoxb-good"})
+    assert r.status_code == 200, r.text
+    assert r.json()["health"] == "ok", "a verified token is known-good, not 'unknown'"
+
+    tool = next(t for t in (await clients.get("/tools")).json() if t["name"] == "slack")
+    b = tool["bindings"][0]
+    assert b["injector"] == "env" and b["format"] == "Bearer {secret}"
+    assert "secret_field" not in b or b.get("secret_field") in (None, "")
+
+
+async def test_token_connect_records_which_workspace(clients: AsyncClient, monkeypatch):
+    """auth.test already says which Slack this is — using it spares a second call, and without it
+    the row would just say "whole account"."""
+    import dataclasses
+
+    from treg import oauth_providers as P
+
+    monkeypatch.setitem(P.REGISTRY, "slack", dataclasses.replace(
+        P.REGISTRY["slack"], base_url="http://upstream", discover_path=""))
+    r = await clients.post("/connections/token", json={"provider": "slack", "token": "xoxb-good"})
+    assert r.json()["resource_name"] == "Acme Workspace"
+    assert r.json()["resource_ref"] == "T0ACME"
+
+
+async def test_oauth_providers_reject_the_token_endpoint(clients: AsyncClient, treg_google_app):
+    r = await clients.post("/connections/token", json={"provider": "google-search-console", "token": "x"})
+    assert r.status_code == 422
+    assert "consent" in r.text
+
+
+def test_slack_is_offerable_without_deployment_credentials():
+    """The user brings their own bot, so treg needs no Slack app of its own — it must not show
+    as 'not configured' the way an unset OAuth provider does."""
+    from treg import oauth_providers as P
+    assert P.SLACK.is_token_kind
+    assert P.is_configured(P.SLACK) is True
+    assert "xoxb" in P.SLACK.token_placeholder
+    assert P.SLACK.setup_url.startswith("https://api.slack.com/apps?new_app=1")

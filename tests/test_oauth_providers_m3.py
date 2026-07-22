@@ -8,6 +8,7 @@ start time so the callback exchanges the code exactly the way the consent URL wa
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from urllib.parse import parse_qs, urlsplit
 
 import pytest
@@ -23,7 +24,7 @@ from treg.models import PendingOAuth
 
 @pytest.fixture
 def all_apps(monkeypatch):
-    for k in ("GOOGLE", "SLACK", "X"):
+    for k in ("GOOGLE", "SLACK", "X", "TIKTOK"):
         monkeypatch.setenv(f"TREG_{k}_CLIENT_ID", f"{k.lower()}-cid")
         monkeypatch.setenv(f"TREG_{k}_CLIENT_SECRET", f"{k.lower()}-csec")
     get_settings.cache_clear()
@@ -39,7 +40,7 @@ def _q(payload: dict) -> dict:
 def test_every_provider_is_registered():
     assert set(P.REGISTRY) == {
         "google-search-console", "google-analytics", "google-business-profile",
-        "google-ads", "linkedin", "slack", "x",
+        "google-ads", "youtube", "linkedin", "slack", "x", "tiktok",
     }
 
 
@@ -48,7 +49,6 @@ def test_default_capability_is_the_broadest():
     afterwards. Every provider's write must be a superset of its read for that to be safe."""
     assert P.GOOGLE_SEARCH_CONSOLE.default_capability == "write"
     assert P.X.default_capability == "write"
-    assert P.SLACK.default_capability == "write"
     assert P.GOOGLE_ADS.default_capability == "manage"  # it has no read-only mode
     for provider in P.REGISTRY.values():
         caps = provider.capabilities
@@ -95,6 +95,49 @@ async def test_google_does_not_use_pkce(clients: AsyncClient, all_apps):
     assert "code_challenge" not in _q(d)
 
 
+# ---- TikTok's two quirks -------------------------------------------------------------------
+async def test_tiktok_consent_url_uses_client_key_not_client_id(clients: AsyncClient, all_apps):
+    """TikTok ignores the OAuth2 spelling. Sending `client_id` gets a consent page that errors out
+    rather than an obvious 400, so this is worth pinning."""
+    q = _q((await clients.post("/oauth/start", json={"provider": "tiktok"})).json())
+    assert q["client_key"] == ["tiktok-cid"]
+    assert "client_id" not in q
+
+
+async def test_tiktok_comma_joins_its_scopes(clients: AsyncClient, all_apps):
+    """Space-joined scopes come back from TikTok as scope_not_authorized — it splits on commas."""
+    q = _q((await clients.post("/oauth/start", json={"provider": "tiktok"})).json())
+    scope = q["scope"][0]
+    assert "," in scope and " " not in scope
+    assert set(scope.split(",")) == set(P.TIKTOK.scopes_for(P.TIKTOK.default_capability))
+
+
+async def test_tiktok_granted_scopes_are_stored_space_joined(clients: AsyncClient, all_apps, monkeypatch):
+    """The wire dialect must not leak into storage: every reader of granted_scopes uses .split(),
+    so a comma-joined grant would read as one bogus scope and report every capability unsatisfied."""
+    # Registry mode takes token_uri from the provider, not the body, so point the provider itself at
+    # the in-process upstream (frozen dataclass → replace rather than setattr).
+    monkeypatch.setitem(P.REGISTRY, "tiktok", replace(P.TIKTOK, token_uri="http://upstream/token"))
+    body = {"provider": "tiktok", "capability": "post"}
+    state = (await clients.post("/oauth/start", json=body)).json()["state"]
+    await clients.get(f"/oauth/callback?code=AUTHCODE&state={state}")
+    sid = (await clients.get(f"/oauth/status/{state}")).json()["secret_id"]
+
+    conn = {c["id"]: c for c in (await clients.get("/connections")).json()}[sid]
+    assert set(conn["capabilities"]) == {"read", "draft", "post"}
+
+
+def test_tiktok_capabilities_are_cumulative():
+    """draft must contain read and post must contain draft, or satisfied_capabilities() (which is
+    set-containment) reports a connection that can post but cannot read."""
+    t = P.TIKTOK
+    assert set(t.scopes_for("read")) < set(t.scopes_for("draft")) < set(t.scopes_for("post"))
+    assert t.default_capability == "post"
+    # video.publish is the whole difference between "we drafted it for you" and "we posted it".
+    assert "video.publish" not in t.scopes_for("draft")
+    assert "video.publish" in t.scopes_for("post")
+
+
 # ---- per-provider consent params ---------------------------------------------------------
 async def test_google_keeps_offline_consent_params(clients: AsyncClient, all_apps):
     """access_type=offline + prompt=consent is what guarantees Google returns a refresh_token."""
@@ -102,14 +145,17 @@ async def test_google_keeps_offline_consent_params(clients: AsyncClient, all_app
     assert q["access_type"] == ["offline"] and q["prompt"] == ["consent"]
 
 
-async def test_slack_does_not_get_googles_params(clients: AsyncClient, all_apps):
-    """Slack rejects them; sending Google's defaults everywhere would break the flow."""
-    q = _q((await clients.post("/oauth/start", json={"provider": "slack"})).json())
-    assert "access_type" not in q and "prompt" not in q
+def test_slack_is_bring_your_own_bot():
+    """A Slack bot is workspace-scoped and belongs to the workspace it's installed in. A shared
+    treg app would sit between a team and their own messages — and couldn't be installed on their
+    behalf anyway — so the user brings their own token instead of consenting to ours."""
+    assert P.SLACK.auth_kind == "token"
+    assert P.SLACK.scopes == {}, "no consent screen means no capability sizing"
+    assert P.SLACK.default_capability == "", "and nothing to default to"
 
 
 async def test_each_provider_uses_its_own_client_credentials(clients: AsyncClient, all_apps):
-    for service, expected in (("google-search-console", "google-cid"), ("slack", "slack-cid"), ("x", "x-cid")):
+    for service, expected in (("google-search-console", "google-cid"), ("x", "x-cid")):
         q = _q((await clients.post("/oauth/start", json={"provider": service})).json())
         assert q["client_id"] == [expected], service
 
@@ -127,14 +173,16 @@ def test_satisfied_capabilities_detects_a_scope_gap():
 
 
 async def test_unconfigured_providers_are_listed_but_flagged(clients: AsyncClient, monkeypatch):
-    monkeypatch.setenv("TREG_SLACK_CLIENT_ID", "")
-    monkeypatch.setenv("TREG_SLACK_CLIENT_SECRET", "")
+    monkeypatch.setenv("TREG_X_CLIENT_ID", "")
+    monkeypatch.setenv("TREG_X_CLIENT_SECRET", "")
     get_settings.cache_clear()
     try:
         rows = {p["service"]: p for p in (await clients.get("/oauth/providers")).json()}
-        assert rows["slack"]["configured"] is False
-        r = await clients.post("/oauth/start", json={"provider": "slack"})
+        assert rows["x"]["configured"] is False
+        r = await clients.post("/oauth/start", json={"provider": "x"})
         assert r.status_code == 422 and "not configured" in r.text
+        # a bring-your-own-token provider needs nothing from the deployment, so it stays offerable
+        assert rows["slack"]["configured"] is True
     finally:
         get_settings.cache_clear()
 
