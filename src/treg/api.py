@@ -1549,6 +1549,8 @@ class OAuthStartIn(BaseModel):
     name: str = ""  # the secret name to create on success; defaults to the provider service
     provider: str | None = None  # registry service id, e.g. "google-search-console"
     capability: str | None = None  # which scope set to request (default: read)
+    # Reconnect/widen an EXISTING connection instead of adding another one. Omit to add.
+    connection_id: int | None = None
     client_id: str = ""
     client_secret: str = ""
     auth_uri: str = "https://accounts.google.com/o/oauth2/auth"
@@ -3413,16 +3415,38 @@ async def list_runs(
 
 
 # ---- OAuth connect flow (Phase C): mint the first token via browser consent --------------
+async def _free_connection_name(base: str, org_id: int, db: AsyncSession) -> str:
+    """First connection for a provider keeps the bare service name; later ones get -2, -3.
+
+    The bare name matters: every skill and doc says `treg call google-search-console`, and a tool
+    name is unique per org, so the first account must own it or all of that breaks. Suffixing only
+    the extras means adding a second account can never change how the first one is called.
+    """
+    taken = set((await db.execute(
+        select(Tool.name).where(Tool.org_id == org_id)
+    )).scalars().all()) | set((await db.execute(
+        select(Secret.name).where(Secret.org_id == org_id)
+    )).scalars().all())
+    if base not in taken:
+        return base
+    return next(f"{base}-{n}" for n in range(2, 1000) if f"{base}-{n}" not in taken)
+
+
 async def _autoprovision_provider_tool(
     provider, secret: Secret, pending: PendingOAuth, db: AsyncSession
 ) -> None:
     """Bind the freshly-connected credential to the provider's API as a callable tool.
 
-    Idempotent by (org, name): reconnecting the same provider rebinds the existing tool to the new
-    credential rather than piling up duplicates."""
+    Named after the CONNECTION, not the provider — a tool name is unique per org, so two accounts
+    on one provider need two tools. The first account's connection is named for the service, so it
+    still gets the bare `google-search-console` every skill and doc refers to.
+
+    Idempotent by (org, name): reconnecting rebinds the existing tool to the new credential rather
+    than piling up duplicates."""
+    tool_name = secret.name or provider.service
     existing = (
         await db.execute(
-            select(Tool).where(Tool.org_id == secret.org_id, Tool.name == provider.service)
+            select(Tool).where(Tool.org_id == secret.org_id, Tool.name == tool_name)
         )
     ).scalars().first()
     # A token provider's secret is a plain string, not an oauth blob — injecting it with
@@ -3459,7 +3483,7 @@ async def _autoprovision_provider_tool(
         existing.health_check = health_check or existing.health_check
         return
     db.add(Tool(
-        org_id=secret.org_id, name=provider.service, owner=pending.owner,
+        org_id=secret.org_id, name=tool_name, owner=pending.owner,
         base_url=provider.base_url, host=_host_of(provider.base_url),
         bindings=bindings, health_check=health_check,
     ))
@@ -3511,6 +3535,24 @@ async def oauth_start(
     if not name:
         raise HTTPException(status_code=422, detail="name is required")
 
+    # Reconnecting targets ONE connection. Scoped to the caller's org so a guessed id can't aim a
+    # consent at another org's credential, and matched to the provider so a Slack consent can't be
+    # made to overwrite a Google one.
+    replaces_id = None
+    if body.connection_id is not None:
+        target = (await db.execute(select(Secret).where(
+            Secret.id == body.connection_id, Secret.org_id == caller.org_id
+        ))).scalars().first()
+        if target is None:
+            raise HTTPException(status_code=404, detail="unknown connection")
+        if body.provider and target.provider != body.provider:
+            raise HTTPException(
+                status_code=422,
+                detail=f"connection {body.connection_id} is {target.provider or 'not a provider connection'}, not {body.provider}",
+            )
+        replaces_id = target.id
+        name = target.name  # keep the account's name (and therefore its tool binding) stable
+
     state = crypto.new_token()
     treg_callback = f"{get_settings().public_url.rstrip('/')}/oauth/callback"
     # The code must come back to treg's OWN callback — a body-supplied redirect_uri pointing elsewhere
@@ -3525,6 +3567,7 @@ async def oauth_start(
         redirect_uri=redirect_uri, provider=body.provider or "",
         code_verifier=code_verifier, auth_params=auth_params, token_endpoint_auth_method=auth_method,
         client_id_param=cid_param, scope_separator=scope_sep, long_lived_exchange=long_lived,
+        replaces_secret_id=replaces_id,
     )
     db.add(pending)
     await db.commit()
@@ -3557,18 +3600,20 @@ async def oauth_callback(
     try:
         blob = await oauth.exchange_code(pending, code, request.app.state.http)
         provider = oauth_providers.get(pending.provider) if pending.provider else None
-        # Reconnecting a provider REPLACES its connection. Adding a second one produced exactly the
-        # confusion you'd expect: two "google-search-console" rows, one read-only and one
-        # write-only, when the user had simply widened the same connection's access.
+        # A consent either REPLACES one named connection or ADDS another. `replaces_secret_id` says
+        # which, decided back at /oauth/start where the user's intent was known. This used to
+        # blanket-replace by provider, which fixed the real bug — widening read→write silently made
+        # a second google-search-console row — at the cost of banning a second account entirely.
         secret = None
-        if pending.provider:
-            secret = (await db.execute(
-                select(Secret).where(
-                    Secret.org_id == pending.org_id, Secret.provider == pending.provider
-                )
-            )).scalars().first()
+        if pending.replaces_secret_id is not None:
+            secret = (await db.execute(select(Secret).where(
+                Secret.id == pending.replaces_secret_id, Secret.org_id == pending.org_id
+            ))).scalars().first()
+            # Deleted between consent and callback: fall through and add it back rather than 500.
         if secret is None:
-            secret = Secret(org_id=pending.org_id, name=pending.name, owner=pending.owner,
+            secret = Secret(org_id=pending.org_id,
+                            name=await _free_connection_name(pending.name, pending.org_id, db),
+                            owner=pending.owner,
                             kind="oauth", value=crypto.encrypt(json.dumps(blob)))
             db.add(secret)
         else:
