@@ -41,6 +41,7 @@ def test_every_provider_is_registered():
     assert set(P.REGISTRY) == {
         "google-search-console", "google-analytics", "google-business-profile",
         "google-ads", "youtube", "linkedin", "slack", "x", "tiktok",
+        "facebook", "instagram",
     }
 
 
@@ -234,3 +235,43 @@ async def test_linkedin_does_not_get_googles_consent_params(clients: AsyncClient
         assert "w_member_social" in q["scope"][0]
     finally:
         get_settings.cache_clear()
+
+
+def test_meta_providers_share_one_app():
+    """Facebook and Instagram are one Meta app, deliberately.
+
+    App Review, business verification and Tech Provider status attach to the app, so a second
+    OAuth client isolates nothing and starts its approval from zero."""
+    assert P.FACEBOOK.client_id_setting == P.INSTAGRAM.client_id_setting == "meta_client_id"
+    assert P.FACEBOOK.client_secret_setting == P.INSTAGRAM.client_secret_setting == "meta_client_secret"
+    assert P.FACEBOOK.base_url == P.INSTAGRAM.base_url
+
+
+def test_meta_post_contains_read():
+    """satisfied_capabilities() is set containment, so a non-cumulative post would report a
+    connection that can publish but 'cannot read' — and the default capability would be wrong."""
+    for provider in (P.FACEBOOK, P.INSTAGRAM):
+        assert set(provider.scopes["read"]) < set(provider.scopes["post"]), provider.service
+        assert provider.default_capability == "post", provider.service
+
+
+def test_instagram_is_reached_through_a_page():
+    """An Instagram professional account has no listing endpoint of its own — it hangs off the
+    linked Page — so dropping pages_show_list silently empties the account picker."""
+    for cap in P.INSTAGRAM.scopes.values():
+        assert "pages_show_list" in cap
+    assert P.INSTAGRAM.discover_id_field == "instagram_business_account.id"
+
+
+def test_meta_asks_for_a_long_lived_token():
+    """Meta's code exchange yields a ~1-2h token and no refresh_token. Without the second
+    exchange every Meta connection dies the day it is made."""
+    assert P.FACEBOOK.long_lived_exchange and P.INSTAGRAM.long_lived_exchange
+    assert not P.TIKTOK.long_lived_exchange  # nothing else should have picked it up
+
+
+def test_instagram_consent_never_mentions_page_publishing():
+    """Scopes are per capability. An Instagram connect asking for pages_manage_posts would put
+    'manage your Pages' posts' on the consent screen for authority it never uses."""
+    for cap in P.INSTAGRAM.scopes.values():
+        assert "pages_manage_posts" not in cap

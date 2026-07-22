@@ -73,6 +73,13 @@ class OAuthProvider:
     # PendingOAuth so the callback and every later refresh speak the same dialect as the consent URL.
     client_id_param: str = "client_id"  # TikTok: "client_key"
     scope_separator: str = " "  # TikTok: ","
+    # Meta hands back a ~1-2 HOUR user token from the authorization-code exchange and never issues
+    # a refresh_token. Left alone, every Meta connection would be dead before the user finished
+    # reading the success page. A second call — grant_type=fb_exchange_token — swaps it for a
+    # ~60-day token, which is the longest Meta will give a user credential. That still can't be
+    # renewed unattended, so the connection surfaces through the same `needs_reconnect` path as
+    # LinkedIn's non-refreshable tokens rather than pretending it auto-heals.
+    long_lived_exchange: bool = False
 
     # Some providers need a SECOND credential alongside the user's OAuth token — Google Ads wants a
     # developer-token header from an approved MCC. We can't auto-provision a working tool from the
@@ -455,7 +462,10 @@ X = OAuthProvider(
 # "Direct Post" toggle is on. So this scope set is really a statement about the portal config, and
 # the two must be changed together — asking here for a scope the app doesn't carry fails at consent
 # with scope_not_authorized rather than at build time.
-_TIKTOK_READ = ["user.info.basic", "video.list", "user.info.stats"]
+# These four must stay in lockstep with the consent screen in the submitted demo video — TikTok
+# rejects an app whose requested scopes exceed what the video shows, and each scope is a visible
+# line on that screen. Adding one here means re-recording.
+_TIKTOK_READ = ["user.info.basic", "user.info.profile", "video.list", "user.info.stats"]
 
 TIKTOK = OAuthProvider(
     service="tiktok",
@@ -487,11 +497,86 @@ TIKTOK = OAuthProvider(
     identity_label_path="data.user.display_name",
 )
 
+# Both Meta providers speak to the same host with the same app; they differ only in which asset the
+# connection acts on (a Page vs an Instagram professional account) and therefore which scopes it
+# needs. Kept as two providers rather than one with capabilities, because a user connecting
+# Instagram must never see "manage your Facebook Pages' posts" on the consent screen.
+_META_AUTH = "https://www.facebook.com/v25.0/dialog/oauth"
+_META_TOKEN = "https://graph.facebook.com/v25.0/oauth/access_token"
+_META_BASE = "https://graph.facebook.com/v25.0"
+
+# pages_show_list is the floor for BOTH providers: it is what returns the Page list, and an
+# Instagram professional account is only reachable *through* the Page it is linked to.
+_FB_READ = ["pages_show_list", "pages_read_engagement", "read_insights"]
+
+FACEBOOK = OAuthProvider(
+    service="facebook",
+    display_name="Facebook Pages",
+    auth_uri=_META_AUTH,
+    token_uri=_META_TOKEN,
+    # read covers listing Pages, reading their content and their insights — Meta has no separate
+    # analytics-only tier worth splitting out, and a Pages connection that cannot read insights is
+    # not a useful read. post adds the one scope that actually publishes.
+    scopes={
+        "read": _FB_READ,
+        "post": [*_FB_READ, "pages_manage_posts"],
+    },
+    client_id_setting="meta_client_id",
+    client_secret_setting="meta_client_secret",
+    base_url=_META_BASE,
+    docs_url="https://developers.facebook.com/docs/pages-api",
+    auth_params={},  # Meta ignores Google's access_type/prompt; sending them just noises the URL
+    long_lived_exchange=True,
+    resource_label="Page",
+    # A user can administer several Pages, so which one this connection acts on is a real choice.
+    discover_path="/me/accounts?fields=id,name",
+    discover_key="data",
+    discover_id_field="id",
+    discover_label_field="name",
+    # /me returns the person, not the Page, and needs no extra scope — so it keeps working even for
+    # a connection whose Page was later unassigned, which is exactly when you want the probe to
+    # still distinguish "credential dead" from "asset gone".
+    probe_path="/me?fields=id,name",
+)
+
+INSTAGRAM = OAuthProvider(
+    service="instagram",
+    display_name="Instagram",
+    auth_uri=_META_AUTH,
+    token_uri=_META_TOKEN,
+    # instagram_basic alone cannot publish, and instagram_content_publish alone cannot read the
+    # account it publishes to — Meta enforces that dependency in App Review, so post is a strict
+    # superset rather than a swap.
+    scopes={
+        "read": ["instagram_basic", "instagram_manage_insights", "pages_show_list", "pages_read_engagement"],
+        "post": [
+            "instagram_basic", "instagram_manage_insights", "pages_show_list",
+            "pages_read_engagement", "instagram_content_publish",
+        ],
+    },
+    client_id_setting="meta_client_id",
+    client_secret_setting="meta_client_secret",
+    base_url=_META_BASE,
+    docs_url="https://developers.facebook.com/docs/instagram-platform/instagram-graph-api",
+    auth_params={},
+    long_lived_exchange=True,
+    resource_label="account",
+    resource_label_plural="accounts",
+    # There is no endpoint that lists Instagram accounts directly: you list Pages and read the
+    # professional account linked to each. Pages with no linked account come back with the field
+    # absent, so the dotted id path yields nothing for them and they drop out of the picker.
+    discover_path="/me/accounts?fields=instagram_business_account{id,username}",
+    discover_key="data",
+    discover_id_field="instagram_business_account.id",
+    discover_label_field="instagram_business_account.username",
+    probe_path="/me?fields=id,name",
+)
+
 REGISTRY: dict[str, OAuthProvider] = {
     p.service: p
     for p in (
         GOOGLE_SEARCH_CONSOLE, GOOGLE_ANALYTICS, GOOGLE_BUSINESS_PROFILE, GOOGLE_ADS, YOUTUBE,
-        LINKEDIN, SLACK, X, TIKTOK,
+        LINKEDIN, SLACK, X, TIKTOK, FACEBOOK, INSTAGRAM,
     )
 }
 

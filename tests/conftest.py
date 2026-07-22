@@ -26,6 +26,7 @@ for _k in (
     "LINKEDIN_CLIENT_ID", "LINKEDIN_CLIENT_SECRET",
     "X_CLIENT_ID", "X_CLIENT_SECRET", "SLACK_CLIENT_ID", "SLACK_CLIENT_SECRET",
     "TIKTOK_CLIENT_KEY", "TIKTOK_CLIENT_SECRET",
+    "META_CLIENT_ID", "META_CLIENT_SECRET",
 ):
     os.environ[f"TREG_{_k}"] = ""  # the test upstream is an in-process ASGI transport, not real DNS
 
