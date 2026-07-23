@@ -29,6 +29,11 @@ BYO = {
 def treg_google_app(monkeypatch):
     monkeypatch.setenv("TREG_GOOGLE_CLIENT_ID", "treg-google-cid")
     monkeypatch.setenv("TREG_GOOGLE_CLIENT_SECRET", "treg-google-csec")
+    # Google Ads consents through a DEDICATED client (its developer token is welded to a separate
+    # Cloud project), so it reads google_ads_client_id, NOT the shared one above. Set it here too or
+    # the Ads connect tests can't build an app — they only passed locally by leaking a real .env value.
+    monkeypatch.setenv("TREG_GOOGLE_ADS_CLIENT_ID", "treg-ads-cid")
+    monkeypatch.setenv("TREG_GOOGLE_ADS_CLIENT_SECRET", "treg-ads-csec")
     get_settings.cache_clear()
     yield
     get_settings.cache_clear()
