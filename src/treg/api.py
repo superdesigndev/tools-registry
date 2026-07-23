@@ -3486,13 +3486,17 @@ async def _autoprovision_provider_tool(
         existing.bindings = bindings
         existing.base_url = provider.base_url
         existing.host = _host_of(provider.base_url)
-        # Reconnecting is how an already-provisioned tool picks up a probe added since it was made.
+        # Reconnecting is how an already-provisioned tool picks up a probe — or examples — added
+        # to the registry since it was made.
         existing.health_check = health_check or existing.health_check
+        if provider.examples and not existing.examples:
+            existing.examples = [dict(e) for e in provider.examples]
         return
     db.add(Tool(
         org_id=secret.org_id, name=tool_name, owner=pending.owner,
         base_url=provider.base_url, host=_host_of(provider.base_url),
         bindings=bindings, health_check=health_check,
+        examples=[dict(e) for e in provider.examples],
     ))
 
 
