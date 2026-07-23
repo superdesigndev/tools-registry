@@ -33,7 +33,7 @@ import time
 import webbrowser
 from collections import deque
 from pathlib import Path
-from urllib.parse import quote
+from urllib.parse import parse_qsl, quote
 
 import httpx
 
@@ -1975,6 +1975,14 @@ def cmd_call(args, cfg) -> None:
     rest = args.target.rstrip("/")
     if args.path:
         rest += "/" + args.path.lstrip("/")
+    # httpx DROPS a URL's existing query string whenever params= is passed (even an empty list), so
+    # an inline `?a=b` written into the path/target would silently vanish — the upstream gets no
+    # query and returns default/wrong data with NO error (Meta's Graph API reads params from the
+    # query string, so `me/adaccounts?fields=…` came back with only ids). Pull any inline query out
+    # and merge it into params so inline and --query compose identically.
+    if "?" in rest:
+        rest, _, inline = rest.partition("?")
+        params = list(parse_qsl(inline, keep_blank_values=True)) + params
     with _client(cfg) as c:
         _show(c.request(args.method, f"/call/{rest}", params=params, content=content, headers=headers))
 
