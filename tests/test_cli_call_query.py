@@ -24,7 +24,8 @@ def _capture(monkeypatch):
 
         def request(self, method, url, params=None, content=None, headers=None):
             # Build the same way httpx.Client would, so the query-merge behaviour is exercised.
-            req = httpx.Request(method, httpx.URL("http://t").join(url), params=params)
+            req = httpx.Request(method, httpx.URL("http://t").join(url), params=params,
+                                content=content, headers=headers)
             seen.append(req)
             return httpx.Response(200, json={})
 
@@ -33,10 +34,10 @@ def _capture(monkeypatch):
     return seen
 
 
-def _args(target, path="", query=None):
+def _args(target, path="", query=None, upload=None, method="GET"):
     return SimpleNamespace(
-        target=target, path=path, method="GET", query=query or [],
-        data=None, file=None, content_type=None, header=[],
+        target=target, path=path, method=method, query=query or [],
+        data=None, file=None, content_type=None, header=[], upload=upload or [],
     )
 
 
@@ -57,3 +58,15 @@ def test_no_query_still_clean(monkeypatch):
     seen = _capture(monkeypatch)
     cli.cmd_call(_args("meta-ads", "act_1/campaigns"), {})
     assert not seen[0].url.params and seen[0].url.path == "/call/meta-ads/act_1/campaigns"
+
+
+def test_upload_builds_multipart_body(monkeypatch, tmp_path):
+    img = tmp_path / "ad.png"
+    img.write_bytes(b"\x89PNG\r\n\x1a\n" + b"FAKEIMAGEDATA" * 100)
+    seen = _capture(monkeypatch)
+    cli.cmd_call(_args("meta-ads", "act_1/adimages", upload=[f"filename=@{img}"], method="POST"), {})
+    req = seen[0]
+    ct = req.headers.get("content-type", "")
+    assert ct.startswith("multipart/form-data; boundary=")
+    body = req.content
+    assert b"FAKEIMAGEDATA" in body and b'name="filename"' in body and b'filename="ad.png"' in body
