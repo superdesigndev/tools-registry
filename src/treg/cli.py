@@ -1960,6 +1960,18 @@ def cmd_call(args, cfg) -> None:
         except ValueError:
             pass
     headers = {"content-type": ctype} if ctype else {}
+    # Some APIs need a caller-supplied header the binding can't know: Google Ads wants
+    # `login-customer-id` naming the manager account whenever you act on a client under an MCC,
+    # and it changes per call, so it can't live on the tool. Injected bindings still win — a
+    # --header must never be able to overwrite the credential the proxy is about to inject.
+    for kv in args.header:
+        if ":" not in kv:
+            sys.exit(f"--header expects 'Name: value', got: {kv!r}")
+        name, _, value = kv.partition(":")
+        name = name.strip()
+        if not name:
+            sys.exit(f"--header needs a name before the colon, got: {kv!r}")
+        headers[name] = value.strip()
     rest = args.target.rstrip("/")
     if args.path:
         rest += "/" + args.path.lstrip("/")
@@ -3250,6 +3262,9 @@ def build_parser() -> argparse.ArgumentParser:
     cl.add_argument("--data", help="request body (string)"); cl.add_argument("--file", help="request body from a file")
     cl.add_argument("--content-type", dest="content_type", metavar="TYPE",
                     help="Content-Type for the body (default: sniffed — a body that parses as JSON sends application/json)")
+    cl.add_argument("--header", action="append", default=[], metavar="'K: V'",
+                    help="an extra request header (repeatable), e.g. --header 'login-customer-id: 1234567890'. "
+                         "Injected credentials always win.")
     cl.set_defaults(fn=cmd_call)
 
     ca = mk(sub, "calls", "Show the audit log: who called what, when, and the result.", "treg calls --limit 20")
