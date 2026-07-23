@@ -67,6 +67,11 @@ class OAuthProvider:
     # perfectly well-scoped token.
     token_scopes_header: str = ""
     base_url: str = ""  # upstream API root, so a successful connect can auto-provision the tool
+    # Copy-paste sample calls stamped onto the provisioned tool's `examples`, surfaced by
+    # `tool ls`. The single most useful thing to carry here is the API VERSION: Google's REST APIs
+    # version the URL path (v21/...) and a wrong guess returns an HTML 404, not a hint — agents
+    # otherwise burn calls guessing. `{resource}` is a placeholder the agent substitutes.
+    examples: tuple[dict, ...] = ()
     docs_url: str = ""
     # A cheap authenticated GET on base_url that proves the credential still works, mirroring the
     # env-import catalog's `probe`. Registry tools had none, so they showed "unchecked" on the Tools
@@ -248,6 +253,16 @@ GOOGLE_SEARCH_CONSOLE = OAuthProvider(
     ),
     base_url="https://searchconsole.googleapis.com",
     docs_url="https://developers.google.com/webmaster-tools/v1/api_reference_index",
+    examples=(
+        {"method": "POST", "path": "webmasters/v3/sites/{site_url}/searchAnalytics/query",
+         "note": "Search analytics. {site_url} is sc-domain:example.com or https://example.com/. "
+                 "Body: {\"startDate\":\"2026-06-01\",\"endDate\":\"2026-06-28\","
+                 "\"dimensions\":[\"query\"]}. For a site TOTAL, omit dimensions — summing a "
+                 "dimension does NOT equal the total."},
+        {"method": "POST", "path": "v1/urlInspection/index:inspect",
+         "note": "Index status — note the v1/ prefix, not webmasters/v3/. "
+                 "Body: {\"inspectionUrl\":\"https://example.com/page\",\"siteUrl\":\"sc-domain:example.com\"}"},
+    ),
     # GSC returns {"siteEntry": [{"siteUrl": "...", "permissionLevel": "..."}]}
     resource_label="site",
     probe_path="/webmasters/v3/sites",
@@ -271,6 +286,14 @@ GOOGLE_ANALYTICS = OAuthProvider(
     ),
     base_url="https://analyticsdata.googleapis.com",
     docs_url="https://developers.google.com/analytics/devguides/reporting/data/v1",
+    examples=(
+        {"method": "POST", "path": "v1beta/properties/{property_id}:runReport",
+         "note": "Data API v1beta. Body: {\"dateRanges\":[{\"startDate\":\"28daysAgo\","
+                 "\"endDate\":\"yesterday\"}],\"dimensions\":[{\"name\":\"pagePath\"}],"
+                 "\"metrics\":[{\"name\":\"screenPageViews\"}]}. Use 'yesterday', not 'today' "
+                 "(today is a partial day). The Admin API (property listing) is a different host — "
+                 "use `treg connections resources`."},
+    ),
     # No probe_path: the Data API is POST-only (runReport), and a probe must be a cheap GET on
     # base_url. Don't "fix" this by pointing at analyticsadmin — the probe runs against the
     # provisioned tool's own host, so it would test a host the tool never calls.
@@ -317,14 +340,28 @@ GOOGLE_ADS = OAuthProvider(
     auth_uri="https://accounts.google.com/o/oauth2/v2/auth",
     token_uri="https://oauth2.googleapis.com/token",
     scopes={"manage": ["https://www.googleapis.com/auth/adwords"]},
-    client_id_setting="google_client_id",
-    client_secret_setting="google_client_secret",
+    # Ads gets its OWN OAuth client, in a DIFFERENT Cloud project from the other Google providers.
+    # A Google Ads developer token is permanently paired to the first Cloud project it calls from,
+    # and the shared Google project is already welded to a different (stale) token — so Ads must
+    # consent through a client in the same Cloud project the live developer token is paired with,
+    # or the API rejects it with DEVELOPER_TOKEN_PROHIBITED. This is the only provider that doesn't
+    # share google_client_id.
+    client_id_setting="google_ads_client_id",
+    client_secret_setting="google_ads_client_secret",
     category="Advertising",
     summary=(
         "Campaign spend, performance and keyword data across your accounts — and change campaigns when you're ready."
     ),
     base_url="https://googleads.googleapis.com",
     docs_url="https://developers.google.com/google-ads/api/docs/start",
+    examples=(
+        {"method": "POST", "path": "v21/customers/{customer_id}/googleAds:search",
+         "note": "GAQL read. API version v21 (verified 2026-07-22); a wrong version 404s as HTML. "
+                 "Body: {\"query\":\"SELECT campaign.name, metrics.cost_micros FROM campaign "
+                 "WHERE segments.date DURING LAST_30_DAYS\"}"},
+        {"method": "POST", "path": "v21/customers/{customer_id}/campaignBudgets:mutate",
+         "note": "Mutate. Add \"validateOnly\":true first to dry-run. amountMicros: $1 = 1000000."},
+    ),
     # Every Ads request carries TWO credentials: the user's OAuth bearer AND a `developer-token`
     # header from an approved manager (MCC) account, usually with `login-customer-id` as well.
     # Auto-provisioning a bearer-only tool would produce something that 401s on first use, so we

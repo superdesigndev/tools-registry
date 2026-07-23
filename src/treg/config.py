@@ -105,6 +105,13 @@ class Settings(BaseSettings):
     # and grants no access to our ad accounts. Holding it centrally is the whole point: a user
     # would otherwise wait weeks for Google to approve one of their own.
     google_ads_developer_token: str = ""
+    # Google Ads consents through a DEDICATED OAuth client in its own Cloud project — NOT the shared
+    # google_client_id. A developer token is permanently welded to the first Cloud project it calls
+    # from, and the shared project is already paired to a different token, so Ads must use a client
+    # from the project its live token is paired with. Empty = Ads shows as unconfigured (correct — it
+    # can't work without this) rather than silently reusing the wrong client.
+    google_ads_client_id: str = ""
+    google_ads_client_secret: str = ""
 
     linkedin_client_id: str = ""
     linkedin_client_secret: str = ""

@@ -3486,13 +3486,17 @@ async def _autoprovision_provider_tool(
         existing.bindings = bindings
         existing.base_url = provider.base_url
         existing.host = _host_of(provider.base_url)
-        # Reconnecting is how an already-provisioned tool picks up a probe added since it was made.
+        # Reconnecting is how an already-provisioned tool picks up a probe — or examples — added
+        # to the registry since it was made.
         existing.health_check = health_check or existing.health_check
+        if provider.examples and not existing.examples:
+            existing.examples = [dict(e) for e in provider.examples]
         return
     db.add(Tool(
         org_id=secret.org_id, name=tool_name, owner=pending.owner,
         base_url=provider.base_url, host=_host_of(provider.base_url),
         bindings=bindings, health_check=health_check,
+        examples=[dict(e) for e in provider.examples],
     ))
 
 
@@ -4373,6 +4377,22 @@ async def _resolve_call(rest: str, org_id: int, db: AsyncSession) -> tuple[Tool,
         longest = max(len(t.base_url.rstrip("/")) for t in matches)
         top = [t for t in matches if len(t.base_url.rstrip("/")) == longest]
         if len(top) > 1:
+            # A hand-registered tool for the same API (often predating the OAuth registry, and
+            # frequently holding a stale credential) collides on host with the one connect
+            # auto-provisioned. Both are real tools, so neither base_url is "longer" — but they are
+            # not equally intended: the registry-provisioned one is the live connection the user
+            # just authorised, and URL-passthrough is the AGENT-facing mode, so 409-ing here breaks
+            # exactly the callers who never typed a tool name. Prefer the provider-backed tool.
+            provider_owned = []
+            for t in top:
+                sids = {b.get("secret_id") for b in (t.bindings or []) if b.get("secret_id") is not None}
+                for sid in sids:
+                    s = await db.get(Secret, sid)
+                    if s is not None and s.org_id == org_id and s.provider:
+                        provider_owned.append(t)
+                        break
+            if len(provider_owned) == 1:
+                return provider_owned[0], norm
             raise HTTPException(status_code=409, detail=f"ambiguous: multiple tools match {host!r}")
         return top[0], norm
 
