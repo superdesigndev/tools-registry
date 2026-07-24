@@ -42,6 +42,8 @@ def test_every_provider_is_registered():
         "google-search-console", "google-analytics", "google-business-profile",
         "google-ads", "youtube", "linkedin", "slack", "x", "tiktok",
         "facebook", "instagram", "meta-ads",
+        # API-key providers (auth_kind="key")
+        "apollo", "pdl", "akta", "hunter", "tikhub", "brightdata", "semrush",
     }
 
 

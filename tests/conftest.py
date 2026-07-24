@@ -82,6 +82,20 @@ def make_upstream(hook_hits: list | None = None) -> FastAPI:
             hook_hits.append(await request.json())
         return {"ok": True}
 
+    @up.get("/units")
+    async def semrush_units():
+        # Semrush's free unit-balance check answers HTTP 200 with a PLAIN-TEXT body, not JSON — the
+        # key-connect probe must not try to JSON-parse it, or a valid key reads as "unreachable".
+        from fastapi.responses import PlainTextResponse
+        return PlainTextResponse("API units balance: 1200")
+
+    @up.get("/units-bad")
+    async def semrush_units_bad():
+        # Semrush signals a bad key with HTTP 200 and a text body like "ERROR 120 :: ...", so the
+        # probe must read the body, not the status, to reject it.
+        from fastapi.responses import PlainTextResponse
+        return PlainTextResponse("ERROR 120 :: wrong key")
+
     @up.api_route("/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
     async def echo(request: Request) -> dict:
         body = (await request.body()).decode()

@@ -1,0 +1,5 @@
+<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="hunter">
+  <!-- Placeholder lettermark. Replace with the official hunter brand SVG. -->
+  <rect width="24" height="24" rx="5" fill="#FF5100"/>
+  <text x="12" y="12" fill="#fff" font-family="ui-sans-serif,system-ui,Arial,sans-serif" font-size="13" font-weight="700" text-anchor="middle" dominant-baseline="central">H</text>
+</svg>

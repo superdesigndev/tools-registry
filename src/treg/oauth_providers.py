@@ -58,6 +58,11 @@ class OAuthProvider:
     token_placeholder: str = ""  # "xoxb-…"
     token_header: str = "Authorization"
     token_format: str = "Bearer {secret}"
+    # Where the pasted credential rides. "header" (default) injects it as token_header; "query"
+    # injects it as the token_param query parameter — Semrush authenticates the classic API with
+    # `?key=…`, not a header. Drives both the connect-time probe and the provisioned tool's binding.
+    token_location: str = "header"  # "header" | "query"
+    token_param: str = ""  # query-param name when token_location == "query" (Semrush: "key")
     setup_url: str = ""  # one-click app creation, pre-filled where the platform supports it
     setup_action_label: str = ""
     setup_steps: tuple[str, ...] = ()
@@ -78,6 +83,11 @@ class OAuthProvider:
     # page forever — health could never say more than "nothing has called this yet". It must live on
     # base_url, NOT discover_base_url: the probe runs against the provisioned tool's own host.
     probe_path: str = ""
+    # An ABSOLUTE URL to verify a pasted key against, used only at connect time when the cheapest
+    # key-check lives on a DIFFERENT host than base_url — Semrush's free unit-balance endpoint is on
+    # www.semrush.com, not the api.semrush.com data host. When empty the connect probe is
+    # base_url + probe_path. This does not become the tool's ongoing health probe (that is probe_path).
+    probe_url: str = ""
 
     # Per-provider auth quirks. Defaults match Google, which is the common case.
     auth_params: dict[str, str] | None = None  # extra ?query on the consent URL
@@ -163,6 +173,15 @@ class OAuthProvider:
     @property
     def is_token_kind(self) -> bool:
         return self.auth_kind == "token"
+
+    @property
+    def uses_pasted_secret(self) -> bool:
+        """A provider the user connects by PASTING a credential — a bring-your-own bot token
+        (Slack, `auth_kind="token"`) or a plain API key (`auth_kind="key"`). Both share one connect
+        path: verify the credential against a probe, store it as an env secret, auto-provision the
+        tool. They differ only in the marketplace copy and, for a key, the header/query it rides in.
+        `is_token_kind` stays narrower — it gates the Slack-only bot-setup wording."""
+        return self.auth_kind in ("token", "key")
 
     @property
     def has_identity(self) -> bool:
@@ -697,11 +716,205 @@ META_ADS = OAuthProvider(
     probe_path="/me?fields=id,name",
 )
 
+# ---- API-key providers (auth_kind="key") ------------------------------------------------------
+# The user pastes an API key instead of consenting through an OAuth app treg owns. Same connect
+# mechanic as Slack's bot token — verify against a probe, store as an env secret, auto-provision the
+# tool — differing only in the header (or query param) the key rides in and the "where do I get a
+# key" copy. A key provider needs nothing from treg, so it is always offerable (is_configured=True).
+# No `scopes`: there is no consent screen to size, so the marketplace card leans on `summary`.
+
+APOLLO = OAuthProvider(
+    service="apollo",
+    display_name="Apollo.io",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your Apollo API key",
+    token_header="X-Api-Key",
+    token_format="{secret}",  # raw key, no Bearer prefix
+    setup_url="https://developers.apollo.io/keys",
+    setup_action_label="Get your Apollo API key",
+    setup_steps=(
+        "Sign in to Apollo and open Settings → Integrations → API.",
+        "Create an API key (a master key reaches every endpoint) and copy it.",
+    ),
+    setup_note="Enrichment calls spend Apollo credits; the health check does not.",
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Enrichment",
+    summary="Enrich people and companies and search Apollo's 200M+ B2B contact database.",
+    base_url="https://api.apollo.io/api/v1",
+    docs_url="https://docs.apollo.io/reference/authentication",
+    # Free auth check. Apollo documents the health probe at the legacy /v1/auth/health (no /api);
+    # /api/v1/auth/health has historically resolved too. Confirm against a real key and adjust if it 404s.
+    probe_path="/auth/health",
+)
+
+PDL = OAuthProvider(
+    service="pdl",
+    display_name="People Data Labs",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your People Data Labs API key",
+    token_header="X-Api-Key",
+    token_format="{secret}",
+    setup_url="https://dashboard.peopledatalabs.com/main/api-keys",
+    setup_action_label="Get your People Data Labs API key",
+    setup_steps=(
+        "Sign in to the People Data Labs dashboard and open API Keys.",
+        "Copy your API key.",
+    ),
+    setup_note="Enrichment and search spend credits; the autocomplete health check is free.",
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Enrichment",
+    summary="Enrich a person or company, or search PDL's people and company datasets.",
+    base_url="https://api.peopledatalabs.com/v5",
+    docs_url="https://docs.peopledatalabs.com/docs/authentication",
+    probe_path="/autocomplete?field=title&text=data",  # Autocomplete API is free (no credits)
+)
+
+AKTA = OAuthProvider(
+    service="akta",
+    display_name="Akta by Wokelo",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your Akta API key",
+    token_header="x-api-key",
+    token_format="{secret}",
+    setup_url="https://akta.pro",
+    setup_action_label="Get your Akta API key",
+    setup_steps=(
+        "Request an API key for your Akta account (support@akta.pro).",
+        "Paste it here.",
+    ),
+    setup_note="Company enrichment spends credits; company search is free.",
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Enrichment",
+    summary="Company intelligence — enrichment, industry resolution, reviews and news monitoring.",
+    # base_url is api.akta.pro/api and every path carries its OWN /v1 prefix, so the effective path is
+    # /api/v1/…. Setting base_url to /api/v1 would double the version to /api/v1/v1.
+    base_url="https://api.akta.pro/api",
+    docs_url="https://docs.akta.pro",
+    probe_path="/v1/company/search?query=canva.com",  # documented free endpoint
+)
+
+HUNTER = OAuthProvider(
+    service="hunter",
+    display_name="Hunter",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your Hunter API key",
+    # Hunter accepts the key as ?api_key=…, an X-API-KEY header, or a Bearer header. Use the header
+    # so the key never lands in a URL (the proxy records request paths; a query key could leak there).
+    token_header="X-API-KEY",
+    token_format="{secret}",
+    setup_url="https://hunter.io/api-keys",
+    setup_action_label="Get your Hunter API key",
+    setup_steps=(
+        "Sign in to Hunter and open API → API Keys.",
+        "Copy your API key.",
+    ),
+    setup_note="Searches and verifications spend credits; the account check is free.",
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Enrichment",
+    summary="Find and verify professional email addresses, and enrich people and companies.",
+    base_url="https://api.hunter.io/v2",
+    docs_url="https://hunter.io/api-documentation/v2",
+    probe_path="/account",  # free — consumes no search/verification/enrichment credits
+)
+
+TIKHUB = OAuthProvider(
+    service="tikhub",
+    display_name="TikHub",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your TikHub API key",
+    # token_header / token_format default to Authorization: Bearer {secret}
+    setup_url="https://tikhub.io/users/api_keys",
+    setup_action_label="Get your TikHub API key",
+    setup_steps=(
+        "Sign in to TikHub and open the API Keys page.",
+        "Create a key and copy it.",
+    ),
+    setup_note="Data calls are billed per successful request; the account check is not.",
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Social media",
+    summary="Read TikTok, Instagram, YouTube, X and more social platforms through one unified API.",
+    base_url="https://api.tikhub.io",
+    docs_url="https://docs.tikhub.io/",
+    probe_path="/api/v1/tikhub/user/get_user_info",  # account info — the natural key check
+)
+
+BRIGHTDATA = OAuthProvider(
+    service="brightdata",
+    display_name="Bright Data",
+    auth_kind="key",
+    token_label="API token",
+    token_placeholder="your Bright Data API token",
+    # Authorization: Bearer {secret} (defaults)
+    setup_url="https://brightdata.com/cp/setting/users",
+    setup_action_label="Get your Bright Data API token",
+    setup_steps=(
+        "Sign in to Bright Data and open Account settings → API tokens.",
+        "Create a token and copy it.",
+    ),
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Social media",
+    summary="Scrape social platforms and the web through Bright Data's Web Scraper API.",
+    # Several product APIs share one host and one Bearer scheme; the social entry is pinned to the
+    # Web Scraper API (/datasets/v3/…).
+    base_url="https://api.brightdata.com",
+    docs_url="https://docs.brightdata.com/api-reference/authentication",
+    # Lightweight dataset listing — inferred (medium confidence). Verify with a real token; adjust if it 404s.
+    probe_path="/datasets/v3/datasets",
+)
+
+SEMRUSH = OAuthProvider(
+    service="semrush",
+    display_name="Semrush",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your Semrush API key",
+    token_location="query",  # Semrush authenticates the classic API with ?key=…, not a header
+    token_param="key",
+    token_format="{secret}",
+    setup_url="https://www.semrush.com/accounts/subscription-info/api-units/",
+    setup_action_label="Get your Semrush API key",
+    setup_steps=(
+        "Sign in to Semrush and open Subscription info → API units.",
+        "Copy your API key.",
+    ),
+    setup_note="Reports spend API units; the key check reads your unit balance for free.",
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="SEO",
+    summary="Domain, keyword and backlink analytics across Semrush's SEO database.",
+    base_url="https://api.semrush.com/",
+    docs_url="https://developer.semrush.com/api/v3/analytics/basic-docs/",
+    # The free unit-balance check lives on a DIFFERENT host than the data API, so verify against it
+    # directly. No probe_path: the classic API is CSV-only with no free GET on api.semrush.com, so the
+    # provisioned tool carries no ongoing health probe (one would spend API units on every run).
+    probe_url="https://www.semrush.com/users/countapiunits.html",
+)
+
 REGISTRY: dict[str, OAuthProvider] = {
     p.service: p
     for p in (
         GOOGLE_SEARCH_CONSOLE, GOOGLE_ANALYTICS, GOOGLE_BUSINESS_PROFILE, GOOGLE_ADS, YOUTUBE,
         LINKEDIN, SLACK, X, TIKTOK, FACEBOOK, INSTAGRAM, META_ADS,
+        # API-key providers
+        APOLLO, PDL, AKTA, HUNTER, TIKHUB, BRIGHTDATA, SEMRUSH,
     )
 }
 
@@ -709,7 +922,7 @@ DEFAULT_CAPABILITY = "read"
 
 # Shelf order in the marketplace. Anything carrying a category not named here sorts last, so a
 # provider added without one is visible rather than lost between the shelves.
-CATEGORY_ORDER = ("SEO", "Advertising", "Social media", "Community", "Other")
+CATEGORY_ORDER = ("SEO", "Advertising", "Social media", "Enrichment", "Community", "Other")
 
 
 def get(service: str) -> OAuthProvider | None:
@@ -732,9 +945,9 @@ def credentials(provider: OAuthProvider) -> tuple[str, str]:
 
 
 def is_configured(provider: OAuthProvider) -> bool:
-    """Whether THIS deployment can offer the provider. A token provider needs nothing from us —
-    the user brings their own — so it is always offerable."""
-    if provider.is_token_kind:
+    """Whether THIS deployment can offer the provider. A pasted-secret provider (bot token or API
+    key) needs nothing from us — the user brings their own — so it is always offerable."""
+    if provider.uses_pasted_secret:
         return True
     try:
         credentials(provider)

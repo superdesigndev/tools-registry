@@ -3456,13 +3456,20 @@ async def _autoprovision_provider_tool(
             select(Tool).where(Tool.org_id == secret.org_id, Tool.name == tool_name)
         )
     ).scalars().first()
-    # A token provider's secret is a plain string, not an oauth blob — injecting it with
-    # secret_field="access_token" would try to read a JSON field that isn't there.
-    if provider.is_token_kind:
-        bindings = [{
-            "secret_id": secret.id, "injector": "env", "location": "header",
-            "name": provider.token_header, "format": provider.token_format,
-        }]
+    # A pasted-secret provider's value is a plain string, not an oauth blob — injecting it with
+    # secret_field="access_token" would try to read a JSON field that isn't there. A key may ride in
+    # a header (default) or a query param (Semrush's ?key=…).
+    if provider.uses_pasted_secret:
+        if provider.token_location == "query":
+            bindings = [{
+                "secret_id": secret.id, "injector": "env", "location": "query",
+                "name": provider.token_param, "format": provider.token_format,
+            }]
+        else:
+            bindings = [{
+                "secret_id": secret.id, "injector": "env", "location": "header",
+                "name": provider.token_header, "format": provider.token_format,
+            }]
     else:
         bindings = [{
             "secret_id": secret.id, "injector": "oauth", "location": "header",
@@ -3797,9 +3804,11 @@ async def connection_resources(
             detail=f"{secret.provider or 'this provider'} has nothing to choose between — it acts on your whole account",
         )
     await oauth.ensure_fresh(secret, db, request.app.state.http)  # no-op for a non-oauth secret
-    # A bring-your-own-token secret is a PLAIN STRING, not an oauth blob — json.loads on it throws.
+    # A pasted-secret (bot token / API key) secret is a PLAIN STRING, not an oauth blob — json.loads
+    # on it throws. (Only header-auth pasted providers reach here; a query-key provider like Semrush
+    # has nothing to discover, so supports_discovery is False and this endpoint 422s earlier.)
     raw = crypto.decrypt(secret.value)
-    if provider.is_token_kind:
+    if provider.uses_pasted_secret:
         disc_headers = {provider.token_header: provider.token_format.format(secret=raw)}
     else:
         blob = json.loads(raw)
@@ -3899,31 +3908,50 @@ async def connect_with_token(
     body: TokenConnectIn, request: Request,
     caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
 ) -> dict:
-    """Connect a provider where the user brings their own bot token (Slack).
+    """Connect a provider the user brings a pasted credential for — a bot token (Slack) or an API
+    key (Apollo, TikHub, Semrush, …).
 
-    The token is VERIFIED against the provider's probe before anything is stored. Saving an
+    The credential is VERIFIED against the provider's probe before anything is stored. Saving an
     unverified credential just moves the failure to the first real call, by which point the user
-    has left the setup screen and has no idea which of the three steps they got wrong."""
+    has left the setup screen and has no idea which of the steps they got wrong."""
     _require_can_register(caller)
     provider = oauth_providers.get(body.provider)
-    if provider is None or not provider.is_token_kind:
+    if provider is None or not provider.uses_pasted_secret:
         raise HTTPException(status_code=422, detail="this provider is connected by consent, not a token")
     token = body.token.strip()
     if not token:
         raise HTTPException(status_code=422, detail=f"{provider.token_label or 'Token'} is required")
 
-    headers = {provider.token_header: provider.token_format.format(secret=token)}
+    # The credential rides in a header (default) or a query param (Semrush: ?key=…). The cheapest
+    # check may also live on a different host than base_url, so honor an absolute probe_url override.
+    rendered = provider.token_format.format(secret=token)
+    if provider.token_location == "query":
+        headers, params = {}, {provider.token_param: rendered}
+    else:
+        headers, params = {provider.token_header: rendered}, {}
+    probe_url = provider.probe_url or f"{provider.base_url.rstrip('/')}{provider.probe_path}"
     try:
-        resp = await request.app.state.http.get(
-            f"{provider.base_url.rstrip('/')}{provider.probe_path}", headers=headers
-        )
-        payload = resp.json() if resp.status_code < 500 else {}
+        resp = await request.app.state.http.get(probe_url, headers=headers, params=params)
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=502, detail=f"could not reach {provider.display_name}: {exc}") from None
-    # Slack answers 200 with {"ok": false, "error": "invalid_auth"} — an HTTP status alone would
-    # happily accept a dead token.
-    if resp.status_code >= 400 or payload.get("ok") is False:
-        why = payload.get("error") or f"HTTP {resp.status_code}"
+    # Only parse JSON when the response actually is JSON — a key check may answer in CSV/text
+    # (Semrush's balance endpoint), where resp.json() would throw and mask a valid key as unreachable.
+    ctype = resp.headers.get("content-type", "")
+    payload: dict = {}
+    if resp.status_code < 500 and ctype.startswith("application/json"):
+        try:
+            payload = resp.json()
+        except Exception:  # noqa: BLE001
+            payload = {}
+    # Slack answers 200 with {"ok": false, "error": "invalid_auth"}, and Semrush answers 200 with a
+    # text body like "ERROR 120 :: ..." — an HTTP status alone would happily accept a dead key.
+    text_error = (
+        resp.status_code < 400
+        and not ctype.startswith("application/json")
+        and resp.text.lstrip().upper().startswith("ERROR")
+    )
+    if resp.status_code >= 400 or payload.get("ok") is False or text_error:
+        why = payload.get("error") or (resp.text.strip()[:80] if text_error else f"HTTP {resp.status_code}")
         raise HTTPException(status_code=422, detail=f"{provider.display_name} rejected that token ({why})")
 
     secret = (await db.execute(
