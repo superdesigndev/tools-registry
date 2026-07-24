@@ -1,6 +1,6 @@
 [project]
 name = "tools-registry"
-version = "0.4.0"
+version = "0.5.0"
 description = "A remote registry that turns team skills into shareable, callable tools via a credential-injecting proxy."
 readme = "README.md"
 license = { file = "LICENSE" }
