@@ -33,7 +33,7 @@ import time
 import webbrowser
 from collections import deque
 from pathlib import Path
-from urllib.parse import quote
+from urllib.parse import parse_qsl, quote
 
 import httpx
 
@@ -1949,10 +1949,36 @@ def cmd_call(args, cfg) -> None:
     # A LIST of pairs (not a dict) so repeated --query keys (?tag=a&tag=b) survive to the upstream —
     # httpx serializes a list of tuples preserving duplicates; a dict would drop all but the last.
     params = [tuple(kv.split("=", 1)) for kv in args.query]
+    # --upload builds a multipart/form-data body. Meta (adimages/advideos), S3, and most upload APIs
+    # require multipart with a real file PART — `--file` sends a single raw body, which they reject,
+    # and cramming a file into a base64 query param dies on argv/URL length for any real asset. httpx
+    # sets the multipart content-type + boundary; the proxy streams the body raw and injects
+    # credentials into headers, so the part travels through untouched.
+    upload_files: list[tuple[str, tuple]] = []
+    for kv in args.upload:
+        if "=" not in kv:
+            sys.exit(f"--upload expects NAME=@/path (or NAME=value), got: {kv!r}")
+        name, _, val = kv.partition("=")
+        if val.startswith("@"):
+            p = Path(val[1:]).expanduser()
+            if not p.is_file():
+                sys.exit(f"--upload file not found: {p}")
+            upload_files.append((name, (p.name, p.read_bytes())))
+        else:
+            upload_files.append((name, (None, val.encode())))  # a plain (non-file) form field
     content = Path(args.file).read_bytes() if args.file else (args.data.encode() if args.data else None)
-    # Content-Type: explicit flag wins; otherwise sniff JSON so `--data '{...}'` / `--file doc.json`
-    # reach upstreams that require `application/json` (e.g. npm publish) without extra flags.
-    ctype = args.content_type
+    upload_ctype = None
+    if upload_files:
+        # Encode the multipart body EAGERLY (not httpx's streaming files=): _RegistryClient's
+        # WAF-retry reads request.content, which a streaming request can't provide (RequestNotRead).
+        # A materialised body is a normal read request and carries the boundary in its content-type.
+        _enc = httpx.Request("POST", "http://local/", files=upload_files)
+        _enc.read()
+        content = _enc.content
+        upload_ctype = _enc.headers["content-type"]  # multipart/form-data; boundary=…
+    # Content-Type: --upload's multipart type wins; else explicit flag; else sniff JSON so
+    # `--data '{...}'` / `--file doc.json` reach upstreams that require `application/json`.
+    ctype = upload_ctype or args.content_type
     if ctype is None and content:
         try:
             json.loads(content)
@@ -1975,6 +2001,14 @@ def cmd_call(args, cfg) -> None:
     rest = args.target.rstrip("/")
     if args.path:
         rest += "/" + args.path.lstrip("/")
+    # httpx DROPS a URL's existing query string whenever params= is passed (even an empty list), so
+    # an inline `?a=b` written into the path/target would silently vanish — the upstream gets no
+    # query and returns default/wrong data with NO error (Meta's Graph API reads params from the
+    # query string, so `me/adaccounts?fields=…` came back with only ids). Pull any inline query out
+    # and merge it into params so inline and --query compose identically.
+    if "?" in rest:
+        rest, _, inline = rest.partition("?")
+        params = list(parse_qsl(inline, keep_blank_values=True)) + params
     with _client(cfg) as c:
         _show(c.request(args.method, f"/call/{rest}", params=params, content=content, headers=headers))
 
@@ -3265,6 +3299,10 @@ def build_parser() -> argparse.ArgumentParser:
     cl.add_argument("--header", action="append", default=[], metavar="'K: V'",
                     help="an extra request header (repeatable), e.g. --header 'login-customer-id: 1234567890'. "
                          "Injected credentials always win.")
+    cl.add_argument("--upload", action="append", default=[], metavar="NAME=@FILE",
+                    help="a multipart/form-data part (repeatable): NAME=@/path/to/file for a file, or "
+                         "NAME=value for a plain field. Use for real file uploads (e.g. Meta adimages) — "
+                         "--file sends a single raw body that most upload APIs reject.")
     cl.set_defaults(fn=cmd_call)
 
     ca = mk(sub, "calls", "Show the audit log: who called what, when, and the result.", "treg calls --limit 20")
