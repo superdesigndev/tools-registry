@@ -303,9 +303,12 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   connection can act on (GSC sites, GA properties, Ads accounts), enriching id-only rows with the
   upstream's human name concurrently (`_enrich_resource_labels`) and recording the successful upstream
   call as proof of health; `set_connection_resource` (`POST …/resource`) pins the chosen `resource_ref`
-  + `resource_name`. `connect_with_token` (`POST /connections/token`) connects a bring-your-own-bot-token
-  provider (Slack), **verifying the token against the provider's probe before storing** and then
-  auto-provisioning its tool. `set_extra_credential` (`POST /connections/{id}/extra-credential`) stores
+  + `resource_name`. `connect_with_token` (`POST /connections/token`) connects any **pasted-secret**
+  provider — a bring-your-own bot token (Slack) or an **API key** (Apollo, Hunter, TikHub, Semrush, …) —
+  **verifying the credential against the provider's probe before storing** (a header- OR query-param probe,
+  an off-host `probe_url`, tolerating a CSV/text body or a 200-with-false-`token_verify_field` reply), then
+  auto-provisioning its tool with a header or query binding. See
+  [auth-secrets](../architecture/auth-secrets.md). `set_extra_credential` (`POST /connections/{id}/extra-credential`) stores
   the second credential a provider needs when treg does NOT hold it centrally (rare) and finishes the
   tool with BOTH bindings. `revoke_connection` (`DELETE /connections/{id}`) deletes the credential and
   cleans up: it removes the tool treg auto-provisioned for the provider and drops the dead binding from
