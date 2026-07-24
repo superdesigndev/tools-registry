@@ -96,6 +96,13 @@ def make_upstream(hook_hits: list | None = None) -> FastAPI:
         from fastapi.responses import PlainTextResponse
         return PlainTextResponse("ERROR 120 :: wrong key")
 
+    @up.get("/verify-field")
+    async def verify_field(request: Request):
+        # Emulates Apollo: HTTP 200 even for a BAD key, validity signalled only by a body field
+        # (is_logged_in). A key containing "good" is valid. The probe must read the field, not status.
+        ok = "good" in request.headers.get("x-api-key", "")
+        return {"healthy": True, "is_logged_in": ok}
+
     @up.api_route("/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
     async def echo(request: Request) -> dict:
         body = (await request.body()).decode()

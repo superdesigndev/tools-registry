@@ -40,8 +40,10 @@ def test_key_providers_appear_in_the_marketplace_listing():
 async def test_key_connect_provisions_a_header_binding(clients: AsyncClient, monkeypatch):
     """A header key (Apollo's X-Api-Key) is a plain string injected as an env header — never an
     oauth blob with an access_token field that isn't there."""
+    # token_verify_field cleared: the generic echo stub doesn't model Apollo's is_logged_in body;
+    # this test is about the binding shape, not Apollo's body check (covered separately below).
     monkeypatch.setitem(P.REGISTRY, "apollo", dataclasses.replace(
-        P.REGISTRY["apollo"], base_url="http://upstream", probe_path="/whoami"))
+        P.REGISTRY["apollo"], base_url="http://upstream", probe_path="/whoami", token_verify_field=""))
     r = await clients.post("/connections/token", json={"provider": "apollo", "token": "sk-apollo"})
     assert r.status_code == 200, r.text
     assert r.json()["health"] == "ok", "a verified key is known-good, not 'unknown'"
@@ -76,6 +78,22 @@ async def test_a_plain_text_error_body_is_rejected(clients: AsyncClient, monkeyp
     assert r.status_code == 422, r.text
     assert "ERROR" in r.text
     assert not [c for c in (await clients.get("/connections")).json() if c["provider"] == "semrush"]
+
+
+async def test_a_200_with_a_false_verify_field_is_rejected(clients: AsyncClient, monkeypatch):
+    """Apollo answers HTTP 200 even for a bad key and signals validity in is_logged_in. token_verify_field
+    makes us read that field: a false one is rejected, a true one connects. Verified live against Apollo."""
+    apollo = dataclasses.replace(
+        P.REGISTRY["apollo"], base_url="http://upstream", probe_path="/verify-field",
+        token_verify_field="is_logged_in")
+    monkeypatch.setitem(P.REGISTRY, "apollo", apollo)
+
+    bad = await clients.post("/connections/token", json={"provider": "apollo", "token": "sk-bad"})
+    assert bad.status_code == 422 and "is_logged_in" in bad.text
+    assert not [c for c in (await clients.get("/connections")).json() if c["provider"] == "apollo"]
+
+    ok = await clients.post("/connections/token", json={"provider": "apollo", "token": "sk-good"})
+    assert ok.status_code == 200, ok.text
 
 
 async def test_probe_url_overrides_base_url_for_verification(clients: AsyncClient, monkeypatch):

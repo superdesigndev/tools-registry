@@ -88,6 +88,10 @@ class OAuthProvider:
     # www.semrush.com, not the api.semrush.com data host. When empty the connect probe is
     # base_url + probe_path. This does not become the tool's ongoing health probe (that is probe_path).
     probe_url: str = ""
+    # A JSON field in the probe response that must be TRUTHY for the key to be valid — for providers
+    # that answer HTTP 200 even on a BAD key and signal validity only in the body (Slack: "ok";
+    # Apollo: "is_logged_in"). Empty means trust the HTTP status (most providers 401/400 a bad key).
+    token_verify_field: str = ""
 
     # Per-provider auth quirks. Defaults match Google, which is the common case.
     auth_params: dict[str, str] | None = None  # extra ?query on the consent URL
@@ -503,6 +507,7 @@ SLACK = OAuthProvider(
     ),
     setup_note="Public channels work immediately. For a private channel, /invite the bot first.",
     token_scopes_header="x-oauth-scopes",
+    token_verify_field="ok",  # Slack answers 200 with {"ok": false} for a dead token
     auth_uri="", token_uri="",
     scopes={},  # scopes live in the manifest above; there is no consent screen to size
     client_id_setting="", client_secret_setting="",
@@ -745,9 +750,10 @@ APOLLO = OAuthProvider(
     summary="Enrich people and companies and search Apollo's 200M+ B2B contact database.",
     base_url="https://api.apollo.io/api/v1",
     docs_url="https://docs.apollo.io/reference/authentication",
-    # Free auth check. Apollo documents the health probe at the legacy /v1/auth/health (no /api);
-    # /api/v1/auth/health has historically resolved too. Confirm against a real key and adjust if it 404s.
+    # Free auth check. It answers HTTP 200 even for a BAD key ({"healthy":true,"is_logged_in":false});
+    # validity is the is_logged_in field, so the probe must read it, not the status (verified live).
     probe_path="/auth/health",
+    token_verify_field="is_logged_in",
 )
 
 PDL = OAuthProvider(
@@ -799,7 +805,10 @@ AKTA = OAuthProvider(
     # /api/v1/…. Setting base_url to /api/v1 would double the version to /api/v1/v1.
     base_url="https://api.akta.pro/api",
     docs_url="https://docs.akta.pro",
-    probe_path="/v1/company/search?query=canva.com",  # documented free endpoint
+    # Trailing slash matters: /company/search (no slash) 307-redirects to /company/search/, and we
+    # don't follow redirects with the key attached. Hitting the slashed path directly returns a clean
+    # 401 {"detail":"Invalid API key"} for a bad key (verified live).
+    probe_path="/v1/company/search/?query=canva.com",
 )
 
 HUNTER = OAuthProvider(

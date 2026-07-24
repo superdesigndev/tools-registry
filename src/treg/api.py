@@ -3943,15 +3943,21 @@ async def connect_with_token(
             payload = resp.json()
         except Exception:  # noqa: BLE001
             payload = {}
-    # Slack answers 200 with {"ok": false, "error": "invalid_auth"}, and Semrush answers 200 with a
-    # text body like "ERROR 120 :: ..." — an HTTP status alone would happily accept a dead key.
+    # Some providers answer HTTP 200 even for a BAD key and signal validity only in the body: a JSON
+    # field (Slack: "ok"; Apollo: "is_logged_in") or an "ERROR ..." text line (Semrush). An HTTP
+    # status alone would happily accept a dead key, so check all three signals.
+    field_bad = bool(provider.token_verify_field) and not payload.get(provider.token_verify_field)
     text_error = (
         resp.status_code < 400
         and not ctype.startswith("application/json")
         and resp.text.lstrip().upper().startswith("ERROR")
     )
-    if resp.status_code >= 400 or payload.get("ok") is False or text_error:
-        why = payload.get("error") or (resp.text.strip()[:80] if text_error else f"HTTP {resp.status_code}")
+    if resp.status_code >= 400 or field_bad or text_error:
+        why = (
+            payload.get("error")
+            or (f"{provider.token_verify_field}=false" if field_bad else None)
+            or (resp.text.strip()[:80] if text_error else f"HTTP {resp.status_code}")
+        )
         raise HTTPException(status_code=422, detail=f"{provider.display_name} rejected that token ({why})")
 
     secret = (await db.execute(
