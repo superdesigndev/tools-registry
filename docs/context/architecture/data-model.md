@@ -19,7 +19,9 @@ SQLModel tables in `src/treg/models.py`. Kept minimal on purpose. Org multi-tena
 
 - **`Org`** — the tenant that owns resources: `id, name, slug` (unique), `suspended` (admin lock),
   `demo` (a sandbox team seeded by [onboarding](../interface/onboarding.md) — labeled + removable),
-  `created_at`.
+  `public_demo` (a team whose member token is PUBLISHED, e.g. on the landing page — non-admin members
+  are locked to `/call` + reads and may never act as a user; gated in `api.require_member` /
+  `require_identity`), `created_at`.
 - **`User`** — a **global identity** only: `email` (unique), `is_superadmin` + `suspended` (platform
   flags, see [super-admin](super-admin.md)), `token_version` (bump to revoke every session cookie +
   identity token this user holds — the signed token carries the `tv` it was minted at; see `sess.make`
@@ -40,7 +42,14 @@ SQLModel tables in `src/treg/models.py`. Kept minimal on purpose. Org multi-tena
   (`env` | `secret_file` | `oauth` | `cli_auth` | `param`), `value` (**Fernet-encrypted at rest**, never
   returned), `bundle_id` (FK), and health fields `health_status` (`unknown`|`ok`|`invalid`) /
   `health_detail` / `health_checked_at`. `param` is a non-secret value (project/org id) injected like a
-  secret but never health-checked.
+  secret but never health-checked. **Connection metadata** (set for registry-minted OAuth connects — see
+  the OAuth marketplace / `oauth_providers.py`; empty for uploaded or bring-your-own-app credentials):
+  `provider` (**indexed** — which curated registry provider minted it), `granted_scopes` (space-joined,
+  what the user ACTUALLY consented to), `resource_ref` + `resource_name` (the chosen site/property/account
+  this connection acts on, plus its human label since upstream ids are opaque). **Expiry is a separate
+  axis from `health_status`** — `health` says "does it work", expiry says "how long will it keep working"
+  (a non-refreshable token stays healthy right up until it silently dies): `expires_at`, `last_refresh_at`,
+  `last_error`.
 - **`Tool`** — a callable capability: `org_id` (FK, idx), `name` (**unique per `(org_id, name)`**),
   `owner`, `base_url`, `host` (netloc of base_url, **indexed** for URL-passthrough resolution),
   `bindings` (a **JSON list** — see below), `health_check` (optional JSON), `examples` (optional JSON
@@ -56,7 +65,15 @@ SQLModel tables in `src/treg/models.py`. Kept minimal on purpose. Org multi-tena
 
 - **`PendingOAuth`** — an in-flight connect flow: `org_id` (FK), `state` (unique, the CSRF/lookup key),
   `client_id`, `client_secret` (encrypted), `auth_uri`, `token_uri`, `scopes`, `redirect_uri`, `status`
-  (`pending`|`done`|`error`), `secret_id` (the secret created on success), `detail`.
+  (`pending`|`done`|`error`), `secret_id` (the secret created on success), `detail`. **Marketplace/quirk
+  fields**, all defaulted, carried through the redirect so the callback exchanges the code exactly the way
+  the consent URL was built: `provider` (which curated registry provider this connect is for — `""` for a
+  bring-your-own-app connect), `code_verifier` (PKCE; `""` = unused), `auth_params` (JSON of extra
+  consent-URL query params), `token_endpoint_auth_method` (`client_secret_post` default),
+  `client_id_param` + `scope_separator` (TikTok spells the client id `client_key` and comma-joins scopes),
+  `long_lived_exchange` (Meta only — swap the short-lived token for a ~60-day one before storing), and
+  `replaces_secret_id` (which existing connection this consent REPLACES — null = add a new one, so the
+  callback no longer has to blanket-replace by provider).
 - **`CallRecord`** — the proxied-call audit row: `org_id`, `user_email`, `tool_name`, `method`, `path`,
   `status_code`, `kind` (**`call`** = proxy `/call`, **`local_run`** = `/tools/{name}/grant`), `created_at`.
 - **`RunRecord`** — the **server-side run** audit row (a `treg run --server` CLI execution — the "kind"
@@ -85,8 +102,13 @@ The API builds a single-binding tool from flat fields via `_flat_binding()`; inj
 One async SQLAlchemy engine (`_engine`) + a public `session_maker` (the audit writer opens its own
 session here). `init_db()` creates tables **and runs the guarded orgs migration** (`_migrate_to_orgs` —
 see [multi-tenancy](multi-tenancy.md)); that migration also does the small additive `ADD COLUMN` steps for
-columns added after a table shipped (e.g. `tool.examples`, and `tool.cli` for local runs — guarded by a
-column-existence check, so it is idempotent on both SQLite and Postgres). `reset_db()` is test-only (drop +
+columns added after a table shipped (e.g. `tool.examples`, `tool.cli` for local runs, `org.public_demo`
+(A15), the seven `secret` connection-metadata columns (A16), and the eight `pendingoauth` marketplace/quirk
+columns (A17–A20) — guarded by a column-existence check, so it is idempotent on both SQLite and Postgres).
+**Postgres BOOLEAN default fix:** boolean columns added here use `DEFAULT false`, never `DEFAULT 0` —
+Postgres rejects an integer default on a `BOOLEAN` column (SQLite accepts both, so the test suite alone
+cannot catch it), which is why `pendingoauth.long_lived_exchange` is spelled `BOOLEAN NOT NULL DEFAULT
+false`. `reset_db()` is test-only (drop +
 recreate); `get_session()` is the FastAPI dependency. SQLite locally (`aiosqlite`), Postgres on Render, same code. **Timestamps are
 naive UTC:** `_now()` (the `created_at` default) drops tzinfo because the columns are `TIMESTAMP WITHOUT
 TIME ZONE` and asyncpg rejects tz-aware values on Postgres; the app compares naive UTC throughout

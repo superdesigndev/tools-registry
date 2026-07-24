@@ -47,6 +47,18 @@ Faithfulness mechanics inside `relay()`:
 A request may carry several credentials: `relay()` loops `tool.bindings` and calls
 `injectors.inject(headers, params, binding, crypto.decrypt(secret.value))` per binding.
 
+**Platform bindings — injecting treg's OWN credential.** A binding with a `platform_setting` key (instead
+of a `secret_id`) injects one of treg's own credentials read from `get_settings()` — the Google Ads
+developer token is the case that exists. The value never lives in the org's secret store, so a tenant
+can't read it or extract it through a local run; a missing setting is a clean `502`
+(`this server has no <setting> configured`). Used by the OAuth-marketplace auto-provisioner for a provider
+that needs a second credential treg holds centrally (see [api](../interface/api.md)).
+
+**Accept-Encoding is normalized to `identity`** when the caller sent none. `relay()` streams the upstream
+body raw (`aiter_raw`), so if the caller doesn't ask for compression httpx would otherwise add its own
+`Accept-Encoding: gzip` and hand a plain HTTP client / agent compressed bytes it never requested. Asking
+for `identity` keeps what the caller receives matching what the caller requested.
+
 ## Tool resolution (`_resolve_call` in api.py)
 `* /call/{rest:path}` → `call_tool()` → `_resolve_call(rest, caller.org_id, db)` returns
 `(tool, upstream_url)`. **Both shapes are scoped to the caller's org** (`Tool.org_id == org_id`), so two
@@ -58,7 +70,8 @@ same-org secrets. After resolution `call_tool` runs `_enforce_daily_cap` (the pe
   by **host** (`_host_of()` = `urlsplit(...).netloc`, matched against the indexed `Tool.host`) then the
   **longest `base_url` prefix**; a tie → `409`, no match → `404`.
 - **Named:** `rest = "<tool>/<path>"` (`rest.partition("/")`), looked up by `Tool.name`; upstream URL =
-  `base_url + path`.
+  `base_url + path`. **No path → the base URL itself, without a trailing slash** — a tool pinned to a
+  full resource (`.../v1/charges`) must relay as-is, since Stripe `404`s `/v1/charges/`.
 
 `call_tool()` loads every bound secret (running `oauth.ensure_fresh` on oauth secrets first — see
 [auth-secrets](auth-secrets.md)), calls `relay()`, then fires `audit.record_call(...)` off the response
@@ -67,7 +80,11 @@ path. Methods allowed: GET/POST/PUT/PATCH/DELETE/HEAD/OPTIONS.
 **Resolution + error hardening:** the URL-passthrough prefix match respects a **path-segment boundary**
 (`norm == base` or `base + "/"`), so `.../v1` no longer matches `.../v10/...` and inject the wrong
 credential; the longest-prefix tiebreak compares rstripped lengths (a trailing-slash duplicate is a real
-`409`, not a silent winner). Binding validity is checked at **registration** (`_validate_bindings` rejects
+`409`, not a silent winner). When two same-host tools still tie on prefix length, `_resolve_call`
+**prefers the registry-provider-backed tool** (one whose binding points at a `Secret` with a `provider`)
+over a hand-registered one that often holds a stale credential — a `409` there would break exactly the
+agent-facing URL-passthrough callers who never typed a tool name; only a genuine ambiguity (neither or
+both provider-owned) still `409`s. Binding validity is checked at **registration** (`_validate_bindings` rejects
 an unknown `injector` and a cross-org/dangling `secret_id`; `register_skill` runs the same gate), and
 `call_tool` translates a call-time injector `ValueError` and an upstream `httpx.RequestError` into a
 `502` instead of an unhandled 500 (and audits the failed attempt, not just successes). A binding
