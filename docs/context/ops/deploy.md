@@ -41,6 +41,23 @@ keygen` prints a Fernet key for `TREG_SECRET_KEY`.
 - `admin_token` — the cross-tenant **super-admin** bearer (`TREG_ADMIN_TOKEN`); empty disables the env
   path (only `is_superadmin` users reach `/admin`). Keep it long + secret. See
   [super-admin](../architecture/super-admin.md).
+- **Registry OAuth-marketplace apps** — treg's OWN approved OAuth clients, so a member can connect a
+  provider without registering an app themselves. `google_client_id`/`_secret` backs both Google login
+  AND the Google registry connects (Search Console / Analytics / Business Profile) via `/oauth/callback`
+  — register both redirect URIs. Google **Ads** is special: `google_ads_client_id`/`_secret` is a
+  DEDICATED client in its own Cloud project (a developer token is welded to one project), plus
+  `google_ads_developer_token` (treg's token from OUR approved manager account, injected on every Ads
+  call as a **platform binding** — see [proxy-model](../architecture/proxy-model.md)). The other
+  providers each take a `<name>_client_id`/`_secret` pair: `linkedin_*`, `slack_*`, `x_*`, `tiktok_*`
+  (separate sandbox vs prod app), and `meta_*` (ONE Meta app backs both facebook + instagram). Empty for
+  a provider ⇒ it lists as **unconfigured** rather than failing part-way through a consent.
+- **Landing live-wire (optional):** `demo_stripe_key` (`TREG_DEMO_STRIPE_KEY`, a Stripe **sandbox
+  restricted** key) powers the landing sandbox's ONE real upstream call — a sandbox call to the exact
+  seeded `stripe` tool relays for real with this key injected; the key exists in no sandbox org. Empty ⇒
+  every sandbox call synthesizes, exactly as before the wire existed. `demo_stripe_webhook_secret`
+  (`TREG_DEMO_STRIPE_WEBHOOK_SECRET`, `whsec_…`) signs the landing payments feed; empty ⇒ `POST
+  /stripe/webhook` is off (`404`, so a deploy without it exposes no unauthenticated POST surface). See
+  [api](../interface/api.md).
 - `github_client_id` / `github_client_secret` / `session_secret` — GitHub OAuth login for the dashboard
   (`TREG_GITHUB_*`, `TREG_SESSION_SECRET`); empty hides the GitHub button. Callback must be
   `<public_url>/auth/github/callback`. See [dashboard](../interface/dashboard.md).
@@ -96,7 +113,8 @@ its own sqlite DB and email dev mode.
 server deploy needs the `[server]` extra (FastAPI/DB/crypto); the wheel ships every web asset via the package.
 `startCommand: python -m treg`, health check on `/meta`. The DB URL is auto-wired via `fromDatabase`
 (config's validator adds the asyncpg driver). Secrets are **dashboard-managed** (`sync: false` — the
-Fernet key, session/admin tokens, GitHub OAuth pair, Resend key); `TREG_PUBLIC_URL`,
+Fernet key, session/admin tokens, GitHub OAuth pair, Resend key, and the optional landing live-wire pair
+`TREG_DEMO_STRIPE_KEY` + `TREG_DEMO_STRIPE_WEBHOOK_SECRET`); `TREG_PUBLIC_URL`,
 `TREG_EMAIL_DEV_MODE=false`, and `TREG_EMAIL_FROM` are set inline. `asyncpg` is a dependency (Postgres
 async driver, alongside `aiosqlite`).
 
@@ -118,7 +136,15 @@ Also **quote a reserved-word table name**: the `token_version` step is `ALTER TA
 touched by `create_all`, only by the migration). The usage-metering columns (A10 `membership.daily_call_cap
 INTEGER DEFAULT -1`, A11 `callrecord.kind VARCHAR DEFAULT 'call'`) follow the same rules but need no
 quoting (neither table name is reserved); the legacy owner-Membership backfill `INSERT` supplies
-`daily_call_cap` explicitly, since a `create_all` column is NOT NULL with no server default.
+`daily_call_cap` explicitly, since a `create_all` column is NOT NULL with no server default. The later
+additive steps follow the same rules: **A15** `org.public_demo BOOLEAN` (via `_ensure_bool_col`, the
+publishable call-only token; the legacy-org backfill `INSERT` now lists it explicitly); **A16** the
+connection metadata on `secret` (`provider`, `granted_scopes`, `resource_ref`, `resource_name`,
+`expires_at`/`last_refresh_at TIMESTAMP`, `last_error`) so the OAuth marketplace can attribute, scope,
+and expire a credential; **A17–A20** the per-provider auth quirks on `pendingoauth` carried through the
+redirect (`provider`, `code_verifier`, `auth_params`, `token_endpoint_auth_method`, `client_id_param`,
+`scope_separator`, `long_lived_exchange BOOLEAN DEFAULT false`, `replaces_secret_id INTEGER`) so the
+callback exchanges the code exactly as the consent URL was built.
 
 **Audit back-pressure (`audit.py`).** Audit rows are written off the request path (fire-and-forget), and
 each write opens a DB connection from the small pool **shared** with real requests. Two limits keep

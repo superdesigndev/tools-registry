@@ -16,7 +16,7 @@ covers (frontmatter `sources:`). Regenerate this index with
 
 | Fragment | Status | Covers |
 |---|---|---|
-| [Auth & secrets — injectors, encryption, OAuth freshness, health](architecture/auth-secrets.md) | shipped | injectors.py, crypto.py, oauth.py, health.py |
+| [Auth & secrets — injectors, encryption, OAuth freshness, health](architecture/auth-secrets.md) | shipped | injectors.py, crypto.py, oauth.py, oauth_providers.py, … |
 | [Data model — the registry tables, async DB, audit writer](architecture/data-model.md) | shipped | models.py, db.py, audit.py, ratestore.py |
 | [Local CLI runs — run a vendor CLI as a dedicated user with a server-held credential (`treg run`)](architecture/local-run.md) | shipped | localrun.py, egress.py, fsjail.py |
 | [Multi-tenancy — orgs, memberships, invites, per-org scoping](architecture/multi-tenancy.md) | shipped | models.py, api.py, db.py |
@@ -31,7 +31,7 @@ covers (frontmatter `sources:`). Regenerate this index with
 | [The CLI (treg) + skill scaffolding](interface/cli.md) | shipped | cli.py, convert.py |
 | [The web dashboard (Ledger, served from FastAPI)](interface/dashboard.md) | shipped | index.html, tutorial.js, tutorial.html, tour.js, … |
 | [Import — scan a .env AND/OR a skills dir, auto-register as tools + bundles](interface/env-import.md) | in-progress | providers.py, skills.py |
-| [Landing sandbox studio — anonymous try-it, hosted skills, CLI installer](interface/landing-sandbox.md) | shipped | sandbox.py, api.py, index.html, install.sh |
+| [Landing sandbox studio — anonymous try-it, hosted skills, CLI installer](interface/landing-sandbox.md) | shipped | sandbox.py, pubfeed.py, api.py, index.html, … |
 | [Onboarding — the first-run demo team (dashboard + CLI)](interface/onboarding.md) | shipped | demo.py, cli.py, index.html |
 | [Shell mode (treg shell) — transparent CLI interception](interface/shell.md) | shipped | shell.py, cli.py |
 | [The shippable tools-registry skill (3 personas)](interface/skill.md) | shipped | skill.md |

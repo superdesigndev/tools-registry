@@ -47,9 +47,13 @@ exits non-zero on HTTP >= 400.
 ## Commands
 - **`config`** (`--base-url`; shows email + active org + logged-in) · **`login`** — three doors in one
   `cmd_login`: default browser handshake — `POST /auth/cli/start` mints the `login_id` **and a short
-  pairing code** (shown only in the terminal), opens the universal `/login?cli=<id>` page (reuses an
-  existing dashboard session via a **team picker**, else offers GitHub / Google / email-code; the browser
-  must echo the pairing code to complete, the anti-phishing guard), then polls `/auth/cli/poll` **with no
+  pairing code**, opens the universal `/login?cli=<id>#code=<code>` page — the code rides in the URL
+  **fragment** (a fragment is never sent to the server, so it stays out of request logs) and the `/login`
+  page **displays** it so the user just confirms it matches the terminal instead of typing it (the
+  anti-phishing guard: a login you didn't start can't be approved into a token, and the server still
+  validates the code at approve time — the guard itself is unchanged). The page reuses an
+  existing dashboard session via a **team picker**, else offers GitHub / Google / email-code, then polls
+  `/auth/cli/poll` **with no
   code**; the poll result may carry `active_org` = the team picked in the browser, which `cmd_login` adopts
   directly, falling back to `_pick_active_org` only against an older server (where `/start` 404s → a
   locally-minted `login_id`, no code)),
@@ -61,11 +65,20 @@ exits non-zero on HTTP >= 400.
   any door also registers you (the user only — no auto personal org) · **`logout`** (clears creds).
   After a first human login, `_maybe_offer_onboarding` prompts `[Y/n]` then shows the 3-path menu (TTY-only).
 - **`onboard`** (`cmd_onboard`, `--path setup|access|demo`/`--source local|global|both`/`--name`/`--yes`/
-  `--reset`; `--mode` hidden, back-compat `quick`→demo) — `_pick_path` offers **Set up** (`_run_setup`,
-  asks "Import from where?" — this project / global agent folders `~/.claude/skills` etc. / both, unless
-  `--source` pins it — then wraps `treg upload` + batched `health --run` + teammate hand-off) · **Access** (`_run_access`, list tools+skills → multi-select
-  `skill install` → a no-key test call) · **Demo** (`_run_demo`, throwaway team → scan+sync probe-able keys → roster → real no-key
-  call → push/pull sync → audit log), with a smart default from the active org. See [onboarding](onboarding.md).
+  `--reset`; `--mode` hidden, back-compat `quick`→demo) — a TTY run opens with a one-second `_splash`
+  decrypt animation (the wordmark reveals behind a ░▒▓ wavefront; any key skips; off-TTY/`NO_COLOR`/dumb
+  terminals never see it), then `_pick_path` presents an **arrow-key menu** (`_menu` — ↑↓/jk move, ↵
+  confirm, 1-9 jump-pick; falls back to questionary where raw-key mode is unavailable). The interactive
+  default is **Set up**; the smart org-based default (team-with-tools → Access, empty admin team → Set up,
+  else Demo) applies only non-interactively. **Set up** (`_run_setup`) asks "Import skill/secret from
+  where?" — this project / global agent folders `~/.claude/skills` etc. / both / an **other project repo**
+  typed inline (a `_menu` type-in row with fish-style folder autosuggestion; "this project" is hidden from
+  a root-ish folder via `_is_rootish` so it can't sweep `$HOME`), unless `--source` pins it — then imports
+  the chosen `.env` + skills and runs a batched `health --run`. **Access** (`_run_access`, list tools+skills
+  → multi-select `skill install` → a no-key test call). **Demo** (`_run_demo`) is now purely
+  **illustrative** — no team is created, nothing is uploaded — showing the loop across four beats (scan
+  preview → roles → a real no-key call if the active team has a callable tool → the audit log). See
+  [onboarding](onboarding.md).
 - **`invites`** (`cmd_invites` → `GET /invites/mine`) lists invites addressed to your proven email;
   **`accept <org-slug>`** (`cmd_accept`) accepts one code-free (finds it in `/invites/mine`, `POST
   /invites/{id}/accept`, sets it active). The code path stays as `org join <code>`.
@@ -112,9 +125,12 @@ exits non-zero on HTTP >= 400.
   catalog (prompts for its key env var + API base_url) and prints a catalog-entry snippet to share; an
   unknown bin isn't server-allow-listed, so it runs locally until an admin allow-lists it. Brains in
   `providers.py` + `skills.py`; see [env-import](env-import.md).
-- **`call`** (`target`, optional `path`; `--method`, `--query K=V` repeatable, `--data`, `--file`) →
-  two shapes: named `call <tool> <path>` or agent-native single URL `call https://host/full/path`
-  (path omitted) → both hit `/call/<rest>` · **`calls`** (`--limit`).
+- **`call`** (`target`, optional `path`; `--method`, `--query K=V` repeatable, `--data`, `--file`,
+  `--content-type`, `--header 'K: V'` repeatable) → two shapes: named `call <tool> <path>` or agent-native
+  single URL `call https://host/full/path` (path omitted) → both hit `/call/<rest>`. **`--header`** adds an
+  extra request header the binding can't know (e.g. Google Ads' per-call `login-customer-id`); an
+  **injected credential always wins**, so a `--header` can never overwrite the secret the proxy injects ·
+  **`calls`** (`--limit`).
 - **`run`** (`treg run <tool> [--local|--server] [--] <cli args…>`, `cmd_run`) — a **dispatcher** that picks
   a tier by flag: `_run_local` (default) or `_run_server`. `args` is an `argparse.REMAINDER`, which silently
   swallows a treg flag typed AFTER the tool name; `cmd_run` guards against that by reading the **real**
@@ -158,8 +174,17 @@ exits non-zero on HTTP >= 400.
   or falls back to the active org token (works for an `is_superadmin` user). See
   [super-admin](../architecture/super-admin.md).
 - **`skill`** (`init --dir`, `add --dir`, `scaffold <dir> [--out]`, `push <file>`, `ls`, `rm`) — see below.
-- **`health`** (`--run`) · **`oauth connect`** (`name`, `--client-secret`, `--scopes`) → drives
-  `/oauth/start`, prints the consent URL, polls `/oauth/status` ~5 min.
+- **`health`** (`--run`).
+- **`oauth`** — **`oauth providers`** (`cmd_oauth_providers` → `GET /oauth/providers`) lists the services
+  treg holds its **own** approved OAuth app for. **`oauth connect`** (`cmd_oauth_connect`) has two modes:
+  **registry** — `--provider <service>` (e.g. `google-search-console`), optional `--capability` to pick a
+  scope set (default read) and optional `name`, so treg's app supplies the client credentials; or
+  **bring-your-own** — `name --client-secret <file> --scopes …` reads your own Google OAuth client JSON
+  (`_byo_body`). Either posts `/oauth/start`, prints the consent URL, and polls `/oauth/status` ~5 min.
+- **`connections`** (`cmd_connections_ls`/`_resources`/`_use`/`_rm`) — your connected accounts: **`ls`**
+  (`GET /connections`, health + expiry), **`resources <id>`** (`GET /connections/{id}/resources` — the
+  sites/properties/accounts it can act on), **`use <id> <resource_ref>`** (`POST /connections/{id}/resource`
+  — select which one), **`rm <id>`** (`DELETE /connections/{id}` — disconnect).
 
 `_parse_bind` defaults every field to a bearer `Authorization` header; only `secret=` is required, so a
 multi-credential tool needs no JSON.

@@ -19,7 +19,10 @@ pair, so every list/create/mutation and the proxy are scoped to the caller's org
 `docs/MULTI-TENANCY-PLAN.md` (standalone plan).
 
 ## The model (`models.py`)
-- **`Org`** — `id, name, slug (unique), created_at`. The tenant that owns secrets/tools/bundles.
+- **`Org`** — `id, name, slug (unique), suspended, demo, public_demo, created_at`. The tenant that owns
+  secrets/tools/bundles. **`public_demo`** marks a team whose member token is PUBLISHED (e.g. on the
+  landing page): non-admin members are locked to `/call` + reads and may never act as a user — enforced in
+  `require_member` / `require_identity`.
 - **`User`** — identity only: `id, email (unique), created_at`. No token, no role.
 - **`Membership`** — `user_id, org_id, role (owner|admin|member|viewer), token_hash (idx), webhook_url,
   daily_call_cap` (per-user daily usage cap; `-1` = unlimited, admin-set — see the API fragment's
@@ -117,7 +120,16 @@ silently drops them and, because a re-run short-circuits, permanently 500s every
 upgrade. (`"user"` is quoted in the `ALTER` — a reserved word in Postgres, where this runs in-place.)
 (A12) adds `tool_access` (JSON, nullable) + `local_run_enabled` (`BOOLEAN NOT NULL DEFAULT true`) to
 **both** `membership` and `invite`; the legacy owner-backfill INSERT names `local_run_enabled` explicitly
-(create_all builds it NOT NULL with no server default). Verified in-place on Postgres.
+(create_all builds it NOT NULL with no server default). Verified in-place on Postgres. Later additive steps
+follow the same guarded pattern: (A14) `invite.landing`, (A15) `org.public_demo`, (A16) the seven `secret`
+connection-metadata columns (`provider`/`granted_scopes`/`resource_ref`/`resource_name`/`expires_at`/
+`last_refresh_at`/`last_error`), and (A17–A20) the eight `pendingoauth` OAuth-marketplace/quirk columns
+(`provider`/`code_verifier`/`auth_params`/`token_endpoint_auth_method`/`client_id_param`/`scope_separator`/
+`long_lived_exchange`/`replaces_secret_id`). **Postgres BOOLEAN default fix (PR #22):** every boolean added
+in-place uses `DEFAULT false`, never `DEFAULT 0` — Postgres rejects an integer default on a `BOOLEAN`
+column (SQLite accepts both, so the test suite alone cannot catch it); `pendingoauth.long_lived_exchange`
+is spelled `BOOLEAN NOT NULL DEFAULT false`, and the legacy `INSERT INTO org (…)` backfill names
+`public_demo` explicitly with a `false` literal.
 
 > Health (`run_all`) takes an `org_id` filter so `/health/run` never leaks other orgs' credentials, and
 > alerts resolve the owner's per-org membership webhook. See [auth-secrets](auth-secrets.md).
