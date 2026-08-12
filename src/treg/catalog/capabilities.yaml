@@ -112,6 +112,8 @@ platforms:
   duckduckgo: {label: "DuckDuckGo Search Results (SERP)", category: "SEO/AEO", summary: "Organic results from DuckDuckGo."}
   yelp: {label: "Yelp", category: "Reviews & Apps", summary: "Business listings and reviews from Yelp."}
   account: {label: "The provider account itself — usage, quota, balance (not a content platform)", category: "Other"}
+  # --- Crypto/Safety: on-chain risk & safety checks, new category (2026-08-12, risk-data-api PR) --
+  solana: {label: "Solana token risk & safety", category: "Crypto/Safety", summary: "Safety score, insider-wallet-cluster detection and on-chain fundamentals for Solana token mints — the check an agent runs before it swaps or pays."}
 
 capabilities:
   # --- SEO / search -----------------------------------------------------------------------------
@@ -1169,3 +1171,10 @@ capabilities:
   yelp.business.profile: "Get a business's profile"
   yelp.business.reviews: "List a business's reviews"
   yelp.business.search: "Search businesses by keyword and location"
+
+  # solana — new Crypto/Safety category, added 2026-08-12 with the risk-data-api provider
+  solana.token.risk-score: "Safety score, live insider-wallet-cluster detection and on-chain fundamentals (mint/freeze authority, honeypot risk, LP lock, holder concentration) for a single Solana token mint"
+  solana.token.risk-score-batch: "The same risk-score check as solana.token.risk-score for multiple Solana token mints in one call"
+  solana.token.risk-history: "Time series of a Solana token mint's past safety_score checks"
+  solana.token.risk-alert.subscribe: "Get a signed callback the moment a Solana token mint's safety_score crosses a threshold, instead of polling solana.token.risk-score on a schedule"
+  solana.token.risk-alert.unsubscribe: "Cancel a safety_score threshold alert"

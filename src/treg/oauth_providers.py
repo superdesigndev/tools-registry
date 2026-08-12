@@ -846,6 +846,38 @@ AKTA = OAuthProvider(
     probe_path="/v1/company/search/?query=canva.com",
 )
 
+RISK_DATA_API = OAuthProvider(
+    service="risk-data-api",
+    display_name="Risk-Data API",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="tnt_sk_your_key_here",
+    # Rides as a standard Bearer header — both are the dataclass defaults, set explicitly here
+    # for clarity next to the rest of the entry.
+    token_header="Authorization",
+    token_format="Bearer {secret}",
+    setup_url="https://tnt-audit.com/risk-api#get-key",
+    setup_action_label="Get your Risk-Data API key",
+    setup_steps=(
+        'Open the Risk-Data API page and enter an email under "Get your API key".',
+        "The key is issued instantly — no card, no approval wait, one key per email.",
+    ),
+    setup_note="15 requests/day free per key; pay-per-call ($0.07, $0.03 once subscribed) past that.",
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Crypto/Safety",
+    summary="Safety score and live insider-wallet-cluster detection for any Solana token mint — the risk check an agent runs before it swaps or pays.",
+    base_url="https://tnt-audit.com/api/v1",
+    docs_url="https://tnt-audit.com/risk-api",
+    # GET /billing/status is the one route in this API that is genuinely free — it reads the
+    # caller's own key record and deliberately skips enforceRateLimit(), so probing a connection
+    # here never spends any of the 15/day free quota. token-risk itself would also work as a probe
+    # (401 on a bad key, same as this one) but would burn the very quota a "check the key" ping
+    # shouldn't cost.
+    probe_path="/billing/status",
+)
+
 HUNTER = OAuthProvider(
     service="hunter",
     display_name="Hunter",
@@ -1486,6 +1518,8 @@ REGISTRY: dict[str, OAuthProvider] = {
         # API-key providers
         APOLLO, PDL, AKTA, HUNTER, CRUNCHBASE, TIKHUB, BRIGHTDATA, SEMRUSH, JUSTONEAPI,
         SCRAPECREATORS,
+        # Crypto/Safety API-key providers
+        RISK_DATA_API,
         # SEO API-key providers
         DATAFORSEO, SERANKING, MOZ, MAJESTIC, SERPSTAT,
         # more Enrichment API-key providers
@@ -1500,7 +1534,7 @@ DEFAULT_CAPABILITY = "read"
 
 # Shelf order in the marketplace. Anything carrying a category not named here sorts last, so a
 # provider added without one is visible rather than lost between the shelves.
-CATEGORY_ORDER = ("SEO", "Advertising", "Social media", "Enrichment", "Community", "Other")
+CATEGORY_ORDER = ("SEO", "Advertising", "Social media", "Enrichment", "Crypto/Safety", "Community", "Other")
 
 
 def get(service: str) -> OAuthProvider | None:
