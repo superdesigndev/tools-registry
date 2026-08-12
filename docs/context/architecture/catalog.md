@@ -424,6 +424,11 @@ Success criteria for a provider PR: validator exits 0; every endpoint either car
 date + example file or an explicit comment why it could not be live-tested; no credential value
 appears anywhere in the diff.
 
+Linkup is the first agentic open-web provider curated here: its core catalog keeps Search's raw,
+sourced-answer and structured response shapes separate, plus Fetch. Their documented prices vary
+with body parameters, so the static test-request price is marked `inferred` and is not eligible for
+treg's platform key until reservation can price `depth`, `outputType` and `renderJs`.
+
 ## Process — bulk-ingesting the extended tier
 
 ```

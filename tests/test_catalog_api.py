@@ -32,7 +32,7 @@ async def test_platforms_lists_the_curated_shelves_busiest_first(clients: AsyncC
     assert 0 < tiktok["capabilities"] <= tiktok["endpoints"]
     assert 0 < tiktok["verified"] <= tiktok["endpoints"]
     assert {"tikhub", "justoneapi"} <= set(tiktok["providers"]), "the social overlap pair is the point"
-    assert {"dataforseo", "moz"} <= set(rows["web"]["providers"]), "the SEO overlap pair is the point"
+    assert {"dataforseo", "moz", "linkup"} <= set(rows["web"]["providers"])
 
     counts = [p["endpoints"] for p in body["platforms"]]
     assert counts == sorted(counts, reverse=True)
@@ -41,6 +41,25 @@ async def test_platforms_lists_the_curated_shelves_busiest_first(clients: AsyncC
 async def test_platform_listing_hides_taxonomy_entries_nobody_implements(clients: AsyncClient):
     rows = (await clients.get("/catalog/platforms")).json()["platforms"]
     assert all(p["endpoints"] > 0 for p in rows)
+
+
+async def test_linkup_exposes_search_answer_structured_and_fetch(clients: AsyncClient):
+    body = (await clients.get("/catalog/platforms/web")).json()
+    caps = {c["id"]: c for c in body["capabilities"]}
+    assert {
+        "web.search.results", "web.search.answer", "web.search.structured", "web.page.fetch",
+    } <= set(caps)
+    endpoints = {
+        e["id"]: e for capability in caps.values() for e in capability["endpoints"]
+        if e["provider"] == "linkup"
+    }
+    assert set(endpoints) == {
+        "linkup.web.search.results",
+        "linkup.web.search.answer",
+        "linkup.web.search.structured",
+        "linkup.web.page.fetch",
+    }
+    assert all(e["platform_eligible"] is False for e in endpoints.values())
 
 
 # ---- platform detail ---------------------------------------------------------------------

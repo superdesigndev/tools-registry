@@ -114,7 +114,7 @@ module symbols:
   pastes; `is_token_kind`), or `"key"` (an **API-key provider** connected by pasting a key: Apollo, PDL,
   Akta, Hunter, Crunchbase, Lusha, Coresignal, Diffbot, The Companies API, LeadMagic on a new
   **Enrichment** shelf, TikHub + Bright Data + Just One API under
-  Social, under **SEO** Semrush + DataForSEO, SE Ranking, Moz, Majestic, Serpstat, and under
+  Social, under **SEO** Linkup + Semrush + DataForSEO, SE Ranking, Moz, Majestic, Serpstat, and under
   **Advertising** the ad-intel keys SpyFu, Apify, Meta Ad Library, SerpApi — alongside the OAuth ad
   platforms Google Ads + Meta Ads and the **unconfigured** Microsoft Ads, Snapchat Ads, Pinterest Ads
   (standard OAuth, live once this deployment sets their client credentials) and TikTok Ads (a

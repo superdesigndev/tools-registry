@@ -1,0 +1,165 @@
+provider: linkup
+source:
+  docs: https://docs.linkup.so/
+  openapi: https://api.linkup.so/v1/openapi.json
+  curated: 2026-08-12
+
+# UNVERIFIED — no Linkup credential was available while curating this file. The request shapes,
+# constraints and prices below come from Linkup's live OpenAPI document and official pricing page.
+# Credential behavior was checked live on 2026-08-12: a bogus Bearer token returns HTTP 401 from
+# both POST /search and GET /credits/balance. Run:
+#   TREG_CATALOG_CRED='<key>' uv run python scripts/catalog_verify.py linkup --write
+# to capture examples and stamp only the endpoints that pass.
+#
+# Search and fetch prices vary with request parameters. Each cost below is the documented price for
+# its test_request, but is deliberately `confidence: inferred`: callers can change `depth`,
+# `outputType` or `renderJs`, so the static amount is only a floor for the route. This keeps the
+# endpoints off treg's own prepaid key until parameter-aware reservation exists.
+
+limits: "10 requests/second per organization for Search and Fetch"
+pricing_url: https://docs.linkup.so/pages/documentation/platform/pricing
+endpoints:
+  - id: linkup.web.search.results
+    capability: web.search.results
+    platform: web
+    scope: any_account
+    method: POST
+    path: /search
+    name: "Search the live web"
+    summary: "Retrieve live web sources with titles, URLs, snippets and optional images"
+    input:
+      bodyType: json
+      body:
+        q: {type: string, required: true, note: "natural-language retrieval instruction", example: "Find the official Linkup API documentation"}
+        depth: {type: string, required: true, note: "fast | standard | deep; fast and standard cost $0.005, deep costs $0.05", example: "fast"}
+        outputType: {type: string, required: true, note: "must be searchResults for this response shape", example: "searchResults"}
+        includeDomains: {type: array, required: false, note: "hard allow-list of up to 100 domains"}
+        excludeDomains: {type: array, required: false, note: "hard domain block-list"}
+        fromDate: {type: string, required: false, note: "ISO date YYYY-MM-DD; must be before toDate"}
+        toDate: {type: string, required: false, note: "ISO date YYYY-MM-DD"}
+        includeImages: {type: boolean, required: false, note: "include image results; default false"}
+        maxResults: {type: number, required: false, note: "maximum results, at least 1"}
+      note: "Results arrive in results[]; text rows contain name, url, content and favicon. Errors and no-result searches are not charged."
+    test_request:
+      body: {q: "Find the official Linkup API documentation", depth: "fast", outputType: "searchResults", maxResults: 2}
+    cost:
+      type: per_success
+      value: 0.005
+      currency: USD
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://docs.linkup.so/pages/documentation/platform/pricing
+      checked: '2026-08-12'
+      confidence: inferred
+      note: "$0.005 for fast/standard searchResults, as used by the test request; deep searchResults costs $0.05. Errors and no-result searches are free."
+    docs_url: https://docs.linkup.so/pages/documentation/endpoints/search/reference
+
+  - id: linkup.web.search.answer
+    capability: web.search.answer
+    platform: web
+    scope: any_account
+    method: POST
+    path: /search
+    name: "Answer from cited web sources"
+    summary: "Generate a sourced answer from live web results"
+    input:
+      bodyType: json
+      body:
+        q: {type: string, required: true, note: "question or retrieval instruction", example: "Where is the official Linkup API documentation?"}
+        depth: {type: string, required: true, note: "fast | standard | deep; deep enables iterative search and scraping", example: "standard"}
+        outputType: {type: string, required: true, note: "must be sourcedAnswer for this response shape", example: "sourcedAnswer"}
+        includeInlineCitations: {type: boolean, required: false, note: "add inline citations to the answer; default false"}
+        includeDomains: {type: array, required: false, note: "hard allow-list of up to 100 domains"}
+        excludeDomains: {type: array, required: false, note: "hard domain block-list"}
+        fromDate: {type: string, required: false, note: "ISO date YYYY-MM-DD; must be before toDate"}
+        toDate: {type: string, required: false, note: "ISO date YYYY-MM-DD"}
+      note: "Returns answer plus sources[] with name, URL, favicon and supporting snippet. Errors and no-result searches are not charged."
+    test_request:
+      body: {q: "Where is the official Linkup API documentation?", depth: "standard", outputType: "sourcedAnswer"}
+    cost:
+      type: per_success
+      value: 0.006
+      currency: USD
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://docs.linkup.so/pages/documentation/platform/pricing
+      checked: '2026-08-12'
+      confidence: inferred
+      note: "$0.006 for fast/standard sourcedAnswer, as used by the test request; deep sourcedAnswer costs $0.055. Errors and no-result searches are free."
+    docs_url: https://docs.linkup.so/pages/documentation/endpoints/search/reference
+
+  - id: linkup.web.search.structured
+    capability: web.search.structured
+    platform: web
+    scope: any_account
+    method: POST
+    path: /search
+    name: "Search into structured JSON"
+    summary: "Return live web research as JSON matching a caller-provided schema"
+    input:
+      bodyType: json
+      body:
+        q: {type: string, required: true, note: "instruction naming the exact fields to retrieve", example: "Find Linkup's API documentation title and URL"}
+        depth: {type: string, required: true, note: "fast | standard | deep", example: "standard"}
+        outputType: {type: string, required: true, note: "must be structured", example: "structured"}
+        structuredOutputSchema: {type: object, required: true, note: "JSON Schema with type object at the root"}
+        includeSources: {type: boolean, required: false, note: "return sources alongside data; changes the response envelope"}
+        includeDomains: {type: array, required: false, note: "hard allow-list of up to 100 domains"}
+        excludeDomains: {type: array, required: false, note: "hard domain block-list"}
+      note: "Without includeSources, the response is the schema-shaped object itself; with it, the response is {data, sources}."
+    test_request:
+      body:
+        q: "Find Linkup's API documentation title and URL"
+        depth: "standard"
+        outputType: "structured"
+        structuredOutputSchema:
+          type: object
+          properties:
+            title: {type: string}
+            url: {type: string}
+          required: [title, url]
+    cost:
+      type: per_success
+      value: 0.006
+      currency: USD
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://docs.linkup.so/pages/documentation/platform/pricing
+      checked: '2026-08-12'
+      confidence: inferred
+      note: "$0.006 for fast/standard structured output, as used by the test request; deep structured output costs $0.055. Errors and no-result searches are free."
+    docs_url: https://docs.linkup.so/pages/documentation/endpoints/search/reference
+
+  - id: linkup.web.page.fetch
+    capability: web.page.fetch
+    platform: web
+    scope: any_account
+    method: POST
+    path: /fetch
+    name: "Fetch a page as Markdown"
+    summary: "Fetch one public URL as clean Markdown, with optional JavaScript rendering and images"
+    input:
+      bodyType: json
+      body:
+        url: {type: string, required: true, note: "public webpage or PDF URL", example: "https://docs.linkup.so"}
+        renderJs: {type: boolean, required: false, note: "render client-side JavaScript; default false; raises cost from $0.001 to $0.005"}
+        extractImages: {type: boolean, required: false, note: "include extracted image URLs and alt text"}
+        includeRawContent: {type: boolean, required: false, note: "include the raw page content and content type"}
+      note: "Returns markdown and favicon; images and rawContent appear only when requested. includeRawHtml is deprecated in favor of includeRawContent."
+    test_request:
+      body: {url: "https://docs.linkup.so", renderJs: false}
+    cost:
+      type: per_success
+      value: 0.001
+      currency: USD
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://docs.linkup.so/pages/documentation/platform/pricing
+      checked: '2026-08-12'
+      confidence: inferred
+      note: "$0.001 without JavaScript rendering, as used by the test request; renderJs=true costs $0.005. Errors are free."
+    docs_url: https://docs.linkup.so/pages/documentation/endpoints/fetch/reference
