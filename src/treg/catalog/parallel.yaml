@@ -1,0 +1,301 @@
+# UNVERIFIED — paths, parameters, and prices are transcribed from Parallel's official OpenAPI and
+# pricing documentation on 2026-08-12. No paid endpoint has been called and no response example is
+# committed. Task and Monitor lifecycle entries use chained placeholder ids: during maintainer-side
+# verification, replace them with the ids returned by the create calls in the same run.
+#
+# All routes below share https://api.parallel.ai and authenticate with a raw `x-api-key` header.
+# Search mode, Task processor, and Monitor processor/frequency make several charges variable; those
+# entries intentionally keep cost.value null so treg never treats a published floor as the charge.
+provider: parallel
+source:
+  docs: https://docs.parallel.ai
+  openapi: https://docs.parallel.ai/public-openapi.json
+  curated: 2026-08-12
+
+limits: "Rate limits vary by API and account tier; see https://docs.parallel.ai/getting-started/rate-limits"
+pricing_url: https://docs.parallel.ai/getting-started/pricing
+
+endpoints:
+  - id: parallel.web.search
+    capability: web.search
+    platform: web
+    scope: any_account
+    method: POST
+    path: /v1/search
+    name: "Search the web"
+    summary: "Search the web and return ranked URLs with excerpts for an agent"
+    input:
+      body:
+        search_queries: {type: array, required: true, note: "one or more concise keyword queries; 2-3 are recommended", example: ["Parallel Web Systems product announcements"]}
+        objective: {type: string, required: false, note: "the underlying question or goal used to focus results", example: "Find recent Parallel Web Systems product announcements"}
+        mode: {type: string, required: false, note: "turbo | basic | advanced; omitted defaults to advanced", example: "turbo"}
+        max_chars_total: {type: integer, required: false, note: "upper bound on characters across all result excerpts", example: 2000}
+        session_id: {type: string, required: false, note: "reuse across related Search and Extract calls"}
+        advanced_settings: {type: object, required: false, note: "source, fetch, and excerpt policies; use only when the defaults do not fit"}
+      bodyType: json
+      note: "mode is a cost dial: turbo is fastest/cheapest, while basic and advanced do more work"
+    test_request:
+      body: {search_queries: ["Parallel Web Systems product announcements"], objective: "Find a recent official product announcement", mode: "turbo", max_chars_total: 1000}
+    cost:
+      type: per_call
+      value: null
+      currency: USD
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://docs.parallel.ai/getting-started/pricing
+      checked: '2026-08-12'
+      confidence: unknown
+      note: "the route supports multiple modes and result sizes: published rates start at $1/1000 turbo requests, while basic/advanced start at $5/1000 and extra results/excerpts add usage; one scalar cannot represent the caller's selection"
+    docs_url: https://docs.parallel.ai/api-reference/search/search
+
+  - id: parallel.web.extract
+    capability: web.extract
+    platform: web
+    scope: any_account
+    method: POST
+    path: /v1/extract
+    name: "Extract web content"
+    summary: "Extract clean markdown or focused excerpts from one or more public URLs"
+    input:
+      body:
+        urls: {type: array, required: true, note: "one to 20 public URLs", example: ["https://www.parallel.ai/"]}
+        objective: {type: string, required: false, note: "focus excerpts on this goal", example: "What web APIs does Parallel provide?"}
+        search_queries: {type: array, required: false, note: "optional keyword queries used with the objective"}
+        max_chars_total: {type: integer, required: false, note: "upper bound on characters across all extracted results", example: 2000}
+        session_id: {type: string, required: false, note: "reuse from a related Search call"}
+        advanced_settings: {type: object, required: false, note: "fetch, excerpt, and full-content policies"}
+      bodyType: json
+    test_request:
+      body: {urls: ["https://www.parallel.ai/"], objective: "What web APIs does Parallel provide?", max_chars_total: 1000}
+    cost:
+      type: per_result
+      value: null
+      currency: USD
+      per: 1
+      unit: page
+      source: docs
+      source_url: https://docs.parallel.ai/getting-started/pricing
+      checked: '2026-08-12'
+      confidence: unknown
+      note: "Parallel documents $1 per 1,000 URLs, but treg's scalar estimator cannot count the nested body.urls array and would reserve/charge the wrong number for batches; keep this BYOK-only until that count is representable"
+    docs_url: https://docs.parallel.ai/api-reference/extract/extract
+
+  - id: parallel.web.research.task.start
+    capability: web.research.task.start
+    platform: web
+    scope: any_account
+    method: POST
+    path: /v1/tasks/runs
+    name: "Start a research task"
+    summary: "Start an asynchronous web research task with cited text or structured output"
+    input:
+      body:
+        processor: {type: string, required: true, note: "processor tier controls depth, latency, and price", example: "lite"}
+        input: {type: string, required: true, note: "a text objective or a JSON object matching task_spec.input_schema", example: "What products does Parallel Web Systems offer?"}
+        task_spec: {type: object, required: false, note: "output_schema and optional input_schema; omit for automatic output"}
+        source_policy: {type: object, required: false, note: "optional include/exclude domains and after_date"}
+        metadata: {type: object, required: false, note: "string keys up to 16 chars and string values up to 512 chars"}
+        previous_interaction_id: {type: string, required: false, note: "continue from a prior interaction"}
+        webhook: {type: object, required: false, note: "callback invoked when the run completes"}
+      bodyType: json
+      note: "returns a run_id immediately; use the retrieve and result operations below"
+    test_request:
+      body: {processor: "lite", input: "What products does Parallel Web Systems offer?"}
+    cost:
+      type: per_success
+      value: null
+      currency: USD
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://docs.parallel.ai/getting-started/pricing
+      checked: '2026-08-12'
+      confidence: unknown
+      note: "completed runs are processor-priced; published tiers span roughly $5-$2,400 per 1,000 runs, so the request's processor cannot be represented by one scalar"
+    docs_url: https://docs.parallel.ai/api-reference/tasks/create-task-run
+
+  - id: parallel.web.research.task.status
+    kind: utility
+    capability: web.research.task.status
+    platform: web
+    scope: own_account
+    method: GET
+    path: /v1/tasks/runs/{run_id}
+    name: "Check research task status"
+    summary: "Retrieve a task run's current status and metadata"
+    input:
+      pathParams:
+        run_id: {type: string, required: true, note: "run_id returned by parallel.web.research.task.start; replace the chained test value during verification", example: "trun_from_start_response"}
+    test_request:
+      pathParams: {run_id: "trun_from_start_response"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: "status retrieval does not create or execute a task"}
+    docs_url: https://docs.parallel.ai/api-reference/tasks/retrieve-task-run
+
+  - id: parallel.web.research.task.result
+    capability: web.research.task.result
+    platform: web
+    scope: own_account
+    method: GET
+    path: /v1/tasks/runs/{run_id}/result
+    name: "Get research task result"
+    summary: "Wait for a task run to complete and return its cited output"
+    input:
+      pathParams:
+        run_id: {type: string, required: true, note: "run_id returned by parallel.web.research.task.start; replace the chained test value during verification", example: "trun_from_start_response"}
+      queryParams:
+        timeout: {type: integer, required: false, note: "seconds to wait for completion; default 600", example: 60}
+    test_request:
+      pathParams: {run_id: "trun_from_start_response"}
+      queryParams: {timeout: 60}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: "retrieving an existing run result does not start a new task"}
+    docs_url: https://docs.parallel.ai/api-reference/tasks/retrieve-task-run-result
+
+  - id: parallel.web.monitor.create
+    kind: action
+    capability: web.monitor.create
+    platform: web
+    scope: own_account
+    method: POST
+    path: /v1/monitors
+    name: "Create a web monitor"
+    summary: "Create a recurring monitor that reports material changes to a web query"
+    input:
+      body:
+        type: {type: string, required: true, note: "event_stream | snapshot", example: "event_stream"}
+        frequency: {type: string, required: true, note: "1h to 30d using h, d, or w units", example: "1w"}
+        settings: {type: object, required: true, note: "for event_stream, include query and optional advanced_settings", example: {query: "Parallel Web Systems product announcements"}}
+        processor: {type: string, required: false, note: "lite (default) | base", example: "lite"}
+        webhook: {type: object, required: false, note: "notification callback configuration"}
+        metadata: {type: object, required: false, note: "string metadata echoed in events and webhooks"}
+      bodyType: json
+      note: "creation schedules recurring paid executions. During verification, capture monitor_id and cancel the monitor with parallel.web.monitor.cancel before ending the session"
+    test_request:
+      body: {type: "event_stream", frequency: "1w", processor: "lite", settings: {query: "Parallel Web Systems product announcements"}}
+    cost:
+      type: per_success
+      value: null
+      currency: USD
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://docs.parallel.ai/getting-started/pricing
+      checked: '2026-08-12'
+      confidence: unknown
+      note: "Monitor bills every recurring execution rather than only this create call: lite is $3/1000 executions and base is $10/1000, multiplied by the chosen frequency and monitor lifetime"
+    docs_url: https://docs.parallel.ai/api-reference/monitor/create-monitor
+
+  - id: parallel.web.monitor.list
+    kind: account
+    capability: web.monitor.list
+    platform: web
+    scope: own_account
+    method: GET
+    path: /v1/monitors
+    name: "List web monitors"
+    summary: "List monitors in the connected Parallel account"
+    input:
+      queryParams:
+        limit: {type: integer, required: false, note: "maximum monitors to return", example: 1}
+        cursor: {type: string, required: false, note: "next_cursor from the previous response"}
+        type: {type: string, required: false, note: "repeat to filter by event_stream or snapshot monitor type"}
+        status: {type: string, required: false, note: "repeat to filter by monitor status; defaults to active"}
+    test_request:
+      queryParams: {limit: 1}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: "listing monitors does not execute them; this is also the provider key probe"}
+    docs_url: https://docs.parallel.ai/api-reference/monitor/list-monitors
+
+  - id: parallel.web.monitor.retrieve
+    kind: account
+    capability: web.monitor.retrieve
+    platform: web
+    scope: own_account
+    method: GET
+    path: /v1/monitors/{monitor_id}
+    name: "Retrieve a web monitor"
+    summary: "Retrieve a monitor's configuration and status"
+    input:
+      pathParams:
+        monitor_id: {type: string, required: true, note: "monitor_id returned by parallel.web.monitor.create; replace the chained test value during verification", example: "monitor_from_create_response"}
+    test_request:
+      pathParams: {monitor_id: "monitor_from_create_response"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: "retrieving monitor configuration does not execute it"}
+    docs_url: https://docs.parallel.ai/api-reference/monitor/retrieve-monitor
+
+  - id: parallel.web.monitor.events
+    capability: web.monitor.events
+    platform: web
+    scope: own_account
+    method: GET
+    path: /v1/monitors/{monitor_id}/events
+    name: "List monitor events"
+    summary: "List material-change events emitted by a monitor"
+    input:
+      pathParams:
+        monitor_id: {type: string, required: true, note: "monitor_id returned by parallel.web.monitor.create; replace the chained test value during verification", example: "monitor_from_create_response"}
+      queryParams:
+        limit: {type: integer, required: false, note: "maximum events to return", example: 1}
+        cursor: {type: string, required: false, note: "next_cursor from the previous response"}
+        event_group_id: {type: string, required: false, note: "filter to one execution; pagination parameters are ignored when set"}
+        include_completions: {type: boolean, required: false, note: "include executions that completed without a material change", example: false}
+    test_request:
+      pathParams: {monitor_id: "monitor_from_create_response"}
+      queryParams: {limit: 1}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: "reading already-created monitor events does not trigger an execution"}
+    docs_url: https://docs.parallel.ai/api-reference/monitor/list-monitor-events
+
+  - id: parallel.web.monitor.update
+    kind: account
+    capability: web.monitor.update
+    platform: web
+    scope: own_account
+    method: POST
+    path: /v1/monitors/{monitor_id}/update
+    name: "Update a web monitor"
+    summary: "Update a monitor's frequency, query, webhook, or metadata"
+    input:
+      pathParams:
+        monitor_id: {type: string, required: true, note: "monitor_id returned by parallel.web.monitor.create; replace the chained test value during verification", example: "monitor_from_create_response"}
+      body:
+        type: {type: string, required: false, note: "required with settings and must be event_stream", example: "event_stream"}
+        frequency: {type: string, required: false, note: "1h to 30d using h, d, or w units", example: "1w"}
+        settings: {type: object, required: false, note: "updated event_stream query or advanced_settings"}
+        webhook: {type: object, required: false, note: "replacement notification callback"}
+        metadata: {type: object, required: false, note: "replacement string metadata"}
+      bodyType: json
+    test_request:
+      pathParams: {monitor_id: "monitor_from_create_response"}
+      body: {frequency: "1w"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: "the update call does not execute the monitor; the resulting future schedule remains billable"}
+    docs_url: https://docs.parallel.ai/api-reference/monitor/update-monitor
+
+  - id: parallel.web.monitor.cancel
+    kind: account
+    capability: web.monitor.cancel
+    platform: web
+    scope: own_account
+    method: POST
+    path: /v1/monitors/{monitor_id}/cancel
+    name: "Cancel a web monitor"
+    summary: "Cancel a monitor so it stops scheduling future executions"
+    input:
+      pathParams:
+        monitor_id: {type: string, required: true, note: "monitor_id returned by parallel.web.monitor.create; replace the chained test value during verification", example: "monitor_from_create_response"}
+      note: "run last in the maintainer verification sequence so the test monitor cannot keep accruing executions"
+    test_request:
+      pathParams: {monitor_id: "monitor_from_create_response"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: "cancelling stops future billable executions and does not itself execute the monitor"}
+    docs_url: https://docs.parallel.ai/api-reference/monitor/cancel-monitor
+
+proposed_capabilities:
+  web.search: "Search the live web and return ranked sources with excerpts"
+  web.extract: "Extract clean or focused content from known web URLs"
+  web.research.task.start: "Start a cited web research task"
+  web.research.task.status: "Check a web research task's status"
+  web.research.task.result: "Retrieve a completed web research task's cited output"
+  web.monitor.create: "Create a recurring monitor for material web changes"
+  web.monitor.list: "List the connected account's web monitors"
+  web.monitor.retrieve: "Retrieve a web monitor's configuration and status"
+  web.monitor.events: "List material-change events from a web monitor"
+  web.monitor.update: "Update a web monitor's query, frequency, or delivery settings"
+  web.monitor.cancel: "Cancel a web monitor and stop future executions"

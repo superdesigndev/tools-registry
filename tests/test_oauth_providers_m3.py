@@ -48,6 +48,7 @@ def test_every_provider_is_registered():
         "dataforseo", "seranking", "moz", "majestic", "serpstat",
         "lusha", "coresignal", "diffbot", "thecompaniesapi", "leadmagic",
         "spyfu", "apify", "meta-ad-library", "serpapi",
+        "parallel",
         "microsoft-ads", "snapchat-ads", "tiktok-ads", "pinterest-ads",
     }
 

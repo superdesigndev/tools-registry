@@ -363,7 +363,10 @@ ALSO be keyed and allow-listed (`platform_key_for`).
 The doctrine is asymmetric on purpose: **a missing or unknown price reads as "refuse", never as
 free.** An endpoint with no `cost` block at all is therefore not platform-eligible without anything
 having to be written out for it, which is why the extended tier's unpriced routes need no
-annotation. Where an endpoint carries only `observed_cost` (DataForSEO prices per API family, not
+annotation. The same rule keeps a BYOK-first provider such as Parallel honest when one route's
+charge varies by mode, processor, result count or recurring execution: record the documented range
+in `note`, leave the scalar value unknown, and let the team's own key pay upstream directly. Where an
+endpoint carries only `observed_cost` (DataForSEO prices per API family, not
 per route), `_effective_cost` synthesizes the block with `source: observed, confidence: verified`
 and `checked` = the verify date: a figure the provider itself reported charging is the strongest
 provenance the catalog has.

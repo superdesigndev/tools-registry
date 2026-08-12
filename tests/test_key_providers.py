@@ -21,7 +21,7 @@ def test_key_providers_are_offerable_without_deployment_credentials():
     for svc in ("apollo", "pdl", "akta", "hunter", "crunchbase", "tikhub", "brightdata", "semrush",
                 "justoneapi", "dataforseo", "seranking", "moz", "majestic", "serpstat",
                 "lusha", "coresignal", "diffbot", "thecompaniesapi", "leadmagic",
-                "spyfu", "apify", "meta-ad-library", "serpapi"):
+                "spyfu", "apify", "meta-ad-library", "serpapi", "parallel"):
         p = P.get(svc)
         assert p is not None, svc
         assert p.auth_kind == "key", svc
@@ -56,6 +56,24 @@ async def test_key_connect_provisions_a_header_binding(clients: AsyncClient, mon
     assert b["injector"] == "env" and b["location"] == "header"
     assert b["name"] == "X-Api-Key" and b["format"] == "{secret}"
     assert "secret_field" not in b or b.get("secret_field") in (None, "")
+
+
+async def test_parallel_key_connect_provisions_raw_x_api_key_binding(
+    clients: AsyncClient, monkeypatch
+):
+    """Parallel's stable REST APIs need a raw x-api-key, not the Bearer format its MCP uses."""
+    monkeypatch.setitem(P.REGISTRY, "parallel", dataclasses.replace(
+        P.REGISTRY["parallel"], base_url="http://upstream", probe_path="/whoami"))
+    r = await clients.post(
+        "/connections/token", json={"provider": "parallel", "token": "parallel-test-key"}
+    )
+    assert r.status_code == 200, r.text
+
+    tool = next(t for t in (await clients.get("/tools")).json() if t["name"] == "parallel")
+    binding = tool["bindings"][0]
+    assert binding["injector"] == "env" and binding["location"] == "header"
+    assert binding["name"] == "x-api-key" and binding["format"] == "{secret}"
+    assert tool["health_check"]["path"] == "/whoami"
 
 
 async def test_key_connect_supports_a_query_param_key(clients: AsyncClient, monkeypatch):
