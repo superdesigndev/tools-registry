@@ -1478,6 +1478,46 @@ PINTEREST_ADS = OAuthProvider(
     probe_path="/user_account",  # cheap token check once configured; auto-provisions a Bearer tool
 )
 
+GOLDSKY = OAuthProvider(
+    service="goldsky",
+    display_name="Goldsky Edge RPC",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your Goldsky API key",
+    # Goldsky's documented shape is ?key=… on the endpoint URL; the X-API-Key header is accepted
+    # too. The query param is what every example in the docs uses, so it is what we inject.
+    token_location="query",
+    token_param="key",
+    token_format="{secret}",
+    setup_url="https://app.goldsky.com/dashboard/settings",
+    setup_action_label="Get your Goldsky API key",
+    setup_steps=(
+        "Sign up at app.goldsky.com — self-serve, no sales call.",
+        "Open Settings → API keys and create a key.",
+        "Copy the key. One key works for every chain.",
+    ),
+    setup_note="Requests bill at $5.00 per 1M across every method; the connection check is one "
+               "eth_chainId call (5e-6 USD).",
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    # Reuses the existing "Developer" bucket (github's) rather than opening a Blockchain shelf —
+    # that call is the maintainers', and nothing here depends on it: `category` is not a search
+    # field, and the word "blockchain" reaches search through the `evm` platform label instead.
+    category="Developer",
+    summary="Blockchain data over EVM JSON-RPC: read smart contracts, logs and events, blocks, "
+            "transactions and balances on Ethereum, Base, Arbitrum and 150+ chains.",
+    base_url="https://edge.goldsky.com/standard/evm",
+    docs_url="https://docs.goldsky.com/edge-rpc/introduction",
+    # JSON-RPC has no free GET route, so the key check is the cheapest METHOD rather than a free
+    # path: eth_chainId on Ethereum mainnet, which costs 5e-6 USD and answers from cache. A bad key
+    # is rejected with a bare HTTP 401 before the request reaches a backend, so the status alone is
+    # a sound signal and no token_verify_field is needed.
+    probe_path="/1",
+    probe_method="POST",
+    probe_json={"jsonrpc": "2.0", "id": 1, "method": "eth_chainId", "params": []},
+)
+
 REGISTRY: dict[str, OAuthProvider] = {
     p.service: p
     for p in (
@@ -1493,6 +1533,8 @@ REGISTRY: dict[str, OAuthProvider] = {
         # Advertising: API-key ad intelligence + unconfigured OAuth ad platforms
         SPYFU, APIFY, META_AD_LIBRARY, SERPAPI,
         MICROSOFT_ADS, SNAPCHAT_ADS, TIKTOK_ADS, PINTEREST_ADS,
+        # Blockchain API-key providers
+        GOLDSKY,
     )
 }
 
