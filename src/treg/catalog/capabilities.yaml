@@ -111,6 +111,15 @@ platforms:
   yandex: {label: "Yandex Search Results (SERP)", category: "SEO/AEO", summary: "Organic results and rankings from Yandex."}
   duckduckgo: {label: "DuckDuckGo Search Results (SERP)", category: "SEO/AEO", summary: "Organic results from DuckDuckGo."}
   yelp: {label: "Yelp", category: "Reviews & Apps", summary: "Business listings and reviews from Yelp."}
+  # --- Blockchain: onchain data over EVM JSON-RPC ------------------------------------------------
+  # The label carries the CHAIN names deliberately: it is the highest-weighted field every endpoint
+  # here shares, and a chain an agent names ("ethereum logs", "base balance") has to match somewhere
+  # or the AND-search returns nothing. The job words (smart contracts, blocks, logs, events) are
+  # deliberately NOT here — a token in the shared label scores every endpoint on the platform
+  # equally, so putting them here would flatten the ranking and bury the endpoint actually asked for.
+  # They live in the per-capability descriptions below, where they discriminate.
+  evm: {label: "EVM blockchain RPC — onchain data from Ethereum, Base, Arbitrum, Optimism, Polygon, Avalanche and 150+ chains", category: "Developer", summary: "Read onchain data from any EVM blockchain — call smart contracts, query logs and events, and fetch blocks, transactions, receipts, traces, balances and gas."}
+
   account: {label: "The provider account itself — usage, quota, balance (not a content platform)", category: "Other"}
 
 capabilities:

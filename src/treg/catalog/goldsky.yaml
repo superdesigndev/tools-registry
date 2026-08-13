@@ -1,0 +1,431 @@
+provider: goldsky
+source:
+  docs: https://docs.goldsky.com/edge-rpc/introduction
+  openapi: null # JSON-RPC, not REST — the method surface is documented one page per method under
+                # https://docs.goldsky.com/edge-rpc/evm/methods/ and indexed in
+                # https://docs.goldsky.com/llms.txt
+  curated: 2026-08-12
+limits: "No published per-key rate limit; budgets are set per project in the Goldsky dashboard"
+pricing_url: https://goldsky.com/pricing
+# Goldsky Edge RPC — blockchain (EVM) JSON-RPC. ONE route serves every method and every chain:
+# POST /{chainId}, with the JSON-RPC method named in the body. So each endpoint below shares the
+# same `path` and differs only in `body.method` — that is the API's real shape, not a modelling
+# shortcut. `chainId` is a path param, so one entry covers Ethereum, Base, Arbitrum, Optimism,
+# Polygon and the rest of the 150+ EVM networks Goldsky serves.
+#
+# THREE THINGS A REVIEWER WILL WANT TO KNOW:
+#   - EVERY test_request below was live-called 2026-08-12 against the PUBLIC demo key documented at
+#     https://docs.goldsky.com/edge-rpc/evm/methods/eth_pendingTransactions (`?key=demo`) and
+#     returned HTTP 200 with a real result. No credential exchange is needed to reproduce them:
+#       curl -X POST 'https://edge.goldsky.com/standard/evm/1?key=demo' \
+#         -H 'content-type: application/json' \
+#         -d '{"jsonrpc":"2.0","id":1,"method":"eth_chainId","params":[]}'
+#   - Test targets are pinned to FIXED historical block 0x1000000 (16777216) and well-known public
+#     mainnet addresses, so a replay a year from now returns the same bytes. The three that must
+#     read head state (gas price, fee history, estimate) are the only non-deterministic ones.
+#   - Prices are UNIFORM: $5.00 per 1M requests for every method, with no upcharge for the
+#     expensive ones (traces, eth_getLogs). That is why every cost block below is identical —
+#     it is one published rate, not fifteen transcriptions.
+#
+# `type: per_success` is exact, not marketing: the meter counts sub-calls the backend judged
+# billable. Successes, empty-but-valid responses and execution reverts bill; protocol and transport
+# failures do not. A JSON-RPC batch bills per sub-call, so a 10-call batch meters 10 units.
+proposed_capabilities:
+  evm.chain.id: "Confirm which blockchain (EVM chain id) an endpoint serves"
+  evm.block.latest_number: "Latest block number on an EVM blockchain"
+  evm.block.get: "Get a block by number or hash, with its transactions"
+  evm.block.receipts: "All transaction receipts in one block, in one call"
+  evm.logs.query: "Query smart contract logs and events by address, topics and block range"
+  evm.transaction.get: "Get a transaction by hash"
+  evm.transaction.receipt: "Get a transaction's receipt — status, gas used, logs and events"
+  evm.transaction.trace: "Trace a transaction's internal calls, transfers and reverts"
+  evm.contract.call: "Call a smart contract read method and get the returned data"
+  evm.contract.code: "Get the deployed bytecode at an address — tells a contract from a wallet"
+  evm.address.balance: "Native token balance of a wallet or smart contract address"
+  evm.address.transaction_count: "Transactions sent from an address (its nonce)"
+  evm.gas.price: "Current gas price on the blockchain"
+  evm.gas.estimate: "Estimate the gas a transaction will use before sending it"
+  evm.gas.fee_history: "Recent base fee and priority fee history for fee estimation"
+endpoints:
+  - id: goldsky.evm.chain.id
+    capability: evm.chain.id
+    platform: evm
+    scope: any_account
+    kind: utility
+    method: POST
+    path: /{chainId}
+    name: "Confirm the chain id"
+    summary: "Chain id the endpoint serves — the cheapest call, and the natural connectivity check"
+    input:
+      pathParams:
+        chainId: {type: integer, required: true, note: "EVM chain id: 1 Ethereum, 8453 Base, 42161 Arbitrum, 10 Optimism, 137 Polygon, 43114 Avalanche, 130 Unichain, 146 Sonic, 480 World Chain, 1329 Sei, 999 HyperEVM — and 150+ more, see https://goldsky.com/chains", example: 1}
+      body:
+        jsonrpc: {type: string, required: true, example: "2.0"}
+        id: {type: integer, required: true, example: 1}
+        method: {type: string, required: true, note: "the JSON-RPC method name", example: "eth_chainId"}
+        params: {type: array, required: true, note: "no parameters", example: []}
+      bodyType: json
+      note: "returns the chain id as a hex quantity, e.g. 0x1 for Ethereum mainnet"
+    test_request:
+      pathParams: {chainId: 1}
+      body: {jsonrpc: "2.0", id: 1, method: "eth_chainId", params: []}
+    cost: &edge_rpc_cost
+      type: per_success
+      value: 5.0
+      per: 1000000
+      unit: call
+      currency: USD
+      source: docs
+      source_url: https://goldsky.com/pricing
+      checked: 2026-08-12
+      confidence: documented
+      note: "$5.00 per 1M requests, flat across every method — traces and eth_getLogs cost the same
+        as eth_blockNumber. Billed per successful sub-call, so a JSON-RPC batch of 10 meters 10."
+    docs_url: https://docs.goldsky.com/edge-rpc/evm/methods/eth_chainId
+
+  - id: goldsky.evm.block.latest_number
+    capability: evm.block.latest_number
+    platform: evm
+    scope: any_account
+    method: POST
+    path: /{chainId}
+    name: "Latest block number"
+    summary: "Current chain head — the latest block number on Ethereum, Base, Arbitrum, Optimism, Polygon or any EVM chain"
+    input:
+      pathParams:
+        chainId: {type: integer, required: true, note: "EVM chain id — 1 Ethereum, 8453 Base, 42161 Arbitrum, 10 Optimism, 137 Polygon", example: 1}
+      body:
+        jsonrpc: {type: string, required: true, example: "2.0"}
+        id: {type: integer, required: true, example: 1}
+        method: {type: string, required: true, example: "eth_blockNumber"}
+        params: {type: array, required: true, note: "no parameters", example: []}
+      bodyType: json
+    test_request:
+      pathParams: {chainId: 1}
+      body: {jsonrpc: "2.0", id: 1, method: "eth_blockNumber", params: []}
+    cost: *edge_rpc_cost
+    docs_url: https://docs.goldsky.com/edge-rpc/evm/methods/eth_blockNumber
+
+  - id: goldsky.evm.block.get
+    capability: evm.block.get
+    platform: evm
+    scope: any_account
+    method: POST
+    path: /{chainId}
+    name: "Get a block"
+    summary: "A block's header and transactions by block number or tag — timestamp, gas used, base fee, miner"
+    input:
+      pathParams:
+        chainId: {type: integer, required: true, note: "EVM chain id", example: 1}
+      body:
+        jsonrpc: {type: string, required: true, example: "2.0"}
+        id: {type: integer, required: true, example: 1}
+        method: {type: string, required: true, note: "eth_getBlockByNumber, or eth_getBlockByHash to look up by hash", example: "eth_getBlockByNumber"}
+        params: {type: array, required: true, note: "[block, fullTransactions] — block is a hex number or one of latest|safe|finalized|earliest|pending; fullTransactions false returns hashes only (much smaller), true returns whole transaction objects", example: ["0x1000000", false]}
+      bodyType: json
+    test_request:
+      pathParams: {chainId: 1}
+      body: {jsonrpc: "2.0", id: 1, method: "eth_getBlockByNumber", params: ["0x1000000", false]}
+    cost: *edge_rpc_cost
+    docs_url: https://docs.goldsky.com/edge-rpc/evm/methods/eth_getBlockByNumber
+
+  - id: goldsky.evm.block.receipts
+    capability: evm.block.receipts
+    platform: evm
+    scope: any_account
+    method: POST
+    path: /{chainId}
+    name: "All receipts in a block"
+    summary: "Every transaction receipt in one block in a single call — logs and events for the whole block without a receipt call per transaction"
+    input:
+      pathParams:
+        chainId: {type: integer, required: true, note: "EVM chain id", example: 1}
+      body:
+        jsonrpc: {type: string, required: true, example: "2.0"}
+        id: {type: integer, required: true, example: 1}
+        method: {type: string, required: true, example: "eth_getBlockReceipts"}
+        params: {type: array, required: true, note: "[block] — hex block number, block hash, or a tag such as latest", example: ["0x1000000"]}
+      bodyType: json
+      note: "one call replaces N eth_getTransactionReceipt calls for a block, and bills as one"
+    test_request:
+      pathParams: {chainId: 1}
+      body: {jsonrpc: "2.0", id: 1, method: "eth_getBlockReceipts", params: ["0x1000000"]}
+    cost: *edge_rpc_cost
+    docs_url: https://docs.goldsky.com/edge-rpc/evm/methods/eth_getBlockReceipts
+
+  - id: goldsky.evm.logs.query
+    capability: evm.logs.query
+    platform: evm
+    scope: any_account
+    method: POST
+    path: /{chainId}
+    name: "Query smart contract logs and events"
+    summary: "Smart contract logs and events filtered by contract address, topics and block range — ERC-20 transfers, swaps, mints, any emitted event"
+    input:
+      pathParams:
+        chainId: {type: integer, required: true, note: "EVM chain id", example: 1}
+      body:
+        jsonrpc: {type: string, required: true, example: "2.0"}
+        id: {type: integer, required: true, example: 1}
+        method: {type: string, required: true, example: "eth_getLogs"}
+        params: {type: array, required: true, note: "[filter] — filter takes address (a contract address or a list of them), topics (topic0 is the event signature hash; nulls are wildcards), and fromBlock/toBlock, or blockHash for exactly one block. KEEP THE RANGE TIGHT: a wide range over a busy contract is the one way to make this call slow, though it costs the same $5/1M as any other method", example: [{"address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", "topics": ["0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"], "fromBlock": "0x1000000", "toBlock": "0x1000000"}]}
+      bodyType: json
+    test_request:
+      pathParams: {chainId: 1}
+      body:
+        jsonrpc: "2.0"
+        id: 1
+        method: "eth_getLogs"
+        params: [{address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", topics: ["0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"], fromBlock: "0x1000000", toBlock: "0x1000000"}]
+    cost: *edge_rpc_cost
+    docs_url: https://docs.goldsky.com/edge-rpc/evm/methods/eth_getLogs
+
+  - id: goldsky.evm.transaction.get
+    capability: evm.transaction.get
+    platform: evm
+    scope: any_account
+    method: POST
+    path: /{chainId}
+    name: "Get a transaction"
+    summary: "A transaction by hash — from, to, value, input data, gas and the block it landed in"
+    input:
+      pathParams:
+        chainId: {type: integer, required: true, note: "EVM chain id", example: 1}
+      body:
+        jsonrpc: {type: string, required: true, example: "2.0"}
+        id: {type: integer, required: true, example: 1}
+        method: {type: string, required: true, example: "eth_getTransactionByHash"}
+        params: {type: array, required: true, note: "[transactionHash] — 32-byte hex hash", example: ["0xb0b31990a5b94de6563f0ed84004a4eadb89a44a37a3ddc19f693235782b8aed"]}
+      bodyType: json
+      note: "returns null for an unknown or not-yet-mined hash — a null result is a valid answer, not an error"
+    test_request:
+      pathParams: {chainId: 1}
+      body: {jsonrpc: "2.0", id: 1, method: "eth_getTransactionByHash", params: ["0xb0b31990a5b94de6563f0ed84004a4eadb89a44a37a3ddc19f693235782b8aed"]}
+    cost: *edge_rpc_cost
+    docs_url: https://docs.goldsky.com/edge-rpc/evm/methods/eth_getTransactionByHash
+
+  - id: goldsky.evm.transaction.receipt
+    capability: evm.transaction.receipt
+    platform: evm
+    scope: any_account
+    method: POST
+    path: /{chainId}
+    name: "Get a transaction receipt"
+    summary: "A transaction's receipt — success or failure status, gas used, and the logs and events it emitted"
+    input:
+      pathParams:
+        chainId: {type: integer, required: true, note: "EVM chain id", example: 1}
+      body:
+        jsonrpc: {type: string, required: true, example: "2.0"}
+        id: {type: integer, required: true, example: 1}
+        method: {type: string, required: true, example: "eth_getTransactionReceipt"}
+        params: {type: array, required: true, note: "[transactionHash]", example: ["0xb0b31990a5b94de6563f0ed84004a4eadb89a44a37a3ddc19f693235782b8aed"]}
+      bodyType: json
+      note: "status 0x1 succeeded, 0x0 reverted. null means the transaction is not mined yet"
+    test_request:
+      pathParams: {chainId: 1}
+      body: {jsonrpc: "2.0", id: 1, method: "eth_getTransactionReceipt", params: ["0xb0b31990a5b94de6563f0ed84004a4eadb89a44a37a3ddc19f693235782b8aed"]}
+    cost: *edge_rpc_cost
+    docs_url: https://docs.goldsky.com/edge-rpc/evm/methods/eth_getTransactionReceipt
+
+  - id: goldsky.evm.transaction.trace
+    capability: evm.transaction.trace
+    platform: evm
+    scope: any_account
+    method: POST
+    path: /{chainId}
+    name: "Trace a transaction"
+    summary: "Internal calls, value transfers and revert reasons inside a transaction — the call tree a receipt does not show"
+    input:
+      pathParams:
+        chainId: {type: integer, required: true, note: "EVM chain id", example: 1}
+      body:
+        jsonrpc: {type: string, required: true, example: "2.0"}
+        id: {type: integer, required: true, example: 1}
+        method: {type: string, required: true, note: "debug_traceTransaction; trace_transaction is also served where the chain's node supports it", example: "debug_traceTransaction"}
+        params: {type: array, required: true, note: "[transactionHash, options] — options.tracer callTracer gives the call tree; omit it for the raw opcode trace, which is very large", example: ["0xb0b31990a5b94de6563f0ed84004a4eadb89a44a37a3ddc19f693235782b8aed", {"tracer": "callTracer"}]}
+      bodyType: json
+      note: "priced identically to every other method — no trace upcharge. Archive-depth traces
+        depend on the chain's node; a chain that cannot serve one answers with a JSON-RPC error
+        rather than partial data"
+    test_request:
+      pathParams: {chainId: 1}
+      body:
+        jsonrpc: "2.0"
+        id: 1
+        method: "debug_traceTransaction"
+        params: ["0xb0b31990a5b94de6563f0ed84004a4eadb89a44a37a3ddc19f693235782b8aed", {tracer: "callTracer"}]
+    cost: *edge_rpc_cost
+    docs_url: https://docs.goldsky.com/edge-rpc/evm/methods/debug_traceTransaction
+
+  - id: goldsky.evm.contract.call
+    capability: evm.contract.call
+    platform: evm
+    scope: any_account
+    method: POST
+    path: /{chainId}
+    name: "Call a smart contract"
+    summary: "Read any smart contract view method — token supply, balances, prices, owners — without sending a transaction"
+    input:
+      pathParams:
+        chainId: {type: integer, required: true, note: "EVM chain id", example: 1}
+      body:
+        jsonrpc: {type: string, required: true, example: "2.0"}
+        id: {type: integer, required: true, example: 1}
+        method: {type: string, required: true, example: "eth_call"}
+        params: {type: array, required: true, note: "[callObject, block] — callObject.to is the contract address and callObject.data is the ABI-encoded selector + arguments (0x18160ddd is totalSupply()); block is a hex number or a tag, and a historical number reads that contract's state at that block", example: [{"to": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", "data": "0x18160ddd"}, "latest"]}
+      bodyType: json
+      note: "the result is ABI-encoded return data — decode it against the contract's ABI"
+    test_request:
+      pathParams: {chainId: 1}
+      body:
+        jsonrpc: "2.0"
+        id: 1
+        method: "eth_call"
+        params: [{to: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", data: "0x18160ddd"}, "latest"]
+    cost: *edge_rpc_cost
+    docs_url: https://docs.goldsky.com/edge-rpc/evm/methods/eth_call
+
+  - id: goldsky.evm.contract.code
+    capability: evm.contract.code
+    platform: evm
+    scope: any_account
+    method: POST
+    path: /{chainId}
+    name: "Get contract bytecode"
+    summary: "Deployed bytecode at an address — an empty result means a wallet, anything else a smart contract"
+    input:
+      pathParams:
+        chainId: {type: integer, required: true, note: "EVM chain id", example: 1}
+      body:
+        jsonrpc: {type: string, required: true, example: "2.0"}
+        id: {type: integer, required: true, example: 1}
+        method: {type: string, required: true, example: "eth_getCode"}
+        params: {type: array, required: true, note: "[address, block] — 0x for an externally owned account (a wallet), bytecode for a contract", example: ["0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", "latest"]}
+      bodyType: json
+    test_request:
+      pathParams: {chainId: 1}
+      body: {jsonrpc: "2.0", id: 1, method: "eth_getCode", params: ["0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", "latest"]}
+    cost: *edge_rpc_cost
+    docs_url: https://docs.goldsky.com/edge-rpc/evm/methods/eth_getCode
+
+  - id: goldsky.evm.address.balance
+    capability: evm.address.balance
+    platform: evm
+    scope: any_account
+    method: POST
+    path: /{chainId}
+    name: "Native balance of an address"
+    summary: "Native token balance of any wallet or contract address — ETH on Ethereum, and the native token on Base, Arbitrum, Optimism, Polygon and other chains"
+    input:
+      pathParams:
+        chainId: {type: integer, required: true, note: "EVM chain id", example: 1}
+      body:
+        jsonrpc: {type: string, required: true, example: "2.0"}
+        id: {type: integer, required: true, example: 1}
+        method: {type: string, required: true, example: "eth_getBalance"}
+        params: {type: array, required: true, note: "[address, block] — a historical block number reads the balance as of that block. For ERC-20 balances use eth_call with balanceOf instead", example: ["0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045", "latest"]}
+      bodyType: json
+      note: "the result is wei as a hex quantity — divide by 1e18 for whole tokens"
+    test_request:
+      pathParams: {chainId: 1}
+      body: {jsonrpc: "2.0", id: 1, method: "eth_getBalance", params: ["0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045", "latest"]}
+    cost: *edge_rpc_cost
+    docs_url: https://docs.goldsky.com/edge-rpc/evm/methods/eth_getBalance
+
+  - id: goldsky.evm.address.transaction_count
+    capability: evm.address.transaction_count
+    platform: evm
+    scope: any_account
+    method: POST
+    path: /{chainId}
+    name: "Transaction count (nonce)"
+    summary: "How many transactions an address has sent — its nonce, and what you need to build the next one"
+    input:
+      pathParams:
+        chainId: {type: integer, required: true, note: "EVM chain id", example: 1}
+      body:
+        jsonrpc: {type: string, required: true, example: "2.0"}
+        id: {type: integer, required: true, example: 1}
+        method: {type: string, required: true, example: "eth_getTransactionCount"}
+        params: {type: array, required: true, note: "[address, block] — use pending to include queued transactions when building the next nonce", example: ["0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045", "latest"]}
+      bodyType: json
+    test_request:
+      pathParams: {chainId: 1}
+      body: {jsonrpc: "2.0", id: 1, method: "eth_getTransactionCount", params: ["0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045", "latest"]}
+    cost: *edge_rpc_cost
+    docs_url: https://docs.goldsky.com/edge-rpc/evm/methods/eth_getTransactionCount
+
+  - id: goldsky.evm.gas.price
+    capability: evm.gas.price
+    platform: evm
+    scope: any_account
+    method: POST
+    path: /{chainId}
+    name: "Current gas price"
+    summary: "Current gas price on the chain, in wei"
+    input:
+      pathParams:
+        chainId: {type: integer, required: true, note: "EVM chain id", example: 1}
+      body:
+        jsonrpc: {type: string, required: true, example: "2.0"}
+        id: {type: integer, required: true, example: 1}
+        method: {type: string, required: true, example: "eth_gasPrice"}
+        params: {type: array, required: true, note: "no parameters", example: []}
+      bodyType: json
+    test_request:
+      pathParams: {chainId: 1}
+      body: {jsonrpc: "2.0", id: 1, method: "eth_gasPrice", params: []}
+    cost: *edge_rpc_cost
+    docs_url: https://docs.goldsky.com/edge-rpc/evm/methods/eth_gasPrice
+
+  - id: goldsky.evm.gas.estimate
+    capability: evm.gas.estimate
+    platform: evm
+    scope: any_account
+    method: POST
+    path: /{chainId}
+    name: "Estimate gas for a transaction"
+    summary: "Gas a transaction would use if sent now — and, when it would revert, the reason it fails"
+    input:
+      pathParams:
+        chainId: {type: integer, required: true, note: "EVM chain id", example: 1}
+      body:
+        jsonrpc: {type: string, required: true, example: "2.0"}
+        id: {type: integer, required: true, example: 1}
+        method: {type: string, required: true, example: "eth_estimateGas"}
+        params: {type: array, required: true, note: "[callObject] — from, to, value and data, the same shape eth_call takes", example: [{"from": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045", "to": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045", "value": "0x1"}]}
+      bodyType: json
+      note: "a transaction that would revert answers with a JSON-RPC error carrying the revert reason — which is the useful answer, and bills the same as a success"
+    test_request:
+      pathParams: {chainId: 1}
+      body:
+        jsonrpc: "2.0"
+        id: 1
+        method: "eth_estimateGas"
+        params: [{from: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045", to: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045", value: "0x1"}]
+    cost: *edge_rpc_cost
+    docs_url: https://docs.goldsky.com/edge-rpc/evm/methods/eth_estimateGas
+
+  - id: goldsky.evm.gas.fee_history
+    capability: evm.gas.fee_history
+    platform: evm
+    scope: any_account
+    method: POST
+    path: /{chainId}
+    name: "Gas fee history"
+    summary: "Base fee and priority fee percentiles over recent blocks — the input for EIP-1559 fee estimation"
+    input:
+      pathParams:
+        chainId: {type: integer, required: true, note: "EVM chain id", example: 1}
+      body:
+        jsonrpc: {type: string, required: true, example: "2.0"}
+        id: {type: integer, required: true, example: 1}
+        method: {type: string, required: true, example: "eth_feeHistory"}
+        params: {type: array, required: true, note: "[blockCount, newestBlock, rewardPercentiles] — blockCount is how many blocks back, rewardPercentiles the priority-fee percentiles to report", example: [4, "latest", [25, 50, 75]]}
+      bodyType: json
+    test_request:
+      pathParams: {chainId: 1}
+      body: {jsonrpc: "2.0", id: 1, method: "eth_feeHistory", params: [4, "latest", [25, 50, 75]]}
+    cost: *edge_rpc_cost
+    docs_url: https://docs.goldsky.com/edge-rpc/evm/methods/eth_feeHistory

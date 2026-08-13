@@ -89,11 +89,21 @@ LEAK = re.compile(r"(Bearer\s+[A-Za-z0-9+/_=-]{16,}|[A-Za-z0-9+/]{40,}={0,2})")
 # segments, and those segments spell words ("dataforseo", "kolContentTags"). A base64 secret hits
 # a `/` only about once per 64 characters, so at least one of its segments stays long and wordless.
 WORDY = re.compile(r"[a-z]{8,}")
+# ...and an onchain identifier is a third shape: `0x` and then nothing but hex. An EVM address,
+# transaction hash, event topic or ABI-encoded calldata is PUBLIC by construction — it names a thing
+# on a public ledger — and it is what every parameter value in a blockchain listing is made of, so
+# without this the rule above fires on each one (22 of them in goldsky.yaml alone). The caveat: a
+# 32-byte private key has this shape too. What keeps that from being a hole is that no JSON-RPC
+# method in the catalog takes one (signing is client-side), and `gitleaks` in CI — the actual
+# credential gate, untouched by this heuristic — still scans every file.
+ONCHAIN_HEX = re.compile(r"0x[0-9a-fA-F]+")
 
 
 def looks_like_secret(match: str) -> bool:
     if match.lower().startswith("bearer"):
         return True
+    if ONCHAIN_HEX.fullmatch(match):
+        return False
     return any(
         len(seg) >= 24 and not WORDY.search(seg) and any(c.isdigit() for c in seg)
         for seg in match.split("/")
