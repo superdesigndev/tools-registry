@@ -25,9 +25,6 @@ proposed_capabilities:
   shortform.sounds.trending: "List trending sounds ranked by recent usage"
   shortform.sounds.breakout: "List breakout sounds accelerating in usage"
   shortform.sounds.search: "Search sounds by title"
-  shortform.sounds.detail: "Get a sound's details and metrics"
-  shortform.sounds.usage_history: "Get a sound's daily usage time-series"
-  shortform.sounds.videos: "List videos using a sound"
   shortform.creator.sounds: "List the sounds in a creator's catalog"
 
 endpoints:
@@ -210,67 +207,6 @@ endpoints:
     test_request:
       queryParams: {q: "original sound", limit: 5}
     cost: {type: per_success, value: 0.10, currency: USD, per: 1, unit: call, source: docs, source_url: 'https://dev.virlo.ai/docs/credits', checked: '2026-08-13', confidence: documented, note: "10 credits @ $0.01/credit; charged on 2xx only"}
-    docs_url: https://dev.virlo.ai/docs/sounds
-
-  - id: virlo.shortform.sounds.detail
-    capability: shortform.sounds.detail
-    platform: shortform
-    method: GET
-    path: /sounds/{sound_id}
-    name: "Sound details"
-    summary: "A single sound's details and metrics"
-    input:
-      pathParams:
-        sound_id: {type: string, required: true, note: "id from shortform.sounds.trending / .search (chained id)"}
-      queryParams:
-        resolve: {type: boolean, required: false, note: "true triggers fresh artist resolution and adds 10 credits ($0.10); the base cost below assumes resolve is omitted"}
-      note: "sound_id must be harvested from a trending/search response first — replace the test id with a live one at verify time"
-    test_request:
-      pathParams: {sound_id: "REPLACE_WITH_LIVE_SOUND_ID"}
-    cost: {type: per_success, value: 0.05, currency: USD, per: 1, unit: call, source: docs, source_url: 'https://dev.virlo.ai/docs/credits', checked: '2026-08-13', confidence: documented, note: "5 credits @ $0.01/credit base (resolve=true adds 10); charged on 2xx only"}
-    docs_url: https://dev.virlo.ai/docs/sounds
-
-  - id: virlo.shortform.sounds.usage_history
-    capability: shortform.sounds.usage_history
-    platform: shortform
-    method: GET
-    path: /sounds/{sound_id}/usage-history
-    name: "Sound usage history"
-    summary: "Daily usage time-series for a sound"
-    input:
-      pathParams:
-        sound_id: {type: string, required: true, note: "id from shortform.sounds.trending / .search (chained id)"}
-      queryParams:
-        start_date: {type: string, required: false, example: "2026-08-01"}
-        end_date: {type: string, required: false, example: "2026-08-07"}
-        limit: {type: integer, required: false, example: 30}
-      note: "sound_id must be harvested from a trending/search response first — replace the test id with a live one at verify time"
-    test_request:
-      pathParams: {sound_id: "REPLACE_WITH_LIVE_SOUND_ID"}
-      queryParams: {limit: 30}
-    cost: {type: per_success, value: 0.05, currency: USD, per: 1, unit: call, source: docs, source_url: 'https://dev.virlo.ai/docs/credits', checked: '2026-08-13', confidence: documented, note: "5 credits @ $0.01/credit; charged on 2xx only"}
-    docs_url: https://dev.virlo.ai/docs/sounds
-
-  - id: virlo.shortform.sounds.videos
-    capability: shortform.sounds.videos
-    platform: shortform
-    method: GET
-    path: /sounds/{sound_id}/videos
-    name: "Videos using a sound"
-    summary: "Videos that use a given sound"
-    input:
-      pathParams:
-        sound_id: {type: string, required: true, note: "id from shortform.sounds.trending / .search (chained id)"}
-      queryParams:
-        sort: {type: string, required: false}
-        platform: {type: string, required: false, example: "tiktok"}
-        limit: {type: integer, required: false, example: 5}
-        page: {type: integer, required: false, example: 1}
-      note: "sound_id must be harvested from a trending/search response first — replace the test id with a live one at verify time"
-    test_request:
-      pathParams: {sound_id: "REPLACE_WITH_LIVE_SOUND_ID"}
-      queryParams: {limit: 5}
-    cost: {type: per_success, value: 0.25, currency: USD, per: 1, unit: call, source: docs, source_url: 'https://dev.virlo.ai/docs/credits', checked: '2026-08-13', confidence: documented, note: "25 credits @ $0.01/credit; charged on 2xx only"}
     docs_url: https://dev.virlo.ai/docs/sounds
 
   - id: virlo.shortform.creator.sounds
