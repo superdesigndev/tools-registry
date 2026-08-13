@@ -897,6 +897,32 @@ TIKHUB = OAuthProvider(
     probe_path="/api/v1/tikhub/user/get_user_info",  # account info — the natural key check
 )
 
+VIRLO = OAuthProvider(
+    service="virlo",
+    display_name="Virlo",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your Virlo API key (virlo_tkn_…)",
+    # token_header / token_format default to Authorization: Bearer {secret} — Virlo's exact scheme.
+    setup_url="https://dev.virlo.ai/dashboard",
+    setup_action_label="Get your Virlo API key",
+    setup_steps=(
+        "Sign in to Virlo and open the dashboard.",
+        "Create an API key (it looks like virlo_tkn_…) and copy it.",
+    ),
+    setup_note="Discovery reads are billed per successful request; the balance check is free.",
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Social media",
+    summary="Cross-platform short-form intelligence: trends, viral videos, sounds and hashtag "
+            "performance across TikTok, Instagram Reels and YouTube Shorts.",
+    base_url="https://api.virlo.ai/v1",
+    docs_url="https://dev.virlo.ai/docs",
+    # A valid key → 200 with the team's balance; a missing/invalid key → 401. Costs 0 credits.
+    probe_path="/account/balance",
+)
+
 BRIGHTDATA = OAuthProvider(
     service="brightdata",
     display_name="Bright Data",
@@ -1492,7 +1518,7 @@ REGISTRY: dict[str, OAuthProvider] = {
         LINKEDIN, SLACK, X, TIKTOK, FACEBOOK, INSTAGRAM, META_ADS,
         # API-key providers
         APOLLO, PDL, AKTA, HUNTER, CRUNCHBASE, TIKHUB, BRIGHTDATA, SEMRUSH, JUSTONEAPI,
-        SCRAPECREATORS,
+        SCRAPECREATORS, VIRLO,
         # SEO API-key providers
         DATAFORSEO, SERANKING, MOZ, MAJESTIC, SERPSTAT,
         # more Enrichment API-key providers
