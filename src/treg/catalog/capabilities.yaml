@@ -217,6 +217,10 @@ capabilities:
   web.scrape.job.start: "Start a scraping job over many URLs"
   web.scrape.job.status: "Check if a scraping job has finished"
   web.scrape.structured: "Scrape a URL into structured records"
+  web.search.results: "Search the live web for sources and snippets"
+  web.search.answer: "Answer a question from cited live web sources"
+  web.search.structured: "Search the live web into a JSON schema"
+  web.page.fetch: "Fetch a public page as clean Markdown"
 
   # merged from ad-provider proposed_capabilities (2026-07-28)
   meta-ads.library.advertiser: "Ads a specific Page is running now"

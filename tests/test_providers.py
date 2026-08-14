@@ -178,6 +178,13 @@ def test_query_provider_auto_registers(tmp_path):
     assert a.supported and a.binding["location"] == "query" and a.binding["name"] == "api_key"
 
 
+def test_linkup_key_auto_registers_as_bearer(tmp_path):
+    env = _write_env(tmp_path, "LINKUP_API_KEY=x\n")
+    [a] = prov.plan_actions(prov.scan_env(env))
+    assert a.supported and a.tool_name == "linkup"
+    assert a.binding["location"] == "header" and a.binding["format"] == "Bearer {secret}"
+
+
 def test_catalog_grew_and_versioned():
     assert prov.CATALOG_VERSION >= 2 and len(prov.CATALOG) >= 80
     # tokens stay distinct enough: no duplicate provider names

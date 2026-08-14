@@ -1040,6 +1040,34 @@ SCRAPECREATORS = OAuthProvider(
     token_verify_field="creditCount",
 )
 
+# ---- web search API-key providers -------------------------------------------------------------
+
+LINKUP = OAuthProvider(
+    service="linkup",
+    display_name="Linkup",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your Linkup API key",
+    token_header="Authorization",
+    token_format="Bearer {secret}",
+    setup_url="https://app.linkup.so/",
+    setup_action_label="Get your Linkup API key",
+    setup_steps=(
+        "Sign in to Linkup and open your organization settings.",
+        "Create an API key and copy it.",
+    ),
+    setup_note="New eligible accounts receive monthly credits; successful calls use the prepaid balance.",
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="SEO",
+    summary="Agentic web search, sourced answers, structured results and page fetching.",
+    base_url="https://api.linkup.so/v1",
+    docs_url="https://docs.linkup.so/",
+    # Free balance read. Live checked 2026-08-12: a bogus Bearer token returns HTTP 401.
+    probe_path="/credits/balance",
+)
+
 # ---- SEO API-key providers -------------------------------------------------------------------
 
 DATAFORSEO = OAuthProvider(
@@ -1492,7 +1520,7 @@ REGISTRY: dict[str, OAuthProvider] = {
         LINKEDIN, SLACK, X, TIKTOK, FACEBOOK, INSTAGRAM, META_ADS,
         # API-key providers
         APOLLO, PDL, AKTA, HUNTER, CRUNCHBASE, TIKHUB, BRIGHTDATA, SEMRUSH, JUSTONEAPI,
-        SCRAPECREATORS,
+        SCRAPECREATORS, LINKUP,
         # SEO API-key providers
         DATAFORSEO, SERANKING, MOZ, MAJESTIC, SERPSTAT,
         # more Enrichment API-key providers

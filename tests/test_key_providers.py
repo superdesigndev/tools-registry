@@ -21,7 +21,7 @@ def test_key_providers_are_offerable_without_deployment_credentials():
     for svc in ("apollo", "pdl", "akta", "hunter", "crunchbase", "tikhub", "brightdata", "semrush",
                 "justoneapi", "dataforseo", "seranking", "moz", "majestic", "serpstat",
                 "lusha", "coresignal", "diffbot", "thecompaniesapi", "leadmagic",
-                "spyfu", "apify", "meta-ad-library", "serpapi"):
+                "spyfu", "apify", "meta-ad-library", "serpapi", "linkup"):
         p = P.get(svc)
         assert p is not None, svc
         assert p.auth_kind == "key", svc
@@ -35,6 +35,7 @@ def test_key_providers_appear_in_the_marketplace_listing():
     assert listing["apollo"]["category"] == "Enrichment"
     assert listing["apollo"]["auth_kind"] == "key"
     assert listing["semrush"]["category"] == "SEO"
+    assert listing["linkup"]["category"] == "SEO"
     assert listing["tikhub"]["category"] == "Social media"
     assert "Enrichment" in P.CATEGORY_ORDER
 
