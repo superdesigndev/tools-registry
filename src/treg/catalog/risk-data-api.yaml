@@ -1,0 +1,154 @@
+provider: risk-data-api
+source:
+  docs: https://tnt-audit.com/risk-api
+  openapi: https://tnt-audit.com/openapi.json
+  curated: 2026-08-12
+# Curated from the provider's own public docs page (https://tnt-audit.com/risk-api), which
+# publishes a live changelog and an exact example response for every field — the request/response
+# shapes below are transcribed directly from it, not reverse-engineered. Not yet live-verified with
+# a real key (that is Step 5/7 of this PR's own review process) — `verified:` is intentionally
+# absent on every entry below until that run happens.
+#
+# SURFACE NOTE: this provider has one real job — score a Solana token mint's on-chain risk — plus
+# thin, honest variations on it (batch, history) and the account/webhook plumbing around it. Five
+# endpoints is the whole genuine surface, not a truncation of a larger one; padding it further would
+# mean inventing capabilities the API doesn't have.
+limits: "15 requests/day free per key (UTC); 402 Payment Required with upgrade_url once over, not a silent block"
+pricing_url: https://tnt-audit.com/risk-api#billing
+
+endpoints:
+  - id: risk-data-api.solana.token.risk-score
+    domain: token
+    capability: solana.token.risk-score
+    platform: solana
+    scope: any_account
+    kind: data
+    method: GET
+    path: /token-risk
+    name: "Get a Solana token's risk score"
+    summary: "Safety score, live insider-wallet-cluster detection, and on-chain fundamentals for any Solana mint"
+    input:
+      queryParams:
+        mint: {type: string, required: true, note: "the Solana token mint address", example: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"}
+      note: "On a mint's first-ever check, cluster_analysis returns \"pending\" while the insider trace runs in the background (~1-2 min); re-check the same mint after that for the full picture. Response also includes vesting_locks[] (known on-chain vesting/lock contracts among top holders) and caps_triggered/dominant_cap (which scoring cap fired, and why)."
+    test_request:
+      queryParams: {mint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"}
+    cost:
+      type: per_call
+      value: 0.07
+      currency: USD
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://tnt-audit.com/risk-api#billing
+      checked: '2026-08-12'
+      confidence: documented
+      note: "First 15 calls/day per key are free (UTC reset). Past that, pay-per-call at $0.07/call, dropping to $0.03/call once subscribed ($49/30 days, 1000 calls included, $0.03/call overage). A 402 (not a 4xx failure) is returned over the limit with no call-credit balance, carrying limit/used/reset_at/overage_rate_usd/upgrade_url — the same key keeps working immediately once topped up."
+    docs_url: https://tnt-audit.com/risk-api
+
+  - id: risk-data-api.solana.token.risk-score-batch
+    domain: token
+    capability: solana.token.risk-score-batch
+    platform: solana
+    scope: any_account
+    kind: data
+    method: POST
+    path: /token-risk/batch
+    name: "Get risk scores for multiple Solana tokens"
+    summary: "The same risk-score check as GET /token-risk for up to 25 mints in one request"
+    input:
+      body:
+        mints: {type: array, required: true, note: "1-25 Solana mint addresses", example: ["EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"]}
+      bodyType: json
+      note: "N mints in one request = N calls charged at the same per-call rate as the single-mint endpoint — no bulk discount, and a hard cap of 25 per request specifically to bound worst-case cost of one call."
+    test_request:
+      body: {mints: ["EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"]}
+      bodyType: json
+    cost:
+      type: per_result
+      value: 0.07
+      currency: USD
+      per: 1
+      unit: record
+      source: docs
+      source_url: https://tnt-audit.com/risk-api#billing
+      checked: '2026-08-12'
+      confidence: documented
+      note: "Same rate and free-tier mechanics as solana.token.risk-score, charged once per mint in the batch (N mints = N calls, no bulk discount)."
+    docs_url: https://tnt-audit.com/risk-api
+
+  - id: risk-data-api.solana.token.risk-history
+    domain: token
+    capability: solana.token.risk-history
+    platform: solana
+    scope: any_account
+    kind: data
+    method: GET
+    path: /token-risk/history
+    name: "Get a Solana token's risk-score history"
+    summary: "Time series of a mint's past safety_score checks, from this provider's own stored history — not a fresh on-chain check"
+    input:
+      queryParams:
+        mint: {type: string, required: true, example: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"}
+        days: {type: integer, required: false, note: "1-90, default 30 — matches the 90-day retention window", example: 7}
+      note: "Pure read from the provider's own database (no live Solana RPC or DexScreener call per request), which is why it is priced differently from the live-check endpoints above."
+    test_request:
+      queryParams: {mint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", days: 7}
+    cost: {type: free, value: 0, currency: USD, unit: call, source: docs, source_url: https://tnt-audit.com/risk-api, checked: '2026-08-12', confidence: documented, note: "does not touch any upstream API, so it is not charged against the free/subscription call quota — still requires a valid key (not public)."}
+    docs_url: https://tnt-audit.com/risk-api
+
+  - id: risk-data-api.solana.token.risk-alert.subscribe
+    domain: alerts
+    capability: solana.token.risk-alert.subscribe
+    platform: solana
+    scope: own_account
+    kind: account
+    method: POST
+    path: /webhooks/subscribe
+    name: "Subscribe to a safety-score threshold alert"
+    summary: "Get a signed HTTP callback the moment a mint's safety_score crosses a threshold, instead of polling on a schedule"
+    input:
+      body:
+        mint: {type: string, required: true, example: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"}
+        threshold: {type: integer, required: true, note: "0-100 safety_score threshold", example: 50}
+        condition: {type: string, required: true, note: "\"above\" or \"below\"", example: "below"}
+        callback_url: {type: string, required: true, note: "your endpoint to receive the signed POST"}
+      bodyType: json
+      note: "Fires once per crossing, not on every check (edge-triggered). Response includes webhook_secret shown ONLY ONCE — save it to verify the X-Webhook-Signature header (hmac-sha256) on every delivery. Calling this creates a real subscription row; pair with risk-alert.unsubscribe using the returned id to clean up a test call."
+    test_request:
+      body: {mint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", threshold: 1, condition: "below", callback_url: "https://example.com/treg-catalog-verify-webhook"}
+      bodyType: json
+    cost: {type: free, value: 0, currency: USD, unit: call, source: docs, source_url: https://tnt-audit.com/risk-api, checked: '2026-08-12', confidence: inferred, note: "not listed as a separately metered action on the pricing page — treated as free pending explicit confirmation from the provider."}
+    docs_url: https://tnt-audit.com/risk-api
+
+  - id: risk-data-api.solana.token.risk-alert.unsubscribe
+    domain: alerts
+    capability: solana.token.risk-alert.unsubscribe
+    platform: solana
+    scope: own_account
+    kind: account
+    method: DELETE
+    path: /webhooks/{id}
+    name: "Cancel a safety-score threshold alert"
+    summary: "Delete an active safety_score threshold subscription by its id"
+    input:
+      pathParams:
+        id: {type: string, required: true, note: "the subscription id returned by risk-alert.subscribe"}
+    untestable: "the {id} path param only exists after a risk-alert.subscribe call — verify by chaining onto that endpoint's test response, not with a standalone request"
+    cost: {type: free, value: 0, currency: USD, unit: call, source: docs, source_url: https://tnt-audit.com/risk-api, checked: '2026-08-12', confidence: inferred, note: "same as risk-alert.subscribe — not listed as separately billed."}
+    docs_url: https://tnt-audit.com/risk-api
+
+  - id: risk-data-api.account.usage
+    kind: account
+    capability: account.usage
+    platform: account
+    scope: own_account
+    method: GET
+    path: /billing/status
+    name: "Get account tier and credit balance"
+    summary: "Your Risk-Data API tier, subscription status and call-credit balance (free)"
+    input:
+      note: "no parameters — the key rides in the Authorization: Bearer header. Deliberately skips the rate-limit check other endpoints run, so this never spends any of the 15/day free quota."
+    test_request: {queryParams: {}}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: "free — this is the registry's own probe endpoint (see OAuthProvider.probe_path in oauth_providers.py)."}
+    docs_url: https://tnt-audit.com/risk-api

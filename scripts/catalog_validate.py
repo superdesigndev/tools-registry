@@ -89,13 +89,27 @@ LEAK = re.compile(r"(Bearer\s+[A-Za-z0-9+/_=-]{16,}|[A-Za-z0-9+/]{40,}={0,2})")
 # segments, and those segments spell words ("dataforseo", "kolContentTags"). A base64 secret hits
 # a `/` only about once per 64 characters, so at least one of its segments stays long and wordless.
 WORDY = re.compile(r"[a-z]{8,}")
+# ...and a Solana public key (mint/wallet address) is a THIRD shape that pattern-matches as a
+# secret under the same test a base64 credential does: 32-44 wordless alphanumeric characters, no
+# slash to break it into shorter segments (risk-data-api.yaml, added with the Crypto/Safety
+# category). It differs from an actual credential in the one way that matters: it is base58, not
+# base64/hex — Bitcoin's base58 alphabet (which Solana also uses) drops 0/O/I/l specifically so an
+# address can be read aloud and copied without the visual-ambiguity bugs that plague raw base64/hex
+# secrets. That is also exactly why it is safe to except: a base58 pubkey is meant to be public by
+# design (an address is what you SHARE to receive funds; the private key never appears in an API
+# example), so excepting the shape does not risk waving through an actual leaked credential — those
+# still contain 0/O/I/l often enough that requiring their absence stays a meaningful filter.
+BASE58_PUBKEY = re.compile(r"^[1-9A-HJ-NP-Za-km-z]{32,44}$")
 
 
 def looks_like_secret(match: str) -> bool:
     if match.lower().startswith("bearer"):
         return True
     return any(
-        len(seg) >= 24 and not WORDY.search(seg) and any(c.isdigit() for c in seg)
+        len(seg) >= 24
+        and not WORDY.search(seg)
+        and any(c.isdigit() for c in seg)
+        and not BASE58_PUBKEY.match(seg)
         for seg in match.split("/")
     )
 
