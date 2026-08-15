@@ -278,6 +278,12 @@ def _migrate_to_orgs(conn) -> None:
             if col not in cols:
                 conn.execute(text(f"ALTER TABLE callrecord ADD COLUMN {col} {ddl}"))
 
+    # (A29) additive: callrecord.refused_by — set when treg itself refused the call pre-relay
+    # (auth/policy/balance/cap/resolution/request; see models.CallRecord). NULLABLE: NULL means the
+    # provider answered, and every pre-existing row that reached upstream is correct as NULL.
+    if "callrecord" in tables and "refused_by" not in {c["name"] for c in insp.get_columns("callrecord")}:
+        conn.execute(text("ALTER TABLE callrecord ADD COLUMN refused_by VARCHAR"))
+
     # (A28) corrective: creditblock.stripe_payment_intent must be UNIQUE (the top-up idempotency
     # key). It sits HERE, above the (B) block, because (B) returns early on a fresh/new-schema DB —
     # and a fresh DB created between the ledger landing and this fix is precisely the one that has

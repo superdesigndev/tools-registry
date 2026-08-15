@@ -52,7 +52,10 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   user + an org + owner membership and returns a token **once**; the dashboard/CLI login doors do NOT go
   through it (they create the user only, no auto org). `create_org` (`POST /orgs`, `require_identity` so a
   zero-org user can make their first team) + `list_orgs` (`GET /orgs`,
-  each org carries a `tool_count` — one grouped query — so the dashboard can land on the org with tools);
+  each org carries a `tool_count` — one grouped query — so the dashboard can land on the org with tools;
+  its `active` flag follows `require_member`'s precedence — per-org membership token, else `X-Treg-Org`,
+  else a team-pinned identity token's own `org` claim — so `treg login --token <pinned key>` lands on the
+  baked-in team instead of the caller's first membership);
   invites via `create_invite` (`POST /orgs/{id}/invites`, admin+) → one-time code (**emailed** via
   `email.send_invite`, best-effort, along with a separate inbox-only `email_token` sign-in link — the
   token is never in the JSON response; see the invite sign-in link below), `accept_invite`
@@ -162,7 +165,13 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
     a no-op where `resource` is unavailable. Deliberately **no** address-space or process-count cap — a
     virtual-memory cap crashes Go CLIs (gh/stripe/doctl) and `RLIMIT_NPROC` is per-uid, shared with the
     server. Full **filesystem/network** isolation needs a container deploy and is a planned follow-up.
-- **Meta:** `meta` (`GET /meta`, open) → `{public_url, github}` for the dashboard.
+- **Meta:** `meta` (`GET /meta`, open) → `{public_url, github, google, app_version, treg_version,
+  posthog_key/posthog_host, intercom_app_id}` for the dashboard. The last three are the opt-in
+  third-party keys (analytics, support chat): empty on a deployment that didn't set them, so
+  self-hosted pages load neither PostHog nor the Intercom Messenger. `intercom_app_id` is paired
+  server-side with `intercom_secret`, which never leaves the server: `_intercom_user_hash` (HMAC-SHA256
+  of the email, keyed by the secret) is added to `GET /auth/me` as `intercom_user_hash` — Intercom
+  identity verification, so a third party who knows an email can't impersonate that user in chat.
 - **Provider catalog:** `providers_catalog` (`GET /providers.json`, open) → `{version, providers}` — the
   catalog `treg upload` uses to detect env keys → tools; served so the CLI can refresh centrally. See
   [env-import](env-import.md).
@@ -203,6 +212,12 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   behind `/catalog/examples`, and `call_template` is a paste-ready `treg call …` line built from the
   endpoint's `test_request` (the request the verifier actually ran) falling back to documented examples.
   `hints` on both routes carries the next command, since finding an endpoint is never the goal.
+  A zero-result search additionally points at **`POST /tool-requests`** (open, per-IP rate-limited,
+  fields capped): file what the catalog is missing — stored as a `ToolRequest` row (see
+  [data-model](../architecture/data-model.md)) with identity attached only when the caller happens
+  to be signed in (token, or same-origin session; a cross-origin cookie POST stores anonymously
+  rather than being rejected). The zero-result caller is exactly the demand signal the catalog team
+  wants, so no signup wall.
 - **Auth — three identity doors** (all resolve to a user via the shared `_find_or_create_user`, so
   first-proof = registration — the **user only, no auto personal org**; a brand-new user lands with zero
   teams and names their first via the mandatory welcome / `treg org create`): **GitHub** — `auth_github` (`GET /auth/github`,
@@ -290,6 +305,13 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   `web/llms.txt` as `text/plain` with `{BASE}` templated from `public_url` — the [llms.txt](https://llmstxt.org)
   agent-onboarding file (call protocol + discovery + auth + CLI + skills + doc links). See [dashboard](dashboard.md).
   `install_sh` (`GET /install.sh`, `{BASE}`-templated) serves the CLI installer (`web/install.sh`).
+  `well_known_skills_index` (`GET /.well-known/skills/index.json`) + `well_known_skill_md`
+  (`GET /.well-known/skills/treg/SKILL.md`) advertise treg's own skill under the agentskills.io
+  convention, making **this host** a skill source with no registry in between (Hermes reads it
+  directly). The index's `description` comes from the skill's frontmatter at request time via
+  `_skill_frontmatter()` — never a second copy — and the SKILL.md route is the same `_serve_md` as
+  `/skill.md`, so `{BASE}` templates to the **serving** host and a self-hosted registry advertises
+  itself. See [skill.md](skill.md) for the other three distribution doors.
   `terms_page` (`GET /terms`) + `privacy_page` (`GET /privacy`) serve the hosted registry's legal pages
   (`_legal_page`, no-cache) with `legal_css` (`GET /legal.css`) as the shared skin — `/privacy` is also
   the URL given to OAuth providers at app-verification time, so don't rename it. Provider brand marks are
@@ -347,7 +369,9 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   registering; `import_skill_folder` (`POST /skills/import`) scans + `build_payload`s + registers the
   selected ones (`_materialize_skill_files` sandboxes the upload). `list_orgs` now carries `tool_count`.
 - **Audit:** `list_calls` (`GET /calls`, limit clamped 1–500; each row carries its `kind` —
-  `call`/`local_run` — for the Activity + Usage views).
+  `call`/`local_run` — for the Activity + Usage views, and `refused_by` — non-null = treg refused
+  pre-relay; see the data-model fragment — so `treg audit` can tell "the provider failed" from
+  "we said no").
 - **OAuth connect + the provider marketplace:** `oauth_start` (`POST /oauth/start`) creates a
   `PendingOAuth` and returns `consent_url` + `state` + `redirect_uri`; `oauth_callback`
   (`GET /oauth/callback`, open) exchanges the code and creates/updates the oauth secret; `oauth_status`
@@ -388,7 +412,16 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   provider — a bring-your-own bot token (Slack) or an **API key** (Apollo, Hunter, TikHub, Semrush, …) —
   **verifying the credential against the provider's probe before storing** (a header- OR query-param probe,
   an off-host `probe_url`, tolerating a CSV/text body or a 200-with-false-`token_verify_field` reply), then
-  auto-provisioning its tool with a header or query binding. See
+  auto-provisioning its tool with a header or query binding. Two probe subtleties the code handles
+  because upstreams don't cooperate: a `probe_path` may bake in a required `?query` (PDL, Akta,
+  JustOneAPI, SpyFu), and httpx **replaces** a URL's own query when `params=` is passed — so the path's
+  query is parsed out and **merged into params** (the credential wins a key collision) rather than
+  silently dropped; and the body is parsed as JSON **regardless of content-type**, because ScrapeCreators
+  serves real JSON under `text/plain` and gating on `application/json` left `token_verify_field` unread
+  (a genuinely non-JSON balance still throws → empty payload → the `ERROR`-text branch, unchanged). A
+  base64-encode provider (`token_encode`, DataForSEO/Moz) accepts EITHER a raw `login:password` OR the
+  dashboard's ready-made base64 blob — a blob is detected (strict-decodes to printable text with a `:`)
+  and kept as-is instead of being double-encoded. See
   [auth-secrets](../architecture/auth-secrets.md). `set_extra_credential` (`POST /connections/{id}/extra-credential`) stores
   the second credential a provider needs when treg does NOT hold it centrally (rare) and finishes the
   tool with BOTH bindings. `revoke_connection` (`DELETE /connections/{id}`) deletes the credential and
@@ -417,6 +450,20 @@ helpers `_secret_view` / `_tool_view` / `_bundle_view` never leak secret values 
 surfaced by `GET /tools` / `/bundles/{id}`).
 
 ## Cross-cutting hardening (bug-hunt)
+- **Legacy-host redirect:** `_legacy_host_redirect` 301s GET/HEAD marketing pages (`_REDIRECT_PATHS`)
+  from the legacy hosts (`config.LEGACY_PUBLIC_HOSTS`) to the canonical `public_url` host (`treg.to`)
+  — but only for **anonymous** visitors: a `treg_session` cookie is host-scoped, so a signed-in
+  browser (e.g. the invite flow landing on `/?invite_org=…`) is served in place. The auth entries
+  `/auth/github`, `/auth/google` and GET `/oauth/authorize` (`_REDIRECT_ALWAYS`) redirect
+  unconditionally and with a **302** (one-shot OAuth params must not be cached as permanent) —
+  each parks a host-scoped cookie (CSRF state / `treg_oauth_return`) that the flow's continuation
+  on `public_url` must be able to read. Everything else is served in
+  place on BOTH hosts, forever: installed CLIs/skills hold tokens pointed at the legacy host, HTTP
+  clients strip `Authorization` on a cross-host redirect, `/vendor-listing` is fetched by agents,
+  and `curl {BASE}/install.sh | sh` runs without `-L`. The legacy names also stay in MCP's
+  transport allow-lists (`mcp._allowed_hosts`/`_allowed_origins`) and in the OAuth token-audience
+  set (`mcp_oauth.mcp_resource_audiences()` — pre-move grants keep their old audience for life,
+  and refresh reissues it). Never remove the legacy domain from Render.
 - **Security headers:** a `@app.middleware` adds `X-Content-Type-Options: nosniff`, `X-Frame-Options:
   DENY`, `Referrer-Policy: no-referrer`, and HSTS to every response (`setdefault`, so the `/call`
   proxy's stricter CSP/nosniff wins).

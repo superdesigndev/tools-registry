@@ -88,8 +88,8 @@ async def mcp_session(client: AsyncClient):
             yield mc
 
 
-async def test_the_server_lists_exactly_the_five_tools(clients):
-    """Five tools, not 2,600. The catalog is DATA reached through a tool, never a tool per endpoint —
+async def test_the_server_lists_exactly_the_six_tools(clients):
+    """Six tools, not 2,600. The catalog is DATA reached through a tool, never a tool per endpoint —
     2,600 schemas would bury the model's context and make the catalog unusable."""
     token = (await clients.post("/users", json={"email": "lister@superdesign.dev"})).json()["token"]
     async with mcp_session(clients) as c:
@@ -97,7 +97,7 @@ async def test_the_server_lists_exactly_the_five_tools(clients):
                                      "clientInfo": {"name": "t", "version": "1"}}, token)
         r = await _rpc(c, "tools/list", token=token)
         names = {t["name"] for t in r.json()["result"]["tools"]}
-    assert names == {"catalog_search", "catalog_get", "call", "balance", "my_tools"}
+    assert names == {"catalog_search", "catalog_get", "call", "balance", "my_tools", "catalog_request"}
 
 
 async def test_catalog_search_returns_priced_results(clients):
@@ -128,7 +128,27 @@ async def test_search_says_so_when_nothing_matches(clients):
     async with mcp_session(clients) as c:
         out = await _call_tool(c, "catalog_search", {"query": "zzzz-no-such-capability"}, token=token)
     assert out["count"] == 0
-    assert "hint" in out
+    assert "catalog_request" in out.get("hint", "")  # the empty result names the way to file the gap
+
+
+async def test_catalog_request_files_the_gap_with_attribution(clients):
+    """The zero-result hint's payoff: the agent can file the missing capability in the same session,
+    and the stored row says who asked (the bearer), not just that someone did."""
+    from sqlmodel import select
+
+    from treg.db import session_maker
+    from treg.models import ToolRequest
+
+    token = (await clients.post("/users", json={"email": "wisher@superdesign.dev"})).json()["token"]
+    async with mcp_session(clients) as c:
+        out = await _call_tool(c, "catalog_request",
+                               {"capability": "Ahrefs backlinks", "note": "for SEO audits"}, token=token)
+    assert out.get("status") == "received", out
+    async with session_maker() as s:
+        (row,) = (await s.execute(select(ToolRequest))).scalars()
+    assert row.capability == "Ahrefs backlinks"
+    assert row.source == "mcp"
+    assert row.user_email == "wisher@superdesign.dev"
 
 
 # ---- the half that matters: no token means no data, no spending ----------------------------
@@ -294,7 +314,8 @@ async def test_every_tool_declares_what_it_can_do(clients):
     from treg.mcp import mcp as server
 
     ann = {t.name: t.annotations for t in await server.list_tools()}
-    assert set(ann) == {"catalog_search", "catalog_get", "call", "balance", "my_tools"}
+    assert set(ann) == {"catalog_search", "catalog_get", "call", "balance", "my_tools",
+                        "catalog_request"}
     for name in ("catalog_search", "catalog_get", "balance", "my_tools"):
         a = ann[name]
         assert a and a.read_only_hint is True, name
@@ -302,6 +323,10 @@ async def test_every_tool_declares_what_it_can_do(clients):
     a = ann["call"]
     assert a.read_only_hint is False
     assert a.destructive_hint is True and a.open_world_hint is True
+    # catalog_request writes (a row on treg itself) but touches nothing upstream and spends nothing.
+    a = ann["catalog_request"]
+    assert a.read_only_hint is False
+    assert a.destructive_hint is False and a.open_world_hint is False
 
 
 async def test_the_domain_challenge_is_404_until_configured(clients):
@@ -388,19 +413,126 @@ async def test_the_output_schema_does_not_BREAK_the_error_paths(clients):
 
 
 async def test_the_schema_tolerates_NULLS_not_just_missing_keys(clients):
-    """`total=False` says a key may be ABSENT; it does not say the value may be null. Real rows carry
-    nulls — a registered tool with no description, an endpoint with no published price — and typing
-    those as plain `str` made `my_tools` return a schema error instead of the team's tools.
+    """`total=False` says a key may be ABSENT; it does not say the value may be null, and nulls reach
+    the client from two directions. Real rows carry them — a registered tool with no description, an
+    endpoint with no published price. And the SDK serializes every response through the
+    TypedDict-derived model, which fills ABSENT keys in as `null` in structuredContent — so a
+    response that never mentions `next` still ships `"next": null`, and a strict client validating
+    against a `type: string` schema refuses the whole answer with -32602 (issue #93, and a second
+    independent report the same day).
 
+    So EVERY field of EVERY tool must allow null, not just the ones known to carry data nulls.
     Asserted on the schema so the next field added is held to the same rule."""
     from treg.mcp import mcp as server
 
-    tools = {t.name: t.output_schema for t in await server.list_tools()}
-    defs = tools["my_tools"].get("$defs", {})
-    team_tool = defs.get("TeamTool", {})
-    for field, spec in team_tool.get("properties", {}).items():
-        allows_null = "null" in str(spec)
-        assert allows_null, f"TeamTool.{field} does not allow null — a real row will fail validation"
+    for t in await server.list_tools():
+        schemas = [t.output_schema] + list(t.output_schema.get("$defs", {}).values())
+        for schema in schemas:
+            for field, spec in schema.get("properties", {}).items():
+                # `Any` renders as an unconstrained schema (no type at all) — that accepts null.
+                unconstrained = "type" not in spec and "anyOf" not in spec
+                allows_null = unconstrained or "null" in str(spec)
+                assert allows_null, (f"{t.name}: {schema.get('title')}.{field} does not allow null — "
+                                     f"the SDK fills absent keys in as null, so a strict client "
+                                     f"will refuse the whole response")
+
+
+async def test_structured_content_VALIDATES_against_the_advertised_schema(clients):
+    """End to end, as the two field reports arrived: a strict client validates structuredContent
+    against the outputSchema from tools/list and refuses the response on any mismatch. The schema
+    test above checks what we promise; this checks what we actually ship — with jsonschema playing
+    the strict client, so a serialization change in the SDK cannot regress this silently."""
+    import jsonschema
+
+    from treg.mcp import mcp as server
+
+    schemas = {t.name: t.output_schema for t in await server.list_tools()}
+    token = (await clients.post("/users", json={"email": "strict@superdesign.dev"})).json()["token"]
+
+    async with mcp_session(clients) as c:
+        # The exact failing calls from the reports: a search (next set, hint absent) and the two
+        # tools whose error shape carries teams/hint — plus a catalog_get error path.
+        for tool, args in [("catalog_search", {"query": "backlinks"}),
+                           ("catalog_get", {"endpoint_id": "no.such.endpoint"}),
+                           # its example_response is an ARRAY of records, which a dict-typed field
+                           # refused server-side — the third null/shape mismatch found in the wild
+                           ("catalog_get", {"endpoint_id": "brightdata.linkedin.user.profile"}),
+                           ("balance", {}),
+                           ("my_tools", {})]:
+            await _rpc(c, "initialize", {
+                "protocolVersion": "2025-06-18", "capabilities": {},
+                "clientInfo": {"name": "strict", "version": "1"}}, token)
+            r = await _rpc(c, "tools/call", {"name": tool, "arguments": args}, token)
+            structured = (r.json().get("result") or {}).get("structuredContent")
+            assert structured is not None, f"{tool} returned no structuredContent: {r.text[:200]}"
+            jsonschema.validate(structured, schemas[tool])  # raises on any mismatch
+
+
+async def test_large_mcp_responses_are_gzipped_AT_THE_ORIGIN(clients):
+    """The fix that actually works for edge re-compression (issue #100). Render's edge ignored
+    `no-transform` and kept Brotli-compressing large responses — which a real client stack
+    (httpx + brotlicffi) fails to decode and then hangs on. An edge only compresses what arrives
+    UNCOMPRESSED, so the origin gzips its own responses: the edge passes them through, and gzip
+    decodes via zlib everywhere.
+
+    Asserted the way the field report arrived: a large catalog_get with `Accept-Encoding: br, gzip`
+    (what httpx sends) must come back gzip — OUR encoding — not unencoded (which the edge would
+    Brotli) and not br."""
+    import json as _json
+
+    token = (await clients.post("/users", json={"email": "gz@superdesign.dev"})).json()["token"]
+    async with mcp_session(clients) as c:
+        await _rpc(c, "initialize", {
+            "protocolVersion": "2025-06-18", "capabilities": {},
+            "clientInfo": {"name": "gz", "version": "1"}}, token)
+        r = await c.post("http://localhost/mcp/", json={
+            "jsonrpc": "2.0", "id": 2, "method": "tools/call",
+            "params": {"name": "catalog_get",
+                       "arguments": {"endpoint_id": "brightdata.linkedin.user.profile"}}},
+            headers={**MCP_HEADERS, "Authorization": f"Bearer {token}",
+                     "Accept-Encoding": "br, gzip"})
+    assert r.status_code == 200
+    assert r.headers.get("content-encoding") == "gzip", dict(r.headers)
+    # httpx transparently gunzips `.content` — that it parses is the end-to-end decode proof,
+    # through the exact client library the field reports used.
+    body = _json.loads(r.content)
+    assert body.get("result"), body
+
+    # And a client that does NOT accept gzip gets identity from us — GZipMiddleware respects
+    # Accept-Encoding rather than forcing an encoding the client cannot decode.
+    async with mcp_session(clients) as c:
+        await _rpc(c, "initialize", {
+            "protocolVersion": "2025-06-18", "capabilities": {},
+            "clientInfo": {"name": "gz2", "version": "1"}}, token)
+        r = await c.post("http://localhost/mcp/", json={
+            "jsonrpc": "2.0", "id": 2, "method": "tools/call",
+            "params": {"name": "catalog_get",
+                       "arguments": {"endpoint_id": "brightdata.linkedin.user.profile"}}},
+            headers={**MCP_HEADERS, "Authorization": f"Bearer {token}",
+                     "Accept-Encoding": "identity"})
+    assert r.status_code == 200
+    assert "content-encoding" not in r.headers, dict(r.headers)
+
+
+async def test_mcp_responses_forbid_edge_TRANSFORMS(clients):
+    """Production sits behind Render's Cloudflare edge, which Brotli-compresses responses unless the
+    origin says not to. At least one real client stack (httpx + brotlicffi, issue #93) dies decoding
+    large compressed bodies and then hangs to its own timeout. `Cache-Control: no-transform` is the
+    origin's standard "do not re-encode" (RFC 9111), and Cloudflare honours it; `no-store` rides
+    along because these responses are per-caller and priced.
+
+    Asserted on both an authenticated answer and the 401 challenge — the header wrapper is outermost
+    precisely so the challenge path carries it too."""
+    token = (await clients.post("/users", json={"email": "edge@superdesign.dev"})).json()["token"]
+    async with mcp_session(clients) as c:
+        challenged = await c.post("http://localhost/mcp/", json={
+            "jsonrpc": "2.0", "id": 1, "method": "tools/list"}, headers=MCP_HEADERS)
+        answered = await _rpc(c, "initialize", {
+            "protocolVersion": "2025-06-18", "capabilities": {},
+            "clientInfo": {"name": "edge", "version": "1"}}, token)
+    assert challenged.status_code == 401
+    for r in (challenged, answered):
+        assert r.headers.get("cache-control") == "no-store, no-transform", dict(r.headers)
 
 
 # ---- refusing in the right SHAPE, not just refusing ------------------------------------------
@@ -537,7 +669,7 @@ def test_a_relayed_402_carries_NO_link_out(clients):
     real = {"detail": {
         "error": "insufficient_balance",
         "message": ("akta.companies.enrich would cost ~$0.875 on treg's akta key and this team's "
-                    "balance is $0.5765.\n  add funds:      https://treg.superdesign.dev/app#billing"
+                    "balance is $0.5765.\n  add funds:      https://treg.to/app#billing"
                     "\n  or use your own key: treg connections connect --provider akta"),
         "balance_micro": 576500, "estimated_cost_micro": 875000,
         "topup_url": "/app#billing", "provider": "akta"}}
@@ -555,7 +687,7 @@ def test_stripping_the_link_keeps_the_DIAGNOSIS(clients):
     real = {"detail": {
         "error": "insufficient_balance",
         "message": ("akta.companies.enrich would cost ~$0.875 and this team's balance is $0.5765."
-                    "\n  add funds:      https://treg.superdesign.dev/app#billing"
+                    "\n  add funds:      https://treg.to/app#billing"
                     "\n  or use your own key: treg connections connect --provider akta"),
         "balance_micro": 576500, "estimated_cost_micro": 875000}}
     out = _without_purchase_pointers(real)
@@ -747,3 +879,133 @@ async def test_the_same_key_through_MCP_bills_once(clients, monkeypatch):
     assert second.get("replayed") is True, "the retry must be marked as a replay"
     assert second.get("body") == first.get("body"), "and return the same answer"
     assert await balance() == after_first, "and bill nothing"
+
+
+# ---------------------------------------------------------------------------------------------
+# `call` request-shape parity with the CLI (`treg call`)
+#
+# Every flag on `treg call` exists because a real endpoint needed it — --query alongside --data
+# (Bright Data's ?dataset_id=… + array body), --header (Google Ads' login-customer-id), raw
+# non-JSON bodies, repeated query keys, inline ?a=b in a passthrough URL that httpx silently
+# drops. The MCP tool must express the same shapes or a class of endpoints is CLI-only.
+# The team-tool "echo" relays to the conftest upstream, which reports exactly what arrived.
+# ---------------------------------------------------------------------------------------------
+
+async def _register_echo(clients) -> str:
+    made = await clients.post("/tools", json={"name": "echo", "base_url": "http://upstream"})
+    assert made.status_code == 200, made.text
+    return clients.headers.get("X-Treg-Token")
+
+
+async def test_call_sends_query_AND_body_together(clients):
+    """The Bright Data shape: a POST whose routing lives in the query string and whose input is
+    the body. `params` alone cannot say both — `query` + `body` can."""
+    token = await _register_echo(clients)
+    async with mcp_session(clients) as c:
+        out = await _call_tool(c, "call", {
+            "endpoint_id": "echo/trigger", "method": "POST",
+            "query": {"dataset_id": "gd_123", "format": "json"},
+            "body": [{"url": "https://example.com/in/someone"}]}, token=token)
+    assert out.get("status") == 200, out
+    seen = json.loads(out["body"]) if isinstance(out.get("body"), str) else out["body"]
+    assert dict(seen["query_multi"])["dataset_id"] == "gd_123"
+    assert json.loads(seen["body"]) == [{"url": "https://example.com/in/someone"}]
+
+
+async def test_call_relays_extra_headers_but_never_tregs_own(clients):
+    """--header parity (login-customer-id is the canonical need). treg's own auth/routing headers
+    are filtered from the relay: the MCP bearer IS the identity and must not be maskable."""
+    token = await _register_echo(clients)
+    async with mcp_session(clients) as c:
+        out = await _call_tool(c, "call", {
+            "endpoint_id": "echo/ads",
+            "headers": {"login-customer-id": "1234567890", "X-Treg-Token": "evil",
+                        "Authorization": "Bearer evil"}}, token=token)
+    assert out.get("status") == 200, out
+    seen = out["body"] if isinstance(out["body"], dict) else json.loads(out["body"])
+    assert seen["headers"].get("login-customer-id") == "1234567890"
+    assert seen["headers"].get("x-treg-token") != "evil"
+
+
+async def test_call_sends_a_raw_string_body_with_content_type(clients):
+    token = await _register_echo(clients)
+    async with mcp_session(clients) as c:
+        out = await _call_tool(c, "call", {
+            "endpoint_id": "echo/xml", "method": "POST",
+            "body": "<xml>hi</xml>", "content_type": "application/xml"}, token=token)
+    assert out.get("status") == 200, out
+    seen = out["body"] if isinstance(out["body"], dict) else json.loads(out["body"])
+    assert seen["body"] == "<xml>hi</xml>"
+    assert seen["headers"].get("content-type") == "application/xml"
+
+
+async def test_call_string_body_sniffs_json_and_implies_post(clients):
+    """A string body that parses as JSON travels as application/json (the CLI's sniff rule), and
+    giving a body without a method means POST (curl's convention)."""
+    token = await _register_echo(clients)
+    async with mcp_session(clients) as c:
+        out = await _call_tool(c, "call", {
+            "endpoint_id": "echo/j", "body": '{"a": 1}'}, token=token)
+    assert out.get("status") == 200, out
+    seen = out["body"] if isinstance(out["body"], dict) else json.loads(out["body"])
+    assert seen["headers"].get("content-type") == "application/json"
+    assert json.loads(seen["body"]) == {"a": 1}
+
+
+async def test_call_repeated_query_keys_survive(clients):
+    """?tag=a&tag=b — a dict keeps only the last; a list value must expand to repeated keys."""
+    token = await _register_echo(clients)
+    async with mcp_session(clients) as c:
+        out = await _call_tool(c, "call", {
+            "endpoint_id": "echo/multi", "query": {"tag": ["a", "b"], "one": "x"}}, token=token)
+    assert out.get("status") == 200, out
+    seen = out["body"] if isinstance(out["body"], dict) else json.loads(out["body"])
+    tags = [v for k, v in seen["query_multi"] if k == "tag"]
+    assert tags == ["a", "b"]
+
+
+async def test_call_inline_query_in_a_passthrough_path_is_not_dropped(clients):
+    """httpx DROPS a URL's existing query string whenever params= is passed — the upstream then
+    answers with default/wrong data and NO error. The CLI guards this; the MCP tool must too."""
+    token = await _register_echo(clients)
+    async with mcp_session(clients) as c:
+        out = await _call_tool(c, "call", {
+            "endpoint_id": "echo/graph/me?fields=id,name", "query": {"limit": "5"}}, token=token)
+    assert out.get("status") == 200, out
+    seen = out["body"] if isinstance(out["body"], dict) else json.loads(out["body"])
+    q = dict(seen["query_multi"])
+    assert q.get("fields") == "id,name", "the inline query must reach the upstream"
+    assert q.get("limit") == "5"
+
+
+async def test_call_refuses_ambiguous_params_plus_explicit_slot(clients):
+    """`params` claiming the same position as an explicit slot is refused loudly — a silent
+    merge is how a wrong request gets sent."""
+    token = await _register_echo(clients)
+    async with mcp_session(clients) as c:
+        out = await _call_tool(c, "call", {
+            "endpoint_id": "echo/x", "method": "POST",
+            "params": {"a": 1}, "body": {"b": 2}}, token=token)
+        assert "`body` OR `params`" in out.get("error", ""), out
+        out2 = await _call_tool(c, "call", {
+            "endpoint_id": "echo/x", "method": "GET",
+            "params": {"a": "1"}, "query": {"b": "2"}}, token=token)
+        assert "`query` OR `params`" in out2.get("error", ""), out2
+
+
+async def test_call_resolves_the_team_for_an_identity_token(clients):
+    """The same production bug `balance` had, on the spending path: an IDENTITY token (`treg
+    login` — what most people hold) belongs to a person who may be in several teams, and /call
+    answers it with a raw "choose an org (send X-Treg-Org)" 400 — a header hint an MCP caller
+    cannot act on. `call` must resolve the team exactly as `balance` does."""
+    r = await clients.post("/users", json={"email": "call-identity@superdesign.dev"})
+    per_org = r.json()["token"]
+    clients.headers["X-Treg-Token"] = per_org
+    identity = (await clients.get("/auth/cli-token")).json()["token"]
+    made = await clients.post("/tools", json={"name": "echo2", "base_url": "http://upstream"})
+    assert made.status_code == 200, made.text
+
+    async with mcp_session(clients) as c:
+        out = await _call_tool(c, "call", {"endpoint_id": "echo2/ping"}, token=identity)
+    assert out.get("status") == 200, out
+    assert "choose an org" not in json.dumps(out)

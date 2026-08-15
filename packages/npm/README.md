@@ -18,5 +18,5 @@ treg login
 treg itself is a Python CLI; this package finds it on your machine and runs it,
 installing it first (via `uv`, `pipx`, or `pip3`) if it's missing.
 
-- Docs & interactive tutorial: https://treg.superdesign.dev/tutorial
+- Docs & interactive tutorial: https://treg.to/tutorial
 - Source: https://github.com/superdesigndev/treg

@@ -113,9 +113,9 @@ endpoints:
       unit: call
       source: docs
       source_url: https://www.thecompaniesapi.com/pricing
-      checked: '2026-07-28'
-      confidence: inferred
-      note: presumed 1 credit per company found, matching domain enrichment — this route's price is NOT explicitly published, so treat the figure as an inference and confirm against a real response's credit accounting before relying on it.
+      checked: '2026-08-13'
+      confidence: verified
+      note: '1 credit per company found. VERIFIED live 2026-08-13: the response body reports its own accounting — a by-email enrich returned meta.cost 1 (with meta.credits showing the remaining balance), confirming 1 credit per matched company.'
     docs_url: https://www.thecompaniesapi.com/api/enrich-company-from-email
 
   - id: thecompaniesapi.companies.email_pattern

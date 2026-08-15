@@ -418,7 +418,7 @@ def test_a_client_trusting_only_the_system_roots_rejects_our_leaf(ca):
 
 # ---- P1 · the environment we publish -------------------------------------------------------
 def test_proxy_env_carries_the_flags_that_matter(ca):
-    env = lp.proxy_env(18791, "tok en/+", ca.bundle_path, "treg.superdesign.dev")
+    env = lp.proxy_env(18791, "tok en/+", ca.bundle_path, "treg.to")
     assert env["HTTPS_PROXY"] == "http://treg:tok%20en%2F%2B@127.0.0.1:18791"
     assert env["https_proxy"] == env["HTTPS_PROXY"]        # curl reads lowercase
     assert env["NODE_USE_ENV_PROXY"] == "1"                # Node's fetch ignores the proxy without it
@@ -427,7 +427,7 @@ def test_proxy_env_carries_the_flags_that_matter(ca):
                 "DENO_CERT", "AWS_CA_BUNDLE"):
         assert env[key] == str(ca.bundle_path)
     # Loopback and the registry itself must never come back through us.
-    assert "127.0.0.1" in env["NO_PROXY"] and "treg.superdesign.dev" in env["NO_PROXY"]
+    assert "127.0.0.1" in env["NO_PROXY"] and "treg.to" in env["NO_PROXY"]
     assert env["no_proxy"] == env["NO_PROXY"]
 
 

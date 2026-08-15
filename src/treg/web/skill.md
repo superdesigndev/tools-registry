@@ -81,6 +81,7 @@ treg catalog search "subreddit posts"            # find endpoints by what they d
 treg catalog get scrapecreators.reddit.subreddit.posts   # params, PRICE, how you'd be served
 treg call scrapecreators.reddit.subreddit.posts --query subreddit=news
 treg balance                                     # the prepaid balance + recent charges
+treg catalog request "<what you need>"           # searched, not there? file it — steers what's added next
 ```
 Rules for spending someone's balance:
 - The price shows BEFORE you call (`treg catalog get`). **Tell the human the price first**; for a

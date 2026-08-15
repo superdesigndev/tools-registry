@@ -99,9 +99,9 @@ endpoints:
       unit: record
       source: docs
       source_url: https://coresignal.com/pricing/
-      checked: '2026-07-28'
-      confidence: inferred
-      note: 20 Coresignal credits per record collected. The cheaper company_base / employee_base collections cost 10.
+      checked: '2026-08-13'
+      confidence: documented
+      note: '20 Coresignal credits per record collected (multi_source); the cheaper company_base / employee_base collections cost 10. Rate published on coresignal.com/pricing. Live re-verify 2026-08-13 was blocked by a 402 "Billing: Insufficient credits" on the test account, so the count stays documented (from pricing) rather than verified.'
     docs_url: https://docs.coresignal.com/company-api/multi-source-company-api/collect
 
   - id: coresignal.people.enrich
@@ -125,9 +125,9 @@ endpoints:
       unit: record
       source: docs
       source_url: https://coresignal.com/pricing/
-      checked: '2026-07-28'
-      confidence: inferred
-      note: 20 Coresignal credits per record collected. The cheaper company_base / employee_base collections cost 10.
+      checked: '2026-08-13'
+      confidence: documented
+      note: '20 Coresignal credits per record collected (multi_source); the cheaper company_base / employee_base collections cost 10. Rate published on coresignal.com/pricing. Live re-verify 2026-08-13 was blocked by a 402 "Billing: Insufficient credits" on the test account, so the count stays documented (from pricing) rather than verified.'
     docs_url: https://docs.coresignal.com/employee-api/multi-source-employee-api/collect
 
   - id: coresignal.people.search

@@ -255,3 +255,65 @@ async def test_window_start_is_clamped(c: AsyncClient):
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     assert round((now - reconcile.window_start(0)).total_seconds() / 86400) == 1
     assert round((now - reconcile.window_start(99999)).total_seconds() / 86400) == 365
+
+
+# ---- shared-plan recovery (the monthly review's input) -----------------------------------------
+async def test_recovery_over_recovered_says_lower(c: AsyncClient):
+    """Collected far above the (window-scaled) fee: the report must say so and suggest the rate at
+    which the MEASURED volume breaks even (fee ÷ calls) — the review rule from
+    docs/SHARED-PLAN-PRICING-PLAN.md applied mechanically.
+
+    The fixture window is ONE day, so the monthly fee scales to 1/30 before comparison. The first
+    version of this test assumed 30 days and failed against a correct report; the expectation now
+    mirrors the scaling instead of hardcoding a month."""
+    await _settles([{"provider": "alphavantage", "amount": 30_000_000,
+                     "endpoint_id": "alphavantage.quote"} for _ in range(3)])
+    async with session_maker() as db:
+        out = await reconcile.shared_plan_recovery(db, _since())
+    row = next(p for p in out["providers"] if p["provider"] == "alphavantage")
+    fee_scaled = int(round(49.99 * 1_000_000 * row["window_days"] / 30))
+    assert row["calls"] == 3 and row["collected_micro"] == 90_000_000
+    assert row["fee_micro"] == fee_scaled
+    assert row["recovery"] == round(90_000_000 / fee_scaled, 4)
+    assert row["suggested_usd"] == round(fee_scaled / 3 / 1_000_000, 9)
+    assert row["action"].startswith("over-recovered")
+
+
+async def test_recovery_quiet_month_says_raise_or_demote(c: AsyncClient):
+    await _settles([{"provider": "alphavantage", "amount": 500_000,
+                     "endpoint_id": "alphavantage.quote"}])   # $0.50 against ~$1.67 of scaled fee
+    async with session_maker() as db:
+        out = await reconcile.shared_plan_recovery(db, _since())
+    row = next(p for p in out["providers"] if p["provider"] == "alphavantage")
+    assert row["recovery"] < 0.5
+    assert "raise toward" in row["action"] and "demote" in row["action"]
+
+
+async def test_recovery_zero_calls_has_no_suggestion(c: AsyncClient):
+    """fee ÷ 0 is not a price. The suggestion must be absent, and the action must raise the demotion
+    question rather than print infinity."""
+    async with session_maker() as db:
+        out = await reconcile.shared_plan_recovery(db, _since())
+    row = next(p for p in out["providers"] if p["provider"] == "alphavantage")
+    assert row["calls"] == 0 and row["suggested_usd"] is None
+    assert "demot" in row["action"]
+
+
+async def test_recovery_ignores_vendor_priced_providers(c: AsyncClient):
+    """dataforseo's rate is the VENDOR's; fee-vs-collected is meaningless for it and its presence
+    here would invite 'adjusting' a price that is not ours to adjust."""
+    await _settles([{"provider": "dataforseo", "amount": 99_000_000}])
+    async with session_maker() as db:
+        out = await reconcile.shared_plan_recovery(db, _since())
+    assert all(p["provider"] != "dataforseo" for p in out["providers"])
+
+
+async def test_price_drift_never_sees_a_shared_plan_provider(c: AsyncClient):
+    """Pinning a NATURAL property before someone breaks it: drift compares our estimate against the
+    provider's own reported charge, and a flat-fee provider never reports one — there is no number
+    to drift from. If a future `_observed_cost_micro` parser is added for such a provider, this test
+    is the alarm that the drift report now polices a price treg itself set."""
+    await _calls([{"endpoint_id": "alphavantage.quote", "provider": "alphavantage", "est": 1000}] * 3)
+    async with session_maker() as db:
+        rows = await reconcile.price_drift(db, _since(), min_calls=1)
+    assert all(r["provider"] != "alphavantage" for r in rows)

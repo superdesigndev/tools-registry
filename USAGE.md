@@ -2,7 +2,7 @@
 
 `treg` is the command-line client for **tools-registry**: call shared team tools without holding
 their credentials, and turn your local skills into shareable tools. It's a thin client over the
-API (`https://treg.superdesign.dev`); the API is the only brain.
+API (`https://treg.to`); the API is the only brain.
 
 Every command reads `~/.treg/config.json` for the endpoint + your token. Get per-command detail
 with `treg <command> --help` (e.g. `treg secret --help`, not `treg "secret add"`).
@@ -54,7 +54,7 @@ present a per-org token directly.
 | `treg onboard` | `--mode guided\|quick` · `--name N` · `--yes` · `--reset` | colourful guided first-run — pick **guided build** (you create the team + invite a teammate, step by step) or **quick demo** (we seed a full demo team + tool + activity), ending on a no-key call. Offered `[Y/n]` after your first login; `--reset` removes demo teammates |
 
 ```bash
-treg config --base-url https://treg.superdesign.dev
+treg config --base-url https://treg.to
 treg login                                 # GitHub; or:
 treg login --email you@example.com        # emailed 6-digit code (register-or-login)
 ```
@@ -82,7 +82,7 @@ treg org create "Team A"                       # active org is now team-a
 treg org invite bob@company.com --role member  # prints e.g. inv_7Kd9x2LmQpR4 — send it to Bob
 
 # Bob's side (no email is sent; he gets the code over Slack/DM)
-treg config --base-url https://treg.superdesign.dev
+treg config --base-url https://treg.to
 treg org join inv_7Kd9x2LmQpR4 --email bob@company.com   # joins + mints HIS own token
 treg tool ls            # sees only Team A's tools
 treg org use team-a     # switch orgs anytime; one token per org, never mixed
@@ -136,6 +136,7 @@ treg tool add google-ads --base-url https://googleads.googleapis.com \
 | `treg catalog search` | `"what you want to do"` | find endpoints by capability |
 | `treg catalog get` | `ENDPOINT_ID` | docs, parameters, **the price**, and how you would be served |
 | `treg call ENDPOINT_ID` | `--query K=V`, `--data STR` | call it |
+| `treg catalog request` | `"what's missing"` | searched, not there? file it — requests steer what gets added next |
 
 ```bash
 treg catalog search "instagram profile"
@@ -188,7 +189,7 @@ treg call posthog api/projects --method POST --data '{"name":"x"}'
 **Agent-native (raw HTTP) form** — build the real upstream URL and prefix it; no CLI needed:
 
 ```
-GET https://treg.superdesign.dev/call/https://api.intercom.io/conversations?per_page=5
+GET https://treg.to/call/https://api.intercom.io/conversations?per_page=5
     + header:  X-Treg-Token: <your token>
 ```
 
@@ -376,7 +377,7 @@ Idempotent — re-run any time (skips what's registered; `--replace` updates). N
 | `treg health` | `--run` | show every credential's status; `--run` re-checks now (refresh oauth, probe tools, alert owners) |
 
 ```bash
-# one-time: add https://treg.superdesign.dev/oauth/callback to your OAuth app's redirect URIs
+# one-time: add https://treg.to/oauth/callback to your OAuth app's redirect URIs
 treg oauth connect gads --client-secret ./client_secret.json \
   --scopes https://www.googleapis.com/auth/adwords
 treg health --run

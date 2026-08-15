@@ -75,6 +75,9 @@ endpoints:
       checked: '2026-07-31'
       confidence: verified
       note: '1 PDL credit per person returned (HTTP 200); a 404 is free. OBSERVED live 2026-07-31 - the response carried x-call-credits-spent 1 and x-call-credits-type enrich. Enriching the same person twice costs 2 credits, PDL does not de-duplicate. cost.usd stays null because there is no public $/credit - the rate is plan-negotiated - so this is a verified CREDIT count, not a verified dollar figure.'
+    miss:
+      status: 404
+      means: "no person matched (or none above min_likelihood) — an expected outcome (and free, per the cost note), not an API failure; do not retry the same identifiers"
     verified: 2026-07-31
     example_response: examples/pdl.people.enrich.json
     docs_url: https://docs.peopledatalabs.com/docs/reference-person-enrichment-api

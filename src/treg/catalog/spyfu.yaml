@@ -67,9 +67,9 @@ endpoints:
       unit: row
       source: docs
       source_url: https://www.spyfu.com/api
-      checked: '2026-07-28'
-      confidence: inferred
-      note: billed per ROW, and one row = one month. Domain Stats CPM is $0.40-$1.00 per 1,000 rows, so a handful of months is a fraction of a cent — but getAllDomainStats on an old domain returns 150+ rows per call.
+      checked: '2026-08-13'
+      confidence: documented
+      note: 'billed per ROW, and one row = one month. Domain Stats CPM is $0.40-$1.00 per 1,000 rows (SpyFu''s published rate; catalog uses the $1.00 upper bound), so a handful of months is a fraction of a cent — but getAllDomainStats on an old domain returns 150+ rows per call. CONFIRMED live 2026-08-13: getLatestDomainStats returned 200 with one row.'
     docs_url: https://developer.spyfu.com/reference/domainstatsapi_getlatestdomainstats_get
 
   # --- Paid search (PPC) ------------------------------------------------------------------------
@@ -183,9 +183,9 @@ endpoints:
       unit: row
       source: docs
       source_url: https://www.spyfu.com/api
-      checked: '2026-07-28'
-      confidence: inferred
-      note: SEO Research CPM is $0.50-$5.00 per 1,000 rows depending on the endpoint (the top-pages endpoints are the $5.00 end); the exact tier for this one is not called out separately in SpyFu's pricing table. pageSize defaults to 5 — set it explicitly.
+      checked: '2026-08-13'
+      confidence: documented
+      note: 'SEO Research CPM is $0.50-$5.00 per 1,000 rows depending on the endpoint (the top-pages endpoints are the $5.00 end); the exact tier for this one is not called out separately in SpyFu''s pricing table, so the catalog uses the $5.00 upper bound. CONFIRMED live 2026-08-13: getMostValuableKeywords returned 200 with rows. pageSize defaults to 5 — set it explicitly.'
     docs_url: https://developer.spyfu.com/reference/organicserpapi_getmostvaluablekeywords_get
 
   # --- Competitors (the cheapest family at $0.20 CPM) -------------------------------------------

@@ -30,7 +30,7 @@ import json
 import time
 from urllib.parse import urljoin
 
-from .config import get_settings
+from .config import PUBLIC_HOST_ALIASES, get_settings
 
 # How long an access token lives. Short, because a refresh token will exist to renew it and a leaked
 # access token is only as dangerous as its remaining life.
@@ -68,6 +68,37 @@ def mcp_resource_url() -> str:
     form we publish here.
     """
     return urljoin(get_settings().public_url.rstrip("/") + "/", "mcp/")
+
+
+def mcp_resource_audiences() -> set[str]:
+    """Every audience an access token may legitimately carry: the canonical resource URL plus every
+    reference-deployment alias. A grant keeps the audience that was consented to for its whole
+    lifetime — refresh reissues `row.resource` — so validating against the canonical URL alone
+    would 401 every pre-move grant forever, with refresh unable to recover. SYMMETRIC on purpose:
+    grants minted on treg.to must equally survive a TREG_PUBLIC_URL rollback to the old name."""
+    return {mcp_resource_url(), *(f"https://{h}/mcp/" for h in PUBLIC_HOST_ALIASES)}
+
+
+def normalize_resource(resource: str) -> str:
+    """Map any slash-variant spelling of OUR OWN resource URLs onto the canonical member of
+    `mcp_resource_audiences()`; anything else passes through untouched. Authorization accepts
+    `…/mcp` via a forgiving compare, but a token whose audience is stored with that spelling would
+    fail the exact audience match forever — so every store/mint/compare site normalizes first."""
+    r = (resource or "").rstrip("/")
+    for aud in mcp_resource_audiences():
+        if r == aud.rstrip("/"):
+            return aud
+    return resource
+
+
+def read_access_token_any(token: str) -> dict | None:
+    """`read_access_token` against each legitimate audience — the resource-server-side companion to
+    `mcp_resource_audiences()`."""
+    for aud in mcp_resource_audiences():
+        claims = read_access_token(token, expected_audience=aud)
+        if claims is not None:
+            return claims
+    return None
 
 
 def protected_resource_metadata() -> dict:

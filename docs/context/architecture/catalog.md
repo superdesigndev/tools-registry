@@ -305,10 +305,19 @@ charges 1 credit per 10 emails (`per: 10, unit: record`), Akta 1.5 credits per 5
   providers' credits do, so each gets its own row. Before this existed, Moz's `quota_rows` blocks
   carried no `currency` at all, defaulted to USD, and served every Moz route as costing $1.00.
 
+A `credit_rates_usd` entry may carry **`kind: treg_shared_plan`**: a rate TREG SET for a flat-fee
+provider (a subscription with a rate limit or unlimited calls), where no per-call vendor price can
+exist. The credit is then "one call on treg's shared plan" and the machinery is unchanged — the
+honesty lives in the entry: the basis must start with "treg shared-plan rate", name the vendor fee,
+and state the break-even volume, and `fee_usd_month` must be present as data (the validator's
+`check_fx` enforces all of it). The rate is reviewed monthly against `reconcile.shared_plan_recovery`
+and edited by hand. The full ladder: docs/SHARED-PLAN-PRICING-PLAN.md; the billing side (429 never
+billable, the recovery report): architecture/money.md.
+
 Each `credit_rates_usd` / `unit_rates_usd` entry carries `usd` plus the `basis`/`source`/`checked` that justify it —
 the cheapest PUBLICLY listed tier (plan price ÷ credits included), so the served figure is an upper
 bound on real spend, never an under-estimate. `usd: null` is a deliberate state, not a gap: the
-provider publishes no per-credit price (seat-priced like Apollo, sales-negotiated like PDL, or not
+provider publishes no per-credit price (sales-negotiated like Crunchbase, or not
 credit-priced at all like BrightData). Those endpoints keep `cost.usd = null` and display natively
 ("3 credits/success"), because a guessed dollar figure is worse than an honest credit count. Both
 blocks are hand-maintained and must stay ABOVE `rates_to_usd:` — `catalog_fx_update.py` rewrites the
@@ -669,11 +678,20 @@ sample size** per endpoint from `CallRecord` — which has recorded `endpoint_id
 `/catalog/endpoints/{id}`, attached to the endpoint **and every sibling**, because the choice is made
 on that page and an agent will not make a second round-trip to compare reliability.
 
-Four rules worth keeping:
+Five rules worth keeping:
 
 - **A 4xx never counts against the provider.** It usually means the caller sent bad parameters;
   counting it would let one agent's mistake make a healthy endpoint look broken to everyone. Only
   2xx versus 5xx decides the rate.
+- **A treg refusal is not evidence about the endpoint.** Rows with `refused_by` set (a paywall 402,
+  a daily-cap 429 — see the data-model fragment) never reached the provider; they are excluded even
+  from `samples`, or a burst of refused calls dresses itself up as traffic. The 2026-08-12 Hunter
+  incident — 309 refusals next to 488 real calls — is why.
+- **`miss` semantics ride on the endpoint.** Some providers answer "asked and answered: no result"
+  with an error status (PDL 404s a person it has no record of; Hunter's combined-find does the
+  same). Endpoints with evidenced miss behaviour carry a `miss: {status, means}` block in their
+  YAML, surfaced through `endpoint_view` — so an agent reads "404 = no match, don't retry" instead
+  of treating an expected empty answer as a failure. Only annotate what the wire has demonstrated.
 - **Below `MIN_SAMPLES` we publish the count and nothing else.** "100% from two calls" is noise
   dressed as evidence, and on a quiet endpoint a rate could expose one org's activity.
 - **Sample size is always visible**, so `100% (8)` cannot beat `99% (121)` by looking rounder.

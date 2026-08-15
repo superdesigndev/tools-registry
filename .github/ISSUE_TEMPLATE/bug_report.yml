@@ -46,7 +46,7 @@ body:
         - Web dashboard
         - The API / proxy
         - Self-hosted server
-        - Hosted (treg.superdesign.dev)
+        - Hosted (treg.to)
         - Other / not sure
     validations:
       required: true

@@ -61,7 +61,7 @@ async def test_platform_detail_groups_the_same_job_across_providers(clients: Asy
     ep = next(e for e in profile["endpoints"] if e["provider"] == "tikhub")
     assert set(ep) == {"id", "provider", "provider_display", "name", "summary", "method", "path",
                        "scope", "tier", "kind", "domain", "call_template", "cost", "verified", "docs_url",
-                       "has_example", "input", "platform_eligible", "test_request"}
+                       "has_example", "input", "platform_eligible", "test_request", "miss"}
     assert ep["kind"] == "data", "an endpoint with no explicit kind is data (the browse surface)"
     assert ep["provider_display"] == P.get("tikhub").display_name
     assert ep["method"] == "GET" and ep["path"].startswith("/")
@@ -345,17 +345,22 @@ async def test_call_template_carries_method_and_body_for_a_post(clients: AsyncCl
 
 
 async def test_a_credit_price_is_served_in_usd_per_provider(clients: AsyncClient):
-    """A "credit" is a provider-scoped unit, not a currency: scrapecreators credits carry a
-    published per-credit price and convert, apollo publishes none so its endpoints stay native."""
+    """A "credit" is a provider-scoped unit, not a currency: each provider converts at its OWN
+    fx.yaml rate ($0.00188 on scrapecreators, $0.026 on apollo), and a provider with no rate
+    stays native — "we don't know" must never surface as a dollar figure."""
     priced = (await clients.get("/catalog/endpoints/scrapecreators.x.v1-amazon-shop")).json()["endpoint"]["cost"]
     assert priced["currency"] == "credit" and priced["value"]
     assert priced["usd"] == round(priced["value"] * cs.load().credit_rates["scrapecreators"], 6)
     assert priced["usd"] > 0, "a credit rate exists, so the dashboard gets a comparable number"
 
-    native = (await clients.get("/catalog/endpoints/apollo.people.enrich")).json()["endpoint"]["cost"]
-    assert native["currency"] == "credit" and native["value"]
-    assert cs.load().credit_rates["apollo"] is None
-    assert native["usd"] is None, "no published rate: display credits, never a guessed dollar"
+    apollo = (await clients.get("/catalog/endpoints/apollo.people.enrich")).json()["endpoint"]["cost"]
+    assert apollo["currency"] == "credit" and apollo["value"]
+    assert apollo["usd"] == round(apollo["value"] * cs.load().credit_rates["apollo"], 6)
+    assert apollo["usd"] != priced["usd"] or apollo["value"] != priced["value"], \
+        "two providers' credits are unrelated units, priced by their own rates"
+
+    unrated = cs.load().cost_view({"type": "per_call", "value": 3, "currency": "credit"}, "no-such-provider")
+    assert unrated["usd"] is None, "no published rate: display credits, never a guessed dollar"
 
 
 # ---- cost: units, provenance and platform eligibility ----------------------------------------
@@ -616,3 +621,69 @@ def test_an_unpriced_route_is_still_refused():
     ep = {"cost": {"type": "per_call", "currency": "credit", "unit": "credit"},
           "provider": "pdl", "scope": "any_account", "kind": "data"}
     assert not cat.platform_eligible(ep)
+
+
+# ---- shared-plan rates: a price treg SET must say so, everywhere ----------------------------
+
+def _load_validator():
+    """The actual validator module, so these tests exercise the real check rather than a copy that
+    can drift from it."""
+    import importlib.util
+    from pathlib import Path
+
+    spec = importlib.util.spec_from_file_location(
+        "catalog_validate", Path(__file__).parent.parent / "scripts" / "catalog_validate.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_every_shared_plan_rate_prints_its_fee_and_break_even():
+    """A `kind: treg_shared_plan` entry is the catalog asserting OUR OWN price for a flat-fee
+    provider. The honesty of that lives in the basis string, because the basis is what every surface
+    shows as provenance: it must say whose price it is, the vendor fee, and the break-even volume.
+    This runs the validator's own check against the real fx.yaml."""
+    cv = _load_validator()
+    errors: list[str] = []
+    cv.check_fx(errors)
+    assert errors == [], "\n".join(errors)
+
+
+def test_the_shared_plan_check_actually_BITES(tmp_path):
+    """Each dishonest shape must produce an error — checked by running the real check against bad
+    entries, not by trusting that it would. (This session alone produced two tests that passed with
+    their subject deleted; the lesson stuck.)"""
+    cv = _load_validator()
+    bad = """
+credit_rates_usd:
+  no_price:   {usd: null, kind: treg_shared_plan, basis: "treg shared-plan rate. $10/mo. break-even at 1,000 calls/mo", source: "x", checked: "2026-08-14"}
+  no_fee:     {usd: 0.001, kind: treg_shared_plan, basis: "treg shared-plan rate. break-even at 1,000 calls/mo", source: "x", checked: "2026-08-14"}
+  no_breakeven: {usd: 0.001, kind: treg_shared_plan, basis: "treg shared-plan rate. Vendor sells flat $10/mo", source: "x", checked: "2026-08-14"}
+  wrong_start: {usd: 0.001, kind: treg_shared_plan, basis: "Vendor sells flat $10/mo; break-even at 1,000 calls/mo", source: "x", checked: "2026-08-14"}
+  typo_kind:  {usd: 0.001, kind: treg_shared_pla, basis: "whatever", source: "x", checked: "2026-08-14"}
+  prose_only: {usd: 0.001, basis: "treg shared-plan rate without the marker", source: "x", checked: "2026-08-14"}
+  fine_vendor: {usd: 0.02, basis: "Starter $49/mo / 2,000 credits", source: "x", checked: "2026-08-14"}
+"""
+    (tmp_path / "fx.yaml").write_text(bad)
+    original = cv.CATALOG
+    try:
+        cv.CATALOG = tmp_path
+        errors: list[str] = []
+        cv.check_fx(errors)
+    finally:
+        cv.CATALOG = original
+    blob = "\n".join(errors)
+    for name in ("no_price", "no_fee", "no_breakeven", "wrong_start", "typo_kind", "prose_only"):
+        assert name in blob, f"{name} should have been refused:\n{blob}"
+    assert "fine_vendor" not in blob, "an ordinary vendor rate must pass untouched"
+
+
+def test_a_shared_plan_rate_converts_like_any_credit():
+    """The whole design: a flat-fee provider is modelled as a credit provider whose credit is one
+    call on treg's shared plan. cost_view needs ZERO changes — this asserts the pilot entry flows
+    through the existing conversion."""
+    from treg import catalog_store as cs
+
+    c = cs.load()
+    out = c.cost_view({"type": "per_call", "value": 1, "currency": "credit"}, "alphavantage")
+    assert out["usd"] == 0.001

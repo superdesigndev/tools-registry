@@ -223,6 +223,190 @@ async def test_topup_reuses_the_org_stripe_customer(c: AsyncClient, monkeypatch)
         assert (await db.get(Org, org_id)).stripe_customer_id == "cus_test_1"
 
 
+async def test_topup_checkout_asks_stripe_for_an_invoice(c: AsyncClient, monkeypatch):
+    """A card receipt proves a charge; an invoice is the document a finance team accepts. The second
+    half of this test is the real guard: the invoice must not cost us `setup_future_usage`, because
+    that is the saved card and the SCA mandate every later auto-top-up charge runs on."""
+    org_id, owner = await _org(c)
+    calls: list[tuple] = []
+
+    async def fake_sdk(fn, /, **kw):
+        calls.append((getattr(fn, "__qualname__", str(fn)), kw))
+        if "Customer" in str(fn):
+            return {"id": "cus_test_1"}
+        return {"id": "cs_1", "url": "https://checkout.stripe.com/c/pay/cs_1"}
+
+    monkeypatch.setattr(billing, "_sdk", fake_sdk)
+    r = await c.post("/billing/topup", json={"amount_usd": 10}, headers=_h(owner))
+    assert r.status_code == 200, r.text
+    session_kw = [kw for name, kw in calls if "Session" in name][0]
+    assert session_kw["invoice_creation"]["enabled"] is True
+    # The org travels onto the invoice too, so one found in the Stripe dashboard resolves to a team.
+    assert session_kw["invoice_creation"]["invoice_data"]["metadata"]["treg_org_id"] == str(org_id)
+    assert session_kw["payment_intent_data"]["setup_future_usage"] == "off_session"
+
+
+async def test_invoice_events_are_acknowledged_but_never_credit(c: AsyncClient):
+    """`invoice_creation` makes Stripe emit invoice.* for every top-up. Crediting on those as well as
+    on the PaymentIntent would be a second door onto the same money."""
+    org_id, owner = await _org(c)
+    before = (await c.get(f"/orgs/{org_id}/balance", headers=_h(owner))).json()["balance_micro"]
+    event = {"id": "evt_inv_1", "type": "invoice.paid", "data": {"object": {
+        "id": "in_test_1", "object": "invoice", "amount_paid": 100_000, "currency": "usd",
+        "metadata": {"treg_org_id": str(org_id), "treg_kind": "topup"}}}}
+    r = await _deliver(c, event)
+    assert r.status_code == 200, r.text
+    assert r.json().get("handled") is False
+    after = (await c.get(f"/orgs/{org_id}/balance", headers=_h(owner))).json()["balance_micro"]
+    assert after == before
+
+
+# ---- the hosted portal --------------------------------------------------------------------------
+async def test_portal_returns_a_one_time_url_for_a_paying_org(c: AsyncClient, monkeypatch):
+    org_id, owner = await _org(c)
+    await _set_org(org_id, stripe_customer_id="cus_test_1")
+    calls: list[tuple] = []
+
+    async def fake_sdk(fn, /, **kw):
+        calls.append((getattr(fn, "__qualname__", str(fn)), kw))
+        return {"id": "bps_1", "url": "https://billing.stripe.com/p/session/bps_1"}
+
+    monkeypatch.setattr(billing, "_sdk", fake_sdk)
+    r = await c.post("/billing/portal", headers=_h(owner))
+    assert r.status_code == 200, r.text
+    assert r.json()["url"].startswith("https://billing.stripe.com/")
+    name, kw = calls[0]
+    assert "billing_portal" in name.lower() or "Session" in name
+    assert kw["customer"] == "cus_test_1"
+    assert kw["return_url"].endswith("/app#billing")
+
+
+async def test_portal_refuses_an_org_with_no_stripe_customer(c: AsyncClient, monkeypatch):
+    """Minting a Customer just to open an empty portal would fill the Stripe account with teams that
+    never bought anything — and the portal would have nothing to show them."""
+    org_id, owner = await _org(c)
+    monkeypatch.setattr(billing, "_sdk", lambda *a, **k: pytest.fail("must not reach Stripe"))
+    r = await c.post("/billing/portal", headers=_h(owner))
+    assert r.status_code == 422
+    assert (await c.get("/billing", headers=_h(owner))).json()["portal"] is False
+
+
+async def test_portal_is_advertised_once_the_org_has_a_customer(c: AsyncClient):
+    org_id, owner = await _org(c)
+    await _set_org(org_id, stripe_customer_id="cus_test_1")
+    assert (await c.get("/billing", headers=_h(owner))).json()["portal"] is True
+
+
+async def test_portal_is_503_when_stripe_is_not_configured(c: AsyncClient, monkeypatch):
+    org_id, owner = await _org(c)
+    await _set_org(org_id, stripe_customer_id="cus_test_1")
+    monkeypatch.setattr(get_settings(), "stripe_secret_key", "", raising=False)
+    assert (await c.post("/billing/portal", headers=_h(owner))).status_code == 503
+
+
+# ---- payment history ----------------------------------------------------------------------------
+def _charge(pi: str, *, invoice: str | None = None, receipt: str = "https://pay.stripe.com/r/1") -> dict:
+    return {"id": f"ch_{pi}", "payment_intent": pi, "receipt_url": receipt, "invoice": invoice}
+
+
+def _invoice(iid: str, *, number: str = "TREG-0001") -> dict:
+    return {"id": iid, "number": number,
+            "invoice_pdf": f"https://pay.stripe.com/invoice/{iid}/pdf",
+            "hosted_invoice_url": f"https://invoice.stripe.com/i/{iid}"}
+
+
+def _docs_sdk(charges: list[dict], invoices: list[dict]):
+    async def fake_sdk(fn, /, **kw):
+        return {"data": invoices if "Invoice" in str(fn) else charges}
+    return fake_sdk
+
+
+async def test_history_links_each_purchase_to_its_invoice(c: AsyncClient, monkeypatch):
+    """Rows come from our own credit blocks so the history can never contradict the balance; Stripe is
+    asked only for the documents. A payment with no invoice still gets its receipt."""
+    org_id, owner = await _org(c)
+    await _set_org(org_id, stripe_customer_id="cus_test_1")
+    async with session_maker() as db:
+        await ledger.topup(db, org_id, 10_000_000, "pi_manual", meta={"source": "stripe"})
+        await ledger.topup(db, org_id, 25_000_000, "pi_auto", meta={"auto": True, "source": "stripe"})
+
+    monkeypatch.setattr(billing, "_sdk", _docs_sdk(
+        [_charge("pi_manual", invoice="in_1"), _charge("pi_auto")], [_invoice("in_1")]))
+    r = await c.get("/billing/history", headers=_h(owner))
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["stripe_ok"] is True
+    rows = {i["payment_intent"]: i for i in body["items"]}
+    assert rows["pi_manual"]["amount_micro"] == 10_000_000
+    assert rows["pi_manual"]["invoice_pdf"].endswith("/pdf")
+    assert rows["pi_manual"]["invoice_number"] == "TREG-0001"
+    assert rows["pi_manual"]["auto"] is False
+    # The auto charge is a bare PaymentIntent — no invoice exists for it, so the receipt is the link.
+    assert rows["pi_auto"]["invoice_pdf"] == ""
+    assert rows["pi_auto"]["receipt_url"].startswith("https://pay.stripe.com/")
+    assert rows["pi_auto"]["auto"] is True
+    # Newest first.
+    assert [i["payment_intent"] for i in body["items"]] == ["pi_auto", "pi_manual"]
+
+
+async def test_history_excludes_the_signup_promo(c: AsyncClient, monkeypatch):
+    """The free grant is balance, not a payment — listing it would offer an invoice for money nobody
+    paid."""
+    org_id, owner = await _org(c)
+    await _set_org(org_id, stripe_customer_id="cus_test_1")
+    monkeypatch.setattr(billing, "_sdk", _docs_sdk([], []))
+    assert (await c.get("/billing/history", headers=_h(owner))).json()["items"] == []
+
+
+async def test_history_survives_a_stripe_outage(c: AsyncClient, monkeypatch):
+    """A Stripe hiccup should cost the payer their download button, not their payment history."""
+    org_id, owner = await _org(c)
+    await _set_org(org_id, stripe_customer_id="cus_test_1")
+    async with session_maker() as db:
+        await ledger.topup(db, org_id, 10_000_000, "pi_manual", meta={"source": "stripe"})
+
+    async def boom(fn, /, **kw):
+        raise stripe.APIConnectionError("stripe is down")
+
+    monkeypatch.setattr(billing, "_sdk", boom)
+    r = await c.get("/billing/history", headers=_h(owner))
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["stripe_ok"] is False
+    assert body["items"][0]["amount_micro"] == 10_000_000  # the amount is still right
+    assert body["items"][0]["invoice_pdf"] == "" and body["items"][0]["receipt_url"] == ""
+
+
+async def test_history_never_moves_money(c: AsyncClient, monkeypatch):
+    org_id, owner = await _org(c)
+    await _set_org(org_id, stripe_customer_id="cus_test_1")
+    async with session_maker() as db:
+        await ledger.topup(db, org_id, 10_000_000, "pi_manual", meta={"source": "stripe"})
+    monkeypatch.setattr(billing, "_sdk", _docs_sdk([_charge("pi_manual", invoice="in_1")], [_invoice("in_1")]))
+    before = (await c.get(f"/orgs/{org_id}/balance", headers=_h(owner))).json()["balance_micro"]
+    await c.get("/billing/history", headers=_h(owner))
+    after = (await c.get(f"/orgs/{org_id}/balance", headers=_h(owner))).json()["balance_micro"]
+    assert after == before
+
+
+async def test_history_and_portal_need_admin_of_this_org(c: AsyncClient, monkeypatch):
+    """A card and an invoice archive are the org's money, not a member's business — the same gate as
+    the rest of /billing."""
+    org_id, owner = await _org(c)
+    member = await _member(c, org_id, owner, "grunt@superdesign.dev")
+    monkeypatch.setattr(billing, "_sdk", lambda *a, **k: pytest.fail("must not reach Stripe"))
+    for method, path in (("GET", "/billing/history"), ("POST", "/billing/portal")):
+        assert (await c.request(method, path, headers=_h(member))).status_code == 403
+        assert (await c.request(method, path)).status_code in (401, 403)
+
+
+async def test_history_of_a_team_that_never_paid_is_empty_not_an_error(c: AsyncClient, monkeypatch):
+    org_id, owner = await _org(c)
+    monkeypatch.setattr(billing, "_sdk", lambda *a, **k: pytest.fail("no customer — must not ask Stripe"))
+    r = await c.get("/billing/history", headers=_h(owner))
+    assert r.status_code == 200 and r.json()["items"] == []
+
+
 # ---- webhook: signature ------------------------------------------------------------------------
 async def test_webhook_rejects_a_bad_signature(c: AsyncClient):
     org_id, _ = await _org(c)

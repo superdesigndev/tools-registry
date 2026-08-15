@@ -159,7 +159,18 @@ async def _thecompaniesapi(c, key):
     return {"value": team.get("credits"), "unit": "credits", "note": ""}
 
 
+async def _apollo(c, key):
+    # api_profile with include_credit_usage returns the caller's remaining balances directly;
+    # num_credits_remaining is the (lead) credit pool the search/enrich endpoints draw from.
+    d = await _get(c, "https://api.apollo.io/api/v1/users/api_profile",
+                   params={"include_credit_usage": "true"}, headers={"X-Api-Key": key})
+    return {"value": d.get("num_credits_remaining"), "unit": "credits",
+            "note": f"direct-dial {d.get('effective_num_direct_dial_credits')} left, "
+                    f"ai {d.get('effective_num_ai_credits')} left"}
+
+
 BALANCE_ROUTES = {
+    "apollo": _apollo,
     "dataforseo": _dataforseo,
     "tikhub": _tikhub,
     "scrapecreators": _scrapecreators,

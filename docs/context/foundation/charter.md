@@ -36,7 +36,7 @@ What this means for anyone reading this fragment:
 Money and metering: [money](../architecture/money.md). The endpoint data and its pricing rules:
 [catalog](../architecture/catalog.md).
 
-> **Status:** shipped and live on `treg.superdesign.dev` (Render, multi-tenant). This fragment records
+> **Status:** shipped and live on `treg.to` (Render, multi-tenant; `treg.superdesign.dev` is the legacy alias). This fragment records
 > the ORIGINAL vision from the 2026-06-30 kickoff and the "why" behind the proxy; the shipped detail
 > lives in the architecture/interface fragments.
 >

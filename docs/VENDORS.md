@@ -41,7 +41,7 @@ Strongly preferred (each one directly improves your listing):
 
 The fastest route: paste the prompt from the **"List as vendor"** button on the dashboard's
 Catalog page into your coding agent — it follows the hosted instructions at
-[`/vendor-listing`](https://treg.superdesign.dev/vendor-listing) and opens the PR for you.
+[`/vendor-listing`](https://treg.to/vendor-listing) and opens the PR for you.
 Or open an issue or PR on this repo yourself, with:
 
 0. **A contact email in the PR/issue description** (e.g. `Contact: partnerships@yourapi.com`) —

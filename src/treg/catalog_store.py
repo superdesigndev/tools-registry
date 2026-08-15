@@ -67,6 +67,12 @@ class Catalog:
     # Credits are PROVIDER-scoped, never a currency: one scrapecreators credit and one lusha credit
     # are unrelated, so this cannot live in `fx` alongside CNY.
     credit_rates: dict[str, float | None] = field(default_factory=dict)
+    # service -> {"usd", "fee_usd_month"} for rates TREG SET (fx.yaml `kind: treg_shared_plan`).
+    # Kept separately because two consumers need the distinction: the reconcile recovery report
+    # computes fee-vs-collected from it, and any surface explaining provenance must say whose price
+    # this is. The rate itself still lives in `credit_rates` like any other — pricing machinery
+    # neither knows nor cares that the rate is ours.
+    shared_plans: dict[str, dict] = field(default_factory=dict)
     # provider service -> meter name -> USD per one unit of that meter (fx.yaml `unit_rates_usd`).
     # Providers that bill in a proprietary meter (Semrush API units, Majestic's three pools, Moz's
     # row quota) get one rate per meter — a provider can have several, and they do not convert
@@ -223,6 +229,11 @@ def _parse(directory: Path) -> Catalog:
         str(service): (v.get("usd") if isinstance(v, dict) else v)
         for service, v in (fx_doc.get("credit_rates_usd") or {}).items()
     }
+    shared_plans = {
+        str(service): {"usd": v.get("usd"), "fee_usd_month": v.get("fee_usd_month")}
+        for service, v in (fx_doc.get("credit_rates_usd") or {}).items()
+        if isinstance(v, dict) and v.get("kind") == "treg_shared_plan"
+    }
     # Same shape one level deeper: service -> meter -> {usd, basis, source, checked}. A provider
     # bills in several meters at once (Majestic has three), so the meter name is part of the key.
     unit_rates = {
@@ -230,7 +241,8 @@ def _parse(directory: Path) -> Catalog:
                        for meter, v in (meters or {}).items()}
         for service, meters in (fx_doc.get("unit_rates_usd") or {}).items()
     }
-    return Catalog(fx=fx, credit_rates=credit_rates, unit_rates=unit_rates, platforms=platforms,
+    return Catalog(fx=fx, credit_rates=credit_rates, unit_rates=unit_rates,
+                   shared_plans=shared_plans, platforms=platforms,
                    capabilities=capabilities, endpoints=endpoints, by_id=by_id,
                    provider_meta=provider_meta)
 
@@ -362,6 +374,10 @@ def _normalize(raw: dict, provider: str, directory: Path) -> dict:
         # unmarked endpoint as extended would hide it from the platform view entirely.
         "tier": raw.get("tier") or "core",
         "verified": str(verified) if verified else None,
+        # {status, means} — a status the provider uses for "asked and answered: no result" (PDL
+        # 404s a person it has no record of). Only endpoints with evidenced miss semantics carry
+        # it; for everything else an error status means what it says.
+        "miss": raw.get("miss") or None,
         "docs_url": raw.get("docs_url") or "",
         "example_file": _example_file(raw, directory),
     }
@@ -419,6 +435,9 @@ def endpoint_view(ep: dict, provider_display: str, cat: Catalog | None = None) -
         # a fact about the row that decides whether the caller needs a credential at all, so it
         # rides on the row rather than being re-derived per client (see `Catalog.platform_eligible`)
         "platform_eligible": cat.platform_eligible(ep) if cat else None,
+        # "no match" semantics, when the endpoint has them — an agent that reads `miss` stops
+        # treating an expected empty answer as a failed call (and stops retrying it).
+        "miss": ep.get("miss"),
         "verified": ep["verified"],
         "docs_url": ep["docs_url"],
         "has_example": bool(ep["example_file"]),

@@ -261,6 +261,11 @@ async def create_topup_checkout(
     WITH the mandate signals PSD2/SCA requires for an unattended charge. Asking for it at purchase
     time costs the payer nothing; retrofitting consent afterwards costs them a second card entry.
 
+    `invoice_creation` is what makes the payment expensable. Stripe's card receipt proves a card was
+    charged; an invoice is the document with an invoice number, a billing address and a tax ID on it,
+    which is what a finance team actually accepts. It is post-purchase — the invoice appears once the
+    payment succeeds, not when the session opens — so nothing here changes what the payer sees.
+
     Currency is pinned to USD explicitly — the Stripe account's own default is AUD, and inheriting it
     would charge a number the ledger would then credit as dollars.
     """
@@ -292,6 +297,15 @@ async def create_topup_checkout(
             "setup_future_usage": "off_session",
             "metadata": {"treg_org_id": str(org.id), "treg_kind": "topup", "treg_auto": "0"},
             **({"receipt_email": email} if email else {}),
+        },
+        # The expensable document (see docstring). `invoice_data` carries the same org identity as the
+        # session so an invoice found in the Stripe dashboard resolves to a team without a lookup.
+        invoice_creation={
+            "enabled": True,
+            "invoice_data": {
+                "description": f"Prepaid API call balance for {org.name or org.slug}",
+                "metadata": {"treg_org_id": str(org.id), "treg_kind": "topup"},
+            },
         },
         # Idempotent per (org, amount, minute): a double-clicked "Add funds" reuses the same session
         # instead of opening a second one the payer might also complete.
@@ -328,6 +342,127 @@ async def create_setup_checkout(db: AsyncSession, org: Org, *, return_base: str 
         cancel_url=f"{base}/app?card=cancelled#billing",
     )
     return {"url": session["url"], "session_id": session["id"], "mode": "setup"}
+
+
+# ---- the hosted billing portal -----------------------------------------------------------------
+async def create_portal_session(db: AsyncSession, org: Org, *, return_base: str = "") -> dict:
+    """A one-time link into Stripe's hosted Customer Portal, where the payer manages their own
+    billing details: card, billing address, tax ID, and the invoice history with its PDFs.
+
+    Hosted rather than rebuilt here for the same reason Checkout is: every one of those fields is a
+    form we would otherwise own, and the tax-ID one carries validation rules per country that go
+    stale. The portal also renders the invoice archive we now generate, so "download an old invoice"
+    needs no page of ours at all.
+
+    Requires a portal CONFIGURATION saved in the Stripe dashboard (Settings → Billing → Customer
+    portal); without one Stripe rejects the call, which surfaces here as the usual Stripe error.
+
+    Refuses an org with no Stripe customer instead of creating one. A customer exists once someone has
+    paid or saved a card; minting one to open an empty portal would fill the Stripe account with
+    customers that never bought anything, and the portal would have nothing to show anyway.
+    """
+    _require_configured()
+    if not org.stripe_customer_id:
+        raise TopupRejected("no billing details yet — add funds once and the portal opens after that")
+    base = (return_base or get_settings().public_url).rstrip("/")
+    session = await _sdk(
+        stripe.billing_portal.Session.create,
+        customer=org.stripe_customer_id,
+        return_url=f"{base}/app#billing",
+    )
+    return {"url": session["url"]}
+
+
+# ---- payment history ---------------------------------------------------------------------------
+async def list_payments(db: AsyncSession, org: Org, *, limit: int = 24) -> dict:
+    """The org's completed top-ups, newest first, each with a link to its invoice or receipt.
+
+    The ROWS come from our own `CreditBlock` table, not from Stripe. That table is what the balance is
+    computed from, so a history built on it can never show a payment the balance disagrees with — and
+    it needs no network call to render amounts and dates.
+
+    Stripe is asked only for the DOCUMENTS, in two list calls rather than two per row: charges (which
+    carry `receipt_url` and point at the invoice) and invoices (which carry the PDF). A failure there
+    degrades to rows without links — a Stripe hiccup should cost the payer their download button, not
+    their payment history. `stripe_ok` says which happened so the UI can tell them.
+
+    Both Stripe windows cap at 100 payments, so a very old top-up on a heavily-used account can come
+    back link-less; the portal (`create_portal_session`) is the unbounded archive.
+
+    Read-only: nothing here moves money or writes to the ledger.
+    """
+    blocks = (await db.execute(
+        select(CreditBlock)
+        .where(CreditBlock.org_id == org.id, CreditBlock.kind == "purchased",
+               CreditBlock.stripe_payment_intent.is_not(None))
+        .order_by(CreditBlock.created_at.desc())
+        .limit(max(1, min(int(limit), 100)))
+    )).scalars().all()
+
+    # Which of these top-ups were automatic. The flag lives in the ledger entry's JSON meta, and JSON
+    # containment isn't portable across SQLite and Postgres — so the rows are narrowed by block id
+    # (exactly the page we're rendering) and the flag is read in Python, the same shape as
+    # `monthly_autotopup_spend`.
+    auto: set[str] = set()
+    if blocks:
+        rows = (await db.execute(
+            select(LedgerEntry.block_id, LedgerEntry.meta).where(
+                LedgerEntry.org_id == org.id, LedgerEntry.kind == "topup",
+                LedgerEntry.block_id.in_([b.id for b in blocks]),
+            )
+        )).all()
+        auto = {str(bid) for bid, meta in rows if isinstance(meta, dict) and meta.get("auto")}
+
+    docs, stripe_ok = await _payment_documents(org, len(blocks))
+    items = []
+    for b in blocks:
+        d = docs.get(b.stripe_payment_intent or "", {})
+        items.append({
+            "payment_intent": b.stripe_payment_intent,
+            "amount_micro": int(b.amount_micro),
+            "amount_usd": ledger.usd(int(b.amount_micro)),
+            "created_at": b.created_at.isoformat() if b.created_at else None,
+            "auto": b.id in auto,
+            "invoice_number": d.get("number") or "",
+            "invoice_pdf": d.get("invoice_pdf") or "",
+            "hosted_invoice_url": d.get("hosted_invoice_url") or "",
+            "receipt_url": d.get("receipt_url") or "",
+        })
+    return {"items": items, "stripe_ok": stripe_ok}
+
+
+async def _payment_documents(org: Org, wanted: int) -> tuple[dict[str, dict], bool]:
+    """`{payment_intent_id: {receipt_url, number, invoice_pdf, hosted_invoice_url}}` for one customer.
+
+    Two list calls, joined in memory through the charge's `invoice` field. Returns `({}, False)` on
+    any Stripe failure — the caller renders amounts without links rather than a 500.
+    """
+    if not (org.stripe_customer_id and wanted and configured()):
+        return {}, bool(configured())
+    window = max(wanted, 100)
+    try:
+        charges = await _sdk(stripe.Charge.list, customer=org.stripe_customer_id, limit=window)
+        invoices = await _sdk(stripe.Invoice.list, customer=org.stripe_customer_id, limit=window)
+    except Exception as e:  # noqa: BLE001 — see docstring: links are optional, the history is not
+        log.warning("billing: could not load payment documents for org %s: %s", org.id, e)
+        return {}, False
+
+    by_invoice = {}
+    for inv in (invoices.get("data") or []):
+        if inv.get("id"):
+            by_invoice[inv["id"]] = {"number": inv.get("number") or "",
+                                     "invoice_pdf": inv.get("invoice_pdf") or "",
+                                     "hosted_invoice_url": inv.get("hosted_invoice_url") or ""}
+    out: dict[str, dict] = {}
+    for ch in (charges.get("data") or []):
+        pi = ch.get("payment_intent")
+        pi = pi if isinstance(pi, str) else (pi or {}).get("id")
+        if not pi:
+            continue
+        inv = ch.get("invoice")
+        inv = inv if isinstance(inv, str) else (inv or {}).get("id")
+        out[pi] = {"receipt_url": ch.get("receipt_url") or "", **by_invoice.get(inv or "", {})}
+    return out, True
 
 
 # ---- auto top-up -------------------------------------------------------------------------------
@@ -606,6 +741,10 @@ async def handle_webhook_event(db: AsyncSession, event: dict) -> dict:
         return await _on_payment_failed(db, obj)
     if kind == "setup_intent.succeeded":
         return await _on_setup_succeeded(db, obj)
+    # Everything else acknowledged and dropped — deliberately, not by omission. `invoice_creation` on
+    # the top-up Checkout makes Stripe emit `invoice.created` / `invoice.paid` for every purchase, and
+    # crediting on those too would be a second door onto the same money. The invoice is a document; the
+    # PaymentIntent is the payment.
     return {"handled": False, "type": kind}
 
 
@@ -760,6 +899,9 @@ async def billing_state(db: AsyncSession, org: Org) -> dict:
         "balance_usd": ledger.usd(int(org.balance_micro or 0)),
         "customer": bool(org.stripe_customer_id),
         "card_on_file": bool(org.stripe_default_pm),
+        # Whether the hosted portal can be opened at all. It hangs off the Stripe customer, which only
+        # exists once someone has paid — so the button stays hidden rather than 422-ing a new team.
+        "portal": configured() and bool(org.stripe_customer_id),
         "topup": {"min_usd": s.topup_min_usd, "default_usd": s.topup_default_usd,
                   "presets": list(s.topup_presets)},
         "autotopup": {

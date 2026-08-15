@@ -377,7 +377,7 @@
   .drawer{position:fixed;top:0;right:0;height:100vh;width:min(520px,96vw);background:var(--panel);border-left:1px solid var(--line);z-index:50;box-shadow:-12px 0 44px rgba(20,16,10,.34);display:flex;flex-direction:column}
   pre{margin:0;padding:14px;background:var(--bg);border:1px solid var(--line);border-radius:10px;font-family:var(--mono);font-size:12.5px;overflow:auto;white-space:pre-wrap;word-break:break-word;max-height:50vh}
   pre.code{white-space:pre;overflow-x:auto;word-break:normal;overflow-wrap:normal;line-height:1.55}
-  .field{display:flex;gap:8px;margin:8px 0} .field input,.field select{background:var(--bg);border:1px solid var(--line);color:var(--ink);border-radius:var(--rb);padding:8px 10px;font-family:var(--mono);font-size:13px} .field input{flex:1}
+  .field{display:flex;gap:8px;margin:8px 0} .field input,.field select,.field textarea{background:var(--bg);border:1px solid var(--line);color:var(--ink);border-radius:var(--rb);padding:8px 10px;font-family:var(--mono);font-size:13px} .field input,.field textarea{flex:1}
   .login{min-height:100vh;display:grid;place-items:center} .loginbox{width:min(420px,92vw);background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:30px;text-align:center}
   .phase2{opacity:.5} .hint{font-family:var(--mono);font-size:11px;color:var(--amber);border:1px dashed var(--amber);border-radius:6px;padding:2px 7px}
   a{color:var(--accent);text-decoration:none;cursor:pointer}
@@ -640,7 +640,7 @@ th{background:rgba(0,0,0,.25)}
 .lc-codewrap{background:#0d0c0b}
 :root:not([data-theme=light]) pre{background:rgba(0,0,0,.28);
   box-shadow:rgba(0,0,0,.4) 0 2px 8px 0 inset;border-color:var(--line)}
-.frow input,.frow select,.field input,.field select,.search,.msel,.bindinput,.si-input{
+.frow input,.frow select,.field input,.field select,.field textarea,.search,.msel,.bindinput,.si-input{
   background:#0d0c0b;box-shadow:rgba(0,0,0,.35) 0 2px 6px 0 inset}
 .chip{border-radius:999px}
 .hint{color:var(--amber);border-color:rgba(216,210,194,.4)}
@@ -757,9 +757,9 @@ input[type=checkbox],input[type=radio]{accent-color:var(--ink)}
 table{background:var(--surface)}
 /* rows.gg's column heads are label text over a rule, not a filled bar. */
 th{background:none;color:var(--muted2);font-weight:450;border-bottom:1px solid var(--line2)}
-.frow input,.frow select,.field input,.field select,.search,.msel,.bindinput,.si-input{
+.frow input,.frow select,.field input,.field select,.field textarea,.search,.msel,.bindinput,.si-input{
   background:var(--surface);box-shadow:none;border:1px solid var(--line2);color:var(--ink)}
-.frow input::placeholder,.field input::placeholder,.search input::placeholder{color:var(--muted2)}
+.frow input::placeholder,.field input::placeholder,.field textarea::placeholder,.search input::placeholder{color:var(--muted2)}
 :root:not([data-theme=light]) pre{background:var(--panel2);box-shadow:none;border-color:var(--line)}
 [data-theme=light] pre{background:var(--panel2);border:1px solid var(--line);color:var(--ink)}
 /* The scanline grain is a dark-theme texture; on paper it reads as dirt. */
@@ -839,6 +839,29 @@ a:hover{text-decoration-color:var(--muted)}
   box-shadow:var(--shadow-sm);
   transition:box-shadow .24s var(--ease),background-color .2s var(--ease)}
 .mk-card:hover{border-color:transparent;transform:none;box-shadow:var(--shadow-md)}
+/* ---- the Platform tab as a LIST ----
+   One integration per row: name and summary on a shared left edge, auth kind and connect state as
+   quiet columns, the action inline. Cards made every name start somewhere else; a shelf you scan
+   for the one provider you hold an account with wants a column. */
+.prov-list{width:100%}
+/* Outrank the base table rules: .ttable .tn is a nowrap 22% column with a MONO name — right for
+   tool names, wrong for "Google Business Profile" next to a summary. */
+.prov-list .tn{width:34%;white-space:nowrap}
+.prov-list .tn b{font-family:var(--sans)}
+.prov-row{cursor:pointer}
+.prov-row td{transition:background-color .2s var(--ease)}
+.prov-row:hover td{background:var(--hover)}
+.prov-row:focus-visible{outline:0;box-shadow:inset 0 0 0 2px var(--ink)}
+.prov-n-i{display:flex;align-items:center;gap:11px;min-width:0}
+.prov-name{min-width:0}
+.prov-name b{font-family:var(--sans);font-size:13px;font-weight:500;letter-spacing:-.1px;display:block;white-space:nowrap}
+.prov-sum{display:block;font-family:var(--sans);font-size:11.5px;color:var(--muted);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:62ch}
+.prov-auth{font-family:var(--sans);font-size:11.5px;color:var(--muted2);white-space:nowrap}
+.prov-st{white-space:nowrap}
+/* The landing flash after a "Bring your own key" jump: the row you were sent to, then it fades. */
+.prov-row.focus td{background:color-mix(in srgb,var(--teal) 14%,transparent)}
+@media (max-width:760px){.prov-sum{display:none}.prov-auth{display:none}}
 .mk-card:focus-visible{outline:0;
   box-shadow:0 0 0 2px var(--bg),0 0 0 3.5px var(--ink)}
 .mk-chip{border-radius:999px;padding:4px 12px;font-size:11px;font-weight:450;
@@ -1331,7 +1354,13 @@ a:hover{text-decoration-color:var(--muted)}
           <div class="tut-head">
             <div><h1>2,600+ tools for agents</h1><p class="sub" style="margin:0">Connect an account once. treg holds the credential server-side and injects it on every call — nothing lands on your machine.</p></div>
             <!-- (The balance pill lives in the side nav, above the account block.) -->
-            <div class="tut-actions"><button class="btn sm" @click="vendorAsk=true" title="Sell an API? Get it listed in this catalog">List as vendor</button></div>
+            <div class="tut-actions">
+              <button class="btn sm" @click="openToolRequest()" title="Missing a tool or provider? Tell us — requests steer what gets added next"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><line x1="12" y1="7" x2="12" y2="13"/><line x1="9" y1="10" x2="15" y2="10"/></svg>Request a tool</button>
+              <button class="btn sm" @click="vendorAsk=true" title="Sell an API? Get it listed in this catalog"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.83z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>List as vendor</button>
+              <!-- The one header action a paying visitor is actually looking for: where do I put MY
+                   key. It only switches tabs, but naming it makes the Platform tab findable. -->
+              <button class="btn sm primary" @click="goByok()" title="Register your own provider key — your key wins over treg's and those calls are never metered"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777Zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>Bring your own key</button>
+            </div>
           </div>
           <div v-if="connErr" class="banner" style="margin-top:12px">{{connErr}}</div>
           <div v-for="c in needSecondCred" :key="'n'+c.id" class="banner" style="margin-top:12px">
@@ -1441,30 +1470,38 @@ a:hover{text-decoration-color:var(--muted)}
 
           <div class="tgroup" v-for="g in shownGroups" :key="g.category">
             <div class="tgh">{{g.category}} <span class="tgh-n">{{g.items.length}}</span><span class="tgh-hint">{{g.hint}}</span></div>
-            <div class="mk-grid">
-              <!-- The whole card is the target. A card that only responds on a small "Open" link
-                   makes the grid feel broken, and there is nothing else in it to click. -->
-              <div v-for="p in g.items" :key="p.service" class="mk-card" tabindex="0" role="button"
-                   :aria-label="'Open '+p.display_name"
-                   @click="openProvider(p.service)" @keyup.enter="openProvider(p.service)">
-                <div class="mk-top">
-                  <span class="plogo-tile"><img class="plogo" :src="'/logos/'+p.service+'.svg'" alt="" aria-hidden="true" @error="$event.target.style.visibility='hidden'"></span>
-                  <div style="min-width:0">
-                    <b>{{p.display_name}}</b>
-                    <span class="mk-cat">{{p.category}}</span>
-                  </div>
-                </div>
-                <p class="mk-sum">{{p.summary}}</p>
-                <div class="mk-foot">
-                  <!-- Connected count is the one fact that changes what you'd do next, so it wins
-                       the slot the mockup gives to latency. -->
+            <!-- A LIST, not cards: this tab is where "bring your own key" lands, and the visitor is
+                 scanning forty names for one they hold an account with. One provider per row keeps
+                 every name on the same left edge; the summary rides along muted and truncated. The
+                 whole row opens the provider page; the Connect / Add key action is inline, so the
+                 common path is one click, not two. -->
+            <div class="ttable-wrap"><table class="ttable prov-list">
+              <tr v-for="p in g.items" :key="p.service" :id="'prov-'+p.service" class="prov-row"
+                  :class="{focus:byokFocus===p.service}" tabindex="0" role="button"
+                  :aria-label="'Open '+p.display_name"
+                  @click="openProvider(p.service)" @keyup.enter="openProvider(p.service)">
+                <td class="tn prov-n">
+                  <!-- Flex on a wrapper INSIDE the cell, never on the <td> — see the ledger rows. -->
+                  <span class="prov-n-i">
+                    <span class="plogo-tile"><img class="plogo" :src="'/logos/'+p.service+'.svg'" alt="" aria-hidden="true" @error="$event.target.style.visibility='hidden'"></span>
+                    <span class="prov-name"><b>{{p.display_name}}</b><span class="prov-sum">{{p.summary}}</span></span>
+                  </span>
+                </td>
+                <td class="prov-auth">{{p.auth_kind==='key'?'API key':(p.auth_kind==='token'?'your own bot':'one-click')}}</td>
+                <td class="ta prov-st">
+                  <!-- Connected count is the one fact that changes what you'd do next. -->
                   <span v-if="connCount[p.service]" class="chip ok">{{connCount[p.service]}} connected</span>
                   <span v-else-if="!p.configured" class="chip warn" title="This server has no client credentials for the provider">not configured</span>
-                  <span v-else class="mk-quiet">Not connected</span>
-                  <span class="mk-auth">{{p.auth_kind==='key'?'API key':(p.auth_kind==='token'?'your own bot':'one-click')}}</span>
-                </div>
-              </div>
-            </div>
+                  <span v-else class="mk-quiet">not connected</span>
+                </td>
+                <td class="tx" @click.stop>
+                  <button v-if="p.configured" class="btn sm" :class="{primary:!connCount[p.service]}"
+                          @click="startConnect(p)"
+                          :title="p.auth_kind==='key'||p.auth_kind==='token' ? 'Paste your own '+p.display_name+' credential — treg keeps it server-side' : 'Connect '+p.display_name+' — approve on their site'">
+                    {{connCount[p.service] ? 'Add account' : (p.auth_kind==='key'||p.auth_kind==='token' ? 'Add key' : 'Connect')}}</button>
+                </td>
+              </tr>
+            </table></div>
           </div>
           </template>
 
@@ -1602,6 +1639,8 @@ a:hover{text-decoration-color:var(--muted)}
             <div class="plat-provs" v-if="platProviders.length">
               <span class="plat-provs-l">Providers</span>
               <button v-for="s in platProviders" :key="s" class="btn sm" @click="openProvider(s)">{{provName(s)}} →</button>
+              <button class="btn sm" @click="goByok(platProviders.length===1 ? platProviders[0] : null)"
+                      title="Register your own provider key — your key wins over treg's and those calls are never metered">🔑 Bring your own key</button>
             </div>
           </div>
 
@@ -1760,7 +1799,10 @@ a:hover{text-decoration-color:var(--muted)}
                             <span v-if="catConnected(e.provider)" class="chip go" title="You already have a connected account that can call this"><span class="godot"></span>Connected</span>
                             <button v-else-if="mkOauth(e.provider)" class="btn sm primary" @click.stop="openProvider(e.provider)"
                                     :title="'Connect '+(e.provider_display||e.provider)+' — one-click OAuth, calls act as your account'">Connect {{e.provider_display||e.provider}}</button>
-                            <button v-else-if="mkKnown(e.provider)" class="btn sm" @click.stop="openProvider(e.provider)"
+                            <!-- Lands on the Catalog's Platform tab focused on this provider — the
+                                 whole key shelf in view, not a dead-end detail page — so the user
+                                 sees where their key lives among the rest before they paste it. -->
+                            <button v-else-if="mkKnown(e.provider)" class="btn sm" @click.stop="goByok(e.provider)"
                                     :title="'Register your own '+(e.provider_display||e.provider)+' key — your key wins over treg\'s and those calls are never metered'">Bring your own key</button>
                           </span>
                         </div>
@@ -2036,13 +2078,27 @@ a:hover{text-decoration-color:var(--muted)}
           </table></div>
           <p v-else class="sub">No secrets yet — add one below, or bulk-load everything at once (setup guide under the form).</p>
           <div class="tgh" style="margin-top:6px">Add {{secretRows.length>1?'secrets':'a secret'}}</div>
+          <p class="sub" v-if="keyNameSuggestions.length" style="max-width:660px;margin:0 0 8px;font-size:12px">
+            Name a key after its catalog provider — e.g. <span class="mono">{{keyNameSuggestions.slice(0,3).map(p=>p.service).join(', ')}}</span> —
+            and catalog calls use it automatically. The name field suggests every provider that takes a pasted key.</p>
           <p class="sub" style="margin:2px 0 8px">Tip: paste a whole <span class="mono">.env</span> into the name field — it splits into rows automatically.</p>
           <div v-for="(row,i) in secretRows" :key="i" class="field" style="max-width:660px;flex-wrap:wrap;margin-bottom:8px">
-            <input v-model="row.name" placeholder="name, e.g. openai-key" style="min-width:150px" @paste="pasteEnv($event,i,'name')" @keyup.enter="addSecrets"/>
+            <input v-model="row.name" list="secret-name-suggest" placeholder="name, e.g. apollo" style="min-width:150px" @paste="pasteEnv($event,i,'name')" @keyup.enter="addSecrets"/>
             <input v-model="row.value" :type="row.kind==='param'?'text':'password'" :placeholder="row.kind==='param'?'value, e.g. a project id (not secret)':'value (encrypted server-side)'" style="min-width:190px" @paste="pasteEnv($event,i,'value')" @keyup.enter="addSecrets"/>
             <select v-model="row.kind" class="msel"><option>env</option><option>oauth</option><option>secret_file</option><option value="param">param (non-secret)</option></select>
             <button v-if="secretRows.length>1" class="btn sm ico" @click="secretRows.splice(i,1)" title="Remove row">✕</button>
+            <!-- The ladder matches by NAME EQUALITY, so the hint either confirms a name the catalog
+                 will find, or offers the exact one when the row is a near miss (APOLLO_API_KEY). -->
+            <span v-if="secretNameHint(row)" class="sub" style="flex-basis:100%;font-size:11.5px;margin:-2px 0 0">
+              <template v-if="secretNameHint(row).ok">✓ {{secretNameHint(row).text}}</template>
+              <template v-else>{{secretNameHint(row).text}}
+                <a href="#" @click.prevent="row.name=secretNameHint(row).service">rename to “{{secretNameHint(row).service}}”</a></template>
+            </span>
           </div>
+          <!-- Every provider a key can be pasted into, as native input suggestions on the name field. -->
+          <datalist id="secret-name-suggest">
+            <option v-for="p in keyNameSuggestions" :key="p.service" :value="p.service">{{p.display_name}}</option>
+          </datalist>
           <p class="sub" v-if="secretRows.some(r=>r.kind==='param')" style="margin:2px 0 8px">A param is non-secret config (project id, org id) — injected alongside a credential into CLI env or an HTTP query.</p>
           <div class="field" style="max-width:660px">
             <button class="btn primary" @click="addSecrets" :disabled="secretBusy||!secretRowsReady">{{secretBusy?'…':(secretRowsReady>1?('Add '+secretRowsReady+' secrets'):'Add secret')}}</button>
@@ -2269,10 +2325,18 @@ a:hover{text-decoration-color:var(--muted)}
             <template v-if="canAdmin && orgTab==='billing'">
               <div v-if="billing" style="margin-top:4px">
                 <div class="card" style="padding:16px">
-                  <div>
-                    <div class="lbl">Balance</div>
-                    <div style="font-size:28px;font-weight:700;color:var(--accent);font-family:var(--mono)">{{money(billing.balance_micro)}}</div>
-                    <p class="sub" style="margin:4px 0 0">Prepaid credit. Calls draw from it - <code>treg balance</code> shows the ledger.</p>
+                  <div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap">
+                    <div style="flex:1;min-width:220px">
+                      <div class="lbl">Balance</div>
+                      <div style="font-size:28px;font-weight:700;color:var(--accent);font-family:var(--mono)">{{money(billing.balance_micro)}}</div>
+                      <p class="sub" style="margin:4px 0 0">Prepaid credit. Calls draw from it - <code>treg balance</code> shows the ledger.</p>
+                    </div>
+                    <!-- Stripe's hosted portal: card, billing address, tax ID and the invoice archive.
+                         Hidden until the team has a Stripe customer, which its first payment creates. -->
+                    <button v-if="billing.portal" class="btn sm" :disabled="billingBusy" @click="openPortal()"
+                            title="Update your card, billing address and tax ID, and download past invoices">
+                      {{billingBusy?'Opening…':'Manage billing'}}
+                    </button>
                   </div>
                   <p v-if="!billing.configured" class="sub" style="margin:12px 0 0">Top-ups aren't configured on this deployment.</p>
 
@@ -2317,6 +2381,28 @@ a:hover{text-decoration-color:var(--muted)}
                           <button class="btn primary" :disabled="!autoConsent||billingBusy" @click="setAuto(true)">{{billingBusy?'…':'Turn on auto top-up'}}</button>
                         </div>
                       </div>
+                    </div>
+
+                    <div style="margin-top:16px;border-top:1px solid var(--line);padding-top:14px">
+                      <div class="lbl">Payment history</div>
+                      <p v-if="bhist.loading" class="sub" style="margin:8px 0 0">Loading…</p>
+                      <p v-else-if="!bhist.items.length" class="sub" style="margin:8px 0 0">No top-ups yet. Once you add funds, every payment shows up here with its invoice.</p>
+                      <template v-else>
+                        <!-- Amounts come from our own ledger, so this list always agrees with the
+                             balance above. Only the links come from Stripe — hence the notice below. -->
+                        <table style="width:100%;margin-top:8px;border-collapse:collapse;max-width:560px">
+                          <tr v-for="i in bhist.items" :key="i.payment_intent" style="border-top:1px solid var(--line)">
+                            <td style="padding:8px 10px 8px 0;white-space:nowrap">{{bhistDate(i.created_at)}}</td>
+                            <td style="padding:8px 10px 8px 0;font-family:var(--mono);white-space:nowrap">{{money(i.amount_micro)}}</td>
+                            <td style="padding:8px 10px 8px 0" class="sub">{{i.auto?'auto':''}}</td>
+                            <td style="padding:8px 0;text-align:right;white-space:nowrap">
+                              <a v-if="bhistLink(i)" :href="bhistLink(i)" target="_blank" rel="noopener">{{bhistLabel(i)}}</a>
+                              <span v-else class="muted">—</span>
+                            </td>
+                          </tr>
+                        </table>
+                        <p v-if="!bhist.ok" class="sub" style="margin:8px 0 0">Invoice links are temporarily unavailable — the amounts above are correct. Try again shortly, or use <b>Manage billing</b> for the full archive.</p>
+                      </template>
                     </div>
                   </template>
                 </div>
@@ -3154,6 +3240,37 @@ a:hover{text-decoration-color:var(--muted)}
         </div></div>
     </div>
 
+    <!-- REQUEST A TOOL (a "the catalog doesn't have X" report — saved server-side, steers what gets keyed next) -->
+    <div class="scrim" role="dialog" aria-modal="true" v-if="reqAsk" @click.self="reqAsk=false;reqErr=''">
+      <div class="modal" style="width:min(520px,95vw)"><div class="hd"><b>Request a tool</b><button class="btn sm ico" @click="reqAsk=false;reqErr=''" aria-label="Close">✕</button></div>
+        <div style="padding:16px 18px">
+          <template v-if="!reqDone">
+            <p class="explain" style="margin-top:0">Missing a provider or capability? Requests go straight to the catalog team — the most-asked-for tools get added first.</p>
+            <div class="lbl" style="margin-top:14px">What's missing</div>
+            <div class="field" style="margin:0"><input v-model="reqForm.capability" maxlength="200" placeholder="e.g. Ahrefs backlinks, flight prices, HN comments" @keyup.enter="submitToolRequest"/></div>
+            <div class="lbl" style="margin-top:14px">Details <span style="text-transform:none;letter-spacing:0;color:var(--muted2)">— optional</span></div>
+            <div class="field" style="margin:0"><textarea v-model="reqForm.note" maxlength="2000" rows="3" placeholder="What you'd use it for, or a link to the provider's docs" style="resize:vertical;min-width:0"></textarea></div>
+            <template v-if="!me">
+              <div class="lbl" style="margin-top:14px">Contact <span style="text-transform:none;letter-spacing:0;color:var(--muted2)">— optional, to hear when it lands</span></div>
+              <div class="field" style="margin:0"><input v-model="reqForm.contact" maxlength="200" placeholder="you@work.com"/></div>
+            </template>
+            <div v-if="reqErr" class="banner" style="margin-top:12px">{{reqErr}}</div>
+            <div style="display:flex;align-items:center;gap:12px;margin-top:18px">
+              <button class="btn primary" @click="submitToolRequest" :disabled="reqBusy">{{reqBusy?'Sending…':'Send request'}}</button>
+              <span class="sub" style="font-size:11.5px;margin:0">Takes ten seconds — no signup needed.</span>
+            </div>
+          </template>
+          <template v-else>
+            <div style="text-align:center;padding:18px 6px 8px">
+              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--accent, currentColor)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+              <p style="margin:12px 0 4px;font-weight:600">Got it — thanks.</p>
+              <p class="sub" style="margin:0 0 16px">Requests are reviewed as they come in; the most-asked-for tools get added first.</p>
+              <button class="btn" @click="reqAsk=false">Close</button>
+            </div>
+          </template>
+        </div></div>
+    </div>
+
     <!-- SHARE A DETAIL PAGE (invite someone new; they land right here after sign-in) -->
     <div class="scrim" role="dialog" aria-modal="true" v-if="share.on && detail" @click.self="share.on=false">
       <div class="modal" style="width:min(560px,95vw)"><div class="hd"><b>Share “{{detail.name}}”</b><button class="btn sm ico" @click="share.on=false" aria-label="Close">✕</button></div>
@@ -3297,7 +3414,11 @@ treg login</pre></div>
                  dead Run button — point them at the tab that DOES work. -->
             <div v-if="epTryAccess && epTryAccess.tier!=='platform' && epTryAccess.tier!=='tool' && epTryAccess.tier!=='credential'"
                  class="banner" style="margin:0">
-              Can't run this here yet — {{mkOauth(epTry.provider) ? 'connect '+(epTry.provider_display||epTry.provider)+' first (Bring your own key), then Run.' : 'this endpoint needs a key. Use the AI Agent / CLI / API tab, or Bring your own key.'}}
+              Can't run this here yet — {{mkOauth(epTry.provider) ? 'connect '+(epTry.provider_display||epTry.provider)+' first, then Run.' : 'this endpoint needs a key. Use the AI Agent / CLI / API tab, or bring your own.'}}
+              <div style="margin-top:10px">
+                <button v-if="mkOauth(epTry.provider)" class="btn sm primary" @click="openProvider(epTry.provider); epTry=null">Connect {{epTry.provider_display||epTry.provider}}</button>
+                <button v-else-if="mkKnown(epTry.provider)" class="btn sm primary" @click="goByok(epTry.provider)">🔑 Bring your own key</button>
+              </div>
             </div>
             <template v-else>
               <div class="field" v-for="p in epTryParams" :key="p.name" style="max-width:520px">
@@ -3364,6 +3485,7 @@ createApp({
       // Billing (Stripe top-ups). `billing` null = not loaded / not an admin; billing.configured
       // false = this deployment sells no balance, so the whole block stays hidden.
       billing:null, billingBusy:false, topupAmount:10, autoAmount:10, autoThreshold:5, autoConsent:false, autoOpen:false,
+      bhist:{items:[],loading:false,ok:true},   // past top-ups + their invoice/receipt links; ok=false means Stripe was unreachable, amounts are still right
       confirmDel:'', confirmLeave:false, confirmRemove:null,
       showJoin:false, joinCode:'', joinBusy:false, joinErr:'',
       secrets:[], showSecrets:false, secretRows:[{name:'',value:'',kind:'env'}], secretBusy:false, secretErr:'', runNote:'',
@@ -3374,6 +3496,7 @@ createApp({
       // holds an approved app for; `connections` is what this org has actually connected.
       providers:[], connections:[], connErr:'', connBusy:false, confirmDisc:null, resPick:null,
       mkCat:'', mkService:null,  // marketplace: active category filter, and the open integration
+      byokFocus:null,  // provider row to flash after a "Bring your own key" jump to the Platform tab
       // Marketplace tab bar: 'all' + one key per catalog category, plus 'platform' for the
       // original integration shelves. Data-first is the default view.
       mkTab:'all',
@@ -3410,7 +3533,7 @@ createApp({
       detail:null, detailData:null, detailErr:'', detailLoading:false, detailFile:'SKILL.md', detailCopied:'', detailNote:'',
       shareGate:null,  // logged-out arrival at a shared detail link: {kind,name} → focused sign-in page (no sandbox/tour)
       share:{on:false, email:'', role:'viewer', full:true, busy:false, err:'', sent:null, member:null},  // detail-page "Share…" (invite + land on this page)
-      me:'', myOrgs:[], isAdmin:false,
+      me:'', icHash:'', myOrgs:[], isAdmin:false,
       onboarded:true,  // first-run onboarding done (server flag; gates the welcome modal)
       welcome:{on:false, step:0, name:'', agent:'openclaw', moreOpen:false, busy:false, err:''},  // first-run: name your team → pick your agent → setup line
       emptyTab:'agent',
@@ -3423,6 +3546,7 @@ createApp({
       startCopied:'', startTab:'access', startAgentOpen:false, startTokenShow:false, mdMenu:false, llmsCopied:false, myToken:null, _myTokenOrg:null, tokenCopied:false,
       agentGuide:null, agentGuideCopied:false, agentRowCopied:null,
       vendorAsk:false, vendorCopied:false,
+      reqAsk:false, reqDone:false, reqBusy:false, reqErr:'', reqForm:{capability:'', note:'', contact:''},
       demo:{
         token:null, org_slug:'', ttl:60, busy:false, err:'', copied:'', signin:false,
         view:'endpoints', secrets:[], tools:[], maxSecrets:3, maxTools:3,
@@ -3880,6 +4004,12 @@ createApp({
     isOwner(){ return this.activeRole==='owner'; },
     canRegister(){ return this.activeRole!=='viewer'; },  // members+ may create secrets/tools
     secretRowsReady(){ return this.secretRows.filter(r=>(r.name||'').trim()&&r.value).length; },
+    // The names the marketplace credential ladder actually matches: tier 2 finds an org secret
+    // NAMED exactly for the provider (Secret.name == service), so these are the names worth
+    // suggesting — a key called APOLLO_API_KEY works as a plain secret but the catalog never sees it.
+    keyNameSuggestions(){ return (this.providers||[])
+      .filter(p=>p.auth_kind==='key'||p.auth_kind==='token')
+      .slice().sort((a,b)=>a.service.localeCompare(b.service)); },
     // ---- detail pages ----
     accessNames(){  // the grantable universe: tool names + recipe-only skill names (an integration
       // skill is reachable through its tool's name; recipe-only bundles need their own entry)
@@ -3931,7 +4061,7 @@ createApp({
     // a11y (WCAG 2.4.3): when a dialog/drawer opens, move focus INTO it (was left on the trigger)
     newTool(v){ this.focusOverlay(v); }, newSkill(v){ this.focusOverlay(v); }, newOrg(v){ this.focusOverlay(v); },
     showJoin(v){ this.focusOverlay(v); }, addOrg(v){ this.focusOverlay(v); }, copyTool(v){ this.focusOverlay(v); },
-    tryTool(v){ this.focusOverlay(v); }, 'welcome.on'(v){ this.focusOverlay(v); },
+    tryTool(v){ this.focusOverlay(v); }, 'welcome.on'(v){ this.focusOverlay(v); }, reqAsk(v){ this.focusOverlay(v); },
   },
   methods:{
     focusOverlay(open){ if(!open) return; this.$nextTick(()=>{ const el=document.querySelector('.scrim input,.scrim textarea,.scrim button,.drawer input,.drawer button'); el&&el.focus(); }); },
@@ -4256,7 +4386,27 @@ createApp({
       this.billing=await this.api('/billing').catch(()=>null);
       if(this.billing){ this.topupAmount=this.billing.topup.default_usd;
         this.autoAmount=Math.round(this.billing.autotopup.amount_usd);
-        this.autoThreshold=Math.round(this.billing.autotopup.threshold_usd); } },
+        this.autoThreshold=Math.round(this.billing.autotopup.threshold_usd);
+        this.loadBillingHistory(); } },
+    // Amounts come from our own credit blocks, so this list can never disagree with the balance above
+    // it; Stripe supplies only the document links, and bhist.ok===false means those were unavailable.
+    async loadBillingHistory(){ if(!this.canAdmin || !this.billing || !this.billing.configured){ this.bhist={items:[],loading:false,ok:true}; return; }
+      this.bhist={items:[],loading:true,ok:true};
+      const out=await this.api('/billing/history').catch(()=>null);
+      this.bhist={items:(out&&out.items)||[], loading:false, ok:!out||out.stripe_ok!==false}; },
+    async openPortal(){ this.billingBusy=true; this.err='';
+      try{ const out=await this.api('/billing/portal',{method:'POST'});
+        // Stripe's hosted portal owns card, billing address, tax ID and the full invoice archive. Its
+        // return_url comes back to #billing, so the same tab is right here as it is for Checkout.
+        window.location.href=out.url; }
+      catch(e){ this.err='Could not open the billing portal: '+(e.detail||e.status); this.billingBusy=false; } },
+    bhistLink(i){ return i.invoice_pdf || i.hosted_invoice_url || i.receipt_url || ''; },
+    bhistLabel(i){ return (i.invoice_pdf||i.hosted_invoice_url) ? 'Invoice' : (i.receipt_url ? 'Receipt' : ''); },
+    // created_at is naive UTC (the models._now convention), so it needs the Z that isoformat omits —
+    // without it the browser reads it as local time and a late-evening top-up shows the wrong day.
+    bhistDate(iso){ if(!iso) return '';
+      const d=new Date(/(Z|[+-]\d{2}:?\d{2})$/.test(iso) ? iso : iso+'Z');
+      return isNaN(d)?'':d.toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'}); },
     async addFunds(amount){ this.billingBusy=true; this.topupAmount=amount; this.err='';
       // Named differently from the server's topup_started (same click, two vantage points —
       // a shared name would double-count in trends); this one exists to link session replays.
@@ -4349,6 +4499,23 @@ createApp({
         if(v.length>=2&&v[0]===v[v.length-1]&&(v[0]==='"'||v[0]==="'")) v=v.slice(1,-1);
         if(k) out.push({name:k,value:v,kind:'env'}); }
       return out; },
+    // The nudge under a secret row: an exact provider name gets a confirmation, a near miss
+    // (APOLLO_API_KEY, tikhub-key, DATAFORSEO_TOKEN) gets the exact name the ladder matches on.
+    // Anything else — a genuinely custom secret — gets silence, not a warning: most secrets are
+    // for the org's own tools and have every right to any name.
+    secretNameHint(row){
+      const raw=(row.name||'').trim(); if(!raw) return null;
+      const provs=this.keyNameSuggestions;
+      const exact=provs.find(p=>p.service===raw);  // the ladder compares exactly — "Apollo" is a near miss, not a hit
+      if(exact) return {ok:true, service:exact.service,
+        text:(exact.display_name||exact.service)+' catalog calls will use this key automatically'};
+      const norm=raw.toLowerCase().replace(/[^a-z0-9]+/g,'');
+      const near=provs.find(p=>{ const s=p.service.replace(/[^a-z0-9]+/g,'');
+        return norm===s+'apikey'||norm===s+'key'||norm===s+'token'||norm===s+'api'||norm===s; });
+      if(near) return {ok:false, service:near.service,
+        text:(near.display_name||near.service)+' catalog calls only find a key named exactly “'+near.service+'” —'};
+      return null;
+    },
     pasteEnv(e,i,field){ const t=(e.clipboardData||window.clipboardData).getData('text')||'';
       const rows=this.parseEnvText(t);
       if(!rows.length) return;                       // not env-shaped → normal paste
@@ -4544,7 +4711,8 @@ createApp({
         this.skillResults=r.results; await this.loadAll();
         if(r.results.length && r.results.every(x=>x.ok)){ setTimeout(()=>{ this.newSkill=false; }, 1000); } }
       catch(e){ this.skillErr='Import failed: '+(e.detail||e.message||(e.status?('HTTP '+e.status):'request failed - try registering fewer skills at once')); } finally{ this.skillBusy=false; } },
-    logout(){ if(this.sessionMode){ fetch('/auth/logout',{method:'POST',credentials:'include'}).finally(()=>{localStorage.removeItem('treg-active');location.reload();}); } else { this.cfg={active:null,orgs:{}}; this.save(); location.reload(); } },
+    logout(){ try{ if(window.Intercom) window.Intercom('shutdown'); }catch(e){}  // drop the Intercom cookie so the next user on this machine can't read these conversations
+      if(this.sessionMode){ fetch('/auth/logout',{method:'POST',credentials:'include'}).finally(()=>{localStorage.removeItem('treg-active');location.reload();}); } else { this.cfg={active:null,orgs:{}}; this.save(); location.reload(); } },
     dot(s){ return s==='unknown'||s==='-'?'○':'●'; },
     short(e){ return (e||'').split('@')[0]; },
     isPersonal(o){ return !!o && o.name===this.me; },  // personal org = the auto-created one named after your email
@@ -4601,7 +4769,7 @@ createApp({
       try{ const o=await this.api('/orgs',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name})});
         this.onboarded=true; try{ await this.api('/onboard/skip',{method:'POST'}); }catch(e){}  // don't re-prompt
         await this.loadAll(); this.switchOrg({slug:o.org});
-        this.analyticsIdentify(); this.track('onboarding_team_created',{team:o.org});
+        this.analyticsIdentify(); this.intercomUpdate(); this.track('onboarding_team_created',{team:o.org});
         this.welcome.step=1; }  // stay in the modal: pick your agent → get the setup line
       catch(e){ this.welcome.err='Could not create the team: '+(e.detail||e.status); }
       finally{ this.welcome.busy=false; } },
@@ -4626,6 +4794,26 @@ createApp({
     analyticsIdentify(){ if(!window.posthog || !window.posthog.identify || !this.me) return;
       try{ window.posthog.identify(this.me, {email:this.me}); if(this.activeSlugNow) window.posthog.group('team', this.activeSlugNow); }catch(e){} },
     track(name, props){ try{ if(window.posthog && window.posthog.capture) window.posthog.capture(name, props||{}); }catch(e){} },
+    // Support chat (Intercom) — only when this deployment opted in (meta.intercom_app_id present);
+    // self-hosters load nothing. Booted AFTER /auth/me resolves (not at the /meta fetch, like
+    // analytics) so the common case boots identified once instead of anonymous→identified.
+    initIntercom(){
+      const app=this.meta && this.meta.intercom_app_id; if(!app || window.__icInit) return; window.__icInit=true;
+      window.intercomSettings=this.intercomPayload();
+      const s=document.createElement('script'); s.async=true; s.src='https://widget.intercom.io/widget/'+app;
+      const i=function(){i.c(arguments)}; i.q=[]; i.c=function(a){i.q.push(a)}; if(!window.Intercom) window.Intercom=i;
+      document.head.appendChild(s);
+      try{ window.Intercom('boot', this.intercomPayload()); }catch(e){}
+    },
+    intercomPayload(){
+      const p={app_id:this.meta.intercom_app_id};
+      // Never send email without user_hash: an unhashed identify is exactly the impersonation
+      // vector identity verification exists to close. No hash (or no login) = anonymous visitor chat.
+      if(this.me && this.icHash){ p.email=this.me; p.user_hash=this.icHash;
+        if(this.activeSlugNow) p.company={id:this.activeSlugNow, name:this.activeSlugNow}; }
+      return p;
+    },
+    intercomUpdate(){ try{ if(window.__icInit && window.Intercom) window.Intercom('update', this.intercomPayload()); }catch(e){} },
     async resetDemo(){ try{ await this.api('/onboard/reset',{method:'POST'}); this.onboarded=true; await this.loadAll(); this.orgMsg='Demo teammates removed.'; }
       catch(e){ this.err='Reset failed: '+(e.detail||e.status); } },
     readMore(section){ try{ window.open('/tutorial'+(section?('#'+section):''),'_blank'); }catch(e){} },
@@ -4651,9 +4839,9 @@ createApp({
       }catch(e){ this.loginErr = e.status===401?'Invalid token.':('Error: '+(e.detail||e.status)); }
       finally{ this.busy=false; } },
     switchOrg(o){ this.orgMenu=false;
-      if(this.sessionMode){ this.activeSlug=o.slug; localStorage.setItem('treg-active',o.slug); this.loadAll(); return; }
+      if(this.sessionMode){ this.activeSlug=o.slug; localStorage.setItem('treg-active',o.slug); this.loadAll(); this.intercomUpdate(); return; }
       if(!this.connected(o.slug)){ this.addOrg=true; return; }
-      this.cfg.active=o.slug; this.save(); this.loadAll(); },
+      this.cfg.active=o.slug; this.save(); this.loadAll(); this.intercomUpdate(); },
     copyStart(text, tag){ navigator.clipboard.writeText(text).then(()=>{ this.startCopied=tag; setTimeout(()=>{ if(this.startCopied===tag) this.startCopied=''; },1400); }).catch(()=>{}); },
     // ---- connections (registry OAuth) ----
     async loadConnections(){
@@ -4807,6 +4995,15 @@ createApp({
     },
     async copyAgentPrompt(){ if(!(await this.toClipboard(this.agentPromptText))) return; this.agentGuideCopied=true; setTimeout(()=>this.agentGuideCopied=false,1500); },
     async copyVendorPrompt(){ if(!(await this.toClipboard(this.vendorPromptText))) return; this.vendorCopied=true; setTimeout(()=>this.vendorCopied=false,1500); },
+    openToolRequest(){ this.reqDone=false; this.reqErr=''; this.reqForm.capability=(this.q||'').trim(); this.reqAsk=true; },  // pre-fill with the search that came up short
+    async submitToolRequest(){ const cap=(this.reqForm.capability||'').trim();
+      if(!cap){ this.reqErr='Say what tool or capability you need.'; return; }
+      this.reqBusy=true; this.reqErr='';
+      try{ await this.api('/tool-requests',{method:'POST',headers:{'content-type':'application/json'},
+          body:JSON.stringify({capability:cap, query:(this.q||'').trim(), note:this.reqForm.note, contact:this.reqForm.contact, source:'web'})});
+        this.reqDone=true; this.reqForm={capability:'', note:'', contact:''}; }
+      catch(e){ this.reqErr = e.status===429?'Too many requests from here — try again later.':('Could not send: '+(e.detail||e.status)); }
+      finally{ this.reqBusy=false; } },
     async copyAgentGuide(kind){ if(!(await this.toClipboard(this.buildAgentPrompt(kind, true)))) return; this.agentRowCopied=kind; setTimeout(()=>{ if(this.agentRowCopied===kind) this.agentRowCopied=null; },1500); },
     switchTo(o){ this.switchOrg(o); },  // dropdown "Switch" button - just switch, stay where you are
     orgSettings(o){ this.orgMenu=false;  // dropdown ⚙ - go INTO that team, then open its settings
@@ -4814,7 +5011,7 @@ createApp({
       this.go('orgs'); },
     resetConfirms(){ this.confirmDelTool=null; this.confirmDelSecret=null; this.confirmDelBundle=null; this.confirmRemove=null; this.confirmLeave=false; this.confirmDel=''; this.confirmAdmUser=null; this.confirmAdmOrg=null; },
     go(v, fromPop){ this.resetConfirms();  // stale inline "Confirm" states must not survive a view switch (accidental-delete risk)
-      this.detail=null; this.view=v; if(v==='activity')this.loadCalls(); if(v==='admin')this.loadAdmin(); if(v==='orgs'){this.loadOrgAdmin(); this.loadMyUsage(); this.loadBilling();} if(v==='usage')this.loadUsage(); if(v==='secrets')this.loadSecrets(); if(v==='connections')this.loadConnections();
+      this.detail=null; this.view=v; if(v==='activity')this.loadCalls(); if(v==='admin')this.loadAdmin(); if(v==='orgs'){this.loadOrgAdmin(); this.loadMyUsage(); this.loadBilling();} if(v==='usage')this.loadUsage(); if(v==='secrets'){this.loadSecrets(); if(!this.providers.length)this.loadConnections();} if(v==='connections')this.loadConnections();
       // push history so browser Back navigates BETWEEN views instead of leaving the app; the '/app'
       // pathname also walks back from a /app/skills/<x> detail URL so reload doesn't reopen the detail
       if(!fromPop) history.pushState({view:v}, '', '/app#'+v); },
@@ -4825,6 +5022,19 @@ createApp({
     // memory) rather than fetching a detail payload, so they can't share openDetail's loader.
     mkFromPath(path){ const m=/^\/app\/marketplace\/([^/]+)$/.exec(path||'');
       return m ? decodeURIComponent(m[1]) : null; },
+    // "Bring your own key", from anywhere: land on the Catalog's Platform tab — the shelf of every
+    // integration a key can be pasted into — rather than a single provider's detail page. With a
+    // service, the shelf scrolls to that provider's row and flashes it; the flash clears itself so
+    // a later visit to the tab doesn't replay a stale highlight.
+    goByok(service){
+      this.mkTab='platform'; this.mkCat='';
+      this.byokFocus=service||null; this.epTry=null;
+      this.go('connections');
+      if(!service) return;
+      this.$nextTick(()=>{ const el=document.getElementById('prov-'+service);
+        if(el) el.scrollIntoView({block:'center', behavior:'smooth'}); });
+      setTimeout(()=>{ if(this.byokFocus===service) this.byokFocus=null; }, 4000);
+    },
     openProvider(service, fromPop){ this.resetConfirms();
       this.detail=null; this.mkService=service; this.view='provider';
       if(!fromPop) history.pushState({mk:service}, '', '/app/marketplace/'+encodeURIComponent(service));
@@ -5398,7 +5608,7 @@ createApp({
         if(route||mkRoute) history.replaceState(null,'',stashed);
       } }
     const me = await fetch('/auth/me',{credentials:'include',headers:{'ngrok-skip-browser-warning':'1'}}).then(r=>r.ok?r.json():null).catch(()=>null);
-    if(me){ this.sessionMode=true; this.me=me.email; this.isAdmin=!!me.is_superadmin; this.onboarded=!!me.onboarded; await this.loadAll(); this.analyticsIdentify();
+    if(me){ this.sessionMode=true; this.me=me.email; this.isAdmin=!!me.is_superadmin; this.onboarded=!!me.onboarded; this.icHash=me.intercom_user_hash||''; await this.loadAll(); this.analyticsIdentify(); this.initIntercom();
       // Share-born arrival (/app/skills/x?invite_org=N from the invite email): accept silently and
       // enter that team — the emailed "Sign in & accept" click was the consent. Otherwise the normal
       // first-run / invite-banner flow.
@@ -5415,7 +5625,7 @@ createApp({
       else { const hv=this.viewFromHash(); if(hv) this.go(hv, true);
         else { this.go('start', true); history.replaceState({view:'start'},'','/app#start'); } }  // no deep link → Getting started is the default landing
       return; }  // GitHub/email session
-    if(this.token){ await this.loadAll();
+    if(this.token){ await this.loadAll(); this.initIntercom();  // token mode: no email/hash → anonymous visitor chat
       const pfTok=this.platformFromHash();
       if(mkRoute) this.openProvider(mkRoute, true); else if(pfTok) this.openPlatform(pfTok, true); else if(route) this.openDetail(route.kind, route.name, true);
       else { const hv=this.viewFromHash(); if(hv) this.go(hv, true);

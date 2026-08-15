@@ -122,11 +122,17 @@ def install_mcp(*, base_url: str, token: str, server_name: str = "treg",
     """Register the treg MCP server into every supported, installed agent on this machine.
 
     Returns {results: [(agent_display, status, detail)], manual: [(display, how)], mcp_url}.
-    `status` ∈ ok | skipped | error. `only` restricts to named agents (else all detected)."""
+    `status` ∈ ok | skipped | error. `only` restricts to named agents; None means all detected.
+
+    `only=[]` means NONE, not all. The original `if only and …` guard read an empty list as "no
+    filter", so a test that passed `only=[]` expecting a no-op wrote its dummy token into the
+    developer's REAL Claude/Cursor/opencode configs on every suite run — which is exactly how a
+    literal `Bearer K` ended up breaking every MCP call on a dev machine, days later, looking like
+    a provider outage."""
     url = base_url.rstrip("/") + "/mcp/"
     results: list[tuple[str, str, str]] = []
     for key, meta in MCP_AGENTS.items():
-        if only and key not in only:
+        if only is not None and key not in only:
             continue
         if not _installed(meta):
             continue
@@ -136,5 +142,5 @@ def install_mcp(*, base_url: str, token: str, server_name: str = "treg",
             status, detail = _write_json_agent(meta, server_name, url, token)
         results.append((meta["display"], status, detail))
     manual = [(m["display"], m["how"]) for k, m in MANUAL_AGENTS.items()
-              if (not only or k in only) and _installed(m)]
+              if (only is None or k in only) and _installed(m)]
     return {"results": results, "manual": manual, "mcp_url": url}

@@ -226,10 +226,9 @@ endpoints:
       unit: record
       source: docs
       source_url: https://leadmagic.io/pricing
-      checked: '2026-07-28'
-      confidence: inferred
-      note: 1 credit per person returned, PLUS 1 credit per email and 5 per mobile when include_contact_details is true. No results, no charge. A limit=25 search revealing mobiles can therefore cost 150+ credits — set limit deliberately.
-    unverified: "http 401 invalid_api_key, re-confirmed 2026-07-31 (identical response, and a 401 consumes no credits) — this key's plan does not include v3 people search; the sibling /v3/companies/search route on the SAME key succeeded (200, 1 credit), so this is a plan/feature gate on this one route, not a broken key or a broken endpoint"
+      checked: '2026-08-13'
+      confidence: verified
+      note: 'VERIFIED live 2026-08-13: a limit=3 search with include_contact_details=false returned 1 person and reported credits_consumed 1 (1 credit per person returned). Revealing contact details adds 1 credit per email and 5 per mobile, so a limit=25 search revealing mobiles can cost 150+ credits — set limit deliberately. No results, no charge. (The earlier 401 plan-gate on v3 people search has cleared on this key.)'
     docs_url: https://leadmagic.io/docs/reference/people-search
 
   - id: leadmagic.account.usage

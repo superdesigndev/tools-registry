@@ -39,15 +39,16 @@ def _get_sem() -> asyncio.Semaphore:
 
 def record_call(
     *, org_id: int | None = None, user_email: str, tool_name: str, method: str, path: str,
-    status_code: int, client: str = "", telemetry: dict | None = None
+    status_code: int, client: str = "", refused_by: str | None = None, telemetry: dict | None = None
 ) -> None:
     """`telemetry` carries the marketplace/spend columns (endpoint_id, provider, credential_tier,
     cost_*_micro, duration_ms, response_bytes, params_hash) — absent for a plain tool call, where they
     stay NULL. It is still fire-and-forget: the money landed in the ledger synchronously, so losing a
-    row here costs analytics, not accounting."""
+    row here costs analytics, not accounting. `refused_by` marks a call TREG refused before anything
+    went upstream (see models.CallRecord) — NULL whenever the provider actually answered."""
     _schedule(_write(CallRecord,
         org_id=org_id, user_email=user_email, tool_name=tool_name,
-        method=method, path=path, status_code=status_code, client=client,
+        method=method, path=path, status_code=status_code, client=client, refused_by=refused_by,
         **(telemetry or {}),
     ))
 

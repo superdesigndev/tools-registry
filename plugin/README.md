@@ -4,10 +4,33 @@ A **distribution wrapper**, not a second product. It ships the same skill that
 `treg skill bootstrap` already installs into `~/.codex/skills/`, packaged so people find treg by
 searching the plugin directory that ChatGPT and Codex share.
 
+> **One of two plugins.** The Claude Code plugin lives at the **repo root**
+> (`.claude-plugin/` + `skills/treg/`) and declares **no connector in its manifest**, so it installs
+> with no token and nothing about it waits on a review queue — its skill wires up the CLI and the MCP
+> tools at first run instead. Both are rendered by the same `scripts/build_plugin.py` from the same
+> source; they differ only in the prepended bootstrap. See
+> [`docs/CLAUDE-PLUGIN.md`](../docs/CLAUDE-PLUGIN.md).
+
     plugin/
     ├── .codex-plugin/plugin.json     the manifest + the listing copy
     ├── skills/treg/        GENERATED — do not edit by hand
-    └── assets/                       icon + logo (▚ in clay #e0703f)
+    └── assets/                       icon + logo (▚, black & white)
+
+## The assets
+
+`logo.png` (1024×1024) and `icon.png` (512×512) are the `▚` mark in **pure black and white** — white
+quadrants on a black rounded square. They are rendered from the geometry in
+`assets/brand/twitter/avatar-dark.svg`, scaled rather than upscaled, so re-rendering at any size is
+exact:
+
+    viewBox 512  ·  outer rx 112  ·  quadrants 140.5² at (111,111) and (260.5,260.5), rx 20
+
+`icon.svg` is deliberately the **filled** variant, not the transparent `mark-white.svg`: a white mark
+on transparency vanishes on a light background, and `composerIcon` renders in a host UI whose
+backdrop we do not control.
+
+Note `interface.brandColor` is still clay `#e0703f` — the product colour on treg.to. That is an
+accent beside a monochrome mark, not a conflict, but change both together if the brand moves.
 
 ## The skill is generated
 
@@ -15,8 +38,8 @@ searching the plugin directory that ChatGPT and Codex share.
 `treg skill bootstrap`, and rendered into this plugin by:
 
 ```bash
-python3 scripts/build_plugin.py            # regenerate
-python3 scripts/build_plugin.py --check    # fail if stale (also a test)
+python3 scripts/build_plugin.py            # regenerate BOTH plugins
+python3 scripts/build_plugin.py --check    # fail if either is stale (also a test)
 ```
 
 Two things differ from the served copy, both because a plugin arrives where the server does not:

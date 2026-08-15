@@ -1,6 +1,6 @@
 {
   "treg": {
-    "url": "https://treg.superdesign.dev/mcp/",
+    "url": "https://treg.to/mcp/",
     "bearer_token_env_var": "TREG_TOKEN"
   }
 }

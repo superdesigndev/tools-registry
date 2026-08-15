@@ -425,6 +425,32 @@ def test_observed_cost_only_trusts_a_real_number():
     assert A._observed_cost_micro("akta", b'{"credits_consumed": 0.5}') == 25_000
     assert A._observed_cost_micro("akta", b'{"credits_consumed": 0}') == 0, "a reported zero is honoured"
     assert A._observed_cost_micro("akta", b'{"credits_charged": 2}') is None, "wrong field name means we never learned it"
+    # leadmagic reports `credits_consumed` too — including 0 on a 2xx miss (observed at verify
+    # time) and fractions (email verify = 0.25 credits). $0.025/credit (fx.yaml).
+    assert A._observed_cost_micro("leadmagic", b'{"credits_consumed": 1}') == 25_000
+    assert A._observed_cost_micro("leadmagic", b'{"credits_consumed": 0}') == 0, "a 2xx miss is free"
+    assert A._observed_cost_micro("leadmagic", b'{"credits_consumed": 0.25}') == 6_250
+    # lusha nests the same contract one level down: billing.creditsCharged — 0 on a 2xx miss
+    # (the captured people.enrich example is one), 2 credits on a company enrich. $0.1248/credit.
+    assert A._observed_cost_micro("lusha", b'{"billing": {"creditsCharged": 1, "resultsReturned": 10}}') == 124_800
+    assert A._observed_cost_micro("lusha", b'{"billing": {"creditsCharged": 0, "resultsReturned": 0}}') == 0, "a 2xx miss is free"
+    assert A._observed_cost_micro("lusha", b'{"billing": {"creditsCharged": 2}}') == 249_600
+    assert A._observed_cost_micro("lusha", b'{"requestId": "x"}') is None, "no billing block means we never learned it"
+
+
+def test_apollo_settles_a_2xx_miss_at_zero():
+    """Apollo answers a no-match with 2xx and charges nothing for it — `organization: null` on
+    enrich, an empty `organizations` page on search. Status-based billing would charge the
+    caller the full credit for a response Apollo gave away; the body is what decides. A body
+    carrying neither documented shape (people enrichment's 1-9 credit range) stays at the
+    estimate — deriving is only safe where the rule is flat."""
+    credit = 26_000  # $0.026/credit (fx.yaml, Basic $65/mo / 2,500 credits)
+    assert A._observed_cost_micro("apollo", b'{"organization": {"name": "Apple"}}') == credit
+    assert A._observed_cost_micro("apollo", b'{"organization": null}') == 0, "a 2xx miss is free"
+    assert A._observed_cost_micro("apollo", b'{"organizations": [{"name": "Apple"}], "pagination": {}}') == credit
+    assert A._observed_cost_micro("apollo", b'{"organizations": [], "pagination": {}}') == 0, "an empty page is free"
+    assert A._observed_cost_micro("apollo", b'{"person": {"id": "x"}}') is None, "1-9 credit range: estimate, not a guess"
+    assert A._observed_cost_micro("apollo", b"not json") is None
 
 
 async def test_daily_cap_fails_closed(clients: AsyncClient, platform_on, monkeypatch):
@@ -964,3 +990,40 @@ async def test_the_sweep_leaves_OTHER_callers_rows_alone(clients: AsyncClient, p
         still = (await db.execute(select(IdempotentCall).where(
             IdempotentCall.key == "someone-elses"))).scalar_one_or_none()
     assert still is not None, "one caller's sweep must not delete another's rows"
+
+
+# ---- 429 is never billable (shared-plan pricing, step 2) ------------------------------------
+
+def test_the_billability_truth_table():
+    """The exact contract of `_platform_billable`, pinned row by row so a future edit changes it on
+    purpose or not at all.
+
+    The 429 row is the shared-plan fix: a rate-limit rejection is capacity refusing the request. On a
+    shared plan key it is treg's own saturation, and billing it would charge teams for our
+    congestion. It also corrects an existing wrong: under `per_call` the old rule billed upstream
+    429s, and no vendor bills a request it refused to accept."""
+    cases = [
+        (200, "per_success", True), (200, "per_call", True),
+        (429, "per_call", False), (429, "per_success", False), (429, "per_result", False),
+        (400, "per_call", True), (400, "per_success", False), (400, "per_result", False),
+        (402, "per_call", True),        # an upstream 402 is the provider billing for acceptance
+        (503, "per_call", False), (503, "per_success", False),
+        (302, "per_call", False),
+    ]
+    for status, cost_type, expected in cases:
+        got = A._platform_billable(status, cost_type)
+        assert got is expected, f"({status}, {cost_type}) -> {got}, expected {expected}"
+
+
+async def test_an_upstream_429_releases_the_hold(clients: AsyncClient, platform_on, monkeypatch):
+    """End to end: the provider rate-limits, the balance ends exactly where it started, and the
+    activity feed shows $0.00 charged."""
+    monkeypatch.setattr(A, "relay", _fake_relay(429, b'{"error":"rate limited"}'))
+    before = await _balance(clients)
+    r = await clients.get(f"/call/{EP}?aweme_id=7")
+    assert r.status_code == 429
+    assert await _balance(clients) == before, "a 429 must not move money"
+    kinds = [e["kind"] for e in await _entries(clients)]
+    assert kinds[:2] == ["release", "reserve"], kinds
+    row = await _telemetry(clients)
+    assert row["cost_charged_micro"] == 0

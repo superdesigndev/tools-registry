@@ -178,9 +178,59 @@ def check_cost(cost: dict, where: str, errors: list[str], warnings: list[str]) -
         warnings.append(f"{where}: cost.checked is {age} days old (> {STALE_DAYS}) — re-check the price")
 
 
+SHARED_PLAN_KIND = "treg_shared_plan"
+
+
+def check_fx(errors: list[str]) -> None:
+    """The fx entries that carry a rate TREG SET, not one the vendor published.
+
+    A `kind: treg_shared_plan` entry is the catalog asserting its own price for a flat-fee provider
+    (see docs/SHARED-PLAN-PRICING-PLAN.md). Everything downstream shows the basis string as
+    provenance, so the honesty lives in that string — these checks make it impossible to add a
+    treg-set rate that does not say whose price it is, what the vendor fee was, and what volume it
+    breaks even at. A treg rate card with none of that printed is exactly the dishonesty the design
+    exists to avoid.
+    """
+    fx = yaml.safe_load((CATALOG / "fx.yaml").read_text()) or {}
+    for service, entry in (fx.get("credit_rates_usd") or {}).items():
+        if not isinstance(entry, dict):
+            continue
+        where = f"fx.yaml credit_rates_usd.{service}"
+        kind = entry.get("kind")
+        basis = str(entry.get("basis") or "")
+        if kind is None:
+            # a vendor-published rate; but prose claiming a treg rate without the marker is drift
+            # between what the machine knows and what the human reads
+            if "treg shared-plan" in basis.lower():
+                fail(errors, where, "basis claims a treg shared-plan rate but has no "
+                                    f"`kind: {SHARED_PLAN_KIND}` marker")
+            continue
+        if kind != SHARED_PLAN_KIND:
+            fail(errors, where, f"unknown kind {kind!r} (only {SHARED_PLAN_KIND!r} exists)")
+            continue
+        if not isinstance(entry.get("usd"), (int, float)) or entry["usd"] <= 0:
+            fail(errors, where, "a treg_shared_plan rate must carry a positive usd — null means "
+                                "'unpriced', which needs no marker")
+        if not basis.startswith("treg shared-plan rate"):
+            fail(errors, where, "basis must START with 'treg shared-plan rate' so every surface "
+                                "showing provenance says whose price this is")
+        if not re.search(r"\$[\d,]+(?:\.\d+)?\s*/\s*(?:mo|yr)", basis):
+            fail(errors, where, "basis must name the vendor fee (e.g. '$49.99/mo')")
+        if not re.search(r"break-even at [\d,]+ calls/mo", basis):
+            fail(errors, where, "basis must state 'break-even at N calls/mo'")
+        if not entry.get("source") or not entry.get("checked"):
+            fail(errors, where, "source and checked are required on a treg-set rate")
+        fee = entry.get("fee_usd_month")
+        if not isinstance(fee, (int, float)) or fee <= 0:
+            fail(errors, where, "fee_usd_month is required on a treg_shared_plan entry — the "
+                                "recovery report computes fee vs collected from it, and a fee that "
+                                "lives only in prose cannot be computed against")
+
+
 def main(argv: list[str]) -> int:
     errors: list[str] = []
     warnings: list[str] = []
+    check_fx(errors)
     tax = yaml.safe_load((CATALOG / "capabilities.yaml").read_text())
     platforms = set(tax.get("platforms") or {})
     capabilities = set(tax.get("capabilities") or {})

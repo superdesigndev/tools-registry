@@ -6,18 +6,18 @@ The whole registry, end to end. Every step shows the **exact command**, the **ex
 There are two companion versions of this same walkthrough, generated from one source
 (`src/treg/web/tutorial.js`):
 
-- **In the dashboard** → sign in at `https://treg.superdesign.dev/` and open **Help → Tutorial**.
-- **Standalone** → `https://treg.superdesign.dev/tutorial`.
+- **In the dashboard** → sign in at `https://treg.to/` and open **Help → Tutorial**.
+- **Standalone** → `https://treg.to/tutorial`.
 
 ### Two focused, deep-dive tutorials
 
 Two features have their own detailed, step-by-step tutorials (exact commands, real output, and how each
 was tested):
 
-- **Import & shell** → `https://treg.superdesign.dev/tutorial-import-shell.md` — `treg upload clis` turns the
+- **Import & shell** → `https://treg.to/tutorial-import-shell.md` — `treg upload clis` turns the
   CLIs already on your machine into team tools; `treg shell` opens a shell where `stripe`, `gh`, `gcloud` …
   just work with the team key injected. Includes the local-run **security sandbox**.
-- **Team access control** → `https://treg.superdesign.dev/tutorial-access.md` — choose **which tools each member
+- **Team access control** → `https://treg.to/tutorial-access.md` — choose **which tools each member
   may use** and whether they may run CLIs **locally**, at invite time or any time later.
 
 ---
@@ -61,7 +61,7 @@ the `HOME=` prefix.
 ```bash
 for u in tom bob alice; do
   mkdir -p ~/.treg-personas/$u
-  HOME=~/.treg-personas/$u treg config --base-url https://treg.superdesign.dev
+  HOME=~/.treg-personas/$u treg config --base-url https://treg.to
 done
 ```
 
@@ -469,7 +469,7 @@ token header - any language, any agent, `curl`.
 ```bash
 ATOK=$(python3 -c "import json;print(json.load(open('/Users/you/.treg-personas/alice/.treg/config.json'))['token'])")
 curl -s -H "X-Treg-Token: $ATOK" \
-  "https://treg.superdesign.dev/call/https://postman-echo.com/get"
+  "https://treg.to/call/https://postman-echo.com/get"
 ```
 ```
 # the postman-echo JSON again, "authorization": "Bearer sk-demo-secret-123" injected -
@@ -759,13 +759,13 @@ Admin panel lights up for him.
 
 ## Step 33 - The same registry, in the browser
 
-Open **treg.superdesign.dev** and sign in with the **email code** door (the same one you used in the terminal):
+Open **treg.to** and sign in with the **email code** door (the same one you used in the terminal):
 type your email → click **Email me a sign-in code** → **check your inbox** for the 6-digit code → paste it
 in and **Sign in**. You land on your team org - Tools shows the `echo` tool, Activity shows the call, and
 (since Tom is now super-admin) an **Admin** panel appears.
 
 ```bash
-open https://treg.superdesign.dev/
+open https://treg.to/
 ```
 ```
 # Sign in with email → land on Superdesign

@@ -46,7 +46,7 @@ the subject comes up, and change it only when the router actually ships.
 **Docs are fragments.** Per-subsystem design docs live in `docs/context/`, one fragment per subsystem,
 each naming its `src/treg/*` sources in frontmatter. Load one with the `tools-registry-context` skill.
 
-**Before pushing:** run `bash .claude/skills/tools-registry-context/scripts/drift.sh`, map changed
+**Before pushing:** run `bash .agents/skills/tools-registry-context/scripts/drift.sh`, map changed
 sources → fragments, update them, and commit the docs **in the same commit as the code**.
 
 **Three files move together** or they drift: `src/treg/web/tutorial.js` (the only interactive source)

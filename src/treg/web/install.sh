@@ -28,16 +28,33 @@ done
 # light for anyone who wants only the plain CLI.
 SRC="tools-registry[proxy]"
 
+# The supported interpreter range — keep in sync with `requires-python` in pyproject.toml.
+# Passed explicitly because uv otherwise resolves against its DEFAULT interpreter (its own managed
+# Python first), and when that is outside the range — a machine whose uv-managed default is 3.11,
+# or 3.14+ once that ships as the OS default — the install dies on resolution instead of picking
+# (or downloading) a compatible Python. With the constraint, uv fetches one if none is installed.
+PYREQ=">=3.12,<3.14"
+
 printf '\n\033[38;5;173m▚ tools-registry\033[0m - installing the treg CLI…\n\n'
 
 if command -v uv >/dev/null 2>&1; then
-  uv tool install --force "$SRC"
+  uv tool install --force --python "$PYREQ" "$SRC"
 elif command -v pipx >/dev/null 2>&1; then
-  pipx install --force "$SRC"
+  # pipx needs a concrete interpreter, not a range — probe for one inside PYREQ before falling
+  # back to pipx's default (which is pipx's own Python and may be outside the range).
+  PIPX_PY=""
+  for py in python3.13 python3.12; do
+    if command -v "$py" >/dev/null 2>&1; then PIPX_PY="$py"; break; fi
+  done
+  if [ -n "$PIPX_PY" ]; then
+    pipx install --force --python "$PIPX_PY" "$SRC"
+  else
+    pipx install --force "$SRC"
+  fi
 elif command -v pip3 >/dev/null 2>&1; then
   pip3 install --user --upgrade "$SRC"
 else
-  echo "Need Python 3.12+ and one of: uv (recommended), pipx, or pip3." >&2
+  echo "Need Python 3.12 or 3.13 and one of: uv (recommended), pipx, or pip3." >&2
   echo "Install uv:  https://docs.astral.sh/uv/getting-started/installation/" >&2
   exit 1
 fi

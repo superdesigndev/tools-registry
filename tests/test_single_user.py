@@ -32,10 +32,10 @@ def test_local_mode_needs_sqlite_and_a_loopback_url():
     # a real deploy — either half is enough to refuse
     assert _settings(database_url="postgresql+asyncpg://u@h/db").single_user_ok is False, \
         "a Postgres URL means a real deploy: no-login must be off"
-    assert _settings(public_url="https://treg.superdesign.dev").single_user_ok is False, \
+    assert _settings(public_url="https://treg.to").single_user_ok is False, \
         "a public domain must never serve a no-login dashboard"
     assert _settings(database_url="postgresql+asyncpg://u@h/db",
-                     public_url="https://treg.superdesign.dev").single_user_ok is False
+                     public_url="https://treg.to").single_user_ok is False
 
 
 def test_it_is_off_unless_explicitly_asked_for():

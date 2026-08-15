@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // @superdesign/treg — npm launcher for the treg CLI (a Python tool).
 // Finds an installed `treg`; if missing, installs it via the registry's
-// installer (https://treg.superdesign.dev/install.sh), then execs it.
+// installer (https://treg.to/install.sh), then execs it.
 'use strict';
 
 const { spawnSync } = require('node:child_process');
@@ -9,7 +9,7 @@ const { existsSync } = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 
-const BASE = process.env.TREG_BASE_URL || 'https://treg.superdesign.dev';
+const BASE = process.env.TREG_BASE_URL || 'https://treg.to';
 const args = process.argv.slice(2);
 
 function findTreg() {

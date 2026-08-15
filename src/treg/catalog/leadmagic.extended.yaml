@@ -9,19 +9,20 @@
 #
 # Billing pattern holds across this tier too: most routes charge only on a definitive hit and are
 # free on a miss/no-match. The three ad-search routes and jobs/company-search v3 charge PER ITEM
-# returned instead (no free floor on the base call), and b2b-ads-search additionally reserves a
-# base charge plus one credit per ad (1-51 credits for a single call) — flag this to a verifier
-# before it runs unbounded.
+# returned instead (no free floor on the base call). b2b-ads-search was VERIFIED 2026-08-13: it
+# charges ~0.2 credit per ad plus a ~0.2 base (= 0.2 x (ads+1)), so a full ~24-ad page is ~5
+# credits, NOT the 1-credit-per-ad / up-to-51 once feared. google-ads-search and meta-ads-search
+# share the per-item shape but their rate is still unconfirmed.
 #
 # VERIFIED 2026-07-28 — 11 of 15 entries called live with a real credential under a 30-credit
 # budget (observed spend ~9.3 credits total, core+extended combined): 10 passed and 1
 # (competitors-search) 401s with invalid_api_key on this key, the same plan-gate shape as core's
 # /v3/people/search — a different /v3 route (companies/search) on the SAME key succeeds, so it
-# reads as a route-level feature gate rather than a broken key. The 3 ad-search routes
-# (google-ads-search, meta-ads-search, b2b-ads-search) are `skipped`: none of them document a
-# `limit` param, so a single call's cost is unbounded (b2b-ads-search alone can reach 51 credits)
-# and none could be safely bounded within the 30-credit cap — they need a topped-up budget and
-# the response's own X-Credits-Max-Cost header checked before a real run, not investigation.
+# reads as a route-level feature gate rather than a broken key. b2b-ads-search has since been run
+# and verified (2026-08-13): its per-call cost is bounded (~5 credits for a full ~24-ad page), so
+# it is no longer `skipped`. google-ads-search and meta-ads-search remain `skipped`: neither
+# documents a `limit` param and neither was run, so their per-call cost is still unconfirmed —
+# check the response's own X-Credits-Max-Cost header before a real run.
 
 provider: leadmagic
 source:
@@ -531,20 +532,24 @@ endpoints:
       body:
         company_domain: {type: string, required: false, example: "leadmagic.io"}
         company_name: {type: string, required: false}
-      note: "at least one of company_domain | company_name is required. UNBOUNDED PER-CALL COST: base 1 credit plus 1 credit per ad, 0-50 ads (1-51 credits total, no limit param documented) — the response header X-Credits-Max-Cost shows the reserved amount before committing"
+      note: "at least one of company_domain | company_name is required. Cost VERIFIED 2026-08-13 as 0.2 credit per ad + a 0.2 base (= 0.2 x (ads+1)): a 5-ad response cost 1.20 credits, a 24-ad response 5.00. Responses appear to cap near 24 ads, so a full page is ~5 credits. The response header X-Credits-Max-Cost shows the reserved amount before committing"
     test_request:
       bodyType: json
       body: {company_domain: "leadmagic.io"}
+    # The route-level stamp PR #118 verified the cost with but forgot to write. The example was
+    # captured live 2026-08-14 (5 ads, 1.2 credits consumed — an exact fit to the verified
+    # 0.2 x (ads+1) formula, a fourth confirmation of it), redaction-scanned, $0.03 charged.
+    verified: 2026-08-14
+    example_response: examples/leadmagic.x.b2b-ads-search.json
     cost:
       type: per_call
-      value: 1
+      value: 5
       currency: credit
       per: 1
       unit: call
-      source: docs
+      source: observed
       source_url: https://leadmagic.io/pricing
-      checked: '2026-07-28'
-      confidence: inferred
-      note: 1 credit base + 1 credit per ad returned; range 1-51 credits per call (0-50 ads max) — a 24-ad response costs 25 credits total
-    skipped: "unbounded per-call cost (1-51 credits, no limit param) — a single call could alone exhaust the entire 30-credit test budget; clears with a topped-up budget and X-Credits-Max-Cost checked first, not investigation"
+      checked: '2026-08-13'
+      confidence: verified
+      note: 'VERIFIED live 2026-08-13 across three calls (credit-balance deltas): 5 ads = 1.20 credits, 24 ads = 5.00, 24 ads = 5.00 — an exact fit to 0.2 credit per ad + 0.2 base (= 0.2 x (ads+1)). The old "1 credit per ad, up to 51" was wrong. Responses appear to cap around 24 ads, so value is the ~5-credit full-page cost as a per-call upper bound; a small company returning few ads costs less (e.g. 1.20 for 5 ads). The response header X-Credits-Max-Cost shows the exact reserved amount before committing.'
     docs_url: https://leadmagic.io/docs/api-reference/b2b-ads-search

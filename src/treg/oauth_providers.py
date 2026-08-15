@@ -949,8 +949,10 @@ BRIGHTDATA = OAuthProvider(
     # Web Scraper API (/datasets/v3/…).
     base_url="https://api.brightdata.com",
     docs_url="https://docs.brightdata.com/api-reference/authentication",
-    # Lightweight dataset listing — inferred (medium confidence). Verify with a real token; adjust if it 404s.
-    probe_path="/datasets/v3/datasets",
+    # Account status: free, answers 200 for a valid token and 401 "Invalid credentials" for a bad one
+    # (verified live 2026-08-13). The old inferred /datasets/v3/datasets was not a real route — it
+    # 404'd "Cannot GET" even with a valid token, so every real key was refused at connect.
+    probe_path="/status",
 )
 
 SEMRUSH = OAuthProvider(
@@ -1033,7 +1035,10 @@ JUSTONEAPI = OAuthProvider(
     docs_url="https://docs.justoneapi.com/en/usage",
     # A bad token returns HTTP 401 {"code":100,"message":"TOKEN INVALID/UNACTIVATE"} (verified live), so
     # the standard status check rejects it. A valid token on this endpoint returns code:0 (~1 credit).
-    probe_path="/api/tiktok/get-user-detail/v1?unique_id=tiktok",
+    # The param is camelCase `uniqueId` — with the old snake_case `unique_id` the API answered HTTP 400
+    # "must input one of them (uniqueId or secUid)" and a VALID token was refused at connect
+    # (verified live 2026-08-13).
+    probe_path="/api/tiktok/get-user-detail/v1?uniqueId=tiktok",
 )
 
 SCRAPECREATORS = OAuthProvider(
@@ -1337,7 +1342,9 @@ SPYFU = OAuthProvider(
     setup_url="https://www.spyfu.com/account/api",
     setup_action_label="Get your SpyFu API key",
     setup_steps=("Open SpyFu Account settings → API.", "Copy your Secret Key."),
-    setup_note="API access is included with paid SpyFu plans; paste the Secret Key.",
+    # The SpyFu dashboard shows THREE credentials (API ID, Secret Key, Base64 Key); only the short
+    # Secret Key works here, so the note has to name the other two or users paste them and get a 401.
+    setup_note="Paste ONLY the short Secret Key (e.g. DR…) — not the API ID and not the Base64 key.",
     auth_uri="", token_uri="",
     scopes={},
     client_id_setting="", client_secret_setting="",

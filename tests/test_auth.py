@@ -174,6 +174,27 @@ async def test_cli_token_bakes_the_active_org_and_works_as_a_BARE_bearer(clients
     assert ok.status_code == 200, ok.text
 
 
+async def test_orgs_marks_the_team_pinned_tokens_org_active(gc):
+    """GET /orgs must mark active the org baked into a team-pinned identity token — that flag is how
+    `treg login --token` lands on the right team. Before this, no org was marked active for such a
+    token and the CLI guessed the FIRST membership: for a multi-team user, an arbitrary other team."""
+    async with session_maker() as s:
+        u = User(email="two-teams@x.dev"); s.add(u); await s.flush()
+        first = Org(name="First", slug="first-team"); second = Org(name="Second", slug="second-team")
+        s.add(first); s.add(second); await s.flush()
+        s.add(Membership(user_id=u.id, org_id=first.id, role="owner", token_hash=crypto.hash_token("t1")))
+        s.add(Membership(user_id=u.id, org_id=second.id, role="owner", token_hash=crypto.hash_token("t2")))
+        await s.commit()
+        uid = u.id
+    pinned = sess.make(uid, org="second-team")
+    r = await gc.get("/orgs", headers={"X-Treg-Token": pinned})
+    assert r.status_code == 200, r.text
+    assert [o["slug"] for o in r.json() if o["active"]] == ["second-team"], r.json()
+    # X-Treg-Org still wins over the claim — the same precedence require_member applies
+    r = await gc.get("/orgs", headers={"X-Treg-Token": pinned, "X-Treg-Org": "first-team"})
+    assert [o["slug"] for o in r.json() if o["active"]] == ["first-team"], r.json()
+
+
 async def test_cli_token_refuses_to_pin_a_team_you_are_not_in(clients):
     """The org claim is only baked when the caller is actually a member — a header naming someone
     else's team yields a plain (unpinned) token, never one that pins a team you cannot reach."""

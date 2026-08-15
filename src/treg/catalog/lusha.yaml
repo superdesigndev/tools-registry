@@ -70,22 +70,22 @@ endpoints:
       body: {contacts: [{firstName: "Jane", lastName: "Doe", companyDomain: "lusha.com"}], reveal: ["emails"]}
     cost:
       type: per_result
-      value: 1
+      value: 2
       currency: credit
       per: 1
       unit: result
       source: rate_card_api
       source_url: https://www.lusha.com/pricing/
-      checked: '2026-07-31'
-      confidence: inferred
-      note: 'billed per revealed datapoint (email and phone are separate charges), not per call; a
-        contact Lusha cannot match is free — OBSERVED 2026-07-31, an unmatched contact reported
-        billing.creditsCharged 0. `value` is the REVEAL half only, from the live rate card
-        (GET /v3/account/usage.pricing: revealEmail 1 per 1, revealPhone 5 per 1), which is why this
-        is inferred rather than verified: the companies sibling of this same search-and-enrich shape
-        was observed charging 2 for one result (a search charge PLUS a reveal charge), so budget
-        1 search + 1 per email + 5 per phone per matched contact until a live match confirms it.'
-    verified: 2026-07-31
+      checked: '2026-08-13'
+      confidence: verified
+      note: 'VERIFIED live 2026-08-13. The live rate card (GET /v3/account/usage.pricing) prices
+        contactSearch at 1 credit per 25 results and revealEmail at 1 per 1, so a fresh single-contact
+        email enrich = 1 search + 1 reveal = 2 credits — confirmed by a fresh match reporting
+        billing.creditsCharged 2 (resultsReturned 1). A phone reveal is +5 (revealPhone 5 per 1), an
+        email +1. A contact Lusha cannot match is free (billing.creditsCharged 0, re-observed
+        2026-08-13). CAVEAT: re-revealing a contact already revealed to this account recently is
+        discounted (an immediate repeat charged 1, not 2); value 2 is the fresh/upper-bound cost.'
+    verified: 2026-08-13
     example_response: examples/lusha.people.enrich.json
     docs_url: https://docs.lusha.com/apis/openapi/enrichment
 

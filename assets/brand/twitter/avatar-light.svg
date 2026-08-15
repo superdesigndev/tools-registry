@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Twitter avatar, light: black ▚ on white. Mark is inset so nothing clips in the circular crop. -->
+  <rect width="512" height="512" rx="112" fill="#ffffff"/>
+  <rect x="111" y="111" width="140.5" height="140.5" rx="20" fill="#000000"/>
+  <rect x="260.5" y="260.5" width="140.5" height="140.5" rx="20" fill="#000000"/>
+</svg>

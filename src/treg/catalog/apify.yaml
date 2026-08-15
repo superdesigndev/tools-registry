@@ -105,7 +105,7 @@ endpoints:
     test_request:
       queryParams: {maxItems: 1, maxTotalChargeUsd: 0.05, timeout: 180}
       body: {search: "nike", region: "all", query_type: "1", limit: 1, offset: 0}
-    cost: {type: per_result, value: 0.003, currency: USD, per: 1, unit: ad, source: docs, source_url: 'https://apify.com/pricing', checked: '2026-07-28', confidence: inferred, note: 'pay-per-event: ~$3.00 per 1,000 ads scraped, no subscription minimum. NOT observable while the actor returns nothing — all three 2026-07-31 runs billed $0.00 because zero results were produced, which is consistent with pay-per-result but confirms no price'}
+    cost: {type: per_result, value: 0.003, currency: USD, per: 1, unit: ad, source: docs, source_url: 'https://apify.com/pricing', checked: '2026-08-13', confidence: documented, note: 'pay-per-event: ~$3.00 per 1,000 ads scraped (published on the actor page), no subscription minimum. The per-ad price is documented, but the charge stays unobservable: a live run 2026-08-13 succeeded (201) yet returned 0 items (x-apify-pagination-total 0), as did all three 2026-07-31 runs — the actor consistently yields nothing, so a real call bills $0. Treat as effectively non-returning until the upstream actor is fixed.'}
     unverified: "actor is upstream-broken, not the route: HTTP 201 with an EMPTY dataset ([]) on three
       live runs 2026-07-31 — search=skincare/region=DE/query_type default, search=skincare/region=all/
       query_type=0 (keyword), and search=nike/region=all/query_type=1 (advertiser, the actor's own

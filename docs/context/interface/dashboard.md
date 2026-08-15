@@ -100,6 +100,15 @@ enterable; leave/delete forget the active org in both modes. On an org switch, `
 open Secrets panel + Activity log too (was showing the previous org's). Copy buttons fall back to
 `execCommand` and only claim success on success; the app shell has a mobile breakpoint.
 
+**Support chat (Intercom):** `initIntercom()` sits next to `initAnalytics()` and follows the same
+opt-in gate — no `meta.intercom_app_id`, no widget. It boots **after** `/auth/me` resolves (not at the
+`/meta` fetch) so the common case boots identified once: `email` + `user_hash` (from `/auth/me`,
+see [api](api.md)) + `company` = the active team slug. Email is **never** sent without `user_hash` (that's the
+impersonation vector identity verification closes) — no hash or no login means anonymous visitor
+chat, which is also what `landing.html`/`support.html` do with a tiny `/meta`-gated inline loader.
+`switchOrg`/team-create call `intercomUpdate()` so the company tracks the active team; `logout()`
+calls `Intercom('shutdown')` so the next user on the machine can't read the previous conversations.
+
 Server side (`api.py`): `require_identity` (who, from token OR session), `require_member` (a Caller in a
 specific org — token bakes the org in; a session picks it via `X-Treg-Org`), and `require_superadmin`
 (env token, or a token/session whose user `is_superadmin`). Every fetch also sends
@@ -134,9 +143,16 @@ specific org — token bakes the org in; a session picks it via `X-Treg-Org`), a
   (Render/Vercel-style — `pasteEnv` → `parseEnvText`: comments/blanks skipped, `export ` stripped, one
   balanced quote pair removed). A single-line `NAME=value` splits only in the *name* field — a value
   containing `=` (base64 pad, connection strings) pastes untouched into the value field; multi-line
-  splits from either field.
+  splits from either field. The name field carries a **`<datalist>` of pasted-secret provider services**
+  (`keyNameSuggestions` — `auth_kind` `key`/`token`, the names the marketplace ladder's tier 2 matches
+  by `Secret.name == service`), and each row gets a `secretNameHint` line: an exact service name is
+  confirmed ("Apollo.io catalog calls will use this key automatically"), a near miss (`APOLLO_API_KEY`,
+  `tikhub-key` — suffix-stripped, case-folded) gets the exact name plus a one-click **rename** link,
+  and any other name gets silence — most secrets back the org's own tools and can be called anything.
+  Providers are loaded on entering the view (`go('secrets')` also fires `loadConnections` when the
+  list is empty) so the suggestions exist on a cold deep link.
 - **Team** (`view==='orgs'`) — the active team, now split into **tabs** (`orgTab`):
-  **Members · Projects · Policy · Team settings**. (The former **My teams** tab is gone — it
+  **Members · Projects · Policy · Billing · Team settings**. (The former **My teams** tab is gone — it
   duplicated the sidebar picker; its New team / Join by code / Paste token actions live in Team
   settings now.) Header reads `Team: {activeName} — you are {activeRole}` and points at the sidebar
   picker for switching.
@@ -158,6 +174,14 @@ specific org — token bakes the org in; a session picks it via `X-Treg-Org`), a
     argv deny patterns with their source (skill vs catalog), under a line naming all three deny
     layers — HTTP rules, argv patterns, OS sandbox — so the whole "what is blocked" picture is one
     screen.
+  - **Billing** (admin+) — balance, the top-up presets, the auto-top-up toggle with its verbatim
+    PSD2/SCA mandate text, and below them **Payment history**: date, amount, an `auto` marker, and one
+    link per row — *Invoice* when Stripe issued one (manual top-ups do; automatic ones can't), else
+    *Receipt*, else an em dash. Amounts come from our own ledger and the links from Stripe, so when
+    Stripe is unreachable the table still renders and a line under it says the links, not the numbers,
+    are missing. A **Manage billing** button opens Stripe's hosted portal (card, billing address, tax
+    ID, the full invoice archive); it is hidden until `billing.portal` is true, which needs a Stripe
+    customer, which a team gets on its first payment — so a new team never sees a button that errors.
   - **Team settings** — deliberately JUST the **Danger zone** (leave / delete), visible to EVERY role
     (leaving is self-service, and `loadOrgAdmin` lands a non-admin here). New team / Join by code /
     Paste token live only in the sidebar picker — cut from this tab on founder review; a personal
@@ -270,15 +294,27 @@ more, and it falls on empty space when the tabs all fit. The rule under the tabs
 **`.mk-tabs-wrap`** parent, because a masked border fades out 26px short of the right edge and reads as a
 rendering fault. Every tab but the last is the **platform axis**
 (which data you want — see the catalog section below); the **last tab, `Platform`, is this integration marketplace**
-(which account you hold), unchanged: providers grouped by category (`providerGroups` computed →
-`shownGroups` filtered by the `mkCat` chip row) as a card grid, the whole card being the click target
-(`openProvider(service)`). Each card shows a **provider logo** served by convention from
+(which account you hold): providers grouped by category (`providerGroups` computed →
+`shownGroups` filtered by the `mkCat` chip row) as a **list** (`.prov-list`, one `.prov-row` per
+provider), not the old card grid — this tab is where "bring your own key" lands, and forty cards put
+every name on a different left edge; a row keeps them in one scannable column (name + truncated summary,
+auth kind, connect state, and an **inline Connect / Add key** action that calls `startConnect(p)` right
+from the row — the `tokenAsk`/`capAsk` modals are global, so the common path is one click). The whole row
+still opens the provider page (`openProvider(service)`); each row has `id="prov-<service>"` so a
+`goByok(service)` jump can scroll to it and flash it (`.prov-row.focus`, `byokFocus` state, self-clearing).
+Rows show the **provider logo** served by convention from
 **`/logos/<service>.svg`** (`.plogo-tile`/`.plogo`, `@error` hides a missing file) — the `StaticFiles`
 mount `_LOGO_DIR` (`src/treg/web/logos/`). `connCount` labels how many accounts are already connected.
 The tab bar itself is `v-if`'d on `plats.list.length` and `mkTabActive` collapses to `'platform'` when
 the catalog is absent, so a build that predates `/catalog` renders exactly the old marketplace.
 
-The catalog page's header carries a **List as vendor** button (`vendorAsk` modal): a vendor pastes the
+The catalog page's header carries a **Request a tool** button (`reqAsk` modal): a short form —
+what's missing, an optional note, a contact field only when signed out (`!me`) — POSTed to
+`/tool-requests` with `source: web`; the capability input pre-fills from the live search box `q`,
+because the button is most often pressed right after a search found nothing. Beside it sit a
+**Bring your own key** button (`goByok()` — the ink-fill primary; it only switches to the Platform
+tab, but naming the action is what makes the tab findable) and
+**List as vendor** (`vendorAsk` modal): a vendor pastes the
 two-sentence prompt (`vendorPromptText`, built on `proxy` = the server's public URL) into their own
 coding agent, which follows the hosted `GET /vendor-listing` instructions and raises the listing PR —
 including the vendor's contact email, which is how a test credential gets arranged.
@@ -543,8 +579,12 @@ row below it off the screen.
 The tab bar's right side carries the provider's **docs** (falling back to its pricing page), then the
 two run actions — and which one is primary depends on the provider's `auth_kind` (`mkOauth(service)`).
 For a **key/token** provider, **▶ Try it** (`openEpTry`) is the ink-fill **primary** — trying on treg's
-own key is what most visitors want — and **Bring your own key** (`openProvider`, formerly the ink-filled
-"Connect {provider}") is the secondary ghost beside it. For an **OAuth** provider treg *can't* serve on
+own key is what most visitors want — and **Bring your own key** (`goByok(provider)` — jumps to the
+Catalog's Platform tab with that provider's row scrolled into view and flashed, so the user sees where
+their key lives among the rest; formerly `openProvider` straight to the detail page) is the secondary
+ghost beside it. The same `goByok` jump is offered from a platform page's provider row (passing the
+provider only when the platform has exactly one) and from the Try-it drawer's "can't run this here"
+banner, which now carries a real **Connect** / **Bring your own key** button instead of prose alone. For an **OAuth** provider treg *can't* serve on
 its own key (calls act as your account), so the order flips: **Connect {provider}** is the ink-fill
 primary and Try-it is secondary. Once an account is connected the connect/own-key button is replaced in
 place by the green **`Connected`** chip. Everything here renders identically in a single row's expansion

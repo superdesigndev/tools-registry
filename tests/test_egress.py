@@ -13,8 +13,8 @@ def test_collect_hosts_includes_registry_and_catalog_dedup_sorted():
         {"base_url": "https://api.stripe.com/v2"},   # same host, different path → deduped
         {"base_url": None},                           # ignored
     ]
-    hosts = egress.collect_hosts("https://treg.superdesign.dev", catalog)
-    assert hosts == ["api.github.com", "api.stripe.com", "treg.superdesign.dev"]
+    hosts = egress.collect_hosts("https://treg.to", catalog)
+    assert hosts == ["api.github.com", "api.stripe.com", "treg.to"]
 
 
 def test_collect_hosts_tolerates_bare_host_and_missing_registry():

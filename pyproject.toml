@@ -1,10 +1,10 @@
 [project]
 name = "tools-registry"
-version = "0.9.0"
+version = "0.11.0"
 description = "A remote registry that turns team skills into shareable, callable tools via a credential-injecting proxy."
 readme = "README.md"
 license = { file = "LICENSE" }
-requires-python = ">=3.12,<3.14"
+requires-python = ">=3.12,<3.14"  # keep in sync with PYREQ in src/treg/web/install.sh
 authors = [
     { name = "Unclecode", email = "unclecode@superdesign.dev" },
     { name = "SuperDesign" },
@@ -59,7 +59,7 @@ proxy = [
 treg = "treg.cli:main"
 
 [project.urls]
-Homepage = "https://treg.superdesign.dev"
+Homepage = "https://treg.to"
 Repository = "https://github.com/superdesigndev/treg"
 Issues = "https://github.com/superdesigndev/treg/issues"
 

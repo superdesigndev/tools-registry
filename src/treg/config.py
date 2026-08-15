@@ -9,6 +9,21 @@ from urllib.parse import urlsplit
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Every hostname the reference deployment has EVER answered to. treg moved
+# treg.superdesign.dev → treg.to (2026-08); installed CLIs, skill.md files, .mcp.json configs and
+# MCP OAuth grants exist against BOTH names, so both stay valid everywhere a host or audience is
+# recognized — mcp.py's transport allow-lists, mcp_oauth's token audiences, api.py's login-callback
+# anchoring — REGARDLESS of which one `public_url` currently points at. That symmetry is what makes
+# a TREG_PUBLIC_URL revert a complete rollback: grants and logins minted on either name survive the
+# flip in either direction. Self-hosters are unaffected: these only ADD accepted names, and none of
+# them resolve to a self-hosted deployment.
+PUBLIC_HOST_ALIASES: tuple[str, ...] = ("treg.superdesign.dev", "treg.to")
+
+# The subset browsers are REDIRECTED AWAY FROM (marketing pages only; see api.py's middleware).
+# Deliberately one-way — only ever the pre-move name, never treg.to — so a browser that cached the
+# old→new 301 can never meet a new→old redirect and loop, even while a rollback is in effect.
+LEGACY_PUBLIC_HOSTS: tuple[str, ...] = ("treg.superdesign.dev",)
+
 
 def platform_setting_name(provider: str) -> str:
     """The Settings attribute holding treg's own key for `provider` — the string a `platform_setting`
@@ -122,6 +137,7 @@ class Settings(BaseSettings):
     platform_key_spyfu: str = ""    # the SpyFu *secret key* alone (?api_key=…), not the id or base64 pair
     platform_key_coresignal: str = ""
     platform_key_thecompaniesapi: str = ""  # raw token — injected as "Basic {secret}" un-encoded
+    platform_key_apollo: str = ""   # raw key (X-Api-Key); billed at the Basic-plan $/credit rate in fx.yaml
     # The KILL SWITCH, and the reason a key alone isn't enough: a provider serves tier 4 only if it is
     # named here AND its key is set. Empty (the default) = tier 4 is entirely off, so a deploy that
     # happens to hold a key can't start spending it by accident. `TREG_PLATFORM_PROVIDERS=""` in the
@@ -162,7 +178,7 @@ class Settings(BaseSettings):
 
     # treg's own public base URL — used to build the OAuth callback (must be whitelisted in the
     # provider's OAuth app). Self-hosting? Set TREG_PUBLIC_URL to your deployment's URL.
-    public_url: str = "https://treg.superdesign.dev"
+    public_url: str = "https://treg.to"
     # Proof to OpenAI's plugin directory that we control this domain. The portal generates a token
     # and fetches it from /.well-known/openai-apps-challenge; that endpoint must return THAT token
     # and nothing else — not JSON, not a list. Empty (the default) leaves the route 404, which is the
@@ -193,6 +209,11 @@ class Settings(BaseSettings):
     # ingestion key (safe to expose to the browser); host defaults to EU cloud.
     posthog_key: str = ""
     posthog_host: str = "https://eu.i.posthog.com"
+    # Intercom Messenger (support chat; treg's own workspace). Empty app_id = OFF, so self-hosted
+    # instances never load the widget. The app_id is public (visible in page source); the secret
+    # signs user_hash for identity verification and must never reach the browser.
+    intercom_app_id: str = ""
+    intercom_secret: str = ""
     # Registry OAuth apps for the non-Google providers (oauth_providers.py). Empty = that provider
     # is listed as unconfigured rather than failing part-way through a consent.
     # treg's own Google Ads developer token, from OUR approved manager account. Ads needs it on
@@ -295,9 +316,10 @@ class Settings(BaseSettings):
 
     # Transactional email via Resend (OTP sign-in codes + team invitations). Empty key = no real
     # send (dev mode still returns the code; prod without a key silently skips the send). From must
-    # be a Resend-verified domain — treg.superdesign.dev is verified (DKIM + SPF).
+    # be a Resend-verified domain — treg.to is verified (DKIM + SPF); treg.superdesign.dev remains
+    # verified as a fallback.
     resend_api_key: str = ""
-    email_from: str = "tools-registry <no-reply@treg.superdesign.dev>"
+    email_from: str = "tools-registry <no-reply@treg.to>"
 
 
 @lru_cache

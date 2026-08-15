@@ -97,6 +97,10 @@ Start from the job, not the vendor:
     treg call tikhub.tiktok.user.profile --query uniqueId=tiktok
     # raw HTTP: GET {BASE}/call/tikhub.tiktok.user.profile?uniqueId=tiktok  + X-Treg-Token
 
+Searched and the catalog genuinely lacks it? File it — requests steer which provider gets added
+next: `treg catalog request "<what you need>"`, or raw HTTP
+`POST {BASE}/tool-requests {"capability": "<what you need>"}` (no token required).
+
 **How a catalogued call is served** — the credential ladder, tried in this order. Note the shape:
 your own credential always beats treg's, so connecting a key you already pay for makes those calls
 free of the balance rather than duplicating them.
@@ -105,6 +109,11 @@ free of the balance rather than duplicating them.
 3. neither → **treg's own key**, billed per call to the team's prepaid balance. Fractions of a
    cent (a TikTok profile is ~$0.001); every new team starts with **$1.00 free**. No provider
    signup, no subscription.
+
+A few flat-fee providers carry a rate **treg set** rather than one the vendor published (the vendor
+sells a subscription, so no per-call price exists). Those rates state the vendor's fee and the volume
+they break even at, and are reviewed monthly against real usage — ask `catalog_get` and the cost's
+provenance says whose price it is.
 
 An endpoint treg has no published price for is **refused**, not served free — you are told to
 connect your own key instead.

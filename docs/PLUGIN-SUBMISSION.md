@@ -38,7 +38,7 @@ and all three normal doors fail that test: GitHub OAuth, Google OAuth, and an em
 The way through already exists:
 
 ```bash
-curl -fsSL https://treg.superdesign.dev/install.sh | sh
+curl -fsSL https://treg.to/install.sh | sh
 treg login --token <REVIEWER_TOKEN>     # the agents/CI door — no browser, no email
 ```
 
@@ -55,10 +55,10 @@ whatever balance it can reach, and the token goes into a form.
 | Long Description | *(use `interface.longDescription` from the manifest, verbatim)* |
 | Logo | `plugin/assets/logo.png` (1024×1024) |
 | Category | **Developer Tools** |
-| Website URL | `https://treg.superdesign.dev` |
+| Website URL | `https://treg.to` |
 | Support URL | **decide — see above** |
-| Privacy Policy URL | `https://treg.superdesign.dev/privacy` |
-| Terms URL | `https://treg.superdesign.dev/terms` |
+| Privacy Policy URL | `https://treg.to/privacy` |
+| Terms URL | `https://treg.to/terms` |
 | Developer Identity | the verified `superdesign` business identity |
 
 ## Skills tab
@@ -135,7 +135,7 @@ rather than jurisdiction-specific, so start narrow rather than selecting everywh
 >
 > To test: install the CLI and sign in with the reviewer token, which needs no browser or email:
 >
->     curl -fsSL https://treg.superdesign.dev/install.sh | sh
+>     curl -fsSL https://treg.to/install.sh | sh
 >     treg login --token <REVIEWER_TOKEN>
 >
 > That account has a prepaid balance, so calls in the test cases will complete. `treg catalog search

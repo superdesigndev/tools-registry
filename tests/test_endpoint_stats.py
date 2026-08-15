@@ -23,10 +23,12 @@ def _now():
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
-async def _record(endpoint_id: str, status: int, ms: int = 100, *, days_ago: int = 0, org_id: int = 1):
+async def _record(endpoint_id: str, status: int, ms: int = 100, *, days_ago: int = 0, org_id: int = 1,
+                  refused_by: str | None = None):
     async with session_maker() as db:
         db.add(CallRecord(org_id=org_id, user_email="a@b.c", tool_name=endpoint_id, method="GET",
-                          path="/x", status_code=status, endpoint_id=endpoint_id, duration_ms=ms,
+                          path="/x", status_code=status, endpoint_id=endpoint_id,
+                          duration_ms=None if refused_by else ms, refused_by=refused_by,
                           created_at=_now() - timedelta(days=days_ago)))
         await db.commit()
 
@@ -56,6 +58,20 @@ async def test_a_caller_error_is_not_held_against_the_provider(clients: AsyncCli
     got = (await _observed([EP]))[EP]
     assert got["samples"] == 12         # still counted as traffic…
     assert got["ok_rate"] == 1.0        # …but the rate is decided only by 2xx vs 5xx
+
+
+async def test_a_treg_refusal_is_not_evidence_about_the_endpoint(clients: AsyncClient):
+    """A paywall 402 or a daily-cap 429 never reached the provider — it says the CALLER's account
+    ran dry, nothing about the endpoint. Refused rows must not even count as samples: the Hunter
+    incident (2026-08-12) put 309 refusals next to 488 real calls, and counting them would have
+    made a healthy endpoint look busier and flakier than it was."""
+    for _ in range(6):
+        await _record(EP, 200)
+    for _ in range(9):
+        await _record(EP, 402, refused_by="balance")
+    got = (await _observed([EP]))[EP]
+    assert got["samples"] == 6          # the refusals are not traffic the provider ever saw
+    assert got["ok_rate"] == 1.0
 
 
 async def test_a_provider_failure_does_move_the_rate(clients: AsyncClient):

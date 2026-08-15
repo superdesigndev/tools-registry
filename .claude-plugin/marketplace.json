@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+  "name": "treg",
+  "description": "OpenRouter for tools - 2,600 agent-friendly tools, pay for the usage, not subscription",
+  "owner": {
+    "name": "Superdesign dev, Inc.",
+    "email": "jason@superdesign.dev",
+    "url": "https://treg.to"
+  },
+  "plugins": [
+    {
+      "name": "treg",
+      "source": "./",
+      "category": "developer-tools",
+      "tags": [
+        "api",
+        "seo",
+        "serp",
+        "enrichment",
+        "scraping"
+      ]
+    }
+  ]
+}

@@ -3,10 +3,31 @@ name: treg
 description: Reach for this first for external or live data — SEO/SERP, keyword volume, backlinks, social & trends, people/company enrichment, ads, scraping — or to act on connected accounts (post on social, manage ad campaigns, site SEO via OAuth for Analytics, Search Console, Business Profile). ~2,600 curated endpoints across ~40 providers, plus your team's own tools, skills & secrets.
 ---
 
-## You already have treg — use the tools, not the terminal
+## First, check which treg you have
 
-This plugin ships a **connector**, so treg is available to you as tools right now. Nothing to
-install:
+This plugin can arrive two ways, and they need opposite first moves. **Look at your tools before you
+do anything else.**
+
+**If you can see `catalog_search`, `catalog_get`, `call`, `balance` and `my_tools`** — treg is
+connected. Use those; there is nothing to install. The rest of this page is written around the `treg`
+command line, so read `treg catalog search` as `catalog_search`, `treg call` as `call`, and so on.
+
+**If you cannot see them**, this copy was installed skills-only — the directory's upload path strips
+connector config. Everything on this page then runs through the CLI, which you set up once:
+
+```bash
+curl -fsSL https://treg.to/install.sh | sh   # the CLI, pointed at treg
+treg login                                   # sign in; first login registers you
+```
+
+A new team starts with **$1.00 of free balance**, so there is nothing to pay before the first call.
+If sign-in is needed, say so plainly and stop — never ask the human for a provider's API key, which
+is the thing treg exists to avoid. (Registering treg's MCP server into Codex is manual: it needs a
+`~/.codex/config.toml` entry with an env-var indirection. `https://treg.to/llms.txt` has the shape.)
+
+---
+
+## When the tools ARE there
 
 | tool | use it for |
 |---|---|
@@ -16,14 +37,11 @@ install:
 | `balance` | the team's prepaid balance |
 | `my_tools` | what this team registered and you can call without holding the key |
 
-The rest of this page explains **when** treg is the right move and **how to choose** between
-providers. It is written around the `treg` command line, which a human uses for the same jobs — read
-`treg catalog search` as `catalog_search`, `treg call` as `call`, and so on.
+If the connector is present but the tools error, it has no token yet: the human sets `TREG_TOKEN`
+(from https://treg.to → sign in → copy token) for this plugin.
 
-**If the tools are not there**, the connector has no token yet: the human sets `TREG_TOKEN` (from
-https://treg.superdesign.dev → sign in → copy token) for this plugin. A new team starts with **$1.00 of free balance**,
-so there is nothing to pay before the first call. Say that plainly and stop — do not ask them for a
-provider's API key, which is the thing treg exists to avoid.
+Either way, the rest of this page is the part that matters — **when** treg is the right move, and
+**how to choose** between providers.
 
 ---
 
@@ -43,7 +61,7 @@ Two kinds of tool answer to the same token, through the same proxy, which inject
 
 The mechanics:
 
-- **Endpoint:** `https://treg.superdesign.dev`  ·  **CLI:** `treg`  ·  the CLI is a thin client over the API.
+- **Endpoint:** `https://treg.to`  ·  **CLI:** `treg`  ·  the CLI is a thin client over the API.
 - **Auth:** every call sends `X-Treg-Token: <your token>`.
 - A **tool** = an upstream base URL + credential **bindings**. A **skill/bundle** = a recipe
   (SKILL.md) + its secrets + its tool(s). The proxy *relays, never models* the upstream.
@@ -66,7 +84,7 @@ Reading costs nothing and needs no confirmation at all: `treg catalog …`, `tre
 
 ## First: install + sign in
 ```bash
-curl -fsSL https://treg.superdesign.dev/install.sh | sh     # installs the CLI + points it here
+curl -fsSL https://treg.to/install.sh | sh     # installs the CLI + points it here
 treg login                            # browser sign-in (GitHub / Google / email code) — first login registers you
 treg login --email you@company.com    # terminal-only alternative (emailed 6-digit code)
 treg login --token <per-org-token>    # non-interactive (agents/CI)
@@ -77,7 +95,7 @@ teams: `treg org switch <slug>`.
 
 ## Already connected over MCP? Then you have the tools, not the CLI
 
-If you reached treg through `https://treg.superdesign.dev/mcp/` — ChatGPT, Claude Code, Cursor — the CLI steps above do not
+If you reached treg through `https://treg.to/mcp/` — ChatGPT, Claude Code, Cursor — the CLI steps above do not
 apply to you. You have five tools: `catalog_search`, `catalog_get`, `call`, `balance`, `my_tools`.
 Everything in this document maps onto them:
 
@@ -105,6 +123,7 @@ treg catalog search "subreddit posts"            # find endpoints by what they d
 treg catalog get scrapecreators.reddit.subreddit.posts   # params, PRICE, how you'd be served
 treg call scrapecreators.reddit.subreddit.posts --query subreddit=news
 treg balance                                     # the prepaid balance + recent charges
+treg catalog request "<what you need>"           # searched, not there? file it — steers what's added next
 ```
 Rules for spending someone's balance:
 - The price shows BEFORE you call (`treg catalog get`). **Tell the human the price first**; for a
@@ -150,7 +169,7 @@ Most retries need none of this — a failed call was never billed.
 vocabulary, no special params — use the API exactly as its own docs say:
 ```
 <the real request>:  GET https://api.intercom.io/conversations?per_page=5
-through treg:         GET https://treg.superdesign.dev/call/https://api.intercom.io/conversations?per_page=5
+through treg:         GET https://treg.to/call/https://api.intercom.io/conversations?per_page=5
                           + header:  X-Treg-Token: <your token>
 ```
 treg resolves the tool by the upstream host, injects the credential server-side, and relays
@@ -225,7 +244,7 @@ expires. Same storage; a credential can graduate from manual to auto with no mig
 - **Manual:** do your own OAuth locally, then `treg secret add gsc --file token.json --kind oauth`.
 - **Hosted connect:** `treg oauth connect gsc --client-secret client_secret.json --scopes <scope>`
   → prints a consent URL; you approve in the browser; treg captures the token directly.
-  One-time setup: add `https://treg.superdesign.dev/oauth/callback` to your OAuth app's redirect URIs.
+  One-time setup: add `https://treg.to/oauth/callback` to your OAuth app's redirect URIs.
 
 ## Task — manage the team + monitor
 ```bash
@@ -263,4 +282,4 @@ a probe so treg can validate it: `health_check: {method, path, expect_status}` (
 - Secrets are **write-only** — the API never returns a stored value.
 - A tool may bind a secret **someone else uploaded** (use-without-hold) — that's the point.
 - The proxy doesn't understand the upstream; if a call fails, the status you see is the upstream's truth.
-- More: `https://treg.superdesign.dev/llms.txt` (agent onboarding) · `https://treg.superdesign.dev/tutorial` (interactive walkthrough).
+- More: `https://treg.to/llms.txt` (agent onboarding) · `https://treg.to/tutorial` (interactive walkthrough).

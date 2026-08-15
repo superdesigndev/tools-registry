@@ -34,13 +34,21 @@ services:
           name: treg-db
           property: connectionString
       # Public base URL — drives the OAuth callback, /meta, /llms.txt, /install.sh, all {BASE} links.
+      # CUTOVER (treg.superdesign.dev → treg.to, 2026-08): setting this back to
+      # https://treg.superdesign.dev is the complete, lossless rollback — PUBLIC_HOST_ALIASES
+      # keeps both names valid in both directions, and the old domain must stay attached on
+      # Render forever (installed clients hold tokens against it).
       - key: TREG_PUBLIC_URL
-        value: https://treg.superdesign.dev
+        value: https://treg.to
       # Never return OTP codes in prod responses (account-takeover vector); email them via Resend.
       - key: TREG_EMAIL_DEV_MODE
         value: "false"
+      # treg.to is Resend-verified (DKIM + SPF). Deliverability canary after every change to this
+      # value: sign in via email OTP and confirm the code ARRIVES — send failures are swallowed by
+      # design, so a broken sender silently kills OTP login. Rollback: the old sender stays
+      # verified in Resend forever.
       - key: TREG_EMAIL_FROM
-        value: tools-registry <no-reply@treg.superdesign.dev>
+        value: tools-registry <no-reply@treg.to>
       - key: PYTHON_VERSION
         value: "3.12.7"
       # Dashboard-managed secrets (paste values in Render; sync:false keeps them out of git).
@@ -55,6 +63,11 @@ services:
       - key: TREG_GITHUB_CLIENT_SECRET
         sync: false
       - key: TREG_RESEND_API_KEY
+        sync: false
+      # Support chat (Intercom Messenger, treg's own workspace). Unset = widget off everywhere.
+      - key: TREG_INTERCOM_APP_ID   # public workspace id (visible in page source anyway)
+        sync: false
+      - key: TREG_INTERCOM_SECRET   # identity-verification secret — signs user_hash, never sent to the browser
         sync: false
       # Landing live-wire demo (optional — unset = sandbox calls all synthesize / webhook 404s).
       - key: TREG_DEMO_STRIPE_KEY       # Stripe sandbox restricted key (Charges only) for the live wire

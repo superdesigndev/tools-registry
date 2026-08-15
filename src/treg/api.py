@@ -28,7 +28,7 @@ import time
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from urllib.parse import quote, urlsplit
+from urllib.parse import parse_qsl, quote, urlsplit, urlunsplit
 
 from sqlalchemy import case, delete, func, or_
 
@@ -50,11 +50,12 @@ from sqlmodel import select
 from . import analytics, audit, billing, catalog_store, crypto, demo as demo_seed, email as email_sender, endpoint_stats, health, injectors, ledger, localrun, oauth
 from . import oauth_providers
 from . import pubfeed, ratestore, reconcile, runner, sandbox as demo_sandbox, session as sess
-from .config import get_settings, platform_setting_name
+from .config import LEGACY_PUBLIC_HOSTS, PUBLIC_HOST_ALIASES, get_settings, platform_setting_name
 from .db import get_session, init_db, session_maker
 from .models import (ROLE_RANK, Bundle, CallRecord, CapabilityPin, CreditBlock, DenyRule, Hold,
                      IdempotentCall, Invite, LedgerEntry, Membership, OAuthClient, OAuthCode,
-                     OAuthRefresh, Org, PendingOAuth, Project, RunRecord, Secret, Tool, User)
+                     OAuthRefresh, Org, PendingOAuth, Project, RunRecord, Secret, Tool, ToolRequest,
+                     User)
 from .proxy import relay
 
 
@@ -158,6 +159,62 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="tools-registry", version="0.0.1", lifespan=lifespan)
 
 
+# The pre-treg.to hostnames must keep answering the API forever — every installed CLI, skill.md
+# and .mcp.json in the wild points here with a Bearer token, and most HTTP clients STRIP the
+# Authorization header when a redirect crosses hosts (and some MCP clients follow no redirects at
+# all). So only browser-facing marketing pages redirect to the canonical host; everything else —
+# /call/, /mcp/, auth flows, webhooks, agent-fetched pages like /vendor-listing, install scripts
+# fetched by `curl | sh` without -L — is served in place on both hosts.
+_LEGACY_HOSTS = set(LEGACY_PUBLIC_HOSTS)
+# Marketing pages — but only for ANONYMOUS visitors. A session cookie is host-scoped, so bouncing a
+# signed-in browser to the canonical host silently logs it out mid-flow (the invite confirmation,
+# for one, sets a legacy-host session and then lands on `/?invite_org=…`).
+_REDIRECT_PATHS = {"/", "/login", "/terms", "/privacy", "/support", "/contact", "/help",
+                   "/tutorial"}
+# The auth ENTRY points redirect unconditionally, and that is a correctness fix, not a marketing
+# one: each parks a host-scoped cookie and then continues on `public_url` — started on the legacy
+# host, the continuation never sees the cookie. /auth/github + /auth/google set the CSRF state
+# cookie the provider callback must find ("Bad state" otherwise); GET /oauth/authorize, signed out,
+# parks the whole authorization request in `treg_oauth_return` and sends the browser through `/` to
+# sign in. Exact paths only; the /callback routes (and POST /oauth/authorize, the consent approval)
+# must keep serving in place — the middleware only touches GET/HEAD.
+_REDIRECT_ALWAYS = {"/auth/github", "/auth/google", "/oauth/authorize"}
+
+
+def _login_callback_base(request: Request) -> str:
+    """The base URL a GitHub/Google login round-trip is anchored to. Normally `public_url` — but
+    the provider compares the exchange's `redirect_uri` byte-for-byte against the one the
+    authorization request named, so a flow living on a legacy host (a login in flight across the
+    cutover deploy, with its state cookie and provider registration both on the old name) must
+    keep building the OLD host's callback. Any recognized alias Host therefore wins — in BOTH
+    directions, so a login minted on treg.to also survives a TREG_PUBLIC_URL rollback."""
+    host = request.headers.get("host", "").split(":")[0].rstrip(".").lower()
+    if host in PUBLIC_HOST_ALIASES:
+        return f"https://{host}"
+    return get_settings().public_url.rstrip("/")
+
+
+@app.middleware("http")
+async def _legacy_host_redirect(request: Request, call_next):
+    """Redirect marketing pages (301) and auth entries (302) from a legacy host to the canonical
+    host. Auth entries get a temporary redirect: their URLs carry one-shot OAuth parameters, and a
+    cached permanent answer is exactly the wrong thing to keep."""
+    host = request.headers.get("host", "").split(":")[0].rstrip(".").lower()
+    if request.method in ("GET", "HEAD") and host in _LEGACY_HOSTS:
+        path = request.url.path
+        always = path in _REDIRECT_ALWAYS
+        if always or (path in _REDIRECT_PATHS and sess.COOKIE not in request.cookies):
+            canonical = get_settings().public_url.rstrip("/")
+            # hostname equality, not substring: a self-hoster whose public_url IS a legacy host
+            # must keep serving in place, but "not-treg.superdesign.dev" must not.
+            if host != ((urlsplit(canonical).hostname or "").rstrip(".").lower()):
+                target = canonical + path
+                if request.url.query:
+                    target += "?" + request.url.query
+                return RedirectResponse(target, status_code=302 if always else 301)
+    return await call_next(request)
+
+
 @app.middleware("http")
 async def _security_headers(request: Request, call_next):
     """The dashboard is an authenticated app; ship the baseline hardening headers it was missing —
@@ -246,6 +303,19 @@ async def _id_out_of_range(request: Request, exc: OverflowError) -> JSONResponse
     return JSONResponse({"detail": "identifier out of range"}, status_code=404)
 
 
+def _refusal_kind(status_code: int) -> str | None:
+    """Which gate said no, from the status treg chose for it (models.CallRecord.refused_by).
+
+    Statuses map 1:1 because each gate owns its code on `/call/`: the vendor's own 401/404/429
+    never comes through here — a relayed response is a Response, not an HTTPException. 5xx maps
+    to None: a 502 is the upstream failing to answer, which is a fact about the provider, and
+    must not be counted as a treg refusal."""
+    if status_code >= 500:
+        return None
+    return {401: "auth", 402: "balance", 403: "policy", 404: "resolution",
+            429: "cap"}.get(status_code, "request")
+
+
 @app.exception_handler(StarletteHTTPException)
 async def _mark_treg_own_errors(request: Request, exc: StarletteHTTPException):
     """Tag treg's OWN refusals on `/call/` with `X-Treg-Error`, then answer exactly as before.
@@ -258,6 +328,17 @@ async def _mark_treg_own_errors(request: Request, exc: StarletteHTTPException):
     resp = await http_exception_handler(request, exc)
     if request.url.path.startswith("/call/"):
         resp.headers["X-Treg-Error"] = "1"
+        # Refusals that raised before the handler's own audit ran (bad token, unknown tool, ACL,
+        # deny rule, daily cap) would otherwise leave NO row — the funnel's early friction was
+        # invisible until this. Identity comes from request.state (stashed at handler entry); a
+        # bad-token 401 never had one, and an anonymous row is still the fact that someone knocked.
+        if not getattr(request.state, "call_audited", False):
+            org_id, email = getattr(request.state, "call_identity", (None, ""))
+            rest = request.url.path[len("/call/"):]
+            audit.record_call(
+                org_id=org_id, user_email=email, tool_name=rest.split("/", 1)[0] or "—",
+                method=request.method, path=request.url.path, status_code=exc.status_code,
+                client=_client_of(request), refused_by=_refusal_kind(exc.status_code))
         # A failed call must not keep its idempotency label. The claim is taken before the upstream
         # call, and a request that dies anywhere after that — a bad parameter, a deny rule, an empty
         # balance — would otherwise hold the label for the whole window and answer every retry with
@@ -322,7 +403,9 @@ async def meta() -> dict:
             "google": bool(s.google_client_id), "app_version": _app_version(),
             "treg_version": _treg_version(),
             # public ingestion key — only present when this deployment opts in (self-hosters send nothing)
-            "posthog_key": s.posthog_key, "posthog_host": s.posthog_host.rstrip("/") if s.posthog_key else ""}
+            "posthog_key": s.posthog_key, "posthog_host": s.posthog_host.rstrip("/") if s.posthog_key else "",
+            # public workspace id — only present when this deployment opts in (self-hosters load no widget)
+            "intercom_app_id": s.intercom_app_id}
 
 
 @app.get("/providers.json", include_in_schema=False)
@@ -460,7 +543,9 @@ async def catalog_search(q: str = "", limit: int = 25) -> dict:
     if not q.strip():
         hints = ["pass ?q= — e.g. /catalog/search?q=tiktok+comments"]
     elif not results:
-        hints = [f"nothing matches all of {q!r} — drop a word, or browse `treg catalog` for the platform shelves"]
+        hints = [f"nothing matches all of {q!r} — drop a word, or browse `treg catalog` for the platform shelves",
+                 "still missing? POST /tool-requests {\"capability\": \"<what you need>\"} — "
+                 "requests steer which provider gets added next"]
     else:
         hints = [f"treg catalog get {results[0]['id']}   # params, cost and an example response",
                  f"{catalog_store.call_template(ranked[0][0])}   # run it — key injected server-side"]
@@ -532,6 +617,73 @@ async def catalog_example(endpoint_id: str) -> Response:
     return Response(content=path.read_bytes(), media_type="application/json")
 
 
+# ---- "the catalog doesn't have X" — tool requests -------------------------------------------
+TOOLREQ_HIT_NS = "toolreq"
+TOOLREQ_RATE_MAX = 10          # filings per IP per window
+TOOLREQ_RATE_WINDOW_S = 3600   # 1 hour
+TOOLREQ_SOURCES = {"web", "cli", "mcp", "api"}
+
+
+class ToolRequestIn(BaseModel):
+    capability: str          # what they wanted — "Ahrefs backlinks", "flight prices", a provider name
+    query: str = ""          # the catalog search that came up empty (agents auto-fill this)
+    note: str = ""
+    contact: str = ""        # optional reach-back; free text, unverified
+    source: str = "web"      # web | cli | mcp | api
+
+
+@app.post("/tool-requests", include_in_schema=False)
+async def create_tool_request(
+    body: ToolRequestIn,
+    request: Request,
+    x_treg_token: str = Header(default=""),
+    treg_session: str = Cookie(default=""),
+    db: AsyncSession = Depends(get_session),
+) -> dict:
+    """Open: file a "the catalog doesn't have X" report. No auth on purpose — the filer is most
+    often an agent that just got zero search results and holds no token, and a signup wall here
+    costs exactly the demand signal the catalog team wants. Per-IP rate limiting (ratestore) is
+    the abuse valve, same shape as POST /demo/sandbox; field caps bound the row.
+
+    Identity is attribution, never authorization: when the caller happens to be signed in (token
+    or same-origin session), the row records who asked so they can be told when it lands — a
+    forged cross-origin cookie POST gets stored as anonymous, not rejected, hence the
+    `_same_origin` gate on the cookie path only."""
+    await ratestore.sweep(db, TOOLREQ_HIT_NS)
+    if not await ratestore.rate_check(db, TOOLREQ_HIT_NS,
+                                      [(_client_ip(request), TOOLREQ_RATE_MAX)], TOOLREQ_RATE_WINDOW_S):
+        await db.commit()  # persist the sweep even on reject
+        raise HTTPException(status_code=429, detail="too many tool requests from here — try again later")
+    capability = body.capability.strip()
+    if not capability:
+        raise HTTPException(status_code=422, detail="say what tool/capability you need")
+    if len(capability) > 200:
+        raise HTTPException(status_code=422, detail="capability is a headline — keep it under 200 chars")
+    org_id, user_email = None, ""
+    if x_treg_token:
+        m = await _membership_by_token(x_treg_token, db)
+        user = await db.get(User, m.user_id) if m else await _user_from_identity_token(x_treg_token, db)
+        if user is not None and not user.suspended:
+            org_id, user_email = (m.org_id if m else None), user.email
+    elif treg_session and _same_origin(request):
+        user = await _user_from_session(treg_session, db)
+        if user is not None:
+            user_email = user.email
+    row = ToolRequest(
+        org_id=org_id,
+        user_email=user_email,
+        capability=capability,
+        query=body.query.strip()[:300],
+        note=body.note.strip()[:2000],
+        contact=body.contact.strip()[:200],
+        source=body.source if body.source in TOOLREQ_SOURCES else "api",
+    )
+    db.add(row)
+    await db.commit()
+    return {"id": row.id, "status": "received",
+            "note": "logged — requests steer which provider gets keyed next"}
+
+
 # ---- human login via GitHub OAuth (dashboard sessions) ------------------------------------
 def _is_https(request: Request) -> bool:
     # behind a reverse proxy (Render), TLS is terminated upstream and forwarded as http + X-Forwarded-Proto.
@@ -595,7 +747,7 @@ async def auth_github(request: Request, cli: str = ""):
     s = get_settings()
     if not s.github_client_id:
         raise HTTPException(status_code=503, detail="GitHub login not configured")
-    redirect = f"{s.public_url.rstrip('/')}/auth/github/callback"
+    redirect = f"{_login_callback_base(request)}/auth/github/callback"
     state = crypto.new_token()
     if cli:  # this is a `treg login` handshake, not a browser session
         _prune_handshakes()  # evict abandoned handshakes so this map can't grow unbounded
@@ -672,7 +824,7 @@ async def auth_github_callback(
         tok = (await client.post(
             s.github_token_url, headers={"Accept": "application/json"},
             data={"client_id": s.github_client_id, "client_secret": s.github_client_secret,
-                  "code": code, "redirect_uri": f"{s.public_url.rstrip('/')}/auth/github/callback"},
+                  "code": code, "redirect_uri": f"{_login_callback_base(request)}/auth/github/callback"},
         )).json()
         access = tok.get("access_token")
         if not access:
@@ -706,7 +858,7 @@ async def auth_google(request: Request, cli: str = ""):
     s = get_settings()
     if not s.google_client_id:
         raise HTTPException(status_code=503, detail="Google login not configured")
-    redirect = f"{s.public_url.rstrip('/')}/auth/google/callback"
+    redirect = f"{_login_callback_base(request)}/auth/google/callback"
     state = crypto.new_token()
     if cli:  # a `treg login` handshake, not a browser session
         _prune_handshakes()
@@ -733,7 +885,7 @@ async def auth_google_callback(
             s.google_token_url, headers={"Accept": "application/json"},
             data={"client_id": s.google_client_id, "client_secret": s.google_client_secret,
                   "code": code, "grant_type": "authorization_code",
-                  "redirect_uri": f"{s.public_url.rstrip('/')}/auth/google/callback"},
+                  "redirect_uri": f"{_login_callback_base(request)}/auth/google/callback"},
         )).json()
         access = tok.get("access_token")
         if not access:
@@ -1066,6 +1218,16 @@ if(HAS_SESSION)loadOrgs();
 """
 
 
+def _intercom_user_hash(email: str) -> str:
+    """Intercom identity verification: HMAC-SHA256 of the identifier the dashboard boots the
+    Messenger with (the email), keyed by the workspace secret — so a third party who knows an email
+    can't impersonate that user in support chat. Empty when unconfigured (self-hosted: no widget)."""
+    secret = get_settings().intercom_secret
+    if not secret:
+        return ""
+    return hmac.new(secret.encode(), email.encode(), hashlib.sha256).hexdigest()
+
+
 @app.get("/auth/me")
 async def auth_me(
     x_treg_token: str = Header(default=""),
@@ -1088,6 +1250,8 @@ async def auth_me(
         raise HTTPException(status_code=401, detail="no session")
     out = {"email": user.email, "is_superadmin": user.is_superadmin, "onboarded": user.onboarded,
            "github": bool(get_settings().github_client_id)}
+    if (ich := _intercom_user_hash(user.email)):
+        out["intercom_user_hash"] = ich
     if membership is not None:
         # The org this token IS. A machine identity cannot call GET /orgs — `require_identity`
         # refuses it on purpose, since `create_org` hangs off that dependency and an agent could
@@ -1801,10 +1965,26 @@ def _wrong_resource(resource: str) -> str | None:
     if not resource:
         return None
     canonical = mcp_oauth.mcp_resource_url()
-    if resource.rstrip("/") == canonical.rstrip("/"):
+    # The legacy hosts' resource URLs stay valid: a pre-move client discovered its `resource` from
+    # the old domain's metadata and will keep sending it for the lifetime of the grant.
+    if any(resource.rstrip("/") == aud.rstrip("/") for aud in mcp_oauth.mcp_resource_audiences()):
         return None
     return (f"this server issues tokens for {canonical} only — use the `resource` value from "
             f"/.well-known/oauth-protected-resource")
+
+
+def _same_mcp_resource(a: str, b: str) -> bool:
+    """Whether two `resource` values name this same MCP server. Exact match, slash-variant match,
+    or BOTH normalize into the canonical+legacy audience set — the domain move renamed the
+    resource without changing it, so a grant consented on one name must stay exchangeable and
+    refreshable by a client re-based onto the other (in either direction)."""
+    from . import mcp_oauth
+
+    na, nb = mcp_oauth.normalize_resource(a), mcp_oauth.normalize_resource(b)
+    if a == b or na == nb:
+        return True
+    auds = mcp_oauth.mcp_resource_audiences()
+    return na in auds and nb in auds
 
 
 def _oauth_error(redirect_uri: str, state: str, error: str, desc: str = ""):
@@ -1976,7 +2156,8 @@ async def oauth_authorize_approve(
     code = OAuthCode(
         code=_s.token_urlsafe(32), client_id=client.client_id, user_id=user.id, org_id=org_id,
         redirect_uri=redirect_uri, code_challenge=code_challenge,
-        resource=resource or mcp_oauth.mcp_resource_url(), scope=scope,
+        resource=mcp_oauth.normalize_resource(resource) if resource else mcp_oauth.mcp_resource_url(),
+        scope=scope,
         expires_at=datetime.now(timezone.utc).replace(tzinfo=None)
         + timedelta(seconds=AUTH_CODE_TTL_S))
     db.add(code)
@@ -2024,7 +2205,7 @@ async def _refresh_grant(*, refresh_token: str, client_id: str, resource: str,
         return bad("invalid_grant", "refresh token expired")
     if client_id and client_id != row.client_id:
         return bad("invalid_grant", "refresh token was issued to a different client")
-    if resource and resource != row.resource:
+    if resource and not _same_mcp_resource(resource, row.resource):
         return bad("invalid_target", "resource does not match the one that was consented to")
 
     user = await db.get(User, row.user_id)
@@ -2041,7 +2222,8 @@ async def _refresh_grant(*, refresh_token: str, client_id: str, resource: str,
                                        user_id=row.user_id, org_id=row.org_id,
                                        resource=row.resource, scope=row.scope, db=db)
     access = mcp_oauth.make_access_token(
-        user_id=row.user_id, org_id=row.org_id, audience=row.resource, scope=row.scope,
+        user_id=row.user_id, org_id=row.org_id, scope=row.scope,
+        audience=mcp_oauth.normalize_resource(row.resource),  # heal pre-normalization spellings
         token_version=user.token_version)
     await db.commit()
     return JSONResponse({"access_token": access, "token_type": "Bearer",
@@ -2111,7 +2293,7 @@ async def oauth_token(
         return bad("invalid_grant", "redirect_uri does not match the one the code was issued for")
     if not mcp_oauth.verify_pkce(code_verifier, row.code_challenge):
         return bad("invalid_grant", "code_verifier does not match the code_challenge")
-    if resource and resource != row.resource:
+    if resource and not _same_mcp_resource(resource, row.resource):
         return bad("invalid_target", "resource does not match the one that was consented to")
 
     user = await db.get(User, row.user_id)
@@ -2119,7 +2301,8 @@ async def oauth_token(
         return bad("invalid_grant", "the account behind this grant is no longer active")
 
     token = mcp_oauth.make_access_token(
-        user_id=row.user_id, org_id=row.org_id, audience=row.resource, scope=row.scope,
+        user_id=row.user_id, org_id=row.org_id, scope=row.scope,
+        audience=mcp_oauth.normalize_resource(row.resource),  # heal pre-normalization spellings
         token_version=user.token_version)
     import secrets as _s
 
@@ -2170,6 +2353,46 @@ async def openai_apps_challenge():
     if not token:
         raise HTTPException(status_code=404, detail="not configured")
     return PlainTextResponse(token, headers={"Cache-Control": "no-store"})
+
+
+def _skill_frontmatter() -> dict[str, str]:
+    """The bundled skill's frontmatter, read at request time rather than duplicated in code — the
+    description is what drives discovery in every registry, and a second copy of it would drift."""
+    f = _WEB_DIR / "skill.md"
+    if not f.exists():
+        raise HTTPException(status_code=404, detail="skill.md not bundled")
+    text = f.read_text(encoding="utf-8")
+    if not text.startswith("---"):
+        raise HTTPException(status_code=404, detail="skill.md has no frontmatter")
+    out: dict[str, str] = {}
+    for line in text.split("---", 2)[1].strip().splitlines():
+        key, _, value = line.partition(":")
+        out[key.strip()] = value.strip()
+    return out
+
+
+@app.get("/.well-known/skills/index.json", include_in_schema=False)
+async def well_known_skills_index():
+    """Advertise treg's own skill under the agentskills.io well-known convention.
+
+    This makes THIS host a first-class skill source: an agent that supports the standard can install
+    treg from treg.to directly, with no directory, no review queue and no third party in the middle
+    — the same skill the plugins ship and `install.sh` drops, reached by whoever asks the domain.
+    """
+    fm = _skill_frontmatter()
+    return JSONResponse({"skills": [{
+        "name": fm.get("name", "treg"),
+        "description": fm.get("description", ""),
+        "files": ["SKILL.md"],
+    }]})
+
+
+@app.get("/.well-known/skills/treg/SKILL.md", include_in_schema=False)
+async def well_known_skill_md():
+    """The skill itself, at the path `index.json` promises. Deliberately the same `_serve_md` the
+    canonical `/skill.md` uses, so `{BASE}` is templated to the serving host here too — a self-hosted
+    registry advertises ITSELF, not treg.to."""
+    return _serve_md("skill.md")
 
 
 @app.get("/connect-demo", include_in_schema=False)
@@ -2491,6 +2714,7 @@ _ORG_SCOPED_MODELS = (
     CapabilityPin, LedgerEntry, Hold, CreditBlock,
     OAuthCode, OAuthRefresh,   # grants naming a team that no longer exists
     IdempotentCall,            # a remembered answer belongs to the team that paid for it
+    ToolRequest,  # attribution rows go with the team; anonymous filings carry no org_id and stay
     Membership,   # last: it is what makes the caller a member of the org being deleted
 )
 
@@ -3017,11 +3241,14 @@ async def list_orgs(
 ) -> list[dict]:
     # "active" = the caller's current org — the token's org (token auth) or X-Treg-Org (session).
     current: int | None = None
-    if x_treg_token:
-        m = await _membership_by_token(x_treg_token, db)
-        current = m.org_id if m else None
-    elif x_treg_org:
-        org = await _resolve_org(x_treg_org, db)
+    if x_treg_token and (m := await _membership_by_token(x_treg_token, db)):
+        current = m.org_id
+    else:
+        # Identity token or session: X-Treg-Org wins, then a team-pinned identity token's own org
+        # claim — the same precedence `require_member` uses to authorize the call. Without the claim
+        # fallback, no org is marked active for a team-pinned token and clients guess (badly).
+        ref = x_treg_org or ((sess.read_claims(x_treg_token) or {}).get("org", "") if x_treg_token else "")
+        org = await _resolve_org(ref, db)
         current = org.id if org else None
     memberships = (
         await db.execute(select(Membership).where(Membership.user_id == user.id))
@@ -3777,6 +4004,39 @@ async def billing_autotopup(
         except billing.BillingNotConfigured as e:
             raise HTTPException(status_code=503, detail=str(e))
     return state
+
+
+@app.get("/billing/history")
+async def billing_history(
+    limit: int = Query(24, ge=1, le=100),
+    caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
+) -> dict:
+    """This team's completed top-ups, newest first, each with its invoice PDF or card receipt.
+
+    Read-only in both directions: it moves no money, and the amounts come from our own credit blocks
+    rather than from Stripe, so the history can never contradict the balance. Stripe is asked only for
+    the document links, and `stripe_ok: false` says they were unavailable — the payments listed are
+    still correct.
+    """
+    org = _billing_org(caller)
+    return await billing.list_payments(db, org, limit=limit)
+
+
+@app.post("/billing/portal")
+async def billing_portal(
+    request: Request,
+    caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
+) -> dict:
+    """A one-time link into Stripe's hosted billing portal — card, billing address, tax ID, and the
+    full invoice archive. 422 until the team has a Stripe customer, which it gets on its first
+    payment; `billing_state`'s `portal` flag is what the UI hides the button on."""
+    org = _billing_org(caller)
+    try:
+        return await billing.create_portal_session(db, org, return_base=_return_base(request))
+    except billing.BillingNotConfigured as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    except billing.TopupRejected as e:
+        raise HTTPException(status_code=422, detail=str(e))
 
 
 @app.post("/billing/stripe/webhook", include_in_schema=False)
@@ -5530,6 +5790,9 @@ async def list_calls(
             "duration_ms": c.duration_ms,
             "response_bytes": c.response_bytes,
             "params_hash": c.params_hash,
+            # non-null = treg said no before anything went upstream (see models.CallRecord) — the
+            # one field that tells "the provider failed" apart from "we refused" in `treg audit`.
+            "refused_by": c.refused_by,
             "created_at": c.created_at.isoformat(),
         }
         for c in rows
@@ -6101,10 +6364,22 @@ async def connect_with_token(
     if not token:
         raise HTTPException(status_code=422, detail=f"{provider.token_label or 'Token'} is required")
     # HTTP Basic providers (DataForSEO, Moz) take a pasted `login:password`; store the Base64 blob so
-    # `Basic {secret}` renders the same at connect and on every proxy call.
+    # `Basic {secret}` renders the same at connect and on every proxy call. Both dashboards ALSO hand
+    # out a ready-made Base64 credential, and users paste that at least as often as the raw pair —
+    # encoding it again produced a double-encoded blob the provider 401'd. So: if the paste already IS
+    # Base64 of a printable `login:password`, keep it. A raw pair can never be mistaken for one (":"
+    # is not in the Base64 alphabet, so strict decoding refuses it), and a Base64 blob can never be
+    # a working raw pair (it has no ":"), so the branch is unambiguous either way.
     if provider.token_encode == "base64":
         import base64
-        token = base64.b64encode(token.encode()).decode()
+        already = None
+        try:
+            decoded = base64.b64decode(token, validate=True).decode()
+            if ":" in decoded and decoded.isprintable():
+                already = token
+        except Exception:  # noqa: BLE001 — not Base64, or not text: encode it below
+            pass
+        token = already or base64.b64encode(token.encode()).decode()
 
     # The credential rides in a header (default) or a query param (Semrush: ?key=…). The cheapest
     # check may also live on a different host than base_url, so honor an absolute probe_url override,
@@ -6115,6 +6390,14 @@ async def connect_with_token(
     else:
         headers, params = {provider.token_header: rendered}, {}
     probe_url = provider.probe_url or f"{provider.base_url.rstrip('/')}{provider.probe_path}"
+    # httpx REPLACES a URL's own query string when `params=` is passed, so a probe_path like
+    # `/autocomplete?field=title&text=data` (PDL, Akta, JustOneAPI, SpyFu) silently lost its required
+    # params and the probe 400'd — rejecting a perfectly good key. Merge the path's query into params
+    # ourselves (params, i.e. the credential for a query provider, wins on a key collision).
+    split = urlsplit(probe_url)
+    if split.query:
+        params = {**dict(parse_qsl(split.query, keep_blank_values=True)), **params}
+        probe_url = urlunsplit((split.scheme, split.netloc, split.path, "", split.fragment))
     try:
         resp = await request.app.state.http.request(
             provider.probe_method or "GET", probe_url,
@@ -6122,13 +6405,17 @@ async def connect_with_token(
         )
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=502, detail=f"could not reach {provider.display_name}: {exc}") from None
-    # Only parse JSON when the response actually is JSON — a key check may answer in CSV/text
-    # (Semrush's balance endpoint), where resp.json() would throw and mask a valid key as unreachable.
+    # Try to parse the body as JSON regardless of the content-type header: ScrapeCreators returns a
+    # real JSON body labelled `text/plain`, and gating on `application/json` left its payload empty so
+    # `token_verify_field` (creditCount) read as false and a valid key was rejected. The parse is
+    # defensive — a genuinely non-JSON key check (Semrush's CSV/number balance) simply throws and
+    # leaves payload empty, falling through to the `text_error` branch exactly as before.
     ctype = resp.headers.get("content-type", "")
     payload: dict = {}
-    if resp.status_code < 500 and ctype.startswith("application/json"):
+    if resp.status_code < 500:
         try:
-            payload = resp.json()
+            parsed = resp.json()
+            payload = parsed if isinstance(parsed, dict) else {}
         except Exception:  # noqa: BLE001
             payload = {}
     # Some providers answer HTTP 200 even for a BAD key and signal validity only in the body: a JSON
@@ -6602,6 +6889,17 @@ async def admin_reconcile_spend(
     since = reconcile.window_start(since_days)
     return {"since": since.isoformat(), "since_days": since_days,
             **await reconcile.provider_spend(db, since)}
+
+
+@app.get("/admin/reconcile/shared-plans")
+async def admin_reconcile_shared_plans(
+    since_days: int = 30, _: str = Depends(require_superadmin), db: AsyncSession = Depends(get_session),
+) -> dict:
+    """Fee vs collected for every rate treg set (fx.yaml `kind: treg_shared_plan`) — the monthly
+    review's input. Reports only; the price change is a hand edit to fx.yaml."""
+    since = reconcile.window_start(since_days)
+    return {"since": since.isoformat(), "since_days": since_days,
+            **await reconcile.shared_plan_recovery(db, since)}
 
 
 @app.get("/admin/reconcile/repeats")
@@ -7273,13 +7571,21 @@ async def _platform_reserve(mk: MarketplaceCall, caller: Caller, db: AsyncSessio
 def _platform_billable(status_code: int, cost_type: str) -> bool:
     """Does a response with this status cost us money? (plan §2.2)
       2xx                        → yes, the provider served it.
-      4xx                        → only under `per_call`: the provider charges for accepting the
+      429                        → never. A rate-limit rejection is capacity refusing the request,
+                                   not the caller's bad input — and on a SHARED plan key it is
+                                   treg's own saturation, so billing it would charge teams for our
+                                   congestion. No vendor bills a request it refused to accept, so
+                                   this is also correct for per_call credit providers, where the
+                                   old rule quietly charged for upstream 429s.
+      other 4xx                  → only under `per_call`: the provider charges for accepting the
                                    request, so a caller's own bad input is on the caller. Under
                                    `per_result`/`per_success` a rejected request produced nothing.
       5xx / 3xx / network error  → no. An upstream failure is never billed to the caller.
     """
     if 200 <= status_code < 300:
         return True
+    if status_code == 429:
+        return False
     if 400 <= status_code < 500:
         return cost_type == "per_call"
     return False
@@ -7295,11 +7601,21 @@ def _observed_cost_micro(provider: str, body: bytes) -> int | None:
       - dataforseo: a top-level `cost` in USD — including 0 when it decided not to charge (a free
         route, or a request it rejected before metering). That zero is real information and settles the
         call at zero, which is why the test is `>= 0` and not truthiness.
-      - scrapecreators (`credits_charged`) and akta (`credits_consumed`): provider credits, converted
-        through the provider's credit rate (fx.yaml) — the same conversion `cost_view` uses, so a
-        settle can't disagree with the catalog's price. Akta is the one that NEEDS this: its enrich
-        route is priced per SECTION requested and its news route adds a per-article rider, so the
-        catalog's single estimate can only be an upper bound — the actual charge lives here.
+      - scrapecreators (`credits_charged`), akta and leadmagic (`credits_consumed`): provider
+        credits, converted through the provider's credit rate (fx.yaml) — the same conversion
+        `cost_view` uses, so a settle can't disagree with the catalog's price. Akta is the one that
+        NEEDS this: its enrich route is priced per SECTION requested and its news route adds a
+        per-article rider, so the catalog's single estimate can only be an upper bound — the actual
+        charge lives here. LeadMagic answers a miss with 2xx and `credits_consumed: 0` (observed at
+        verify time), so honouring the field is what keeps a free miss from billing the estimate;
+        it also reports fractions (email verify is 0.25).
+      - lusha: `billing.creditsCharged`, one level down — the same reported-credits contract,
+        including 0 on a 2xx miss (the captured people.enrich example IS one) and the 2-credit
+        company enrich. Converted through the lusha rate like the others.
+      - apollo: DERIVED, not reported. Apollo answers a miss with 2xx (`organization: null` on
+        enrich, an empty `organizations` page on search) and charges nothing for it, so status-based
+        billing alone would bill the caller for a response Apollo gave away. The body says whether
+        the charged thing came back; when it didn't, the call settles at 0.
 
     Everyone else settles at the estimate. This is the same signal the catalog's `observed_cost`
     harvests, which is what lets phase 5's drift detector compare the two numbers directly."""
@@ -7316,11 +7632,29 @@ def _observed_cost_micro(provider: str, body: bytes) -> int | None:
         if isinstance(cost, (int, float)) and not isinstance(cost, bool) and cost >= 0:
             return int(cost * 1_000_000 + 0.5)
         return None
-    if provider in ("scrapecreators", "akta"):
+    if provider in ("scrapecreators", "akta", "leadmagic"):
         credits = doc.get("credits_charged" if provider == "scrapecreators" else "credits_consumed")
         rate = catalog_store.load().credit_rates.get(provider)
         if isinstance(credits, (int, float)) and not isinstance(credits, bool) and credits >= 0 and rate:
             return int(credits * rate * 1_000_000 + 0.5)
+        return None
+    if provider == "lusha":
+        billing = doc.get("billing")
+        credits = billing.get("creditsCharged") if isinstance(billing, dict) else None
+        rate = catalog_store.load().credit_rates.get("lusha")
+        if isinstance(credits, (int, float)) and not isinstance(credits, bool) and credits >= 0 and rate:
+            return int(credits * rate * 1_000_000 + 0.5)
+        return None
+    if provider == "apollo":
+        # Only the shapes whose billing rule is documented and body-decidable: company enrichment
+        # (1 credit per organization returned, null on a miss) and company search (1 credit per
+        # non-empty PAGE). A body carrying neither key — people enrichment's 1-9 credit range
+        # included — falls through to the estimate rather than guessing.
+        rate = catalog_store.load().credit_rates.get("apollo")
+        if rate:
+            for key in ("organization", "organizations"):
+                if key in doc:
+                    return int(rate * 1_000_000 + 0.5) if doc[key] else 0
         return None
     return None
 
@@ -7419,6 +7753,10 @@ async def call_tool(
     caller: Caller = Depends(require_member),
     db: AsyncSession = Depends(get_session),
 ):
+    # Identity for the refusal fallback in `_mark_treg_own_errors`: a raise anywhere below (unknown
+    # tool, deny rule, daily cap) leaves this handler without an audit row, and the exception handler
+    # is the one place every such refusal passes through — but it has no Caller of its own.
+    request.state.call_identity = (caller.org_id, caller.email)
     # Faithful-relay: use the RAW request path, not Starlette's decoded path param. Decoding is
     # lossy — an encoded slash (`%2f`) in `rest` would become a real `/` and change the upstream
     # route (npm's scoped publish `PUT /@scope%2fname` 404s as `/@scope/name`). httpx preserves
@@ -7465,10 +7803,11 @@ async def call_tool(
         except HTTPException as mkexc:
             # A malformed marketplace call (wrong method, missing param, no credential, 502) must
             # still leave a trace — it's exactly the row the caller will come asking about.
+            request.state.call_audited = True
             audit.record_call(
                 org_id=caller.org_id, user_email=caller.email, tool_name=ep["id"],
                 method=request.method, path=rest, status_code=mkexc.status_code,
-                client=_client_of(request),
+                client=_client_of(request), refused_by=_refusal_kind(mkexc.status_code),
                 telemetry={"endpoint_id": ep["id"], "provider": ep.get("provider")})
             analytics.capture(caller.email, "tool_called",
                 {"tool_name": ep["id"], "status_code": mkexc.status_code,
@@ -7492,10 +7831,12 @@ async def call_tool(
     audit_slug = caller.org.slug  # PostHog group key — must match the browser's posthog.group('team', slug)
 
     def _audit(status_code: int, *, observed_micro: int | None = None, charged_micro: int | None = None,
-               duration_ms: int | None = None, response_bytes: int | None = None) -> None:
+               duration_ms: int | None = None, response_bytes: int | None = None,
+               refused_by: str | None = None) -> None:
         # Audit the attempt too — failures are results worth recording. A marketplace call additionally
         # carries its telemetry (which endpoint, which credential tier, what it cost): still
         # fire-and-forget, because the money itself already landed synchronously in the ledger.
+        request.state.call_audited = True  # the refusal fallback in _mark_treg_own_errors stands down
         telemetry = None
         if mk is not None:
             telemetry = {
@@ -7509,7 +7850,7 @@ async def call_tool(
         audit.record_call(
             org_id=audit_org_id, user_email=audit_email, tool_name=audit_tool,
             method=request.method, path=upstream_url, status_code=status_code,
-            client=_client_of(request), telemetry=telemetry,
+            client=_client_of(request), refused_by=refused_by, telemetry=telemetry,
         )
         # Product analytics mirror of the row above. Deliberately excludes params, bodies, and the
         # full upstream URL (hostname only) — per-call detail beyond what a chart needs stays in the DB.
@@ -7561,7 +7902,8 @@ async def call_tool(
         except HTTPException as exc:
             # A call refused for MONEY (402 empty balance / 429 daily cap) is the event the org will
             # ask about first — it must appear in the activity feed, charged 0.
-            _audit(exc.status_code, charged_micro=0)
+            _audit(exc.status_code, charged_micro=0,
+                   refused_by="balance" if exc.status_code == 402 else "cap")
             raise
     started = _now_ms()
     try:

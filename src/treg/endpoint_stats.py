@@ -81,7 +81,11 @@ async def observed(
             func.sum(case((CallRecord.status_code >= 500, 1), else_=0)).label("bad"),
             func.max(CallRecord.created_at).label("last"),
         )
-        .where(CallRecord.endpoint_id.in_(ids), CallRecord.created_at >= since)
+        .where(CallRecord.endpoint_id.in_(ids), CallRecord.created_at >= since,
+               # treg's own refusals (paywall 402s, caps, bad requests never relayed) are facts
+               # about the CALLER's account, not the endpoint — they must not even count as
+               # samples, or a burst of refused calls dresses itself up as evidence.
+               CallRecord.refused_by.is_(None))
         .group_by(CallRecord.endpoint_id)
     )).all()
 

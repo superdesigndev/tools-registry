@@ -1,0 +1,11 @@
+{
+  "$schema": "https://skills.sh/schemas/skills.sh.schema.json",
+  "groupings": [
+    {
+      "title": "Developer Tools",
+      "skills": [
+        "treg"
+      ]
+    }
+  ]
+}

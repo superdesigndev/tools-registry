@@ -45,7 +45,10 @@ marker on `catalog get`): the catalog is public, and `sys.exit` raises `SystemEx
 read, and tolerates a corrupt file as empty so a half-written config can't brick every command).
 `_save_config` writes atomically (temp + `os.replace`); `login` persists the token **before** the
 best-effort `_pick_active_org` lookup, so a transient `/orgs` failure can't discard a freshly-minted
-token. `call --query` is relayed as a list of pairs (duplicate keys survive) and rejects a value with no
+token. `_pick_active_org` prefers the server's `active` flag, then the org a team-pinned identity token
+bakes into its claim (`_token_org_claim` decodes it locally, unverified — covers older servers that mark
+nothing active for such a token), and only then the first membership — an arbitrary team for a
+multi-team user, so it is the last resort, not the default. `call --query` is relayed as a list of pairs (duplicate keys survive) and rejects a value with no
 `=`; `contract_to_skill_payload`/`load_contract` raise clear errors (naming the entry/file) for a
 stale/malformed `treg.json` instead of a bare traceback. Every "read a file / parse inline JSON the
 user pointed at" path (`oauth connect`, `tool add/update --binding|--health`, `skill push|scaffold|init`,
@@ -331,7 +334,11 @@ Bare **`treg connections`** now lists (the subparser is `required=False` with a 
   don't know which shelf it sits on (`GET /catalog/search`). A compact ranked table: endpoint id,
   platform, provider, cost, `✓`/`·` verified, tier, clipped summary — footer hint `treg catalog get <id>`.
   Cost prints in **USD** (`_cost_usd`, 3 significant digits) rather than `_cost_label`'s source currency:
-  the column is only worth reading if CNY and USD rows compare.
+  the column is only worth reading if CNY and USD rows compare. The no-match message names
+  `treg catalog request "<query>"` — the empty search is the moment the filer exists.
+- **`catalog request <what's missing…>`** (`_catalog_request`) — file a "the catalog doesn't have X"
+  report (`POST /tool-requests`, `source: cli`). Open endpoint, rate-limited server-side; a configured
+  token rides along as attribution only, never a requirement.
 - **`catalog get <endpoint-id>`** (`_catalog_get`) — the last stop before `treg call`
   (`GET /catalog/endpoints/{id}`): summary, provider + limits/pricing_url, cost in USD *and* the original
   currency with its note, verified date, the capability with a **siblings** table (same job, other

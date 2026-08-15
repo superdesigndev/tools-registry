@@ -18,7 +18,7 @@ Everything else in treg is reached by a CLI or an HTTP call. This is the door an
 through: ChatGPT, Claude Code, Cursor, or anything else that speaks the Model Context Protocol. It is
 mounted at `/mcp/` on the same app, so there is one deployment, one database and one set of rules.
 
-## Five tools, and why only five
+## Six tools, and why only six
 
 | Tool | Job |
 |---|---|
@@ -27,6 +27,7 @@ mounted at `/mcp/` on the same app, so there is one deployment, one database and
 | `call` | a catalog endpoint by id, or `<tool-name>/<path>` for the team's own tool |
 | `balance` | the team's prepaid balance |
 | `my_tools` | what the team registered that can be called without holding the key |
+| `catalog_request` | file what the catalog is MISSING — the demand signal for what gets added next |
 
 Deliberately not one tool per provider. A catalog of 2,600 endpoints exposed as 2,600 MCP tools would
 bury the client's tool list and force a re-connect every time the catalog grew. `catalog_search`
@@ -35,6 +36,12 @@ plus `call` covers all of it and stays the same size.
 `call` is annotated **destructive + open-world + non-idempotent**, which reads as pessimistic until
 you notice treg does not model the upstream: it relays to somebody else's API and cannot know whether
 that endpoint charges, writes or deletes. Claiming otherwise would be a guess presented as a fact.
+`catalog_request` is the one other non-read: a write, but a harmless one (a row on treg itself,
+nothing upstream, nothing spent), so it stays closed-world and non-destructive. It relays to
+`POST /tool-requests` so rate limiting and field caps live in one place, forwarding the edge's
+`X-Forwarded-For` — the in-process relay would otherwise collapse every MCP caller into one
+rate-limit bucket. `catalog_search`'s zero-result hint names it, so an agent that just searched
+and found nothing can file the gap in the same session.
 
 ## In-process, not over the network
 
@@ -47,6 +54,28 @@ MCP traffic is distinguishable from unreported CLI traffic in the audit trail an
 
 The catalog is the one exception: read straight from `catalog_store`, which is already parsed in
 memory, so a search answers in about a millisecond. That is a **speed** choice, not a permission one.
+
+## `call` speaks every request shape the CLI does
+
+`params` keeps its original method-based role (query string on GET, JSON body on POST). The
+explicit slots exist for the shapes that role can't express, mirroring `treg call`'s flags —
+each of which was added because a real endpoint needed it:
+
+- `query` — ALWAYS the query string; a list value expands to repeated keys (`?tag=a&tag=b`,
+  which a dict would collapse). Composable with `body` on a POST — the Bright Data dataset shape
+  (`?dataset_id=…` + array body) was uncallable over MCP without it.
+- `body` — ALWAYS the body. Object/array → JSON; a STRING is sent raw with `content_type` naming
+  it (sniffed as `application/json` when it parses as JSON — the CLI's rule). A body implies POST.
+- `headers` — extra upstream headers (`login-customer-id` is the canonical need). treg's own
+  auth/routing headers are filtered from the relay; injected credentials always win server-side.
+- An inline `?a=b` inside a passthrough URL is pulled out and merged — httpx silently DROPS a
+  URL's query string whenever `params=` is passed, the same gotcha `cmd_call` guards.
+- `params` claiming the same position as an explicit slot is refused loudly, never merged.
+- Multipart file upload stays CLI-only (`treg call --upload`) — MCP callers hold no files.
+- `call` resolves the TEAM the way `balance` does (`_resolve_org`, before anything is spent): a
+  multi-team identity token used to bounce off /call's raw `choose an org (send X-Treg-Org)`
+  400 — a header hint an MCP caller can't act on; now it gets the pinned/active team, or the
+  friendly error that NAMES the teams.
 
 ## `call` takes an `idempotency_key`
 
@@ -64,6 +93,49 @@ on WHEN to use it, because that is where a mistake costs something. Reuse for a 
 refused rather than answered, so the failure is loud.
 
 Full reasoning, storage rules and the concurrency guard: `architecture/money.md`.
+
+## Output schemas: every field optional AND nullable
+
+Each tool declares what it returns (ChatGPT's connector review asks; a model that must guess at
+field names guesses). Two rules, both learned the hard way:
+
+**Every field is optional** (`total=False`). The SDK validates a strict schema on the way out, so a
+required field would turn the first `{"error": "not authenticated"}` into an opaque tool failure
+instead of a recoverable refusal.
+
+**Every field is nullable** (`| None`) — not just the ones that carry data nulls (a tool with no
+description, an endpoint with no price). The SDK serializes each response through the
+TypedDict-derived pydantic model, and that dump fills every **absent** key in as `null` in
+`structuredContent`. So a response that never mentions `next` still ships `"next": null`, and a
+strict client validating against an advertised `type: string` refuses the whole answer with -32602.
+Two independent field reports arrived the same day (issue #93 and one on X) before this was caught:
+FastMCP's own client is lenient, so nothing local ever tripped it. The suite now validates real
+`structuredContent` against the advertised schema with `jsonschema` playing the strict client.
+
+A field whose real payloads vary in shape is `Any`, not a union: `call.body` relays whatever the
+provider sent, and `catalog_get.example_response` is a dict for most endpoints but an ARRAY for
+providers whose response is a list of records (brightdata datasets) — typing it `dict` made the
+server's own outbound validation refuse the whole catalog entry.
+
+## Responses are gzip-compressed at the origin — the edge must find nothing to do
+
+Production sits behind Render's managed edge — no account or dashboard of ours — which
+Brotli-compresses large responses on the way out. At least one real client stack (httpx +
+brotlicffi, issue #93) dies mid-decode on that output and then hangs to its own timeout, minutes
+after the upstream answered in seconds.
+
+The first fix was `Cache-Control: no-store, no-transform` (the `NoTransformResponses` wrapper,
+outermost so 401 challenges carry it too) — the origin's standard "do not re-encode" (RFC 9111).
+**Render's edge ignores it** (issue #100: `content-encoding: br` arrived in production right next to
+the header). The header stays because it is correct and free, but the working fix is different: the
+MCP app gzips its own responses (`GZipMiddleware` inside `build_mcp_app`, ≥1KB). An edge only
+compresses what arrives uncompressed — a response already carrying `Content-Encoding: gzip` passes
+through — and gzip decodes via zlib on every mainstream client, sidestepping the brotli decoder
+entirely. Only a client accepting br-but-not-gzip (no mainstream stack does this) would still meet
+the edge's Brotli.
+
+Post-deploy check, any time this path changes: a large authenticated `catalog_get` over `/mcp/` with
+`Accept-Encoding: br, gzip` must come back `content-encoding: gzip`, not `br`.
 
 ## Authentication: eager, every request
 
@@ -121,6 +193,17 @@ A test asserts that calling without it raises rather than defaulting to permissi
 `/oauth/authorize` also refuses a `resource` we do not serve, up front. Accepting one mints a token
 that is valid, well-formed and silently useless — the failure then surfaces at the first tool call as
 "not signed in", pointing the reader at authentication when the problem was the audience.
+
+**The audience set is canonical + legacy** (`mcp_resource_audiences()`: `public_url` plus
+`config.PUBLIC_HOST_ALIASES` — the treg.superdesign.dev → treg.to move, SYMMETRIC so grants
+minted on either name survive a `TREG_PUBLIC_URL` flip in either direction). A pre-move grant carries
+the old resource URL as its audience for its whole lifetime, because refresh reissues the audience
+that was consented to (`row.resource`); validating against the canonical URL alone would 401 every
+pre-move grant with refresh unable to recover. The transport validates via `read_access_token_any`,
+and `/oauth/token` treats the two names as the same resource (`api._same_mcp_resource`).
+Slash-variant spellings are healed by `normalize_resource()` at every store/mint/compare site:
+authorize accepts `…/mcp` via a forgiving compare, and a token whose audience kept that spelling
+would fail the exact audience match forever.
 
 ## Two doors in, one row out
 
@@ -214,6 +297,15 @@ documented JSON (`~/.cursor/mcp.json`, `~/.config/opencode/opencode.json`). Code
 `bearer_token_env_var`), Hermes (yaml) and OpenClaw are **reported, not written** — their formats
 aren't safely expressible from the light CLI (no toml writer, yaml is a server-only dep), so we print
 the exact manual step rather than a config we haven't runtime-verified.
+
+The command **verifies the token against `/auth/me` before writing anything** — the same check
+`treg login --token` runs. Learned the hard way: without it, a garbage token fans out silently into
+every agent on the machine and surfaces days later as per-provider "invalid token" errors inside
+whichever agent tries a call — catalog reads still work (they don't validate the token downstream),
+which makes it look like a provider outage rather than a setup problem. The garbage in question was
+the test suite's own dummy: `install_mcp(only=[])` read an empty list as "no filter" and wrote
+`Bearer K` into the developer's real configs on every suite run — `only=[]` now means *none*, and
+the test isolates HOME.
 
 Why a header works even though treg advertises OAuth: a client only falls back to OAuth discovery on
 a **401**, and treg returns **200** for a valid header — verified against Claude Code, which

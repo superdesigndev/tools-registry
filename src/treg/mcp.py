@@ -39,7 +39,7 @@ import json
 import os
 from contextlib import asynccontextmanager
 from typing import Any, TypedDict
-from urllib.parse import urlsplit
+from urllib.parse import parse_qsl, urlsplit
 
 import httpx
 from mcp.server import MCPServer
@@ -48,7 +48,7 @@ from mcp.server.transport_security import TransportSecuritySettings
 from mcp.types import ToolAnnotations
 
 from . import catalog_store
-from .config import get_settings
+from .config import PUBLIC_HOST_ALIASES, get_settings
 
 # Every tool must declare what it can DO, and the review process checks these against real behaviour.
 # Read-only means it changes nothing anywhere; open-world means it can change state visible on the
@@ -97,12 +97,16 @@ mcp = MCPServer(
 # failure. Optional fields document the success shape while letting the error shape through, which is
 # the trade worth making: a schema is a hint to the model, not a gate on our own error handling.
 
-# NULLABLE as well as optional. `total=False` says a key may be ABSENT; it does not say the value may
-# be null, and real rows carry nulls — a registered tool with no description, an endpoint with no
-# published price. The first version typed these as plain `str` and a team tool with
-# `description: None` failed validation, so `my_tools` returned a schema error instead of the team's
-# tools. Caught by the isolation test's "org A must genuinely SEE its tool" assertion, which exists
-# precisely so a passing-for-free result is impossible.
+# NULLABLE as well as optional — EVERY field, not just the ones that carry data nulls. `total=False`
+# says a key may be ABSENT; it does not say the value may be null, and nulls arrive from two
+# directions. First, real rows carry them — a registered tool with no description, an endpoint with
+# no published price; typing these as plain `str` made `my_tools` return a schema error instead of
+# the team's tools. Second — the one that reached two users before it reached us (#93) — the SDK
+# serializes the returned dict through a pydantic model built from this TypedDict, and that dump
+# fills every ABSENT key in as `null` in `structuredContent`. So a response that never mentions
+# `next` still ships `"next": null` to the client, and a strict client validating against the
+# advertised schema (`type: string`, no null) refuses the whole answer with -32602. `| None` turns
+# the advertised type into `anyOf [string, null]`, which is the truth of what we send.
 class SearchResult(TypedDict, total=False):
     endpoint_id: str | None
     name: str | None
@@ -116,22 +120,31 @@ class SearchOut(TypedDict, total=False):
     query: str | None
     count: int | None
     total_matches: int | None
-    results: list[SearchResult]
-    hint: str
-    next: str
-    error: str
-    detail: str
+    results: list[SearchResult] | None
+    hint: str | None
+    next: str | None
+    error: str | None
+    detail: str | None
+
+
+class RequestOut(TypedDict, total=False):
+    id: int | None
+    status: str | None      # "received"
+    note: str | None
+    error: str | None
+    detail: str | None
 
 
 class CatalogGetOut(TypedDict, total=False):
-    endpoint: dict[str, Any]        # the full catalog entry: params, cost, observed reliability
-    provider: dict[str, Any]
-    siblings: list[dict[str, Any]]  # other providers of the same capability, for comparison
-    call_template: str
-    example_response: dict[str, Any]
-    hints: list[str]
-    error: str
-    detail: str
+    endpoint: dict[str, Any] | None        # the full catalog entry: params, cost, observed reliability
+    provider: dict[str, Any] | None
+    siblings: list[dict[str, Any]] | None  # other providers of the same capability, for comparison
+    call_template: str | None
+    example_response: Any                  # a dict for most endpoints, an ARRAY for providers whose
+                                           # response is a list of records (brightdata datasets)
+    hints: list[str] | None
+    error: str | None
+    detail: str | None
 
 
 class CallOut(TypedDict, total=False):
@@ -139,11 +152,11 @@ class CallOut(TypedDict, total=False):
     endpoint_id: str | None
     replayed: bool | None           # answered from an earlier call with the same idempotency_key
     body: Any                       # the provider's response, verbatim
-    cost_usd: float
-    whose_error: str                # "treg" or "provider" — who to blame, and whether to retry
-    hint: str
-    error: str
-    detail: str
+    cost_usd: float | None
+    whose_error: str | None         # "treg" or "provider" — who to blame, and whether to retry
+    hint: str | None
+    error: str | None
+    detail: str | None
 
 
 class BalanceOut(TypedDict, total=False):
@@ -151,10 +164,10 @@ class BalanceOut(TypedDict, total=False):
     balance_usd: float | None
     balance_micro: int | None
     holds_micro: int | None
-    error: str
-    detail: str
-    teams: list[str]                # when a person is in several and none is active
-    hint: str
+    error: str | None
+    detail: str | None
+    teams: list[str] | None         # when a person is in several and none is active
+    hint: str | None
 
 
 class TeamTool(TypedDict, total=False):
@@ -166,11 +179,11 @@ class TeamTool(TypedDict, total=False):
 class MyToolsOut(TypedDict, total=False):
     team: str | None
     count: int | None
-    tools: list[TeamTool]
-    error: str
-    detail: str
-    teams: list[str]
-    hint: str
+    tools: list[TeamTool] | None
+    error: str | None
+    detail: str | None
+    teams: list[str] | None
+    hint: str | None
 
 
 def _bearer(ctx: Context) -> str:
@@ -224,14 +237,15 @@ def _oauth_claims(token: str) -> dict | None:
     """
     from . import mcp_oauth
 
-    return mcp_oauth.read_access_token(token, expected_audience=mcp_oauth.mcp_resource_url())
+    return mcp_oauth.read_access_token_any(token)
 
 
 def _need_token() -> dict:
+    base = get_settings().public_url.rstrip("/")
     return {
         "error": "not authenticated",
         "detail": (
-            "This MCP server needs a treg token. Get one at https://treg.superdesign.dev "
+            f"This MCP server needs a treg token. Get one at {base} "
             "(sign in, then Settings -> copy token) and set it as the TREG_TOKEN environment "
             "variable for this server."
         ),
@@ -339,7 +353,7 @@ async def _resolve_org(client: httpx.AsyncClient) -> tuple[int | None, str | Non
     r = await client.get("/orgs")
     if r.status_code == 401 or me.status_code == 401:
         return None, None, {"error": "not signed in, or this token is invalid or expired",
-                            "hint": "copy a fresh token from https://treg.superdesign.dev"}
+                            "hint": f"copy a fresh token from {get_settings().public_url.rstrip('/')}"}
     if r.status_code != 200:
         return None, None, {"error": "could not read the teams for this token"}
     orgs = _body(r) or []
@@ -394,11 +408,39 @@ async def catalog_search(query: str, limit: int = 8) -> SearchOut:
     out = {"query": query, "count": len(results), "total_matches": total, "results": results}
     if not results:
         out["hint"] = (
-            f"nothing matches all of {query!r} — drop a word, or try a different way of saying the task"
+            f"nothing matches all of {query!r} — drop a word, or try a different way of saying the task. "
+            "If the catalog genuinely lacks it, file it with catalog_request(capability=...) — "
+            "requests steer which provider gets added next"
         )
     else:
         out["next"] = "catalog_get(endpoint_id) for parameters and the exact price, then call(...)"
     return out
+
+
+@mcp.tool(
+    description=(
+        "The catalog doesn't have what you need? File a tool request — one sentence saying what "
+        "capability or provider is missing. Requests are the demand signal that decides which "
+        "provider gets added next. Use AFTER catalog_search comes up empty, not instead of it."
+    ),
+    # A write, but a harmless one: it files a report on treg itself — nothing upstream, nothing spent.
+    annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=False,
+                                idempotent_hint=False),
+    structured_output=True
+)
+async def catalog_request(capability: str, ctx: Context, note: str = "") -> RequestOut:
+    """Relays to POST /tool-requests so the rate limiting, field caps and attribution live in one
+    place; the bearer (when the session has one) turns into who-asked on the stored row."""
+    token = _bearer(ctx)
+    # The in-process relay would otherwise collapse every MCP caller into one client IP ("?"),
+    # making the per-IP rate limit a single global bucket — forward the edge's X-Forwarded-For
+    # so the API's limiter sees the real caller.
+    xff = (ctx.headers or {}).get("x-forwarded-for") or (ctx.headers or {}).get("X-Forwarded-For") or ""
+    async with _api(token) as client:
+        r = await client.post("/tool-requests", json={
+            "capability": capability, "note": note, "source": "mcp"},
+            headers={"X-Forwarded-For": xff} if xff else {})
+    return _body(r)
 
 
 @mcp.tool(
@@ -443,13 +485,24 @@ async def catalog_get(endpoint_id: str, ctx: Context) -> CatalogGetOut:
         "nothing the second time; the result carries `replayed: true`. Use a NEW key (or none) for "
         "genuinely new work, even when the parameters are identical: repeating a search to see "
         "what changed is a new call, not a retry, and reusing the key would hand you the old answer. "
-        "Reusing one key for a DIFFERENT request is refused rather than answered."
+        "Reusing one key for a DIFFERENT request is refused rather than answered.\n\n"
+        "For requests `params` can't express, the explicit slots mirror the CLI's flags: `query` "
+        "is ALWAYS the query string (a list value expands to repeated keys), `body` is ALWAYS the "
+        "request body (object/array → JSON; a STRING is sent raw, with `content_type` naming what "
+        "it is — sniffed as application/json when it parses as JSON), and `headers` adds upstream "
+        "request headers an endpoint needs per-call (e.g. Google Ads' login-customer-id); "
+        "injected credentials always win over them. Use `query` + `body` together for endpoints "
+        "that split a POST across both (Bright Data's ?dataset_id=… + array body). Giving `body` "
+        "implies POST. Multipart file uploads aren't supported here — run (or tell the human to "
+        "run) the CLI: `treg call <endpoint> --upload name=@/path/to/file`."
     ),
     annotations=_CALLS,
     structured_output=True
 )
 async def call(endpoint_id: str, params: dict | list | None = None,
                method: str | None = None, idempotency_key: str | None = None,
+               query: dict | None = None, body: dict | list | str | None = None,
+               headers: dict | None = None, content_type: str | None = None,
                ctx: Context = None) -> CallOut:  # type: ignore[assignment]
     token = _bearer(ctx) if ctx else ""
     if not token:
@@ -465,13 +518,82 @@ async def call(endpoint_id: str, params: dict | list | None = None,
                 "hint": "use catalog_search for a catalog id, or my_tools then "
                         "'<tool-name>/<path>' for one of this team's own tools"}
 
-    method = (method or (ep.get("method") if ep else None) or "GET").upper()
+    # `body` implies POST — curl's convention, and the CLI's: catalog endpoints reject a method
+    # mismatch, so making `body` just work beats asking the caller to repeat what the catalog knows.
+    method = (method or (ep.get("method") if ep else None)
+              or ("POST" if body is not None else "GET")).upper()
+    reads_query = method in ("GET", "HEAD", "DELETE")
     # A LIST is a legitimate body, not a mistake. DataForSEO — the largest provider in the catalog at
     # 217 endpoints — takes an ARRAY of task objects on every one of its `live` POST routes, so a
     # dict-only signature made all of them uncallable. Found by trying one rather than by reading the
     # type. Query strings still need key/value pairs, so a list is only meaningful as a body.
     args = params if params is not None else {}
+
+    # ---- assemble the real request: query string, body, extra headers ------------------------
+    # `params` keeps its method-based role (query on GET, body on POST); the explicit `query` and
+    # `body` slots express the shapes that role can't — a POST that needs BOTH a body and a query
+    # string (Bright Data's ?dataset_id=… + array body), a raw non-JSON body, an extra upstream
+    # header. When an explicit slot is given, `params` must not also claim the same position —
+    # refused loudly rather than silently merged, because a silent merge sends a wrong request.
+    if body is not None and params is not None and not reads_query:
+        return {"error": "give the request body as `body` OR `params`, not both",
+                "endpoint_id": endpoint_id}
+    if query is not None and params is not None and reads_query:
+        return {"error": "give the query string as `query` OR `params`, not both",
+                "endpoint_id": endpoint_id}
+    if reads_query and isinstance(args, list):
+        return {"error": "this endpoint takes query parameters, so `params` must be an "
+                         "object, not a list", "endpoint_id": endpoint_id}
+
+    # Query pairs as a LIST of tuples so repeated keys (?tag=a&tag=b) survive — a dict keeps only
+    # the last. A list VALUE in `query` expands to repeated keys. And an inline `?a=b` inside a
+    # passthrough URL would be DROPPED by httpx whenever params= is passed — the upstream then
+    # answers with default/wrong data and NO error (the CLI guards the same gotcha) — so it is
+    # pulled out and merged.
+    query_pairs: list[tuple[str, str]] = []
+    if "?" in endpoint_id:
+        endpoint_id, _, inline = endpoint_id.partition("?")
+        query_pairs += parse_qsl(inline, keep_blank_values=True)
+    for src in (args if (reads_query and isinstance(args, dict)) else {}, query or {}):
+        for k, v in src.items():
+            if isinstance(v, (list, tuple)):
+                query_pairs += [(k, str(x)) for x in v]
+            else:
+                query_pairs.append((k, str(v)))
+
+    the_body = body if body is not None else (args if not reads_query else None)
+    # Caller headers relay to the upstream exactly as the CLI's --header does (Google Ads'
+    # login-customer-id is the canonical need) — with treg's own auth/routing headers filtered so
+    # the tool's semantics stay unambiguous: the bearer on the MCP request IS the identity, and
+    # idempotency travels via its own argument. Injected credentials always win server-side.
+    extra_headers = {k: str(v) for k, v in (headers or {}).items()
+                     if k.lower() not in ("x-treg-token", "x-treg-org", "authorization",
+                                          "idempotency-key")}
+    if isinstance(the_body, str):
+        # A raw string body travels as-is. Content-Type: explicit wins, else sniff JSON — the
+        # CLI's rule, because upstreams that require `application/json` reject a JSON body
+        # labelled text/plain.
+        ctype = content_type
+        if ctype is None:
+            try:
+                json.loads(the_body)
+                ctype = "application/json"
+            except ValueError:
+                ctype = "text/plain"
+        extra_headers["content-type"] = ctype
+
     async with _api(token) as client:
+        # Resolve the team the same way `balance`/`my_tools` do BEFORE spending anything: a
+        # multi-team identity token otherwise reaches /call and bounces off its raw
+        # "choose an org (send X-Treg-Org)" 400 — a header hint an MCP caller cannot act on.
+        # `_resolve_org` honours the pinned/active team and, when there genuinely is no answer,
+        # NAMES the teams so the agent can ask the human — found live on the first
+        # multi-team dashboard token pasted into an MCP client.
+        _, slug, problem = await _resolve_org(client)
+        if problem:
+            return problem
+        if slug:
+            extra_headers["X-Treg-Org"] = slug
         if idempotency_key:
             # Straight through to the header the API already honours. Deliberately the CALLER's key
             # and never derived from the request: two identical searches an hour apart are new work,
@@ -479,14 +601,19 @@ async def call(endpoint_id: str, params: dict | list | None = None,
             # cache wearing an idempotency badge.
             client.headers["Idempotency-Key"] = idempotency_key[:200]
         # The SAME route the CLI and the proxy use, so the tool ACL, deny rules, both daily caps,
-        # the balance reserve and the settle all happen exactly once, in one place.
-        if method in ("GET", "HEAD", "DELETE"):
-            if isinstance(args, list):
-                return {"error": "this endpoint takes query parameters, so `params` must be an "
-                                 "object, not a list", "endpoint_id": endpoint_id}
-            r = await client.request(method, f"/call/{endpoint_id}", params=args)
-        else:
-            r = await client.request(method, f"/call/{endpoint_id}", json=args)
+        # the balance reserve and the settle all happen exactly once, in one place. params= is
+        # only passed when there ARE pairs — see the inline-query gotcha above.
+        kw: dict[str, Any] = {}
+        if extra_headers:
+            kw["headers"] = extra_headers
+        if query_pairs:
+            kw["params"] = query_pairs
+        if the_body is not None:
+            if isinstance(the_body, str):
+                kw["content"] = the_body.encode()
+            else:
+                kw["json"] = the_body
+        r = await client.request(method, f"/call/{endpoint_id}", **kw)
 
     out: dict[str, Any] = {"status": r.status_code, "endpoint_id": endpoint_id, "body": _body(r)}
     if r.headers.get("X-Treg-Idempotent-Replay") == "true":
@@ -603,6 +730,13 @@ def _allowed_hosts() -> list[str]:
     public = urlsplit(get_settings().public_url).netloc
     if public:
         hosts += [public, public.split(":")[0]]
+    # Every name the reference deployment has ever answered to, SYMMETRICALLY — a .mcp.json
+    # pointed at either domain keeps working whichever one public_url currently names, which is
+    # what makes an env-var rollback lossless (a treg.to config must survive a revert too).
+    hosts += list(PUBLIC_HOST_ALIASES)
+    # The SDK compares Host values EXACTLY, and `example.com:443` is a valid spelling of the
+    # default-port form some clients send — so every bare https hostname also allows its :443 twin.
+    hosts += [f"{h}:443" for h in hosts if ":" not in h and h not in ("localhost", "127.0.0.1")]
     hosts += ["localhost", "127.0.0.1", "treg.internal"]
     hosts += [h.strip() for h in os.environ.get("TREG_MCP_ALLOWED_HOSTS", "").split(",") if h.strip()]
     # a bare host and host:port are different header values, so allow the common local ports too
@@ -626,6 +760,10 @@ def _allowed_origins() -> list[str]:
     public = get_settings().public_url.rstrip("/")
     if public:
         origins.append(public)
+    origins += [f"https://{h}" for h in PUBLIC_HOST_ALIASES]
+    # Exact comparison again: allow the explicit-default-port spelling of every https origin.
+    origins += [f"{o}:443" for o in origins
+                if o.startswith("https://") and ":" not in o.removeprefix("https://")]
     origins += [f"http://localhost:{p}" for p in ("8000", "18790")]
     origins += [f"http://127.0.0.1:{p}" for p in ("8000", "18790")]
     origins += ["http://localhost", "http://127.0.0.1"]
@@ -724,7 +862,7 @@ class RequireAuthForProtectedTools:
             return "missing"
         from . import mcp_oauth
         if mcp_oauth.looks_like_access_token(token) and \
-                mcp_oauth.read_access_token(token, expected_audience=mcp_oauth.mcp_resource_url()) is None:
+                mcp_oauth.read_access_token_any(token) is None:
             return "invalid"
         return None             # a live access token, or a per-org token the tool validates itself
 
@@ -759,6 +897,46 @@ class RequireAuthForProtectedTools:
         await send({"type": "http.response.body", "body": json.dumps(payload).encode()})
 
 
+class NoTransformResponses:
+    """Stamp `Cache-Control: no-store, no-transform` on every MCP response.
+
+    Production sits behind Render's managed edge — not an account of ours, and there is no
+    dashboard to configure — and that edge Brotli-compresses responses on the way out. A compliant
+    client decodes `br` fine, but at least one real MCP client stack (httpx + brotlicffi, issue #93)
+    dies mid-decode on large compressed bodies, and the failure mode is the worst one available: the
+    RPC hangs until the client's own timeout, minutes after the upstream answered in seconds.
+
+    `no-transform` is the standard way for an origin to tell an intermediary "do not re-encode this"
+    (RFC 9111 §5.2.2.6) — and Render's edge IGNORES it (issue #100: `content-encoding: br` arrived
+    right next to this header in production). The header stays because it is correct and costs
+    nothing, but the fix that actually works is compressing at the origin — see `build_mcp_app`:
+    an edge does not re-encode a response that already carries `Content-Encoding`. `no-store` rides
+    along because these responses are per-caller and priced — nothing on this path should ever be
+    served from a cache.
+
+    An ASGI wrapper rather than a header in api.py's middleware so that WHEREVER this app is mounted
+    — production, or a test building its own transport — the header ships. Same lesson as the auth
+    wrapper below: wrapping only one composition path is how the other one silently diverges.
+    """
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
+
+        async def send_stamped(message):
+            if message["type"] == "http.response.start":
+                headers = [(k, v) for k, v in message.get("headers", [])
+                           if k.lower() != b"cache-control"]
+                headers.append((b"cache-control", b"no-store, no-transform"))
+                message = dict(message, headers=headers)
+            await send(message)
+
+        return await self.app(scope, receive, send_stamped)
+
+
 def build_mcp_app():
     """A fresh ASGI app for the MCP transport.
 
@@ -783,7 +961,22 @@ def build_mcp_app():
     # Wrapped HERE, not around the module-level value, so a caller that builds its own app gets the
     # same thing production runs. The first version wrapped only the module-level app, and the tests
     # — which build a fresh transport per test — silently exercised an unprotected server.
-    return RequireAuthForProtectedTools(transport)
+    #
+    # GZip at the ORIGIN is the fix for edge re-compression (issue #100, the second half of #93).
+    # Render's edge ignored `Cache-Control: no-transform` and kept Brotli-compressing large
+    # responses, which a real client stack (httpx + brotlicffi) fails to decode and then hangs on.
+    # An edge only compresses what arrives UNCOMPRESSED — a response already carrying
+    # `Content-Encoding: gzip` passes through, and gzip is decoded by zlib on every mainstream
+    # client, which sidesteps the brotli decoder entirely. A client that does not accept gzip gets
+    # identity from us (GZipMiddleware respects Accept-Encoding); only a client accepting br-and-
+    # not-gzip — no mainstream stack — would still meet the edge's Brotli.
+    #
+    # NoTransformResponses is outermost so the auth wrapper's own 401 challenges carry the header
+    # too; gzip sits between so challenges and answers alike are origin-encoded.
+    from starlette.middleware.gzip import GZipMiddleware
+
+    return NoTransformResponses(GZipMiddleware(RequireAuthForProtectedTools(transport),
+                                               minimum_size=1024))
 
 
 mcp_app = build_mcp_app()
@@ -795,6 +988,8 @@ async def mcp_lifespan(target=None):
     lifespan, and the streamable-HTTP session manager builds its task group there — without this
     every MCP request fails with "Task group is not initialized"."""
     target = target or mcp_app
-    inner = getattr(target, "app", target)   # unwrap RequireAuthForProtectedTools
+    inner = target
+    while not hasattr(inner, "router"):      # unwrap NoTransformResponses / RequireAuthForProtectedTools
+        inner = inner.app
     async with inner.router.lifespan_context(inner):
         yield

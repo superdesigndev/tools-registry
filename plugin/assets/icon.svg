@@ -1,6 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <rect width="512" height="512" rx="112" fill="#211d16"/>
-  <!-- the ▚ brand mark: upper-left + lower-right quadrants in Ledger clay -->
-  <rect x="96" y="96" width="152" height="152" rx="24" fill="#e0703f"/>
-  <rect x="264" y="264" width="152" height="152" rx="24" fill="#e0703f"/>
+  <!-- treg composer icon: the ▚ mark, white on black. Same geometry as web/favicon.svg and
+       assets/brand/twitter/, recoloured to pure black/white.
+       FILLED on purpose: a transparent white mark disappears on a light background, and this
+       renders in a host UI whose backdrop we do not control. -->
+  <rect width="512" height="512" rx="112" fill="#000000"/>
+  <rect x="111" y="111" width="140.5" height="140.5" rx="20" fill="#ffffff"/>
+  <rect x="260.5" y="260.5" width="140.5" height="140.5" rx="20" fill="#ffffff"/>
 </svg>

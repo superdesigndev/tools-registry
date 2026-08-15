@@ -60,7 +60,7 @@ def test_admin_and_skill_parsers():
 
 def test_config_v2_roundtrip(tmp_path, monkeypatch):
     monkeypatch.setattr(cli, "CONFIG_PATH", tmp_path / "config.json")
-    cli._save_config({"base_url": "https://treg.superdesign.dev", "token": "T", "email": "me@x.dev",
+    cli._save_config({"base_url": "https://treg.to", "token": "T", "email": "me@x.dev",
                       "active_org": "team-a", "identity": True})
     cfg = cli._load_config()
     assert cfg["token"] == "T" and cfg["active_org"] == "team-a" and cfg["identity"] is True
@@ -69,7 +69,7 @@ def test_config_v2_roundtrip(tmp_path, monkeypatch):
 def test_legacy_multiorg_config_migrates(tmp_path, monkeypatch):
     monkeypatch.setattr(cli, "CONFIG_PATH", tmp_path / "config.json")
     (tmp_path / "config.json").write_text(json.dumps({
-        "base_url": "https://treg.superdesign.dev", "active_org": "team-a",
+        "base_url": "https://treg.to", "active_org": "team-a",
         "orgs": {"team-a": {"token": "OLD", "org_id": 3}}}))
     cfg = cli._load_config()
     assert cfg["token"] == "OLD" and cfg["active_org"] == "team-a" and cfg["identity"] is False
@@ -79,6 +79,48 @@ def test_load_config_default(tmp_path, monkeypatch):
     monkeypatch.setattr(cli, "CONFIG_PATH", tmp_path / "nope.json")
     cfg = cli._load_config()
     assert cfg["token"] is None and cfg["active_org"] is None and cfg["base_url"].startswith("http")
+
+
+def test_token_org_claim_reads_a_team_pinned_token():
+    """`_token_org_claim` decodes the org slug a team-pinned identity token carries — without the
+    signature check (the server still authorizes), and returning None on anything else."""
+    import base64
+    payload = base64.urlsafe_b64encode(
+        json.dumps({"uid": 7, "exp": 9999999999, "tv": 0, "org": "team-b"}).encode()
+    ).decode().rstrip("=")
+    assert cli._token_org_claim(f"{payload}.not-a-real-signature") == "team-b"
+    assert cli._token_org_claim("tok-opaque-per-org") is None      # opaque membership token
+    assert cli._token_org_claim(None) is None
+    assert cli._token_org_claim("") is None
+
+
+def test_pick_active_org_prefers_the_tokens_baked_org(monkeypatch):
+    """Against an older server that marks nothing active for a team-pinned token, `_pick_active_org`
+    must land on the token's own org — not the first membership, which for a multi-team user is an
+    arbitrary other team (`treg login --token <superdesign key>` used to activate `oauth-test`)."""
+    import base64
+
+    class _Resp:
+        status_code = 200
+        def json(self):
+            return [{"slug": "first-team", "active": False}, {"slug": "second-team", "active": False}]
+
+    class _Client:
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+        def get(self, path): return _Resp()
+
+    monkeypatch.setattr(cli, "_client", lambda cfg: _Client())
+    payload = base64.urlsafe_b64encode(
+        json.dumps({"uid": 7, "exp": 9999999999, "tv": 0, "org": "second-team"}).encode()
+    ).decode().rstrip("=")
+    cfg = {"base_url": "http://x", "token": f"{payload}.sig", "active_org": None}
+    cli._pick_active_org(cfg)
+    assert cfg["active_org"] == "second-team"
+    # an opaque token (no claim) still falls back to the first membership
+    cfg = {"base_url": "http://x", "token": "tok-opaque", "active_org": None}
+    cli._pick_active_org(cfg)
+    assert cfg["active_org"] == "first-team"
 
 
 def test_client_sends_token_and_active_org(monkeypatch):

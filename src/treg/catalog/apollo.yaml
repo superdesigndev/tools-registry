@@ -16,8 +16,8 @@ source:
 # notices about exactly this. Do not "simplify" the path back.
 #
 # Billing (https://docs.apollo.io/docs/api-pricing): Apollo meters CREDITS, the per-month allowance
-# depends on the plan, and no public $/credit exists — so cost.value is null throughout and the
-# credit rule lives in cost.note. Three rules matter:
+# depends on the plan, and Apollo itself publishes no $/credit — costs below stay in credits and
+# convert through fx.yaml's credit_rates_usd.apollo (Basic-plan rate). Three rules matter:
 #   1. Enrichment charges only when credit-consuming data comes BACK. A miss costs 0.
 #   2. A mobile phone is eight times the price of an email: 1 credit for demographics or an email,
 #      +8 if a mobile is returned, hence Apollo's own "1-9 credits per person". `reveal_phone_number`
@@ -66,9 +66,9 @@ endpoints:
       unit: record
       source: docs
       source_url: https://www.apollo.io/pricing
-      checked: '2026-07-28'
-      confidence: inferred
-      note: '1-9 credits per person, charged only when credit-consuming data is returned: 1 credit for demographics or an email, plus 8 credits if a mobile phone comes back (reveal_phone_number defaults off). No match, no charge. Waterfall vendors may bill even on a miss. No public $/credit.'
+      checked: '2026-08-13'
+      confidence: documented
+      note: 'Metered at the 1-credit baseline treg calls with: reveal_phone_number and reveal_personal_emails both default false, so a default enrich consumes 1 credit for demographics or an email, charged only when credit-consuming data comes back (no match, no charge) — the same documented Basic-plan rate (fx.yaml credit_rates_usd.apollo) as apollo.companies.enrich. CAVEAT: a caller that sets reveal_phone_number=true consumes up to 9 credits (a mobile is +8, returned async to webhook_url) and is under-metered by the extra 8. Waterfall vendors may bill even on a miss.'
     docs_url: https://docs.apollo.io/reference/people-enrichment
 
   - id: apollo.people.search
@@ -191,9 +191,9 @@ endpoints:
       unit: record
       source: docs
       source_url: https://www.apollo.io/pricing
-      checked: '2026-07-28'
-      confidence: inferred
-      note: priced per person MATCHED in the batch on the same 1-9 credit scale as single enrichment (1 baseline, +8 if a mobile is revealed), not per call; unmatched rows are free.
+      checked: '2026-08-13'
+      confidence: documented
+      note: 'priced per person MATCHED in the batch on the same 1-credit baseline as single enrichment (apollo.people.enrich), +8 if a mobile is revealed, not per call; unmatched rows are free. CONFIRMED live 2026-08-13 the route matches (200, 1/1 person). Same documented Basic-plan rate as fx.yaml credit_rates_usd.apollo.'
     docs_url: https://docs.apollo.io/reference/bulk-people-enrichment
 
   - id: apollo.account.usage

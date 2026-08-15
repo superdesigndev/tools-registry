@@ -203,6 +203,13 @@ class CallRecord(SQLModel, table=True):
     # sha256 of endpoint_id + the canonicalized query + body — an identity for "the same call again".
     # Bodies are NEVER stored; this is the future cache key and the repeat-rate signal (plan phase 5).
     params_hash: str | None = Field(default=None, index=True)
+    # Set when TREG refused the call before a byte went upstream; NULL when the provider answered
+    # (whatever its status). Values: auth (bad/expired token) | policy (ACL/deny rule/suspension) |
+    # balance (402 insufficient prepaid balance) | cap (429 daily caps) | resolution (no such tool
+    # or endpoint) | request (malformed pre-relay: wrong method, missing param, bad body). What
+    # separates "the provider failed" from "we said no" — without it a paywall 402 is
+    # indistinguishable from a provider error, and provider stats absorb our own refusals.
+    refused_by: str | None = Field(default=None, index=True)
     created_at: datetime = Field(default_factory=_now)
 
 
@@ -710,3 +717,28 @@ class IdempotentCall(SQLModel, table=True):
     charged_micro: int = Field(default=0)
     created_at: datetime = Field(default_factory=_now)
     expires_at: datetime
+
+
+class ToolRequest(SQLModel, table=True):
+    """A "the catalog doesn't have X" report — filed from the catalog page, the CLI, or by an
+    agent mid-search over MCP. Demand signal for which provider to key next; reviewed by querying
+    this table (a Slack notifier may hang off the insert later, but the row is the record).
+
+    Deliberately anonymous-friendly: an agent that just got zero results usually holds no token,
+    and a signup wall here would cost us exactly the signal we want. So identity fields are
+    nullable, the endpoint is open, and per-IP rate limiting (ratestore) is the abuse valve.
+    """
+
+    id: int | None = Field(default=None, primary_key=True)
+    # Filled when the caller was authenticated (session or token); NULL for anonymous filings.
+    org_id: int | None = Field(default=None, foreign_key="org.id", index=True)
+    user_email: str = Field(default="")
+    # What they wanted: free-text capability/provider ("Ahrefs backlinks", "weather API"), plus the
+    # search query that came up empty — auto-filled by agents, the best dedup/priority signal.
+    capability: str = Field(index=True)
+    query: str = Field(default="")
+    note: str = Field(default="")
+    contact: str = Field(default="")  # optional reach-back (email/handle); free text, unverified
+    source: str = Field(default="web", index=True)  # web | cli | mcp | api
+    status: str = Field(default="open", index=True)  # open | done | dismissed — flipped by hand
+    created_at: datetime = Field(default_factory=_now, index=True)

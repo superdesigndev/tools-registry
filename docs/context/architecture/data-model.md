@@ -76,7 +76,22 @@ SQLModel tables in `src/treg/models.py`. Kept minimal on purpose. Org multi-tena
   `replaces_secret_id` (which existing connection this consent REPLACES — null = add a new one, so the
   callback no longer has to blanket-replace by provider).
 - **`CallRecord`** — the proxied-call audit row: `org_id`, `user_email`, `tool_name`, `method`, `path`,
-  `status_code`, `kind` (**`call`** = proxy `/call`, **`local_run`** = `/tools/{name}/grant`), `created_at`.
+  `status_code`, `kind` (**`call`** = proxy `/call`, **`local_run`** = `/tools/{name}/grant`), `created_at`,
+  and `refused_by` (migration A29, nullable): set when **treg itself refused the call before anything went
+  upstream** — `auth` | `policy` | `balance` | `cap` | `resolution` | `request` — and NULL whenever the
+  provider actually answered. Every `/call/` refusal now leaves a row: the in-handler audits stamp their own
+  kind, and refusals that raise **before** the handler's audit exists (bad token, unknown tool, ACL, deny
+  rule, daily cap) are recorded by a fallback in the `X-Treg-Error` exception handler — the one place every
+  refusal passes through — using the identity stashed in `request.state` (a bad-token 401 records
+  anonymously). It is what tells "the provider failed" apart from "we said no": a paywall 402 must not read
+  as a provider error, and `endpoint_stats` excludes refused rows entirely.
+- **`ToolRequest`** — a "the catalog doesn't have X" report (`POST /tool-requests`, open + per-IP
+  rate-limited): `capability` (the headline, ≤200 chars), `query` (the search that came up empty —
+  auto-filled by agents, the dedup/priority signal), `note`, `contact`, `source` (`web` | `cli` |
+  `mcp` | `api`), `status` (`open` | `done` | `dismissed`, flipped by hand), and **nullable**
+  `org_id`/`user_email` — identity is attribution when the caller happens to have one, never a
+  requirement, because the usual filer is an agent with zero results and no token. Reviewed by
+  querying the table; a Slack notifier may hang off the insert later, but the row is the record.
 - **`RunRecord`** — the **server-side run** audit row (a `treg run --server` CLI execution — the "kind"
   `server_run` in usage rollups): `org_id`, `user_email`, `bundle_name` (holds the **tool** name since the
   tool-side run unification; column name is historical), `argv` (JSON — never carries a secret value;

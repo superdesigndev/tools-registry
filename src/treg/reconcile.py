@@ -229,3 +229,82 @@ async def repeat_rate(db: AsyncSession, since: datetime, *, top: int = 10) -> di
         "repeat_ratio": round(totals_repeats / totals_calls, 4) if totals_calls else 0.0,
         "providers": providers, "top_repeated": top_repeated,
     }
+
+
+async def shared_plan_recovery(db: AsyncSession, since: datetime) -> dict:
+    """Fee versus collected, per provider whose rate TREG SET (fx.yaml `kind: treg_shared_plan`).
+
+    This is the monthly review's input (docs/SHARED-PLAN-PRICING-PLAN.md): a flat-fee subscription
+    has no vendor per-call price, so treg publishes its own rate with a stated break-even, and this
+    report is what keeps that rate honest over time. It REPORTS; a human edits fx.yaml. An
+    auto-adjusting price would move under an agent's feet mid-session, and a rate card that moves on
+    its own is not a rate card.
+
+    Three numbers and a suggestion per provider:
+      * `fee_micro`        — the subscription, from fx.yaml `fee_usd_month`, scaled to the window
+                             (a 30-day report on a monthly fee compares like with like; a 7-day one
+                             compares against a quarter of the fee, not all of it).
+      * `collected_micro`  — settled platform charges for the provider in the window.
+      * `recovery`         — collected / fee. 1.0 is break-even.
+      * `suggested_usd`    — fee ÷ measured calls: the rate at which THIS volume would break even.
+                             None when there were no calls, because $∞/call is not a suggestion.
+
+    The action field applies the review rule mechanically so the reviewer applies judgement, not
+    arithmetic: well over fee → "lower toward suggested"; well under → "raise toward suggested, or
+    demote to own-key-only"; near 1.0 → "on target". Thresholds are ±50%, wide on purpose — a
+    monthly hand edit should chase real drift, not noise.
+    """
+    catalog = _catalog().load()
+    plans = catalog.shared_plans
+    if not plans:
+        return {"providers": [], "note": "no shared-plan rates configured"}
+
+    window_days = max((datetime.now(timezone.utc).replace(tzinfo=None) - since).days, 1)
+    entries = (await db.execute(
+        select(LedgerEntry).where(LedgerEntry.kind == "settle", LedgerEntry.created_at >= since)
+    )).scalars().all()
+
+    per: dict[str, dict] = {}
+    for e in entries:
+        meta = e.meta or {}
+        provider = str(meta.get("provider") or "")
+        if provider not in plans:
+            continue
+        row = per.setdefault(provider, {"calls": 0, "collected_micro": 0})
+        row["calls"] += 1
+        row["collected_micro"] += abs(e.amount_micro or 0)
+
+    out = []
+    for provider, plan in sorted(plans.items()):
+        fee_month = float(plan.get("fee_usd_month") or 0)
+        fee_micro = int(round(fee_month * 1_000_000 * window_days / 30))
+        row = per.get(provider, {"calls": 0, "collected_micro": 0})
+        calls, collected = row["calls"], row["collected_micro"]
+        recovery = (collected / fee_micro) if fee_micro else None
+        suggested = round(fee_micro / calls / 1_000_000, 9) if calls else None
+        if recovery is None:
+            action = "no fee recorded — fix fx.yaml"
+        elif calls == 0:
+            action = "no calls — raise the question of demoting to own-key-only"
+        elif recovery > 1.5:
+            action = f"over-recovered — consider lowering toward ${suggested}"
+        elif recovery < 0.5:
+            action = f"under-recovered — raise toward ${suggested}, or demote to own-key-only"
+        else:
+            action = "on target"
+        out.append({
+            "provider": provider, "rate_usd": plan.get("usd"), "fee_usd_month": fee_month,
+            "window_days": window_days, "calls": calls,
+            "fee_micro": fee_micro, "collected_micro": collected,
+            "recovery": round(recovery, 4) if recovery is not None else None,
+            "suggested_usd": suggested, "action": action,
+        })
+    return {"providers": out}
+
+
+def _catalog():
+    """Deferred so reconcile stays importable without the catalog package in odd contexts, and so
+    tests can monkeypatch the module in one obvious place."""
+    from . import catalog_store
+
+    return catalog_store

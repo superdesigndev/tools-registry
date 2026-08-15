@@ -1,12 +1,12 @@
 # tools-registry — onboarding
 
 The bootstrap an agent (or human) follows to start calling shared tools and to share its own.
-The CLI is a thin client over the API at `https://treg.superdesign.dev`; the API is the only brain.
+The CLI is a thin client over the API at `https://treg.to`; the API is the only brain.
 
 ## 1. Install the CLI
 
 ```bash
-curl -fsSL https://treg.superdesign.dev/install.sh | sh   # installs `treg`, points it at the registry
+curl -fsSL https://treg.to/install.sh | sh   # installs `treg`, points it at the registry
 ```
 
 (Working from a clone instead? `uv sync && uv run treg --help`.)

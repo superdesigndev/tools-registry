@@ -139,7 +139,11 @@ files a skill folder is — `SKILL.md` (agent recipe: call the treg proxy, key i
 (so it targets whatever host is live — a dev box or the real domain). The script now installs from
 **PyPI** (`SRC="tools-registry"`, the light CLI package; the FastAPI/DB server stack is the separate
 `tools-registry[server]` extra for self-hosters) via `uv tool install --force` → `pipx install --force` →
-`pip3 install --user --upgrade`, then runs `treg config --base-url {BASE}`. It also installs the official
+`pip3 install --user --upgrade`, then runs `treg config --base-url {BASE}`. The uv/pipx paths pin the
+supported interpreter range (`PYREQ`, kept in sync with `requires-python` in `pyproject.toml`): without
+it uv resolves against its *default* interpreter — its own managed Python first — and a machine whose
+default falls outside the range fails resolution instead of picking (or auto-downloading) a compatible
+one. It also installs the official
 **tools-registry skill** into every detected agent via `treg skill bootstrap` (Claude Code, Cursor, Codex,
 Gemini, Copilot, OpenCode, Windsurf …), falling back on older CLIs to a Claude-only drop that curls
 `{BASE}/skill.md` into `~/.claude/skills/treg`. Because the package is public on PyPI,

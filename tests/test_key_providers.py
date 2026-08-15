@@ -137,3 +137,74 @@ async def test_key_connection_lists_and_revokes(clients: AsyncClient, monkeypatc
     listed = [c for c in (await clients.get("/connections")).json() if c["provider"] == "tikhub"]
     assert len(listed) == 1 and listed[0]["kind"] == "env"
     assert (await clients.delete(f"/connections/{listed[0]['id']}")).status_code == 200
+
+
+# ---- HTTP Basic providers: paste a raw pair OR a ready-made Base64 blob ----------------------
+async def test_basic_provider_encodes_a_raw_login_password_once(clients: AsyncClient, monkeypatch):
+    """DataForSEO/Moz take HTTP Basic. Pasting the raw `login:password`, treg Base64s it once and the
+    upstream sees `Basic <b64(login:password)>`."""
+    import base64
+    monkeypatch.setitem(P.REGISTRY, "dataforseo", dataclasses.replace(
+        P.REGISTRY["dataforseo"], base_url="http://upstream", probe_path="/whoami"))
+    r = await clients.post("/connections/token", json={"provider": "dataforseo", "token": "login:pw"})
+    assert r.status_code == 200, r.text
+    echoed = (await clients.get("/call/dataforseo/whoami")).json()["auth"]
+    assert echoed == "Basic " + base64.b64encode(b"login:pw").decode()
+
+
+async def test_basic_provider_accepts_a_ready_made_base64_blob(clients: AsyncClient, monkeypatch):
+    """The DataForSEO and Moz dashboards ALSO hand out a ready-made Base64 credential, and users paste
+    that at least as often as the raw pair. treg must NOT Base64 it a second time — the upstream has to
+    receive exactly `Basic <the pasted blob>`, decoding back to the original `login:password`."""
+    import base64
+    blob = base64.b64encode(b"login:pw").decode()
+    monkeypatch.setitem(P.REGISTRY, "dataforseo", dataclasses.replace(
+        P.REGISTRY["dataforseo"], base_url="http://upstream", probe_path="/whoami"))
+    r = await clients.post("/connections/token", json={"provider": "dataforseo", "token": blob})
+    assert r.status_code == 200, r.text
+    echoed = (await clients.get("/call/dataforseo/whoami")).json()["auth"]
+    assert echoed == "Basic " + blob, "a pasted Base64 blob must not be double-encoded"
+
+
+# ---- corrected probe shapes (regression guards for the 2026-08-13 connect-flow fixes) --------
+def test_brightdata_probe_is_a_real_route():
+    """The old /datasets/v3/datasets 404'd even for a valid token, refusing every real key. /status is
+    the free account check that answers 200 (valid) / 401 (bad)."""
+    assert P.get("brightdata").probe_path == "/status"
+
+
+def test_justoneapi_probe_uses_camelcase_uniqueid():
+    """snake_case unique_id made the API answer HTTP 400 ('must input one of them (uniqueId or
+    secUid)') and a VALID token was refused. The param is camelCase."""
+    assert "uniqueId=" in P.get("justoneapi").probe_path
+    assert "unique_id=" not in P.get("justoneapi").probe_path
+
+
+async def test_probe_parses_json_body_labelled_text_plain(clients: AsyncClient, monkeypatch):
+    """ScrapeCreators answers HTTP 200 with a JSON body but a text/plain content-type; validity lives
+    in creditCount. Gating the parse on application/json left the field unread and refused a good key."""
+    monkeypatch.setitem(P.REGISTRY, "scrapecreators", dataclasses.replace(
+        P.REGISTRY["scrapecreators"], base_url="http://upstream",
+        probe_path="/credit-json-as-text", token_verify_field="creditCount"))
+    r = await clients.post("/connections/token", json={"provider": "scrapecreators", "token": "sc-key"})
+    assert r.status_code == 200, r.text
+
+
+async def test_probe_keeps_a_query_string_baked_into_probe_path(clients: AsyncClient, monkeypatch):
+    """A probe_path like `/autocomplete?field=title` must reach the upstream WITH that query — httpx
+    drops a URL's own query when params= is passed, which used to 400 the probe and refuse the key."""
+    monkeypatch.setitem(P.REGISTRY, "pdl", dataclasses.replace(
+        P.REGISTRY["pdl"], base_url="http://upstream",
+        probe_path="/needs-query?field=title&text=data", token_verify_field=""))
+    r = await clients.post("/connections/token", json={"provider": "pdl", "token": "pdl-key"})
+    assert r.status_code == 200, r.text
+
+
+async def test_query_token_survives_alongside_a_probe_path_query(clients: AsyncClient, monkeypatch):
+    """A query-credential provider (SpyFu: ?api_key=) whose probe_path ALSO carries a required query
+    (?domain=) must send both — the merge keeps the path's params and adds the credential on top."""
+    monkeypatch.setitem(P.REGISTRY, "spyfu", dataclasses.replace(
+        P.REGISTRY["spyfu"], base_url="http://upstream",
+        probe_path="/needs-query?field=title", token_verify_field=""))
+    r = await clients.post("/connections/token", json={"provider": "spyfu", "token": "spyfu-secret"})
+    assert r.status_code == 200, r.text

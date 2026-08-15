@@ -110,6 +110,22 @@ def make_upstream(hook_hits: list | None = None) -> FastAPI:
         ok = "good" in request.headers.get("x-api-key", "")
         return {"healthy": True, "is_logged_in": ok}
 
+    @up.get("/credit-json-as-text")
+    async def credit_json_as_text(request: Request):
+        # Emulates ScrapeCreators: a real JSON body served with a text/plain content-type. The probe
+        # must parse it anyway to read token_verify_field, not gate on the mislabelled header.
+        from fastapi.responses import PlainTextResponse
+        return PlainTextResponse('{"success":true,"creditCount":17220}')
+
+    @up.get("/needs-query")
+    async def needs_query(request: Request):
+        # Emulates PDL/Akta/JustOneAPI/SpyFu: a probe_path with a required ?query. httpx drops a URL's
+        # own query when params= is passed, so a valid key 400'd until the query was merged into params.
+        if not request.query_params.get("field"):
+            from fastapi.responses import JSONResponse
+            return JSONResponse({"message": "field is required"}, status_code=400)
+        return {"ok": True}
+
     @up.api_route("/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
     async def echo(request: Request) -> dict:
         body = (await request.body()).decode()
