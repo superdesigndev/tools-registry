@@ -46,6 +46,7 @@ platforms:
   apple-music: {label: "Apple Music", category: "Social", summary: "Public artists, albums, tracks and search from Apple Music."}
   soundcloud: {label: "SoundCloud", category: "Social", summary: "Artists, tracks and uploads from SoundCloud."}
   linkinbio: {label: "Link-in-bio pages (Linktree, Komi, Link.me, Pillar…)", category: "Social", summary: "The links a creator lists on their link-in-bio page, across Linktree-style services."}
+  shortform: {label: "Short-form video (cross-platform)", category: "Social", summary: "Cross-platform short-form intelligence — trends, viral videos, sounds and hashtag performance aggregated across TikTok, Instagram Reels and YouTube Shorts."}
 
   # --- Developer: code hosting & developer platforms -------------------------------------------
   github: {label: "GitHub", category: "Developer", summary: "Public repos, users, contributions and trending pages from GitHub."}
