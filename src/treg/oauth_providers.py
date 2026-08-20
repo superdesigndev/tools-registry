@@ -2224,7 +2224,12 @@ LETSFG = OAuthProvider(
     setup_note=(
         "Flight search is billed per call on a monthly ladder ($0.50 for the first 10 searches "
         "each month, $0.20 to 1,000, $0.10 beyond). Parsing, location lookup, provider listing "
-        "and the account check are free; hotel search is free up to 1,000 searches per booking."
+        "and the account check are free; hotel search is free up to 1,000 searches per booking. "
+        "LetsFG also runs a FREE agent lane on a different host and credential "
+        "(letsfg.co/api with a Bearer token, enrol at letsfg.co/for-agents) which powers their "
+        "own MCP server and CLI — it is not reachable through this connection, and it is "
+        "capped at 3 searches per 10 minutes / 25 per day, so it suits a personal CLI rather "
+        "than an agent doing scheduled work."
     ),
     auth_uri="", token_uri="",
     scopes={},

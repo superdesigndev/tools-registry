@@ -11,6 +11,45 @@ source:
 # self-serve and instant (POST /agents/register, email only, no card, no sales call); a card is
 # attached later, only when moving off the free sandbox.
 #
+# ---------------------------------------------------------------------------------------------
+# TWO WAYS IN, AND THIS ENTRY IS THE PAID ONE. LetsFG sells the same flight engine through two
+# separate credentials. Everything catalogued below is the DEVELOPER API. The other lane is free
+# and is described here so you can choose deliberately rather than discover it by accident.
+#
+#   1. DEVELOPER API  (this entry)  https://letsfg.co/developers/api/v1   X-API-Key: <key>
+#      Paid per search on a monthly ladder, prepaid USD balance, no published per-key rate limit.
+#      Register with an email and get a key instantly. This is the lane to use from treg: the key
+#      pastes in, the price is published and meterable, and GET /agents/me is a free probe.
+#
+#   2. FREE AGENT LANE, "PFS"       https://letsfg.co/api                 Authorization: Bearer <token>
+#      Search costs nothing. It powers LetsFG's own MCP server, CLI and the PyPI/npm packages.
+#      Enrol at POST /api/agent-access/request (answer with a card via Stripe setup-mode, which is
+#      a zero-amount authorisation and never charges, or pay $0.01 once over MPP), then
+#      POST /api/agent-access/verify to receive a token valid 90 days. The lane is three
+#      endpoints: POST /api/search, GET /api/results/{search_id}, POST /api/agent-book.
+#      Docs: https://letsfg.co/for-agents
+#
+# WHY THE FREE LANE IS NOT CATALOGUED AS CALLABLE ENDPOINTS. Three reasons, all structural:
+#   - It is on a DIFFERENT HOST than this provider's base_url (letsfg.co/api, not
+#     letsfg.co/developers/api/v1) and treg resolves every endpoint path against base_url, so those
+#     routes could be written down here but could not be called through the proxy.
+#   - It has no free probe endpoint. There is no /agents/me equivalent on that lane; the cheapest
+#     call is POST /api/search, which is the expensive operation itself.
+#   - Its 401 does not discriminate. A bad token and a MISSING token both answer
+#     `401 {"error":"Unauthorized","code":"NO_SESSION"}` byte-for-byte (checked 2026-08-20), so a
+#     probe cannot tell "this team's token expired" from "no credential was attached" -- which is
+#     exactly the distinction a marketplace has to show its user.
+#
+# AND ONE CAVEAT WORTH MORE THAN THE OTHERS: letsfg.co/for-agents advertises free-lane search as
+# "FREE, unlimited". It is free, but it is NOT unlimited -- the token store enforces 3 searches per
+# 10 minutes, 10 per hour and 25 per 24 hours per token. An agent that fans out will meet a 429
+# quickly. The paid lane catalogued below has no such per-key cap, which is the practical reason to
+# prefer it for anything doing real work.
+#
+# So: use the free lane for a personal CLI, an MCP server on one machine, or trying the engine out;
+# use this entry for an agent doing work on a schedule.
+# ---------------------------------------------------------------------------------------------
+#
 # BILLING — read this before trusting a `cost` block below. LetsFG's own docs speak in "credits",
 # but a credit has no fixed price: flight search is billed on a MONTHLY VOLUME LADDER, $0.50 per
 # search for the first 10 each calendar month, $0.20 for searches 11-1,000, and $0.10 from 1,001
