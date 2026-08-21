@@ -46,6 +46,7 @@ platforms:
   apple-music: {label: "Apple Music", category: "Social", summary: "Public artists, albums, tracks and search from Apple Music."}
   soundcloud: {label: "SoundCloud", category: "Social", summary: "Artists, tracks and uploads from SoundCloud."}
   linkinbio: {label: "Link-in-bio pages (Linktree, Komi, Link.me, Pillar…)", category: "Social", summary: "The links a creator lists on their link-in-bio page, across Linktree-style services."}
+  social-publishing: {label: "Cross-platform social publishing", category: "Social", summary: "Schedule and publish to your own accounts across many social networks through one scheduler API — one call, all platforms."}
 
   # --- Developer: code hosting & developer platforms -------------------------------------------
   github: {label: "GitHub", category: "Developer", summary: "Public repos, users, contributions and trending pages from GitHub."}
