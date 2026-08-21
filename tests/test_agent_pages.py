@@ -343,8 +343,13 @@ async def test_use_cases_hub_lists_every_written_page(clients: AsyncClient):
     assert '<a href="/use-cases">' in (await clients.get(USECASE)).text   # breadcrumb points here
 
 
-@pytest.mark.parametrize("path", ["/agents/chatgpt", "/agents/claude", "/agents/claude-code",
-                                  "/agents/cursor", "/use-cases", USECASE])
+# Every page that ships, not a hand-kept list: this set grows by 59 as the use-case pages land, and
+# a title that overflows is invisible in exactly the way nobody notices during review.
+ALL_PAGES = ([f"/agents/{a}" for a in agent_pages.AGENTS] + ["/use-cases"]
+             + [f"/use-cases/{c}/{j}" for c, j in agent_pages.USE_CASE_PAGES])
+
+
+@pytest.mark.parametrize("path", ALL_PAGES)
 async def test_titles_and_descriptions_fit_a_search_result(clients: AsyncClient, path: str):
     """Google prints roughly 60 characters of a title and 155 of a description; past that it cuts
     mid-word, and the cut usually lands on the part that would have made someone click."""
@@ -354,3 +359,32 @@ async def test_titles_and_descriptions_fit_a_search_result(clients: AsyncClient,
     assert len(title) <= 65, f"{path}: title {len(title)} chars: {title}"
     assert len(desc) <= 160, f"{path}: description {len(desc)} chars"
     assert desc.rstrip().endswith((".", "?", "!")), f"{path}: description cut mid-sentence: …{desc[-40:]}"
+
+
+@pytest.mark.parametrize("key", list(agent_pages.USE_CASE_PAGES))
+def test_no_use_case_page_ships_with_an_empty_section(key):
+    """The template renders whatever the spec holds, so a missing field is a heading with nothing
+    under it rather than an error. The counts are the house shape: 4 reasons, 3 notes, 4 FAQ."""
+    spec = agent_pages.USE_CASE_PAGES[key]
+    for field in ("label", "sentence", "title", "lede", "prompt", "what_is"):
+        assert spec.get(field), (key, field)
+    assert len(spec["prompt_why"]) == 4, (key, "prompt_why")
+    assert len(spec["notes"]) == 3, (key, "notes")
+    assert len(spec["faq"]) == 4, (key, "faq")
+    assert len(spec["related"]) == 4, (key, "related")
+    # the voices section is optional, but half of one is a heading over nothing
+    assert bool(spec.get("voices")) == bool(spec.get("voices_intro")), (key, "voices without intro")
+    for v in spec.get("voices") or ():
+        heading, quote, who, url, answer = v
+        assert all((heading, quote, who, url, answer)), (key, heading)
+        assert url.startswith("https://"), (key, url)
+        assert len(quote.split()) <= 25, (key, "quote over 25 words", quote)
+
+
+def test_related_links_point_at_jobs_that_exist():
+    """`related` is rendered as links to other pages. A label that is not on the menu is a 404, and
+    the four ad landing pages already taught us that a dead internal link is never noticed."""
+    menu = {lbl for _, jobs in agent_pages.USE_CASES for lbl, _ in jobs}
+    for key, spec in agent_pages.USE_CASE_PAGES.items():
+        for label in spec["related"]:
+            assert label in menu, (key, label)

@@ -49,6 +49,30 @@ Only if wave 1 indexes. Each is one pricing/comparison page plus its three or fo
   These are single-provider pages, so they follow the **short form**: prompt, why it works, connect
   steps, params, one call, FAQ. No comparison section.
 
+### Wave 2 progress
+
+**YouTube & video shipped 2026-08-21** (5 pages, not the 4 planned: `video-details-views-and-stats`
+came along because the quota argument is the same argument). Measured US volume behind the titles,
+via the free own-key Google Ads endpoint: `youtube transcript` 110,000 · `get youtube transcript`
+2,400 · `youtube channel stats` 1,300 · `youtube data api` 1,000 · `youtube transcript api` 880 ·
+`youtube video statistics` 590 · `youtube keyword search tool` 480 · `youtube scraper` 390 ·
+`youtube comment scraper` 210 · `youtube search api` 170 · `youtube mcp server` 140. Dead, do not
+target: `youtube video stats api` (0), `youtube channel data api` (0), `youtube subscriber count
+api` (10), `youtube video details api` (10), `youtube metadata api` (10), `youtube channel api` (30).
+The pattern from the enrichment pass holds: buyers type the **thing plus a verb** ("get youtube
+transcript") or **scraper**, not `<thing> api`, except where the thing is a named product
+(`youtube data api`).
+
+Two remain in the cluster for the next run: `trending-videos` and `transcripts-of-x-and-facebook-video-posts`.
+
+**Catalog gap found, needs a human.** `tikhub.x.youtube-web-search-channel` is mapped to capability
+`youtube.search.channels`, but it searches *within* one channel by id ("Search within a YouTube
+channel by keyword"), which is a different job from finding channels by keyword. It renders as a row
+on `/use-cases/youtube-video/search-videos-and-channels-by-keyword`, where the page's FAQ now names
+the distinction rather than papering over it. The real cross-channel search is
+`tikhub.x.youtube-web-v2-search-channels`. Either remap the endpoint or give within-channel search
+its own capability.
+
 ## Wave 3 — the rest, ordered by demand, not by catalog size (weeks 5+)
 
 SEO (8 jobs) · Social (9) · Local businesses (4) · Finance (7) · E-commerce (4) · Advertising (3) ·

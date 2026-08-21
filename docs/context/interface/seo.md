@@ -301,7 +301,24 @@ its page. `tests/test_agent_pages.py` asserts the route source contains no job-s
 verbatim with a link, each followed by what the page can honestly do about it (including "no
 comparison table can answer this"). The `.agents/skills/treg-page` skill runs that research with
 `agent-reach` before any page is written, and documents how to spot the vendor astroturf that
-dominates these searches.
+dominates these searches. It is not decoration: on the YouTube pass roughly half the corpus was
+vendor-written, thirteen distinguishable clusters, one posting the same body to three subreddits
+seven seconds apart. `voices` renders in HTML and in the `.md` mirror, and is optional in the spec
+(two of the first seven pages ship without it), so `test_no_use_case_page_ships_with_an_empty_section`
+requires `voices` and `voices_intro` together rather than requiring either.
+
+**The section order is comparison, then voices, then notes, then FAQ.** Copy inside `voices`,
+`notes` and `faq` that says "the comparison below" is pointing backwards; the first written pages
+say it anyway. Write position-neutral ("the comparison above", "the prices here") or the sentence
+is wrong for every reader who scrolls.
+
+**Written so far: 12 of the 66 jobs.** The YouTube & video cluster (transcript, video stats, channel
+stats, search, comments) landed 2026-08-21 and is the first `compare`-form cluster where one row is
+free: the official Data API on the reader's own connected Google account, at $0.00 with a 10,000
+unit daily quota. The free row is deliberately excluded from the "cheapest per unit" claim, because
+`_uc_providers` only ranks rows with a truthy USD price, and a free-but-rationed row is not a
+cheaper version of a metered one. Those pages carry the quota arithmetic instead, which is what the
+research said people actually get stuck on.
 
 Nested under the category on purpose: the five flat ad pages keep their URLs and `build_html.py`
 ownership, and `test_legacy_flat_use_case_pages_still_answer` proves the nested route cannot shadow
