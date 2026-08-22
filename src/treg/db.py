@@ -24,7 +24,12 @@ from .config import get_settings
 _db_url = get_settings().database_url
 _engine_kwargs: dict = {"future": True}
 if "sqlite" not in _db_url:
-    _engine_kwargs.update(pool_pre_ping=True, pool_recycle=300, pool_size=20, max_overflow=40)
+    # 5+10, not the 20+40 this shipped with. The pool is PER INSTANCE, and a rolling deploy runs two
+    # instances against one Postgres — 60 each meant 120 potential connections against a basic-plan
+    # ceiling of ~100, so a deploy could starve the database with no bug anywhere. 15 is generous for
+    # an async app on this plan; saturation now surfaces as our own pool queueing (visible, bounded)
+    # rather than Postgres refusing connections for everyone (the 2026-08-15 outage).
+    _engine_kwargs.update(pool_pre_ping=True, pool_recycle=300, pool_size=5, max_overflow=10)
 _engine = create_async_engine(_db_url, **_engine_kwargs)
 # Public: the audit writer opens its own session here (off the request path — rule #2).
 session_maker = async_sessionmaker(_engine, class_=AsyncSession, expire_on_commit=False)
@@ -54,6 +59,16 @@ async def init_db() -> None:
 
     async with _engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
+        # Fail FAST if a migration cannot get its lock, instead of stopping the world. An ALTER on a
+        # hot table (callrecord is written by every call) needs an ACCESS EXCLUSIVE lock; without a
+        # lock_timeout it queues behind live traffic, and every NEW query then queues behind the
+        # waiting ALTER — both instances starve, the health check fails, and the shared database is
+        # left wedged for the instance that was healthy (the 2026-08-15 outage, root cause).
+        # With the timeout, a contended deploy FAILS CLEANLY in seconds: prod keeps serving on the
+        # old code, nothing is wedged, and the deploy is simply retried at a quieter moment.
+        if _engine.dialect.name == "postgresql":
+            await conn.execute(text("SET lock_timeout = '5s'"))
+            await conn.execute(text("SET statement_timeout = '120s'"))
         await conn.run_sync(_migrate_to_orgs)
 
 
@@ -284,6 +299,123 @@ def _migrate_to_orgs(conn) -> None:
     if "callrecord" in tables and "refused_by" not in {c["name"] for c in insp.get_columns("callrecord")}:
         conn.execute(text("ALTER TABLE callrecord ADD COLUMN refused_by VARCHAR"))
 
+    # (A30) additive: callrecord caller tags — the X-Treg-Meta bag a reselling builder stamps on each
+    # call, plus the indexed copy of the primary dimension. NOT NULL DEFAULT '' rather than nullable:
+    # "" is the untagged sentinel everywhere in this feature, and a NULL would be distinct from it in
+    # any index built over these columns. `tags` stays nullable — NULL means "no bag at all", which is
+    # every row written before this shipped.
+    if "callrecord" in tables:
+        cols = {c["name"] for c in insp.get_columns("callrecord")}
+        for col, ddl in (
+            ("call_ref", "VARCHAR NOT NULL DEFAULT ''"),
+            ("budget_dim", "VARCHAR NOT NULL DEFAULT ''"),
+            ("budget_val", "VARCHAR NOT NULL DEFAULT ''"),
+            ("tags", "JSON"),
+        ):
+            if col not in cols:
+                conn.execute(text(f"ALTER TABLE callrecord ADD COLUMN {col} {ddl}"))
+
+    # (A31) additive: org-level caller-tag settings — which keys may carry a budget, which one scopes
+    # idempotency, and the team's own daily spend ceiling. `daily_cap_micro` is 0 ("use the deployment
+    # default") rather than the default itself, so raising the platform default later reaches every
+    # team that never set one instead of freezing them at today's number.
+    if "org" in tables:
+        cols = {c["name"] for c in insp.get_columns("org")}
+        for col, ddl in (
+            ("budget_dims", "JSON"),
+            ("primary_dim", "VARCHAR NOT NULL DEFAULT 'customer'"),
+            ("daily_cap_micro", "INTEGER NOT NULL DEFAULT 0"),
+        ):
+            if col not in cols:
+                conn.execute(text(f'ALTER TABLE org ADD COLUMN {col} {ddl}'))
+
+    # (A32) additive: membership.pinned_tags — a token minted for ONE customer/workspace. Nullable:
+    # NULL means unpinned, which is every token that existed before this shipped.
+    if "membership" in tables and "pinned_tags" not in {c["name"] for c in insp.get_columns("membership")}:
+        conn.execute(text("ALTER TABLE membership ADD COLUMN pinned_tags JSON"))
+
+    # (A33) additive: idempotentcall.call_ref — the X-Treg-Call-Id of the original call, so a
+    # replay returns the id that owns the money instead of one for work that never ran.
+    if "idempotentcall" in tables and "call_ref" not in {c["name"] for c in insp.get_columns("idempotentcall")}:
+        conn.execute(text("ALTER TABLE idempotentcall ADD COLUMN call_ref VARCHAR NOT NULL DEFAULT ''"))
+
+    # (A34) additive: tagbudget.auto — separates registry bookkeeping from a human-set limit.
+    # `create_all` builds the column on a fresh database; this is for one created earlier in this
+    # feature's life, where the table exists without it.
+    if "tagbudget" in tables and "auto" not in {c["name"] for c in insp.get_columns("tagbudget")}:
+        _ensure_bool_col(conn, insp, tables, "tagbudget", "auto")
+        # Backfill by MEANING, not by the column default. A row that caps nothing, throttles nothing
+        # and blocks nobody was written by the registry on first sight of a value, never by a person.
+        # Left as `auto = false` it would count as an override — and an override with no caps is
+        # unlimited, so every value seen before this shipped would have been silently exempt from its
+        # dimension's default.
+        conn.execute(text(
+            "UPDATE tagbudget SET auto = true WHERE daily_cap_micro IS NULL "
+            "AND monthly_cap_micro IS NULL AND calls_per_day < 0 AND status = 'active' "
+            "AND (note IS NULL OR note = '')"))
+
+    # (A35) split mutable OAuth grant authority from immutable refresh-token provenance. create_all
+    # makes the new table; this backfill gives every existing family the team and consent timestamp
+    # from its oldest (consent) row. INSERT ... WHERE NOT EXISTS is portable and idempotent on both
+    # SQLite and Postgres, including a deploy restarted after the table was created but not filled.
+    if "oauthgrant" in tables and "oauthrefresh" in tables:
+        conn.execute(text(
+            "INSERT INTO oauthgrant (family_id, current_org_id, granted_at) "
+            "SELECT r.family_id, r.org_id, r.created_at FROM oauthrefresh r "
+            "WHERE r.id = (SELECT MIN(r0.id) FROM oauthrefresh r0 "
+            "WHERE r0.family_id = r.family_id) "
+            "AND NOT EXISTS (SELECT 1 FROM oauthgrant g WHERE g.family_id = r.family_id)"))
+
+    # (A36) additive: callrecord.error_request / error_response — the redacted, truncated evidence
+    # kept for a FAILED platform-tier call so a provider error can be diagnosed after the fact (see
+    # models.CallRecord). NULLABLE with no default: NULL means "nothing captured", which is correct
+    # for every pre-existing row and for every successful or own-key call written after this ships.
+    # VARCHAR, matching every other additive column here — TEXT is not portability-checked by
+    # tests/test_migration_ddl.py.
+    # Renumbered from (A35) on merge: main took that number for the OAuth-grant backfill above, and
+    # two blocks sharing a tag would make the next collision impossible to talk about.
+    if "callrecord" in tables:
+        cols = {c["name"] for c in insp.get_columns("callrecord")}
+        for col in ("error_request", "error_response"):
+            if col not in cols:
+                conn.execute(text(f"ALTER TABLE callrecord ADD COLUMN {col} VARCHAR"))
+
+    # (A37) additive: org ad-attribution columns + first_call_at. `create_all` builds them on a
+    # fresh database; this is for one created before this feature shipped. All nullable, so no
+    # backfill is meaningful — a team that predates the ads work has no click to attribute to.
+    if "org" in tables:
+        org_cols = {c["name"] for c in insp.get_columns("org")}
+        for col, ddl in (("ad_gclid", "VARCHAR"), ("ad_click_id_type", "VARCHAR"),
+                         ("ad_click_at", "TIMESTAMP"),
+                         ("ad_landing", "VARCHAR"), ("first_call_at", "TIMESTAMP")):
+            if col not in org_cols:
+                conn.execute(text(f"ALTER TABLE org ADD COLUMN {col} {ddl}"))
+
+    # (A38) additive: durable retry/dead-letter state for the Ads conversion outbox. The table may
+    # already exist from the first conversion-tracking deploy; create_all does not add new columns.
+    if "adconversion" in tables:
+        conv_cols = {c["name"] for c in insp.get_columns("adconversion")}
+        for col in ("next_attempt_at", "failed_at"):
+            if col not in conv_cols:
+                conn.execute(text(f"ALTER TABLE adconversion ADD COLUMN {col} TIMESTAMP"))
+
+    # (A39) additive: user.referral_code — this person's `?ref=` code (see referrals.py). NULLABLE
+    # with no default: it is minted lazily the first time someone opens the Referrals page, so NULL
+    # ("never asked for one") is the correct and overwhelmingly common state. "user" is QUOTED — a
+    # reserved word in Postgres, and this ALTER runs in place on the live PG database.
+    #
+    # The UNIQUE index is created separately and NOT as a column constraint: `create_all` already
+    # built it on a fresh database, so this branch only runs where the table predates the feature,
+    # and IF NOT EXISTS keeps it idempotent across a restarted deploy. The `referral` table itself
+    # needs nothing here — create_all makes a brand-new table for free.
+    #
+    # Renumbered from (A37) on merge: main took 37 and 38 for the ad-attribution work above, and two
+    # blocks sharing a tag would make the next collision impossible to talk about.
+    if "user" in tables and "referral_code" not in {c["name"] for c in insp.get_columns("user")}:
+        conn.execute(text('ALTER TABLE "user" ADD COLUMN referral_code VARCHAR'))
+        conn.execute(text(
+            'CREATE UNIQUE INDEX IF NOT EXISTS ix_user_referral_code ON "user" (referral_code)'))
+
     # (A28) corrective: creditblock.stripe_payment_intent must be UNIQUE (the top-up idempotency
     # key). It sits HERE, above the (B) block, because (B) returns early on a fresh/new-schema DB —
     # and a fresh DB created between the ledger landing and this fix is precisely the one that has
@@ -310,10 +442,15 @@ def _migrate_to_orgs(conn) -> None:
             # balance_micro and the autotopup_* columns are explicit for the same reason
             # daily_call_cap is below: create_all builds them NOT NULL with no SERVER default, so a raw
             # INSERT must supply the model's default (zero balance, auto-top-up off, no failures).
+            # Every NOT NULL column is named explicitly, `primary_dim` and `daily_cap_micro` included:
+            # a column `create_all` built from a SQLModel default is NOT NULL with NO server default
+            # (the default lives in Python, and this is raw SQL). See ops/deploy.md §migration portability.
             text("INSERT INTO org (name, slug, suspended, demo, public_demo, balance_micro, "
                  "autotopup_enabled, autotopup_threshold_micro, autotopup_amount_micro, "
-                 "autotopup_monthly_cap_micro, autotopup_failures, created_at) "
-                 "VALUES ('superdesign', 'superdesign', false, false, false, 0, false, 0, 0, 0, 0, :t)"),
+                 "autotopup_monthly_cap_micro, autotopup_failures, primary_dim, daily_cap_micro, "
+                 "created_at) "
+                 "VALUES ('superdesign', 'superdesign', false, false, false, 0, false, 0, 0, 0, 0, "
+                 "'customer', 0, :t)"),
             {"t": now},
         )
         org_id = conn.execute(text("SELECT id FROM org WHERE slug = 'superdesign'")).scalar()

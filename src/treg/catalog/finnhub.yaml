@@ -1,0 +1,99 @@
+provider: finnhub
+source:
+  docs: https://finnhub.io/docs/api
+  openapi: null # paths transcribed and live-verified 2026-08-15 (free tier, 60 req/min)
+  curated: 2026-08-15
+# TRIAL POOL + own-key: treg holds only Finnhub's free key, and their free tier is licensed for personal,
+# non-commercial use; the commercial All-In-One is $3,500/mo billed annually (research doc,
+# licensing table). No fx rate -> usd null -> platform_eligible FALSE by construction. A team pasting
+# its own Finnhub key gets everything at their own tier's limits.
+pricing_url: https://finnhub.io/pricing
+endpoints:
+  - id: finnhub.quote
+    domain: stocks
+    capability: stocks.quote.live
+    platform: stocks
+    scope: any_account
+    method: GET
+    path: /quote
+    name: "Real-time stock quote by ticker — price, day change"
+    summary: "Current price, day change, open/high/low and previous close for a US ticker"
+    input:
+      queryParams:
+        symbol: {type: string, required: true, example: "AAPL"}
+    test_request: {queryParams: {symbol: "AAPL"}}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, source_url: "https://finnhub.io/pricing", checked: "2026-08-15", confidence: documented, note: "$0 on treg's key: a TRIAL POOL of 50 calls per team per day served on treg's free-tier finnhub key (fx.yaml kind: treg_trial). Past the allowance the call is refused with a connect-your-own-key hint. With your own key: unmetered, your plan's limits"}
+    verified: 2026-08-15
+    example_response: examples/finnhub.quote.json
+    docs_url: https://finnhub.io/docs/api/quote
+  - id: finnhub.company.profile
+    domain: stocks
+    capability: stocks.company.profile
+    platform: stocks
+    scope: any_account
+    method: GET
+    path: /stock/profile2
+    name: "Company profile by stock ticker — industry, market cap"
+    summary: "Company behind a ticker: name, industry, market cap, IPO date, logo and weburl"
+    input:
+      queryParams:
+        symbol: {type: string, required: true, example: "AAPL"}
+    test_request: {queryParams: {symbol: "AAPL"}}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, source_url: "https://finnhub.io/pricing", checked: "2026-08-15", confidence: documented, note: "$0 on treg's key: a TRIAL POOL of 50 calls per team per day served on treg's free-tier finnhub key (fx.yaml kind: treg_trial). Past the allowance the call is refused with a connect-your-own-key hint. With your own key: unmetered, your plan's limits"}
+    verified: 2026-08-15
+    example_response: examples/finnhub.company.profile.json
+    docs_url: https://finnhub.io/docs/api/company-profile2
+  - id: finnhub.symbol.search
+    domain: stocks
+    capability: stocks.tickers.search
+    platform: stocks
+    scope: any_account
+    method: GET
+    path: /search
+    name: "Search stock ticker symbols by company name"
+    summary: "Resolve a company name or fragment to tradable symbols"
+    input:
+      queryParams:
+        q: {type: string, required: true, example: "apple"}
+    test_request: {queryParams: {q: "apple"}}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, source_url: "https://finnhub.io/pricing", checked: "2026-08-15", confidence: documented, note: "$0 on treg's key: a TRIAL POOL of 50 calls per team per day served on treg's free-tier finnhub key (fx.yaml kind: treg_trial). Past the allowance the call is refused with a connect-your-own-key hint. With your own key: unmetered, your plan's limits"}
+    verified: 2026-08-15
+    example_response: examples/finnhub.symbol.search.json
+    docs_url: https://finnhub.io/docs/api/symbol-search
+  - id: finnhub.company.news
+    domain: stocks
+    capability: stocks.company.news
+    platform: stocks
+    scope: any_account
+    method: GET
+    path: /company-news
+    name: "Company news by stock ticker over a date range"
+    summary: "News articles for one company over a date range"
+    input:
+      queryParams:
+        symbol: {type: string, required: true, example: "AAPL"}
+        from: {type: string, required: true, note: "YYYY-MM-DD", example: "2026-08-10"}
+        to: {type: string, required: true, note: "YYYY-MM-DD", example: "2026-08-15"}
+    test_request: {queryParams: {symbol: "AAPL", from: "2026-08-10", to: "2026-08-15"}}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, source_url: "https://finnhub.io/pricing", checked: "2026-08-15", confidence: documented, note: "$0 on treg's key: a TRIAL POOL of 50 calls per team per day served on treg's free-tier finnhub key (fx.yaml kind: treg_trial). Past the allowance the call is refused with a connect-your-own-key hint. With your own key: unmetered, your plan's limits"}
+    verified: 2026-08-15
+    example_response: examples/finnhub.company.news.json
+    docs_url: https://finnhub.io/docs/api/company-news
+  - id: finnhub.metrics.basic
+    domain: stocks
+    capability: stocks.fundamentals.metrics
+    platform: stocks
+    scope: any_account
+    method: GET
+    path: /stock/metric
+    name: "Stock fundamentals by ticker — P/E, margins, 52-week range"
+    summary: "Valuation, margin, growth and per-share metrics for a ticker (P/E, 52-week range, beta and more)"
+    input:
+      queryParams:
+        symbol: {type: string, required: true, example: "AAPL"}
+        metric: {type: string, required: true, note: "all", example: "all"}
+    test_request: {queryParams: {symbol: "AAPL", metric: "all"}}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, source_url: "https://finnhub.io/pricing", checked: "2026-08-15", confidence: documented, note: "$0 on treg's key: a TRIAL POOL of 50 calls per team per day served on treg's free-tier finnhub key (fx.yaml kind: treg_trial). Past the allowance the call is refused with a connect-your-own-key hint. With your own key: unmetered, your plan's limits"}
+    verified: 2026-08-15
+    example_response: examples/finnhub.metrics.basic.json
+    docs_url: https://finnhub.io/docs/api/company-basic-financials

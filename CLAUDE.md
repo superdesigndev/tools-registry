@@ -5,7 +5,7 @@ job — without owning the API keys.
 
 Two halves answer the same token, through the same `/call/`:
 
-- **The catalog** — ~2,600 curated external endpoints across ~40 providers (SEO and backlinks, social
+- **The catalog** — ~2,850 curated external endpoints across ~57 providers (SEO and backlinks, social
   and trends, people and company enrichment, ads, scraping). treg can serve eligible ones **on its own
   key**, metered per call from the team's prepaid balance ($1.00 free per new team). No provider signup.
 - **Your own tools** — what a teammate registered: a paid API account, an OAuth connection, a vendor
@@ -32,7 +32,7 @@ which was the older security-led pitch; "marketplace" implies buying and sellers
 infrastructure language that says nothing about what a user can now do.
 
 Phrase everything as **what the agent can now do**, not what we store. The test: *"your team's shared
-vault of skills and secrets"* fails it; *"2,600 tools your agent can call, plus your own"* passes.
+vault of skills and secrets"* fails it; *"2,800 tools your agent can call, plus your own"* passes.
 
 ## Do not document what is not built
 

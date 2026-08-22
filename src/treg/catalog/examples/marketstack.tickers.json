@@ -1,0 +1,58 @@
+{
+  "pagination": {
+    "limit": 3,
+    "offset": 0,
+    "count": 3,
+    "total": 31
+  },
+  "data": [
+    {
+      "name": "Apple Inc",
+      "symbol": "AAPL",
+      "has_intraday": false,
+      "has_eod": true,
+      "country": null,
+      "stock_exchange": {
+        "name": "NASDAQ - ALL MARKETS",
+        "acronym": "NASDAQ",
+        "mic": "XNAS",
+        "country": null,
+        "country_code": "US",
+        "city": "NEW YORK",
+        "website": "www.nasdaq.com"
+      }
+    },
+    {
+      "name": "APPLE DRN",
+      "symbol": "AAPL34.BVMF",
+      "has_intraday": false,
+      "has_eod": true,
+      "country": null,
+      "stock_exchange": {
+        "name": "B3 S.A. - BRASIL BOLSA BALCAO",
+        "acronym": "B3",
+        "mic": "BVMF",
+        "country": null,
+        "country_code": "BR",
+        "city": "SAO PAULO",
+        "website": "www.b3.com.br"
+      }
+    },
+    {
+      "name": "APPLE INC",
+      "symbol": "AAPL.XSGO",
+      "has_intraday": false,
+      "has_eod": true,
+      "country": null,
+      "stock_exchange": {
+        "name": "SANTIAGO STOCK EXCHANGE",
+        "acronym": "",
+        "mic": "XSGO",
+        "country": null,
+        "country_code": "CL",
+        "city": "SANTIAGO",
+        "website": "www.bolsadesantiago.com"
+      }
+    }
+  ]
+}

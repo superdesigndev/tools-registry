@@ -20,8 +20,12 @@ def test_key_providers_are_offerable_without_deployment_credentials():
     not shown as 'not configured' the way an unset OAuth provider is."""
     for svc in ("apollo", "pdl", "akta", "hunter", "crunchbase", "tikhub", "brightdata", "semrush",
                 "justoneapi", "dataforseo", "seranking", "moz", "majestic", "serpstat",
-                "lusha", "coresignal", "diffbot", "thecompaniesapi", "leadmagic",
-                "spyfu", "apify", "meta-ad-library", "serpapi", "parallel"):
+                "lusha", "coresignal", "diffbot", "thecompaniesapi", "leadmagic", "fiber-ai",
+                "companyenrich", "oceanio", "tomba", "predictleads", "findymail", "branddev",
+                "icypeas", "leadsforge", "influencersclub",
+                "spyfu", "apify", "meta-ad-library", "serpapi", "parallel",
+                "coingecko", "polygon", "finnhub", "twelvedata", "fmp", "eodhd", "marketstack",
+                "tiingo"):
         p = P.get(svc)
         assert p is not None, svc
         assert p.auth_kind == "key", svc
@@ -36,7 +40,9 @@ def test_key_providers_appear_in_the_marketplace_listing():
     assert listing["apollo"]["auth_kind"] == "key"
     assert listing["semrush"]["category"] == "SEO"
     assert listing["tikhub"]["category"] == "Social media"
+    assert listing["coingecko"]["category"] == "Market data"
     assert "Enrichment" in P.CATEGORY_ORDER
+    assert "Market data" in P.CATEGORY_ORDER
 
 
 # ---- connect-by-key ----------------------------------------------------------------------

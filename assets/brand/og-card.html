@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<!--
+  Source for src/treg/web/media/og.png — the 1200x630 social card.
+
+  Regenerate after a repositioning or a big catalog change:
+    open this file in a headless browser at exactly 1200x630 and screenshot #card.
+  It is a BUILD source, not a served page: the favicons below are fetched once at render time and
+  baked into the PNG, so the shipped card has no runtime network dependency.
+
+  Skin is landing.html's token system, verbatim — Geist Pixel on the display line only, DM Mono for
+  identifiers and counts, ink for emphasis, no brand accent. Layout follows docs/assets/treg-hero.png.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Pixel&family=Inter:wght@400;450;500;600;650;700&family=DM+Mono:ital,wght@0,400;0,500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f4f4f1; --surface:#fff; --ink:#1a1a1a; --muted:#7c7c7c; --teal:#1a7da6;
+    --shadow-sm:0 1px 2px #00000014;
+    --shadow-md:0 1px 2px -1px #0000000a,0 4px 6px -1px #0000000f;
+    --display:"Geist Pixel",Georgia,serif;
+    --sans:"Inter","Segoe UI",system-ui,sans-serif;
+    --mono:"DM Mono",ui-monospace,"SF Mono",Menlo,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#fff}
+  #card{
+    width:1200px;height:630px;background:var(--bg);color:var(--ink);
+    font-family:var(--sans);display:flex;flex-direction:column;align-items:center;
+    justify-content:center;gap:0;padding:44px 56px;overflow:hidden;
+  }
+
+  /* ---------- wordmark ---------- */
+  .mark{display:flex;align-items:center;gap:12px;background:#1a1a1a;color:#f8f8f7;
+    border-radius:14px;padding:11px 22px 11px 14px;box-shadow:var(--shadow-md)}
+  .mark .glyph{width:30px;height:30px;border-radius:8px;background:#f8f8f7;color:#1a1a1a;
+    display:grid;place-items:center;font-family:var(--mono);font-weight:500;font-size:19px;line-height:1}
+  .mark b{font-family:var(--mono);font-weight:500;font-size:29px;letter-spacing:.01em}
+
+  /* ---------- headline ---------- */
+  h1{font-family:var(--display);font-weight:400;font-size:76px;line-height:1;
+    letter-spacing:-.005em;margin-top:26px;white-space:nowrap}
+  .sub{font-family:var(--mono);font-size:20px;color:var(--muted);margin-top:18px;letter-spacing:-.01em}
+  .sub b{color:var(--teal);font-weight:500}
+  .sub i{font-style:normal;color:#c3c3bf;padding:0 9px}
+
+  /* ---------- the key ---------- */
+  .key{display:flex;align-items:center;gap:13px;background:var(--surface);border-radius:13px;
+    padding:13px 26px;margin-top:26px;box-shadow:var(--shadow-md)}
+  .key .glyph{width:27px;height:27px;border-radius:7px;background:#1a1a1a;color:#f8f8f7;
+    display:grid;place-items:center;font-family:var(--mono);font-weight:500;font-size:17px;line-height:1}
+  .key code{font-family:var(--mono);font-size:22px;letter-spacing:.02em}
+  .key code s{text-decoration:none;color:#b9b9b4;letter-spacing:.14em}
+
+  /* ---------- provider chips ---------- */
+  .rows{display:flex;flex-direction:column;align-items:center;gap:11px;margin-top:32px}
+  .row{display:flex;gap:11px}
+  .chip{display:flex;align-items:center;gap:9px;background:var(--surface);border-radius:11px;
+    padding:9px 16px;box-shadow:var(--shadow-sm);font-weight:600;font-size:17px;white-space:nowrap}
+  .chip img,.chip .ic{width:22px;height:22px;border-radius:5px;display:block}
+  .chip.more{background:none;box-shadow:none;border:1.5px dashed #cfcfc9;color:var(--muted);
+    font-family:var(--mono);font-weight:400;font-size:16px}
+</style>
+</head>
+<body>
+<div id="card">
+  <div class="mark"><span class="glyph">▚</span><b>treg</b></div>
+
+  <h1>OpenRouter for agent tools</h1>
+  <div class="sub">One unified key for <b>2,600+ tools</b><i>·</i>priced per call<i>·</i>open source</div>
+
+  <div class="key"><span class="glyph">▚</span><code>trg_live_<s>••••••••••••••</s></code></div>
+
+  <div class="rows">
+    <div class="row">
+      <div class="chip"><img src="https://www.google.com/s2/favicons?domain=semrush.com&sz=64"/>Semrush</div>
+      <div class="chip"><img src="https://www.google.com/s2/favicons?domain=moz.com&sz=64"/>Moz</div>
+      <div class="chip"><img src="https://www.google.com/s2/favicons?domain=majestic.com&sz=64"/>Majestic</div>
+      <div class="chip"><img src="https://www.google.com/s2/favicons?domain=dataforseo.com&sz=64"/>DataForSEO</div>
+      <div class="chip"><img src="https://www.google.com/s2/favicons?domain=seranking.com&sz=64"/>SE Ranking</div>
+      <div class="chip"><img src="https://www.google.com/s2/favicons?domain=serpapi.com&sz=64"/>SerpApi</div>
+    </div>
+    <div class="row">
+      <div class="chip"><img src="https://www.google.com/s2/favicons?domain=tiktok.com&sz=64"/>TikTok</div>
+      <div class="chip"><img src="https://www.google.com/s2/favicons?domain=instagram.com&sz=64"/>Instagram</div>
+      <div class="chip"><img src="https://www.google.com/s2/favicons?domain=youtube.com&sz=64"/>YouTube</div>
+      <div class="chip"><img src="https://www.google.com/s2/favicons?domain=x.com&sz=64"/>X/Twitter</div>
+      <div class="chip"><img src="https://www.google.com/s2/favicons?domain=reddit.com&sz=64"/>Reddit</div>
+      <!-- LinkedIn's s2 favicon only resolves at 16px and falls back to a generic globe at 64,
+           so the mark is inlined instead. Every other chip fetches cleanly. -->
+      <div class="chip"><svg class="ic" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="4" fill="#0A66C2"/><path fill="#fff" d="M7.1 9.3H4.6V19h2.5V9.3ZM5.85 8.2a1.45 1.45 0 1 0 0-2.9 1.45 1.45 0 0 0 0 2.9ZM19.4 19h-2.5v-4.7c0-1.2-.44-2-1.5-2-.82 0-1.3.55-1.51 1.08-.08.19-.1.45-.1.72V19H11.3s.03-8.8 0-9.7h2.5v1.37c.33-.51.92-1.24 2.24-1.24 1.64 0 2.86 1.07 2.86 3.37V19Z"/></svg>LinkedIn</div>
+    </div>
+    <div class="row">
+      <div class="chip"><img src="https://www.google.com/s2/favicons?domain=hunter.io&sz=64"/>Hunter</div>
+      <div class="chip"><img src="https://www.google.com/s2/favicons?domain=apollo.io&sz=64"/>Apollo</div>
+      <div class="chip"><img src="https://www.google.com/s2/favicons?domain=crunchbase.com&sz=64"/>Crunchbase</div>
+      <div class="chip"><img src="https://www.google.com/s2/favicons?domain=ads.google.com&sz=64"/>Google Ads</div>
+      <div class="chip"><img src="https://www.google.com/s2/favicons?domain=facebook.com&sz=64"/>Meta Ads</div>
+      <div class="chip more">+2,600 endpoints</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

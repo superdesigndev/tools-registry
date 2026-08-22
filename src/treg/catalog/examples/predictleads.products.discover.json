@@ -1,0 +1,44 @@
+{
+  "data": [
+    {
+      "id": "7eb06b1d-aeac-4838-a6a0-be9c7256773c",
+      "type": "product",
+      "attributes": {
+        "category": "solution",
+        "name": "Shop By Activity",
+        "normalized_name": "Shop By Activity",
+        "description": "Collections grouped by workout or activity type.",
+        "subcategory": "use_case",
+        "sources": [
+          "main"
+        ],
+        "source_url": "https://cbdequinoxtheshop.com",
+        "first_seen_at": "2026-07-22T01:59:51Z",
+        "last_seen_at": "2026-08-19T15:26:30Z"
+      },
+      "relationships": {
+        "company": {
+          "data": {
+            "id": "eeaeb218-8b6c-5767-9df2-74c84b1525f3",
+            "type": "company"
+          }
+        }
+      }
+    }
+  ],
+  "included": [
+    {
+      "id": "eeaeb218-8b6c-5767-9df2-74c84b1525f3",
+      "type": "company",
+      "attributes": {
+        "domain": "cbdequinoxtheshop.com",
+        "company_name": "Equinox Holdings, Inc.",
+        "ticker": null
+      }
+    }
+  ],
+  "meta": {
+    "schema_version": "3.2",
+    "record_state": "active"
+  }
+}

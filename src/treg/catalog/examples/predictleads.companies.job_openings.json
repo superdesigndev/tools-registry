@@ -1,0 +1,55 @@
+{
+  "data": [
+    {
+      "id": "284eb966-142d-47ac-8430-83ef870ff77f",
+      "type": "job_opening",
+      "attributes": {
+        "title": "Account Executive, SMB Hunter (Central Eastern Europe)",
+        "normalized_title": "Account Executive",
+        "description": "# Account Executive, SMB Hunter (Central Eastern Europe)\n\n## Who we are\n\n### Abo …[truncated]",
+        "url": "https://stripe.com/careers/listing/account-executive-smb-hunter-central-eastern- …[truncated]",
+        "first_seen_at": "2026-08-19T20:01:53Z",
+        "last_seen_at": "2026-08-19T23:26:47Z",
+        "last_processed_at": "2026-08-19T23:18:18Z",
+        "contract_types": [
+          "full_time",
+          "… 1 more items omitted"
+        ],
+        "categories": [
+          "sales"
+        ],
+        "onet_data": {
+          "code": "41-3091.00",
+          "family": "Sales and Related",
+          "occupation_name": "Sales Representatives of Services, Except Advertising, Insurance, Financial Serv …[truncated]"
+        },
+        "_truncated": "remaining fields omitted for brevity"
+      },
+      "relationships": {
+        "company": {
+          "data": {
+            "id": "a0383c53-8142-5e7c-8ca3-9980289a3ccc",
+            "type": "company"
+          }
+        }
+      }
+    }
+  ],
+  "included": [
+    {
+      "id": "a0383c53-8142-5e7c-8ca3-9980289a3ccc",
+      "type": "company",
+      "attributes": {
+        "domain": "stripe.com",
+        "company_name": "Stripe, Inc."
+      }
+    }
+  ],
+  "meta": {
+    "schema_version": "3.3",
+    "record_state": "active",
+    "message_type": "ok",
+    "message": "You can try running the same query on any subsidiary company domain (bridge.xyz, …[truncated]",
+    "crawler_potentially_blocked": false
+  }
+}

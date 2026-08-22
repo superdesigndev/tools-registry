@@ -1,0 +1,56 @@
+# Query-side vocabulary aliases for catalog search (catalog_store.search).
+#
+# The catalog's text says "crypto"; agents type "cryptocurrency". Substring matching is
+# one-directional (the QUERY token must appear in the endpoint's text), so the long form finds
+# nothing. Each entry maps one query word to the catalog words that mean the same thing: a token
+# matches an endpoint when the token OR any of its aliases appears in the endpoint's text, at the
+# same field weight. This file rewrites nothing in provider files, survives every re-ingest, and is
+# the cheap layer before any embedding model — see docs/context/architecture/catalog.md ("Search
+# scoring").
+#
+# Curation rules (enforced by scripts/catalog_validate.py check_aliases):
+#   - keys and values are lowercase single words (they pass through the same tokenizer as queries);
+#   - a value must actually occur in the catalog's text, or the alias is dead weight (warning);
+#   - no self-reference;
+#   - NOUNS ONLY, and the target must be a selective word. Aliasing a verb to a commoner verb
+#     poisons the key: `lookup: [search, find]` inflated lookup's match set from 27 endpoints to
+#     689 and destroyed its ranking power (found 2026-08-20). Generic verbs are the algorithm's
+#     job (soft tokens), not this file's.
+# Feed: the SearchMiss log (models.SearchMiss) — a logged zero-result query whose words name an
+# existing endpoint in different vocabulary is exactly one row here. Add the word agents USED as
+# the key, the word the catalog HAS as the value.
+
+aliases:
+  # market data
+  cryptocurrency: [crypto]
+  cryptocurrencies: [crypto]
+  bitcoin: [crypto, coin]
+  equities: [stock]
+  ticker: [stock, symbol]
+  # media text
+  transcript: [captions, subtitles]
+  transcripts: [captions, subtitles]
+  subtitles: [captions, transcript]
+  captions: [transcript, subtitles]
+  # tech / web
+  software: [technologies, technology]
+  techstack: [technologies]
+  visitors: [traffic]
+  screenshot: [screen]
+  # people & companies
+  person: [people]
+  firm: [company]
+  firms: [company]
+  employee: [employees, headcount]
+  staff: [employees, headcount]
+  firmographic: [company]
+  firmographics: [company]
+  # jobs
+  openings: [postings]
+  opening: [postings]
+  vacancies: [postings, jobs]
+  vacancy: [postings, jobs]
+  # platform shorthands agents use
+  ig: [instagram]
+  yt: [youtube]
+  fb: [facebook]

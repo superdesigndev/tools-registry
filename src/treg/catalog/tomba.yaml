@@ -1,0 +1,702 @@
+provider: tomba
+source:
+  docs: https://docs.tomba.io/api
+  openapi: null # none published — /v1/openapi.json 404s and the reference site is a SPA; paths below were enumerated by live probing on 2026-08-20
+  curated: '2026-08-20'
+# TWO-HEADER AUTH — read this before wiring the provider up.
+# Only three routes answer the API key alone (X-Tomba-Key): /v1/usage, /v1/email-format and
+# /v1/email-count. EVERY other route below returns HTTP 400 {"errors":{"type":
+# "authentication_failed","message":"No user found for the API supplied. ..."}} unless a SECOND
+# header, X-Tomba-Secret, rides along. So the registry entry must use the extra_credential_*
+# machinery (token_header for the key, extra_credential_header for the secret) — a single-slot
+# injection covers only 3 of 23 endpoints. See notes.md.
+#
+# Billing is a published per-endpoint credit rate card (pricing_url) and it was confirmed against
+# Tomba's own /v1/logs, which reports the credits billed for each call: finder/verifier/
+# domain-search/linkedin/enrich/similar/phone-validator/reveal = 1 credit, phone-finder = 5,
+# location = 0. Those endpoints carry confidence `verified` with source `observed`; the routes the
+# rate card is silent about carry the honest `inferred`.
+#
+# TWO BILLING QUIRKS worth knowing before estimating spend:
+#   1. "If we can't find a valid email, your search is free" — a miss costs nothing (author-finder
+#      returned an empty record on both test URLs and billed 0).
+#   2. "Duplicate searches within the same month cost nothing" — a repeat of an identical query is
+#      billed 0. Confirmed live: every endpoint below billed its rate on the first call and 0 on
+#      the replay ~6 minutes later. A verification re-run is therefore free, and a naive per-call
+#      spend estimate OVERSTATES real cost for repeated queries.
+#
+# RATE LIMITS ARE PER ROUTE AND TIGHT on this plan — /v1/rate-limits returns them live. Several
+# routes are rps 1 / rpm 2 / daily 5 (author-finder, domain-search). Callers hitting these in a
+# loop will see 429 {"errors":{"type":"rate_limit",...}} long before they run out of credits.
+limits: "per-route, not account-wide — GET /v1/rate-limits returns the live rps/rpm/daily limits and current usage for every route. On the Growth plan several routes are rps 1 / rpm 2 / daily 5."
+pricing_url: https://tomba.io/pricing
+proposed_capabilities:
+  companies.emails.list: "List every work email found on a company domain"
+  companies.emails.count: "Count the emails known for a domain, by department & seniority"
+  companies.emails.locations: "Where a domain's contacts are, by country"
+  companies.tech_stack: "Technologies a website runs"
+  companies.similar: "Find companies similar to a given domain"
+  people.email.sources: "Where on the web an email address was seen"
+  people.phone.verify: "Validate & format a phone number"
+  web.domain.disposable: "Is a domain disposable or a free webmail host"
+  account.usage: "Credits consumed so far this period"
+  account.rate_limits: "Per-route rate limits and current usage"
+  account.logs: "Recent API calls with the credits each one cost"
+endpoints:
+  - id: tomba.people.email.find
+    domain: people
+    capability: people.email.find
+    platform: people
+    scope: any_account
+    method: GET
+    path: /v1/email-finder
+    name: "Find a work email from a name and domain"
+    summary: "Name + company domain → the person's verified work email, with confidence score and the sources it was seen on"
+    input:
+      queryParams:
+        domain: {type: string, required: true, note: "company domain, no protocol", example: "stripe.com"}
+        full_name: {type: string, required: false, note: "full name; use INSTEAD of first_name/last_name", example: "Patrick Collison"}
+        first_name: {type: string, required: false, note: "use together with last_name when you do not have the full name"}
+        last_name: {type: string, required: false}
+      note: "either full_name, or first_name + last_name. A miss is free (`score: 0`, null email)."
+    test_request:
+      queryParams: {domain: "stripe.com", full_name: "Patrick Collison"}
+    cost:
+      type: per_success
+      value: 1
+      currency: credit
+      per: 1
+      unit: call
+      source: observed
+      source_url: https://tomba.io/pricing
+      checked: '2026-08-20'
+      confidence: verified
+      note: "rate card says 1 credit per VALID email found; /v1/logs reported cost=1 for the live call and cost=0 for the identical replay (duplicates are free within the month)"
+    verified: '2026-08-20'
+    example_response: examples/tomba.people.email.find.json
+    docs_url: https://docs.tomba.io/api/finder
+
+  - id: tomba.people.email.find.linkedin
+    domain: people
+    capability: people.email.find
+    platform: people
+    scope: any_account
+    method: GET
+    path: /v1/linkedin
+    name: "Find a work email from a LinkedIn profile URL"
+    summary: "LinkedIn profile URL → the member's work email plus the same enriched person record the finder returns"
+    input:
+      queryParams:
+        url: {type: string, required: true, note: "full public LinkedIn profile URL", example: "https://www.linkedin.com/in/patrickcollison"}
+    test_request:
+      queryParams: {url: "https://www.linkedin.com/in/patrickcollison"}
+    cost:
+      type: per_success
+      value: 1
+      currency: credit
+      per: 1
+      unit: call
+      source: observed
+      source_url: https://tomba.io/pricing
+      checked: '2026-08-20'
+      confidence: verified
+      note: "rate card: 1 credit per valid email from LinkedIn; /v1/logs reported cost=1 for the live call"
+    verified: '2026-08-20'
+    example_response: examples/tomba.people.email.find.linkedin.json
+    docs_url: https://docs.tomba.io/cli/linkedin
+
+  - id: tomba.people.email.find.author
+    domain: people
+    capability: people.email.find
+    platform: people
+    scope: any_account
+    method: GET
+    path: /v1/author-finder
+    name: "Find an article author's email from its URL"
+    summary: "Article or blog-post URL → the byline author's name and work email"
+    input:
+      queryParams:
+        url: {type: string, required: true, note: "URL of an article with a visible byline", example: "https://www.anthropic.com/news/claude-3-family"}
+      note: "rps 1 / rpm 2 / daily 5 on the Growth plan — the tightest limit of any route here"
+    test_request:
+      queryParams: {url: "https://www.anthropic.com/news/claude-3-family"}
+    cost:
+      type: per_success
+      value: 1
+      currency: credit
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://tomba.io/pricing
+      checked: '2026-08-20'
+      confidence: documented
+      note: "rate card: 1 credit per valid author email found. Both live test URLs returned an empty record (no author resolved) and billed nothing, so the charged case was not observed"
+    verified: '2026-08-20'
+    example_response: examples/tomba.people.email.find.author.json
+    docs_url: https://docs.tomba.io/cli/author
+
+  - id: tomba.people.email.verify
+    domain: people
+    capability: people.email.verify
+    platform: people
+    scope: any_account
+    method: GET
+    path: /v1/email-verifier/{email}
+    name: "Verify an email address is deliverable"
+    summary: "Deliverability status, score, MX/SMTP checks, catch-all, disposable, gibberish and role-address flags for one address"
+    input:
+      pathParams:
+        email: {type: string, required: true, note: "the address to verify, in the path (not a query param)", example: "patrick@stripe.com"}
+    test_request:
+      pathParams: {email: "patrick@stripe.com"}
+    cost:
+      type: per_call
+      value: 1
+      currency: credit
+      per: 1
+      unit: call
+      source: observed
+      source_url: https://tomba.io/pricing
+      checked: '2026-08-20'
+      confidence: verified
+      note: "1 credit per verification; the Growth plan grants 5,000 verification credits on top of the 5,000 finder credits, so verification is effectively bundled. /v1/logs reported cost=1"
+    verified: '2026-08-20'
+    example_response: examples/tomba.people.email.verify.json
+    docs_url: https://docs.tomba.io/api/verifier
+
+  - id: tomba.people.enrich
+    domain: people
+    capability: people.enrich
+    platform: people
+    scope: any_account
+    method: GET
+    path: /v1/enrich
+    name: "Enrich a person by email — name, role, social profiles"
+    summary: "Email address → full person record: name, company, position, department, seniority, country, gender, social profiles and the pages the address was found on"
+    input:
+      queryParams:
+        email: {type: string, required: true, note: "the work email to enrich", example: "patrick@stripe.com"}
+    test_request:
+      queryParams: {email: "patrick@stripe.com"}
+    cost:
+      type: per_success
+      value: 1
+      currency: credit
+      per: 1
+      unit: call
+      source: observed
+      source_url: https://tomba.io/pricing
+      checked: '2026-08-20'
+      confidence: verified
+      note: "rate card: 1 credit per email enriched; /v1/logs reported cost=1 (route enrich-finder)"
+    verified: '2026-08-20'
+    example_response: examples/tomba.people.enrich.json
+    docs_url: https://docs.tomba.io/api/enrichment
+
+  - id: tomba.people.enrich.profile
+    domain: people
+    capability: people.enrich
+    platform: people
+    scope: any_account
+    method: GET
+    path: /v1/people/find
+    name: "Enrich a person by email (Clearbit-shaped response)"
+    summary: "Email address → a person record in the classic Person-API shape: name object, geo, employment, and per-network social handles"
+    input:
+      queryParams:
+        email: {type: string, required: true, note: "the work email to enrich", example: "patrick@stripe.com"}
+      note: "same data as /v1/enrich, reshaped as a drop-in replacement for the retired Clearbit Person API"
+    test_request:
+      queryParams: {email: "patrick@stripe.com"}
+    cost:
+      type: per_success
+      value: 1
+      currency: credit
+      per: 1
+      unit: call
+      source: observed
+      source_url: https://tomba.io/pricing
+      checked: '2026-08-20'
+      confidence: verified
+      note: "/v1/logs reported cost=1 (route enrich-email, type 'Person Enrichment')"
+    verified: '2026-08-20'
+    example_response: examples/tomba.people.enrich.profile.json
+    docs_url: https://docs.tomba.io/migration/clearbit/person-api
+
+  - id: tomba.companies.enrich
+    domain: companies
+    capability: companies.enrich
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /v1/companies/find
+    name: "Enrich a company by domain — headcount, revenue, SIC"
+    summary: "Company domain → firmographics: legal name, sector and SIC/NAICS codes, headcount, revenue range, founding year, address, socials and known email addresses"
+    input:
+      queryParams:
+        domain: {type: string, required: true, note: "company domain, no protocol or www", example: "stripe.com"}
+    test_request:
+      queryParams: {domain: "stripe.com"}
+    cost:
+      type: per_success
+      value: 1
+      currency: credit
+      per: 1
+      unit: call
+      source: observed
+      source_url: https://tomba.io/pricing
+      checked: '2026-08-20'
+      confidence: verified
+      note: "rate card: 1 credit per company enriched (and 'free included with domain search'); /v1/logs reported cost=1 (route enrich-company)"
+    verified: '2026-08-20'
+    example_response: examples/tomba.companies.enrich.json
+    docs_url: https://docs.tomba.io/migration/clearbit/company-api
+
+  - id: tomba.people.enrich.combined
+    domain: people
+    capability: people.enrich
+    platform: people
+    scope: any_account
+    method: GET
+    path: /v1/combined/find
+    name: "Enrich a person and their company by email, in one call"
+    summary: "Email address → both the person record and the full company record, in one response"
+    input:
+      queryParams:
+        email: {type: string, required: true, note: "the work email to enrich", example: "patrick@stripe.com"}
+    test_request:
+      queryParams: {email: "patrick@stripe.com"}
+    cost:
+      type: per_success
+      value: 2
+      currency: credit
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://tomba.io/pricing
+      checked: '2026-08-20'
+      confidence: documented
+      note: "priced as the person (1) + company (1) enrichments it performs. The live call logged cost=0 under route 'enrich-combined', but only because the same person and company had been enriched minutes earlier and duplicates are free within the month — so the observed 0 is NOT the first-call price"
+    verified: '2026-08-20'
+    example_response: examples/tomba.people.enrich.combined.json
+    docs_url: https://docs.tomba.io/migration/clearbit/combined-api
+
+  - id: tomba.people.phone.find
+    domain: people
+    capability: people.phone.find
+    platform: people
+    scope: any_account
+    method: GET
+    path: /v1/phone-finder
+    name: "Find a direct phone number by email, domain or LinkedIn"
+    summary: "Email, domain or LinkedIn URL → a direct phone number with country, line type, carrier, region and timezone"
+    input:
+      queryParams:
+        email: {type: string, required: false, note: "look the number up from a work email", example: "patrick@stripe.com"}
+        domain: {type: string, required: false, note: "look the number up from a company domain"}
+        linkedin: {type: string, required: false, note: "look the number up from a LinkedIn profile URL"}
+      note: "supply exactly one of email / domain / linkedin. THE MOST EXPENSIVE ROUTE HERE at 5 credits"
+    test_request:
+      queryParams: {email: "patrick@stripe.com"}
+    cost:
+      type: per_success
+      value: 5
+      currency: credit
+      per: 1
+      unit: call
+      source: observed
+      source_url: https://tomba.io/pricing
+      checked: '2026-08-20'
+      confidence: verified
+      note: "rate card: 5 credits per phone lookup; /v1/logs reported cost=5 for the live call"
+    verified: '2026-08-20'
+    example_response: examples/tomba.people.phone.find.json
+    docs_url: https://docs.tomba.io/cli/phone-finder
+
+  - id: tomba.people.phone.verify
+    domain: people
+    capability: people.phone.verify
+    platform: people
+    scope: any_account
+    method: GET
+    path: /v1/phone-validator
+    name: "Validate and format a phone number"
+    summary: "Phone number → validity, local/international/E.164/RFC3966 formats, country, line type, carrier, region and timezones"
+    input:
+      queryParams:
+        phone: {type: string, required: true, note: "the number to validate; URL-encode a leading + as %2B", example: "+14155550100"}
+        country_code: {type: string, required: false, note: "ISO-2 country to interpret a national-format number against, e.g. US"}
+    test_request:
+      queryParams: {phone: "+14155550100"}
+    cost:
+      type: per_call
+      value: 1
+      currency: credit
+      per: 1
+      unit: call
+      source: observed
+      source_url: https://tomba.io/pricing
+      checked: '2026-08-20'
+      confidence: verified
+      note: "rate card: 1 credit per phone validated; /v1/logs reported cost=1"
+    verified: '2026-08-20'
+    example_response: examples/tomba.people.phone.verify.json
+    docs_url: https://docs.tomba.io/cli/phone-validator
+
+  - id: tomba.companies.emails.list
+    domain: companies
+    capability: companies.emails.list
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /v1/domain-search
+    name: "List the work emails at a company domain"
+    summary: "Company domain → every email address found on it, each with the person's name, position, department, seniority, confidence score and source pages, plus the company's own profile"
+    input:
+      queryParams:
+        domain: {type: string, required: true, note: "company domain, no protocol or www", example: "stripe.com"}
+        limit: {type: integer, required: false, note: "results per page — an ENUM, not a free integer: 2 is rejected with 'Error validation on Limit:oneof'. 1 and 10 are known-good; treat it as the page-size dial", example: 1}
+        page: {type: integer, required: false, note: "1-based page number"}
+        department: {type: string, required: false, note: "filter by department, e.g. engineering, sales, executive"}
+        type: {type: string, required: false, note: "personal | generic — generic means role addresses like sales@"}
+      note: "rps 1 / rpm 2 / daily 5 on the Growth plan. The company enrichment that comes back alongside the emails is free"
+    test_request:
+      queryParams: {domain: "stripe.com", limit: 1}
+    cost:
+      type: per_result
+      value: 1
+      currency: credit
+      per: 1
+      unit: row
+      source: observed
+      source_url: https://tomba.io/pricing
+      checked: '2026-08-20'
+      confidence: verified
+      note: "rate card: 1 credit per email returned — `limit` is the price dial. /v1/logs reported cost=1 for the live limit=1 call"
+    verified: '2026-08-20'
+    example_response: examples/tomba.companies.emails.list.json
+    docs_url: https://docs.tomba.io/cli/search
+
+  - id: tomba.companies.emails.count
+    domain: companies
+    capability: companies.emails.count
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /v1/email-count
+    name: "Count the emails known for a domain (free)"
+    summary: "Company domain → how many addresses Tomba holds, split personal vs generic and broken down by department and seniority — a free way to size a domain before paying to search it"
+    input:
+      queryParams:
+        domain: {type: string, required: true, note: "company domain, no protocol or www", example: "stripe.com"}
+      note: "one of the three routes that answer the API KEY ALONE, with no X-Tomba-Secret header"
+    test_request:
+      queryParams: {domain: "stripe.com"}
+    cost:
+      type: free
+      value: 0
+      currency: USD
+      unit: call
+      source: observed
+      source_url: https://tomba.io/pricing
+      checked: '2026-08-20'
+      confidence: inferred
+      note: "the published rate card does not list this route, and no /v1/logs row was raised for it. Treated as free on that evidence — re-check if a bill disagrees"
+    verified: '2026-08-20'
+    example_response: examples/tomba.companies.emails.count.json
+    docs_url: https://docs.tomba.io/cli/count
+
+  - id: tomba.companies.email_pattern
+    domain: companies
+    capability: companies.email_pattern
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /v1/email-format
+    name: "A company's email address patterns by domain"
+    summary: "Company domain → the address patterns in use ({first}, {first}.{last}, {f}{last}…) with the share of the company's addresses on each"
+    input:
+      queryParams:
+        domain: {type: string, required: true, note: "company domain, no protocol or www", example: "stripe.com"}
+      note: "one of the three routes that answer the API KEY ALONE, with no X-Tomba-Secret header"
+    test_request:
+      queryParams: {domain: "stripe.com"}
+    cost:
+      type: per_call
+      value: 1
+      currency: credit
+      per: 1
+      unit: call
+      source: observed
+      source_url: https://tomba.io/pricing
+      checked: '2026-08-20'
+      confidence: verified
+      note: "not on the published rate card, but /v1/logs recorded cost=1 for the first call of the day and cost=0 for the two replays (duplicates free within the month)"
+    verified: '2026-08-20'
+    example_response: examples/tomba.companies.email_pattern.json
+    docs_url: https://docs.tomba.io/attributes/format
+
+  - id: tomba.companies.emails.locations
+    domain: companies
+    capability: companies.emails.locations
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /v1/location
+    name: "Where a company's contacts are — a per-country tally"
+    summary: "Company domain → a per-country tally of the contacts Tomba holds for it"
+    input:
+      queryParams:
+        domain: {type: string, required: true, note: "company domain, no protocol or www", example: "stripe.com"}
+      note: "country codes come back mixed-case in the live response ('us' and 'US' are separate rows) — normalise before summing"
+    test_request:
+      queryParams: {domain: "stripe.com"}
+    cost:
+      type: free
+      value: 0
+      currency: USD
+      unit: call
+      source: observed
+      source_url: https://tomba.io/pricing
+      checked: '2026-08-20'
+      confidence: verified
+      note: "/v1/logs recorded the call under route 'location' with cost=0 on its FIRST invocation, so this is free rather than deduplicated"
+    verified: '2026-08-20'
+    example_response: examples/tomba.companies.emails.locations.json
+    docs_url: https://docs.tomba.io/attributes/location
+
+  - id: tomba.people.email.sources
+    domain: people
+    capability: people.email.sources
+    platform: people
+    scope: any_account
+    method: GET
+    path: /v1/email-sources
+    name: "Where an email address was seen on the web"
+    summary: "Email address → every public page the address was extracted from, with first-seen and last-seen dates and whether it is still on the page"
+    input:
+      queryParams:
+        email: {type: string, required: true, note: "the address to trace", example: "patrick@stripe.com"}
+      note: "the path takes the address as a QUERY param — /v1/email-sources/{email} is a 404"
+    test_request:
+      queryParams: {email: "patrick@stripe.com"}
+    cost:
+      type: per_call
+      value: null
+      currency: credit
+      per: 1
+      unit: call
+      source: inferred
+      checked: '2026-08-20'
+      confidence: unknown
+      note: "not on the published rate card and no /v1/logs row was raised for it; the pricing page bundles 'emails enriched with sources URL' into the domain-search line, which does not settle the standalone route's price. Left honestly unpriced"
+    verified: '2026-08-20'
+    example_response: examples/tomba.people.email.sources.json
+    docs_url: https://docs.tomba.io/attributes/sources
+
+  - id: tomba.companies.tech_stack
+    domain: companies
+    capability: companies.tech_stack
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /v1/technology
+    name: "Detect a website's tech stack by domain"
+    summary: "Website domain → the detected tech stack: each technology's name, vendor site, description and category (CMS, analytics, payments…)"
+    input:
+      queryParams:
+        domain: {type: string, required: true, note: "website domain, no protocol or www", example: "stripe.com"}
+    test_request:
+      queryParams: {domain: "stripe.com"}
+    cost:
+      type: per_call
+      value: 1
+      currency: credit
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://tomba.io/pricing
+      checked: '2026-08-20'
+      confidence: documented
+      note: "rate card: 'Technology Lookup — 1 credit per technology lookup'. No /v1/logs row was observed for the live call, so the charge was not confirmed"
+    verified: '2026-08-20'
+    example_response: examples/tomba.companies.tech_stack.json
+    docs_url: https://docs.tomba.io/attributes/technology
+
+  - id: tomba.companies.similar
+    domain: companies
+    capability: companies.similar
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /v1/similar
+    name: "Find lookalike companies from a seed domain"
+    summary: "Company domain → comparable companies with their domain, name and industry — competitor and lookalike discovery from one seed"
+    input:
+      queryParams:
+        domain: {type: string, required: true, note: "seed company domain, no protocol or www", example: "stripe.com"}
+    test_request:
+      queryParams: {domain: "stripe.com"}
+    cost:
+      type: per_call
+      value: 1
+      currency: credit
+      per: 1
+      unit: call
+      source: observed
+      source_url: https://tomba.io/pricing
+      checked: '2026-08-20'
+      confidence: verified
+      note: "rate card: 1 credit per similar-domain lookup; /v1/logs reported cost=1"
+    verified: '2026-08-20'
+    example_response: examples/tomba.companies.similar.json
+    docs_url: https://docs.tomba.io/attributes/similar
+
+  - id: tomba.companies.search.suggestions
+    domain: companies
+    capability: companies.search
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /v1/domain-suggestions
+    name: "Resolve a company name to its domain"
+    summary: "Company name or keyword → matching companies with their real domain and how many emails Tomba holds for each — the name-to-domain step before any domain-keyed call"
+    input:
+      queryParams:
+        query: {type: string, required: true, note: "company name or keyword. NOTE: the param is `query`, not `domain` — passing `domain` returns 422 'Error validation on Query:required'", example: "stripe"}
+    test_request:
+      queryParams: {query: "stripe"}
+    cost:
+      type: per_call
+      value: 1
+      currency: credit
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://tomba.io/pricing
+      checked: '2026-08-20'
+      confidence: documented
+      note: "rate card: 'Domain Suggestions — 1 credit'. No /v1/logs row was observed for the live call"
+    verified: '2026-08-20'
+    example_response: examples/tomba.companies.search.suggestions.json
+    docs_url: https://docs.tomba.io/api/domain-suggestions
+
+  - id: tomba.companies.search.reveal
+    domain: companies
+    capability: companies.search
+    platform: companies
+    scope: any_account
+    method: POST
+    path: /v1/reveal/search
+    name: "Search companies by industry, country and size"
+    summary: "Structured filters (or a natural-language query) → matching companies with firmographics, socials, revenue band, headcount band and how many contacts are available for each"
+    input:
+      body:
+        filters: {type: object, required: false, note: "structured criteria — arrays of values per field, e.g. {\"country\":[\"IE\"],\"industry\":[\"Financial Services\"]}", example: {country: ["IE"], industry: ["Financial Services"]}}
+        query: {type: string, required: false, note: "natural-language search, 8-100 chars. WARNING: this mode failed live with 422 {\"type\":\"openai_error\"} — it routes through an LLM upstream and is not reliable. Prefer `filters`"}
+        page: {type: integer, required: false, note: "1-1000, default 1"}
+        webhook_url: {type: string, required: false, note: "deliver the results asynchronously instead"}
+      note: "POST with Content-Type: application/json. Either filters or query"
+    test_request:
+      body: {filters: {country: ["IE"], industry: ["Financial Services"]}, page: 1}
+    cost:
+      type: per_call
+      value: 1
+      currency: credit
+      per: 50
+      unit: row
+      source: docs
+      source_url: https://tomba.io/pricing
+      checked: '2026-08-20'
+      confidence: documented
+      note: "rate card: '1 credit reveals up to 50 companies'. /v1/logs reported cost=1 for the first live call and cost=0 for the replay"
+    verified: '2026-08-20'
+    example_response: examples/tomba.companies.search.reveal.json
+    docs_url: https://docs.tomba.io/api/reveal
+
+  - id: tomba.web.domain.disposable
+    domain: web
+    capability: web.domain.disposable
+    platform: web
+    scope: any_account
+    method: GET
+    path: /v1/domain-status
+    name: "Is a domain disposable or free webmail"
+    summary: "Domain → two booleans: whether it is a disposable/throwaway mail host and whether it is a free webmail provider — the cheap pre-filter before signup or lead acceptance"
+    input:
+      queryParams:
+        domain: {type: string, required: true, note: "domain to classify", example: "stripe.com"}
+    test_request:
+      queryParams: {domain: "stripe.com"}
+    cost:
+      type: free
+      value: 0
+      currency: USD
+      unit: call
+      source: observed
+      source_url: https://tomba.io/pricing
+      checked: '2026-08-20'
+      confidence: inferred
+      note: "not on the published rate card and no /v1/logs row was raised for the live call; treated as free on that evidence"
+    verified: '2026-08-20'
+    example_response: examples/tomba.web.domain.disposable.json
+    docs_url: https://docs.tomba.io/cli/status
+
+  - id: tomba.account.usage
+    kind: account
+    domain: account
+    capability: account.usage
+    platform: account
+    scope: own_account
+    method: GET
+    path: /v1/usage
+    name: "Your credit usage this period"
+    summary: "Per-day and total counts of searches, verifications, exports and source lookups made on this key"
+    input:
+      note: "no parameters. One of the three routes that answer the API KEY ALONE, with no X-Tomba-Secret header — which is why it is the connect-time probe"
+    test_request:
+      queryParams: {}
+    cost: {type: free, value: 0, currency: USD, unit: call, source: observed, source_url: "https://tomba.io/pricing", checked: '2026-08-20', confidence: verified, note: "account route; raises no /v1/logs row and consumes no credits"}
+    verified: '2026-08-20'
+    example_response: examples/tomba.account.usage.json
+    docs_url: https://docs.tomba.io/usage-and-quotas
+
+  - id: tomba.account.rate_limits
+    kind: account
+    domain: account
+    capability: account.rate_limits
+    platform: account
+    scope: own_account
+    method: GET
+    path: /v1/rate-limits
+    name: "Your per-route rate limits"
+    summary: "Live rps / rpm / daily limit and current usage for every route on this plan — call it before a batch to learn how fast you may go"
+    input:
+      note: "no parameters"
+    test_request:
+      queryParams: {}
+    cost: {type: free, value: 0, currency: USD, unit: call, source: observed, source_url: "https://tomba.io/pricing", checked: '2026-08-20', confidence: verified, note: "account route; raises no /v1/logs row and consumes no credits"}
+    verified: '2026-08-20'
+    example_response: examples/tomba.account.rate_limits.json
+    docs_url: https://docs.tomba.io/rate-limits
+
+  - id: tomba.account.logs
+    kind: account
+    domain: account
+    capability: account.logs
+    platform: account
+    scope: own_account
+    method: GET
+    path: /v1/logs
+    name: "Your recent API calls and what each cost"
+    summary: "The last calls made on this account, each with its route, parameters and the CREDITS it was billed — the provider's own machine-readable record of what you spent"
+    input:
+      queryParams:
+        page: {type: integer, required: false, note: "1-based page. NOTE: paging appeared to be a no-op live — page=2 and page=3 returned the same rows as page=1"}
+      note: "returns roughly the 15 most recent calls"
+    test_request:
+      queryParams: {}
+    cost: {type: free, value: 0, currency: USD, unit: call, source: observed, source_url: "https://tomba.io/pricing", checked: '2026-08-20', confidence: verified, note: "account route; raises no /v1/logs row and consumes no credits"}
+    verified: '2026-08-20'
+    example_response: examples/tomba.account.logs.json
+    docs_url: https://docs.tomba.io/cli/logs

@@ -1,0 +1,16 @@
+{
+  "ticker": "AAPL",
+  "name": "Apple Inc",
+  "country": "US",
+  "currency": "USD",
+  "estimateCurrency": "USD",
+  "exchange": "NASDAQ NMS - GLOBAL MARKET",
+  "ipo": "1980-12-12",
+  "marketCapitalization": 4460857.105989755,
+  "logo": "https://static2.finnhub.io/file/publicdatany/finnhubimage/stock_logo/AAPL.png",
+  "shareOutstanding": 14687.36,
+  "finnhubIndustry": "Technology",
+  "phone": "14089961010",
+  "weburl": "https://www.apple.com/",
+  "floatingShare": 14445.7
+}

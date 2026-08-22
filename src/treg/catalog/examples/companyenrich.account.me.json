@@ -1,0 +1,15 @@
+{
+  "userId": "00000000-0000-0000-0000-000000000000",
+  "credits": {
+    "used": 47,
+    "total": 500
+  },
+  "capabilities": {
+    "lists": false,
+    "previews": false,
+    "companySearchLimit": 100,
+    "companySearchAsyncLimit": 100,
+    "peopleSearchLimit": 100,
+    "searchTermLimit": 100
+  }
+}

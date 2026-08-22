@@ -18,7 +18,18 @@ Paths are versioned and a wrong guess returns a **Google HTML 404**, not JSON. N
 or in `treg tool ls` reports the current version — one agent burned **five** calls walking v14→v18
 before recovering the answer from the `treg calls` audit log.
 
-**Use `v21`** (verified 2026-07-22). If it 404s, check the release notes; do not guess downward.
+**Use `v25`** (released 2026-07-22, live-verified through the proxy 2026-08-17; sunsets ~Aug 2027).
+Do not guess downward.
+
+Two different failures, two different fixes:
+
+- **HTML 404** — the version never existed (you guessed too high, or typo'd the path).
+- **JSON 400 `UNSUPPORTED_VERSION`** — the version existed and has been **sunset**. Google ships a
+  major roughly quarterly and each lives ~12 months, so a pin that worked for months dies on a
+  date, not on a deploy. v21 died this way on **2026-08-05**. Always jump to the newest GA
+  version, not the next one up — the next one up may be months from its own sunset.
+
+Release notes and sunset dates: <https://developers.google.com/google-ads/api/docs/sunset-dates>
 
 ## 2. `contains_eu_political_advertising` is required on campaign create  ⚠️ 3/3 hit this
 
@@ -95,7 +106,7 @@ which no error will catch. Use it whenever the operation spends money or you can
 ## Reading performance
 
 ```bash
-treg call google-ads "v21/customers/<CID>/googleAds:search" --method POST --data '{
+treg call google-ads "v25/customers/<CID>/googleAds:search" --method POST --data '{
   "query":"SELECT campaign.name, campaign.status, campaign_budget.amount_micros,
            metrics.impressions, metrics.clicks, metrics.cost_micros, metrics.conversions
            FROM campaign WHERE segments.date DURING LAST_30_DAYS
@@ -143,6 +154,6 @@ Created under a **test manager** — a separate Google account; a production man
 They have **no serving data** and **cannot test conversion uploads**, so they only prove mutation
 mechanics. Performance and conversion work must happen on a live account.
 
-- Field reference: https://developers.google.com/google-ads/api/fields/v21/overview
+- Field reference: https://developers.google.com/google-ads/api/fields/v25/overview
 - GAQL grammar: https://developers.google.com/google-ads/api/docs/query/grammar
 - Test accounts: https://developers.google.com/google-ads/api/docs/best-practices/test-accounts

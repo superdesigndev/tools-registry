@@ -1,0 +1,129 @@
+provider: polygon
+source:
+  docs: https://polygon.io/docs/rest/stocks
+  openapi: null # paths transcribed and live-verified 2026-08-15 (Stocks Starter plan)
+  curated: 2026-08-15
+# OWN-KEY-ONLY, deliberately: treg's Stocks Starter subscription is licensed "Individual Use", which
+# does not cover serving other teams (docs/MARKET-DATA-CATEGORY-RESEARCH.md, licensing table). The
+# commercial tier is Stocks Business at $2,499/mo — a purchase the usage data has to earn first.
+# Mechanically that means: cost blocks are 1 credit with NO fx rate for polygon, so usd stays null
+# and platform_eligible is FALSE by construction. A team pasting its own Polygon key gets everything.
+# Verified live 2026-08-15 on treg's Starter key (unlimited calls, 15-min delayed, 5y history).
+# 2026 note: Polygon is rebranding to Massive; api.polygon.io remains the served host.
+pricing_url: https://massive.com/pricing
+endpoints:
+  - id: polygon.prev-close
+    domain: stocks
+    capability: stocks.eod.latest
+    platform: stocks
+    scope: any_account
+    method: GET
+    path: /v2/aggs/ticker/{ticker}/prev
+    name: "Previous close by stock ticker — prior day OHLCV bar"
+    summary: "The prior trading day's open/high/low/close/volume bar for one ticker"
+    input:
+      queryParams:
+        ticker: {type: string, required: true, note: "path parameter", example: "AAPL"}
+        adjusted: {type: boolean, required: false, note: "true (default) adjusts for splits"}
+    test_request: {queryParams: {ticker: "AAPL"}}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, checked: "2026-08-15", note: "included in the subscriber's own plan (flat subscription, no per-call price); treg publishes no rate, so this serves own-key only"}
+    verified: 2026-08-15
+    example_response: examples/polygon.prev-close.json
+    docs_url: https://polygon.io/docs/rest/stocks/aggregates/previous-day-bar
+  - id: polygon.aggs.range
+    domain: stocks
+    capability: stocks.eod.history
+    platform: stocks
+    scope: any_account
+    method: GET
+    path: /v2/aggs/ticker/{ticker}/range/{multiplier}/{timespan}/{from}/{to}
+    name: "Stock OHLCV bars by ticker and date range, any interval"
+    summary: "OHLCV bars for a ticker at any granularity (minute to year) over a date range — Polygon's workhorse endpoint"
+    input:
+      queryParams:
+        ticker: {type: string, required: true, note: "path parameter", example: "AAPL"}
+        multiplier: {type: integer, required: true, note: "path parameter — bar size multiplier", example: "1"}
+        timespan: {type: string, required: true, note: "path parameter — minute | hour | day | week | month | quarter | year", example: "day"}
+        from: {type: string, required: true, note: "path parameter — YYYY-MM-DD", example: "2026-08-01"}
+        to: {type: string, required: true, note: "path parameter — YYYY-MM-DD", example: "2026-08-14"}
+        adjusted: {type: boolean, required: false}
+        sort: {type: string, required: false, note: "asc | desc"}
+        limit: {type: integer, required: false, note: "max 50000"}
+    test_request: {queryParams: {ticker: "AAPL", multiplier: "1", timespan: "day", from: "2026-08-01", to: "2026-08-14", limit: "5"}}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, checked: "2026-08-15", note: "included in the subscriber's own plan (flat subscription, no per-call price); treg publishes no rate, so this serves own-key only"}
+    verified: 2026-08-15
+    example_response: examples/polygon.aggs.range.json
+    docs_url: https://polygon.io/docs/rest/stocks/aggregates/custom-bars
+  - id: polygon.daily.open-close
+    domain: stocks
+    capability: stocks.eod.history
+    platform: stocks
+    scope: any_account
+    method: GET
+    path: /v1/open-close/{ticker}/{date}
+    name: "Daily open and close by stock ticker on one date"
+    summary: "One ticker's open, close, high, low, volume and after-hours prices on one date"
+    input:
+      queryParams:
+        ticker: {type: string, required: true, note: "path parameter", example: "AAPL"}
+        date: {type: string, required: true, note: "path parameter — YYYY-MM-DD", example: "2026-08-14"}
+        adjusted: {type: boolean, required: false}
+    test_request: {queryParams: {ticker: "AAPL", date: "2026-08-14"}}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, checked: "2026-08-15", note: "included in the subscriber's own plan (flat subscription, no per-call price); treg publishes no rate, so this serves own-key only"}
+    verified: 2026-08-15
+    example_response: examples/polygon.daily.open-close.json
+    docs_url: https://polygon.io/docs/rest/stocks/aggregates/daily-ticker-summary
+  - id: polygon.tickers.search
+    domain: stocks
+    capability: stocks.tickers.search
+    platform: stocks
+    scope: any_account
+    method: GET
+    path: /v3/reference/tickers
+    name: "Search stock and crypto tickers by symbol or name"
+    summary: "Search Polygon's reference directory of tickers by symbol or name, filtered by market and type"
+    input:
+      queryParams:
+        search: {type: string, required: false, example: "apple"}
+        ticker: {type: string, required: false, note: "exact symbol lookup"}
+        market: {type: string, required: false, note: "stocks | crypto | fx | otc | indices"}
+        active: {type: boolean, required: false}
+        limit: {type: integer, required: false, note: "max 1000"}
+    test_request: {queryParams: {search: "apple", market: "stocks", limit: "3"}}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, checked: "2026-08-15", note: "included in the subscriber's own plan (flat subscription, no per-call price); treg publishes no rate, so this serves own-key only"}
+    verified: 2026-08-15
+    example_response: examples/polygon.tickers.search.json
+    docs_url: https://polygon.io/docs/rest/stocks/tickers/all-tickers
+  - id: polygon.ticker.details
+    domain: stocks
+    capability: stocks.company.profile
+    platform: stocks
+    scope: any_account
+    method: GET
+    path: /v3/reference/tickers/{ticker}
+    name: "Company details by stock ticker — market cap, listing date"
+    summary: "Company details behind a ticker: name, market cap, listing date, SIC classification, homepage"
+    input:
+      queryParams:
+        ticker: {type: string, required: true, note: "path parameter", example: "AAPL"}
+    test_request: {queryParams: {ticker: "AAPL"}}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, checked: "2026-08-15", note: "included in the subscriber's own plan (flat subscription, no per-call price); treg publishes no rate, so this serves own-key only"}
+    verified: 2026-08-15
+    example_response: examples/polygon.ticker.details.json
+    docs_url: https://polygon.io/docs/rest/stocks/tickers/ticker-overview
+  - id: polygon.market.status
+    domain: stocks
+    capability: stocks.market.status
+    platform: stocks
+    scope: any_account
+    method: GET
+    path: /v1/marketstatus/now
+    name: "US stock market open or closed right now"
+    summary: "Whether US markets and each exchange are open, closed or in extended hours at this moment"
+    input:
+      note: "no parameters"
+    test_request: {queryParams: {}}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, checked: "2026-08-15", note: "included in the subscriber's own plan (flat subscription, no per-call price); treg publishes no rate, so this serves own-key only"}
+    verified: 2026-08-15
+    example_response: examples/polygon.market.status.json
+    docs_url: https://polygon.io/docs/rest/stocks/market-operations/market-status

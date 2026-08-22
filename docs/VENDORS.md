@@ -56,6 +56,15 @@ Or open an issue or PR on this repo yourself, with:
 6. Your 8–15 core endpoints, each with example parameter values and a cheap test target
 7. A test credential (or a small credits grant) sent privately once we reach out — **never in
    the issue/PR** — so we can run live verification
+8. **A self-verification ledger**: before submitting, run every `test_request` live against your
+   own account and record, per endpoint, the HTTP status, the cost your YAML claims, and the cost
+   your meter actually charged (charge field, rate-card endpoint, or balance delta), dated. Docs
+   drift; meters don't — a real submission's docs-transcribed price was 5× under what the meter
+   charged. Deliberate-miss test targets must be labeled as such, with the hit price observed
+   once on a real target.
+9. **A full-surface map**: every documented operation, marked catalogued or excluded-with-reason —
+   including the free count/preview routes and your cheapest operation tiers, which are the ones
+   agents (and reviewers) look for first.
 
 The example below is the complete shape of a listing.
 
@@ -147,6 +156,12 @@ The `capability` field is what puts you on the comparison shelf: an agent asking
 your API does a job the taxonomy lacks, the file proposes it under `proposed_capabilities:`.
 
 ### 3. What we run before it merges
+
+Your self-verification ledger speeds this up but never replaces it: every claim in a vendor PR —
+prices, probe behavior, evidence — is re-checked against an **independent** live run with a
+credential we control. `verified:` stamps and example responses are ours to add, on what we
+watched succeed. A ledger that disagrees with its own YAML bounces the PR; a price that disagrees
+with our meter gets corrected from the observed charge.
 
 ```bash
 # 1. Live bogus-key test: a garbage key POSTed to /connections/token must come back rejected

@@ -1,0 +1,83 @@
+provider: twelvedata
+source:
+  docs: https://twelvedata.com/docs
+  openapi: null # paths transcribed and live-verified 2026-08-15 (free Basic, 800 calls/day)
+  curated: 2026-08-15
+# TRIAL POOL + own-key: treg holds the free Basic key; Twelve Data's Individual pricing is for personal,
+# non-commercial purposes, and the business tier with external display rights is Venture at
+# $499/mo (research doc, licensing table). No fx rate -> usd null -> platform_eligible FALSE.
+pricing_url: https://twelvedata.com/pricing
+endpoints:
+  - id: twelvedata.quote
+    domain: stocks
+    capability: stocks.quote.live
+    platform: stocks
+    scope: any_account
+    method: GET
+    path: /quote
+    name: "Stock, forex or crypto quote by symbol — 52-week range"
+    summary: "Current quote with open/high/low/close, volume, change and 52-week range — stocks, forex and crypto symbols alike"
+    input:
+      queryParams:
+        symbol: {type: string, required: true, example: "AAPL"}
+        interval: {type: string, required: false, note: "quote interval, default 1day"}
+    test_request: {queryParams: {symbol: "AAPL"}}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, source_url: "https://twelvedata.com/pricing", checked: "2026-08-15", confidence: documented, note: "$0 on treg's key: a TRIAL POOL of 20 calls per team per day served on treg's free-tier twelvedata key (fx.yaml kind: treg_trial). Past the allowance the call is refused with a connect-your-own-key hint. With your own key: unmetered, your plan's limits"}
+    verified: 2026-08-15
+    example_response: examples/twelvedata.quote.json
+    docs_url: https://twelvedata.com/docs#quote
+  - id: twelvedata.time-series
+    domain: stocks
+    capability: stocks.eod.history
+    platform: stocks
+    scope: any_account
+    method: GET
+    path: /time_series
+    name: "Stock OHLCV time series by symbol — 1min to 1month"
+    summary: "OHLCV series at any interval from 1min to 1month — the workhorse for charts and analysis"
+    input:
+      queryParams:
+        symbol: {type: string, required: true, example: "AAPL"}
+        interval: {type: string, required: true, note: "1min | 5min | 15min | 30min | 45min | 1h | 2h | 4h | 1day | 1week | 1month", example: "1day"}
+        outputsize: {type: integer, required: false, note: "number of points, default 30, max 5000"}
+        start_date: {type: string, required: false}
+        end_date: {type: string, required: false}
+    test_request: {queryParams: {symbol: "AAPL", interval: "1day", outputsize: "3"}}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, source_url: "https://twelvedata.com/pricing", checked: "2026-08-15", confidence: documented, note: "$0 on treg's key: a TRIAL POOL of 20 calls per team per day served on treg's free-tier twelvedata key (fx.yaml kind: treg_trial). Past the allowance the call is refused with a connect-your-own-key hint. With your own key: unmetered, your plan's limits"}
+    verified: 2026-08-15
+    example_response: examples/twelvedata.time-series.json
+    docs_url: https://twelvedata.com/docs#time-series
+  - id: twelvedata.price
+    domain: stocks
+    capability: stocks.quote.live
+    platform: stocks
+    scope: any_account
+    method: GET
+    path: /price
+    name: "Current price of a symbol — one number only"
+    summary: "One number: the current price of a symbol — the cheapest possible check"
+    input:
+      queryParams:
+        symbol: {type: string, required: true, example: "AAPL"}
+    test_request: {queryParams: {symbol: "AAPL"}}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, source_url: "https://twelvedata.com/pricing", checked: "2026-08-15", confidence: documented, note: "$0 on treg's key: a TRIAL POOL of 20 calls per team per day served on treg's free-tier twelvedata key (fx.yaml kind: treg_trial). Past the allowance the call is refused with a connect-your-own-key hint. With your own key: unmetered, your plan's limits"}
+    verified: 2026-08-15
+    example_response: examples/twelvedata.price.json
+    docs_url: https://twelvedata.com/docs#real-time-price
+  - id: twelvedata.symbol.search
+    domain: stocks
+    capability: stocks.tickers.search
+    platform: stocks
+    scope: any_account
+    method: GET
+    path: /symbol_search
+    name: "Search stock, forex and crypto symbols by name"
+    summary: "Resolve a name or fragment to symbols across stocks, forex and crypto, with exchange info"
+    input:
+      queryParams:
+        symbol: {type: string, required: true, note: "the search text", example: "apple"}
+    test_request: {queryParams: {symbol: "apple"}}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, source_url: "https://twelvedata.com/pricing", checked: "2026-08-15", confidence: documented, note: "$0 on treg's key: a TRIAL POOL of 20 calls per team per day served on treg's free-tier twelvedata key (fx.yaml kind: treg_trial). Past the allowance the call is refused with a connect-your-own-key hint. With your own key: unmetered, your plan's limits"}
+    verified: 2026-08-15
+    example_response: examples/twelvedata.symbol.search.json
+    docs_url: https://twelvedata.com/docs#symbol-search

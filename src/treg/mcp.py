@@ -36,6 +36,7 @@ not initialized". `api.py` must compose this module's lifespan with its own; see
 from __future__ import annotations
 
 import json
+import logging
 import os
 from contextlib import asynccontextmanager
 from typing import Any, TypedDict
@@ -47,7 +48,7 @@ from mcp.server.mcpserver import Context
 from mcp.server.transport_security import TransportSecuritySettings
 from mcp.types import ToolAnnotations
 
-from . import catalog_store
+from . import audit, catalog_store
 from .config import PUBLIC_HOST_ALIASES, get_settings
 
 # Every tool must declare what it can DO, and the review process checks these against real behaviour.
@@ -113,7 +114,9 @@ class SearchResult(TypedDict, total=False):
     provider: str | None
     usd_per_call: float | None
     no_key_needed: bool | None
-    score: int | None
+    score: float | None
+    works: float | None          # measured success rate, or null when there isn't enough evidence
+    samples: int | None          # how many real calls that rate stands on
 
 
 class SearchOut(TypedDict, total=False):
@@ -121,6 +124,8 @@ class SearchOut(TypedDict, total=False):
     count: int | None
     total_matches: int | None
     results: list[SearchResult] | None
+    ranking_note: str | None     # set when the tie group outran what the evidence sort could weigh
+    near: list[dict] | None      # zero results only: the rows just under the gate + the words they miss
     hint: str | None
     next: str | None
     error: str | None
@@ -143,6 +148,7 @@ class CatalogGetOut(TypedDict, total=False):
     example_response: Any                  # a dict for most endpoints, an ARRAY for providers whose
                                            # response is a list of records (brightdata datasets)
     hints: list[str] | None
+    did_you_mean: list[str] | None         # real ids close to one that missed
     error: str | None
     detail: str | None
 
@@ -155,12 +161,15 @@ class CallOut(TypedDict, total=False):
     cost_usd: float | None
     whose_error: str | None         # "treg" or "provider" — who to blame, and whether to retry
     hint: str | None
+    did_you_mean: list[str] | None  # real ids close to one that missed
     error: str | None
     detail: str | None
 
 
 class BalanceOut(TypedDict, total=False):
     team: str | None
+    team_name: str | None           # the display name — a slug alone can't be recognised as wrong
+    identity: str | None            # WHOSE grant this is; the answer to "wrong team? whose login?"
     balance_usd: float | None
     balance_micro: int | None
     holds_micro: int | None
@@ -178,6 +187,8 @@ class TeamTool(TypedDict, total=False):
 
 class MyToolsOut(TypedDict, total=False):
     team: str | None
+    team_name: str | None
+    identity: str | None
     count: int | None
     tools: list[TeamTool] | None
     error: str | None
@@ -225,6 +236,48 @@ def _without_purchase_pointers(body: Any) -> Any:
         return v
 
     return scrub(body)
+
+
+def _qs_value(v: Any) -> str:
+    """One query-string value, spelled the way the WIRE spells it — not the way Python does.
+
+    `str(True)` is `"True"`, and an upstream that documents a boolean flag rejects that:
+    thecompaniesapi answers `{"rule": "boolean", "message": "The value must be a boolean"}`. The
+    caller did nothing wrong — JSON booleans are what an MCP client sends, and they arrived here as
+    real `bool`s — so the conversion is ours to get right. It bit hardest where it cost money:
+    `simplified=true` is that endpoint's FREE preview mode, so a silently-mangled flag pushed the
+    caller onto the paid path for a query they had asked to see for nothing.
+
+    Nested objects/arrays go as compact JSON rather than Python's `repr` (`{'a': 1}` with single
+    quotes is not JSON and no upstream parses it). `None` never reaches here — an unset parameter is
+    omitted from the query string entirely, which is what "no value" means over HTTP.
+    """
+    return catalog_store.wire_value(v)
+
+
+def _query_values(ep: dict | None, name: str, value: Any) -> list[str]:
+    """Structured value(s) for one query key, using the catalog's declared wire encoding."""
+    return catalog_store.query_values(ep, name, value)
+
+
+async def _observed_stats(endpoint_ids: list[str]) -> dict[str, dict]:
+    """What treg has measured across real calls to these endpoints — `{}` if it can't be read.
+
+    Its own session rather than the caller's client: this is a read of pooled, aggregate telemetry
+    that belongs to no org, and search must keep working when the query does not (the ranking then
+    falls back to the deterministic score order, which is what it always was).
+    """
+    if not endpoint_ids:
+        return {}
+    try:
+        from . import endpoint_stats
+        from .db import session_maker
+
+        async with session_maker() as db:
+            return await endpoint_stats.observed(db, endpoint_ids)
+    except Exception:  # noqa: BLE001 — telemetry must never take search down
+        logging.getLogger("treg.mcp").warning("endpoint stats unavailable", exc_info=True)
+        return {}
 
 
 def _oauth_claims(token: str) -> dict | None:
@@ -371,6 +424,48 @@ async def _resolve_org(client: httpx.AsyncClient) -> tuple[int | None, str | Non
     return int(chosen["org_id"]), chosen.get("slug"), None
 
 
+async def _whose_grant(client: httpx.AsyncClient, slug: str | None, *, oauth: bool) -> dict:
+    """`{team, team_name, identity, hint}` — enough for a human to spot the WRONG team.
+
+    A slug on its own cannot be sanity-checked. `superdesign-7` looks like a plausible team to an
+    agent and to the person reading over its shoulder, and neither of them can tell it apart from
+    the team they meant; the first signal that anything was wrong was money missing from a balance
+    nobody had opened. The display name and the account the grant belongs to are what make the
+    mismatch legible — most of the time it is the OTHER half that differs, an OAuth consent given by
+    one login while the CLI is signed in as another, which is exactly why `treg org ls` did not list
+    the team the connector was spending from.
+
+    Best-effort by construction: this is a label on an answer that is already correct, so a failure
+    to read the display name must never cost the caller their balance.
+    """
+    out: dict[str, Any] = {"team": slug}
+    try:
+        me = _body(await client.get("/auth/me"))
+        if isinstance(me, dict) and me.get("email"):
+            out["identity"] = me["email"]
+        orgs = _body(await client.get("/orgs"))
+        for o in orgs if isinstance(orgs, list) else []:
+            if o.get("slug") == slug:
+                out["team_name"] = o.get("name")
+                break
+        else:
+            # The grant names a team this identity's own list does not — worth saying out loud
+            # rather than leaving as a silent blank.
+            if slug and isinstance(orgs, list):
+                out["hint"] = (f"this connection spends from {slug!r}, which is not among this "
+                               f"account's teams — check who authorised it")
+    except Exception:  # noqa: BLE001 — a label, never a gate
+        logging.getLogger("treg.mcp").warning("could not label the grant's team", exc_info=True)
+    if oauth:
+        # Only an OAuth grant HAS a team to move. A header token carries its own team already, and
+        # `treg mcp grants` would list nothing for it — sending that caller to a command with no
+        # answer is the "documented a feature that isn't there for you" failure in miniature.
+        out.setdefault("hint", "to spend from a different team, the human who authorised this "
+                               "connection runs `treg mcp grants` then `treg mcp use-team "
+                               "<grant> <team>` — no need to reconnect")
+    return out
+
+
 # --------------------------------------------------------------------------------------------
 # The catalog — read straight from memory. Still credentialed: the transport challenges first.
 # --------------------------------------------------------------------------------------------
@@ -388,9 +483,17 @@ async def _resolve_org(client: httpx.AsyncClient) -> tuple[int | None, str | Non
 )
 async def catalog_search(query: str, limit: int = 8) -> SearchOut:
     cat = catalog_store.load()
-    ranked, total = catalog_store.search(query, cat, max(1, min(limit, 25)))
+    limit = max(1, min(limit, 25))
+    # Score, then let the evidence break the ties. Token scoring produces ties by the dozen — every
+    # one of the 24 "ad library" matches scores 6 — so with a default limit of 8 the rows an agent
+    # actually sees were decided by file order. That handed back seven tikhub rows (one of them
+    # uncallable) and hid the cheapest endpoint with a perfect measured record.
+    ranked, total, tie_truncated = catalog_store.rank_band(query, cat, limit)
+    stats = await _observed_stats([ep["id"] for ep, _ in ranked])
+    ranked = catalog_store.rerank(ranked, stats, cat)[:limit]
     results = []
     for ep, score in ranked:
+        obs = stats.get(ep["id"]) or {}
         cost = cat.cost_view(ep.get("cost"), ep.get("provider")) or {}
         results.append({
             "endpoint_id": ep["id"],
@@ -404,14 +507,42 @@ async def catalog_search(query: str, limit: int = 8) -> SearchOut:
             "no_key_needed": cat.platform_eligible(ep)
                              and bool(get_settings().platform_key_for(ep.get("provider"))),
             "score": score,
+            # The measured half of the answer, at the step where the agent is choosing. Without it
+            # the "your agent picks on evidence" story only came true at catalog_get — one endpoint
+            # at a time, after the shortlist had already been cut blind.
+            "works": obs.get("ok_rate"),
+            "samples": obs.get("samples") or 0,
         })
     out = {"query": query, "count": len(results), "total_matches": total, "results": results}
+    if tie_truncated:
+        # No silent caps: past this many equally-scoring rows the evidence sort never saw the rest,
+        # so the tail is ordered by nothing in particular and must not read as a ranked answer.
+        out["ranking_note"] = (f"{query!r} matches too broadly to rank on measured reliability past "
+                               f"the first {catalog_store.RERANK_BAND} equally-scoring rows — "
+                               f"add a word to narrow it")
     if not results:
-        out["hint"] = (
-            f"nothing matches all of {query!r} — drop a word, or try a different way of saying the task. "
-            "If the catalog genuinely lacks it, file it with catalog_request(capability=...) — "
-            "requests steer which provider gets added next"
-        )
+        # Same miss log as GET /catalog/search (see models.SearchMiss) — this tool reads the catalog
+        # in-process, so the HTTP route's logging never sees an MCP agent's empty search.
+        if query.strip():
+            audit.record_search_miss(query=query.strip(), source="mcp")
+        # the zero-result answer carries the rows that JUST missed the gate and which words they
+        # missed — the caller is an LLM, and told exactly what to drop it re-queries correctly
+        near = catalog_store.near_misses(query, cat)
+        if near:
+            out["near"] = near
+            first = near[0]
+            out["hint"] = (
+                f"nothing matches {query!r} closely enough. Nearest: {first['endpoint_id']} "
+                f"matches {', '.join(first['matches'])} but not {', '.join(first['missing'])} — "
+                "drop the unmatched words, or say the task differently. If the catalog genuinely "
+                "lacks it, file it with catalog_request(capability=...)"
+            )
+        else:
+            out["hint"] = (
+                f"nothing matches {query!r} closely enough — try different task words. "
+                "If the catalog genuinely lacks it, file it with catalog_request(capability=...) — "
+                "requests steer which provider gets added next"
+            )
     else:
         out["next"] = "catalog_get(endpoint_id) for parameters and the exact price, then call(...)"
     return out
@@ -460,8 +591,14 @@ async def catalog_get(endpoint_id: str, ctx: Context) -> CatalogGetOut:
     async with _api(token) as client:
         r = await client.get(f"/catalog/endpoints/{endpoint_id}")
     if r.status_code == 404:
+        cat = catalog_store.load()
         return {"error": f"unknown endpoint {endpoint_id!r}",
-                "hint": "use catalog_search to find the right id"}
+                # Naming the near miss, not just the tool to go back to. An id one segment off is
+                # the common failure — and the loop breaks at its FIRST step, so an agent that only
+                # hears "search again" re-runs the same search and re-derives the same wrong id.
+                "hints": [catalog_store.unknown_id_hint(endpoint_id, cat),
+                          "or use catalog_search to find the right id"],
+                "did_you_mean": catalog_store.near_ids(endpoint_id, cat)}
     return _body(r)
 
 
@@ -494,7 +631,11 @@ async def catalog_get(endpoint_id: str, ctx: Context) -> CatalogGetOut:
         "injected credentials always win over them. Use `query` + `body` together for endpoints "
         "that split a POST across both (Bright Data's ?dataset_id=… + array body). Giving `body` "
         "implies POST. Multipart file uploads aren't supported here — run (or tell the human to "
-        "run) the CLI: `treg call <endpoint> --upload name=@/path/to/file`."
+        "run) the CLI: `treg call <endpoint> --upload name=@/path/to/file`.\n\n"
+        "Query values are sent the way HTTP spells them: booleans as `true`/`false`, nested "
+        "objects as compact JSON. A null query value is OMITTED from the query string — if an "
+        "upstream distinguishes an absent parameter from an empty one, send the empty string "
+        "explicitly rather than null."
     ),
     annotations=_CALLS,
     structured_output=True
@@ -512,11 +653,15 @@ async def call(endpoint_id: str, params: dict | list | None = None,
     # first and falls back to a catalog id, so an org tool always wins over the catalog. Pre-checking
     # the catalog and refusing anything absent would have made `my_tools` a list of things the agent
     # could see and never call — which is how this gap was found.
-    ep = catalog_store.load().by_id.get(endpoint_id)
+    cat = catalog_store.load()
+    ep = cat.by_id.get(endpoint_id)
     if ep is None and "/" not in endpoint_id:
+        near = catalog_store.near_ids(endpoint_id, cat)
         return {"error": f"unknown endpoint {endpoint_id!r}",
-                "hint": "use catalog_search for a catalog id, or my_tools then "
-                        "'<tool-name>/<path>' for one of this team's own tools"}
+                "hint": ("did you mean " + ", ".join(near) + "?" if near else
+                         "use catalog_search for a catalog id, or my_tools then "
+                         "'<tool-name>/<path>' for one of this team's own tools"),
+                "did_you_mean": near}
 
     # `body` implies POST — curl's convention, and the CLI's: catalog endpoints reject a method
     # mismatch, so making `body` just work beats asking the caller to repeat what the catalog knows.
@@ -556,19 +701,20 @@ async def call(endpoint_id: str, params: dict | list | None = None,
         query_pairs += parse_qsl(inline, keep_blank_values=True)
     for src in (args if (reads_query and isinstance(args, dict)) else {}, query or {}):
         for k, v in src.items():
-            if isinstance(v, (list, tuple)):
-                query_pairs += [(k, str(x)) for x in v]
-            else:
-                query_pairs.append((k, str(v)))
+            if v is not None:
+                query_pairs += [(k, encoded) for encoded in _query_values(ep, k, v)]
 
     the_body = body if body is not None else (args if not reads_query else None)
     # Caller headers relay to the upstream exactly as the CLI's --header does (Google Ads'
     # login-customer-id is the canonical need) — with treg's own auth/routing headers filtered so
     # the tool's semantics stay unambiguous: the bearer on the MCP request IS the identity, and
     # idempotency travels via its own argument. Injected credentials always win server-side.
+    # `x-treg-meta` joins the filtered set: caller tags decide who gets billed and budgeted, so they
+    # must come from the TRANSPORT (the builder's backend, below) and never from a tool argument the
+    # model fills in — a model that omits it mid-chain drops that spend out of its user's invoice.
     extra_headers = {k: str(v) for k, v in (headers or {}).items()
                      if k.lower() not in ("x-treg-token", "x-treg-org", "authorization",
-                                          "idempotency-key")}
+                                          "idempotency-key", "x-treg-meta")}
     if isinstance(the_body, str):
         # A raw string body travels as-is. Content-Type: explicit wins, else sniff JSON — the
         # CLI's rule, because upstreams that require `application/json` reject a JSON body
@@ -594,6 +740,12 @@ async def call(endpoint_id: str, params: dict | list | None = None,
             return problem
         if slug:
             extra_headers["X-Treg-Org"] = slug
+        # Relay the caller tags off the MCP transport, the same way catalog_request forwards
+        # X-Forwarded-For. A builder proxying MCP sets this header once per session on their own HTTP
+        # client; the model never sees it, so it cannot be forgotten or invented.
+        inbound_meta = (ctx.headers or {}).get("x-treg-meta") or (ctx.headers or {}).get("X-Treg-Meta")
+        if inbound_meta:
+            extra_headers["X-Treg-Meta"] = str(inbound_meta)
         if idempotency_key:
             # Straight through to the header the API already honours. Deliberately the CALLER's key
             # and never derived from the request: two identical searches an hour apart are new work,
@@ -667,11 +819,12 @@ async def balance(ctx: Context) -> BalanceOut:
         if problem:
             return problem
         r = await client.get(f"/orgs/{org_id}/balance", headers={"X-Treg-Org": slug or ""})
+        whose = await _whose_grant(client, slug, oauth=_oauth_claims(token) is not None)
     body = _body(r)
     if r.status_code != 200:
         return {"error": "could not read the balance", "detail": body}
     return {
-        "team": slug,
+        **whose,
         "balance_usd": round((body.get("balance_micro") or 0) / 1_000_000, 6),
         "balance_micro": body.get("balance_micro"),
         "holds_micro": body.get("holds_micro"),
@@ -696,12 +849,13 @@ async def my_tools(ctx: Context) -> MyToolsOut:
         if problem:
             return problem
         r = await client.get("/tools", headers={"X-Treg-Org": slug or ""})
+        whose = await _whose_grant(client, slug, oauth=_oauth_claims(token) is not None)
     body = _body(r)
     if r.status_code != 200:
         return {"error": "could not list the team's tools", "detail": body}
     tools = body if isinstance(body, list) else body.get("tools", [])
     return {
-        "team": slug,
+        **whose,
         "count": len(tools),
         "tools": [{"name": t.get("name"), "base_url": t.get("base_url"),
                    "description": t.get("description")} for t in tools],

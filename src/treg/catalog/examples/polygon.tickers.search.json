@@ -1,0 +1,50 @@
+{
+  "results": [
+    {
+      "ticker": "AAPL",
+      "name": "Apple Inc.",
+      "market": "stocks",
+      "locale": "us",
+      "primary_exchange": "XNAS",
+      "type": "CS",
+      "active": true,
+      "currency_name": "usd",
+      "cik": "0000320193",
+      "composite_figi": "BBG000B9XRY4",
+      "share_class_figi": "BBG001S5N8V8",
+      "last_updated_utc": "2026-08-15T06:11:04.44665147Z"
+    },
+    {
+      "ticker": "AAPX",
+      "name": "T-Rex 2X Long Apple Daily Target ETF",
+      "market": "stocks",
+      "locale": "us",
+      "primary_exchange": "BATS",
+      "type": "ETF",
+      "active": true,
+      "currency_name": "usd",
+      "cik": "0001771146",
+      "composite_figi": "BBG01KY72SD3",
+      "share_class_figi": "BBG01KY72T78",
+      "last_updated_utc": "2026-08-15T06:11:04.446651851Z"
+    },
+    {
+      "ticker": "AAPY",
+      "name": "Kurv Yield Premium Strategy Apple (AAPL) ETF",
+      "market": "stocks",
+      "locale": "us",
+      "primary_exchange": "BATS",
+      "type": "ETF",
+      "active": true,
+      "currency_name": "usd",
+      "cik": "0001848758",
+      "composite_figi": "BBG01QY0GMH9",
+      "share_class_figi": "BBG01QY0GNH7",
+      "last_updated_utc": "2026-08-15T06:11:04.446651941Z"
+    }
+  ],
+  "status": "OK",
+  "request_id": "18c8a3eeedc4be7aca25eb033ba1df35",
+  "count": 3,
+  "next_url": "https://api.polygon.io/v3/reference/tickers?cursor=YXA9MyZhcz0mbGltaXQ9MyZtYXJrZXQ9c3RvY2tzJnNlYXJjaD1hcHBsZSZzb3J0PXRpY2tlcg"
+}

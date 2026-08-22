@@ -1,10 +1,17 @@
 # Live-verified 2026-07-28 through the treg /call proxy (connection: google-ads). All 5 endpoints
 # PASS, including listAccessibleCustomers — treg's tool binds the developer token alongside the
 # OAuth bearer, so a proxied caller needs neither, and no login-customer-id was required.
-# EXCEPT the googleAds:search request shape and the API VERSION, transcribed from
-# oauth_providers.GOOGLE_ADS.examples, where v21 was live-verified on 2026-07-22. The version is
-# in the URL path and a wrong guess returns an HTML 404 with no hint — treat v21 as load-bearing
-# and re-check it against the registry entry before assuming a 404 is anything else.
+# EXCEPT the googleAds:search request shape, transcribed from oauth_providers.GOOGLE_ADS.examples.
+#
+# API VERSION EXPIRES ON A CALENDAR, NOT ON A DEPLOY. Bumped v21 -> v25 on 2026-08-17 after v21
+# was SUNSET on 2026-08-05 and every call started failing with a JSON 400 UNSUPPORTED_VERSION.
+# listAccessibleCustomers and googleAds:search were re-verified live on v25 the same day.
+# (A version that never existed fails differently — an HTML 404 with no hint.) Google ships a
+# major roughly quarterly and sunsets each after ~12 months, so v25 (released 2026-07-22) is good
+# until ~Aug 2027 and then this file breaks again on a date nobody is watching. Bump all four
+# places together: here, google-ads.extended.yaml, oauth_providers.GOOGLE_ADS, and
+# scripts/catalog_ingest.py:GADS_VERSION. Sunset schedule:
+# https://developers.google.com/google-ads/api/docs/sunset-dates
 #
 # TWO CREDENTIALS PER CALL. Every request carries the user's OAuth bearer AND a `developer-token`
 # header from an approved Google Ads manager (MCC) account; most also need `login-customer-id`
@@ -32,8 +39,8 @@ endpoints:
     platform: google-ads
     scope: own_account
     method: GET
-    path: /v21/customers:listAccessibleCustomers
-    name: "List accessible accounts"
+    path: /v25/customers:listAccessibleCustomers
+    name: "List the Google Ads accounts your login can reach"
     summary: "List the Google Ads accounts your login can reach"
     input:
       note: "no parameters. Returns {resourceNames: [\"customers/6186675831\", …]} — ids ONLY, no names, which is why treg runs a second GAQL lookup (SELECT customer.descriptive_name FROM customer) per row to label the picker. Still needs the developer-token header"
@@ -41,15 +48,15 @@ endpoints:
     test_request: {queryParams: {}}
     verified: 2026-07-28
     example_response: examples/google-ads.accounts.json
-    docs_url: https://developers.google.com/google-ads/api/rest/reference/rest/v21/customers/listAccessibleCustomers
+    docs_url: https://developers.google.com/google-ads/api/rest/reference/rest/v25/customers/listAccessibleCustomers
 
   - id: google-ads.query
     capability: google-ads.query
     platform: google-ads
     scope: own_account
     method: POST
-    path: /v21/customers/{customer_id}/googleAds:search
-    name: "Run a custom GAQL query"
+    path: /v25/customers/{customer_id}/googleAds:search
+    name: "Run a GAQL query on your Google Ads account"
     summary: "Run a GAQL query against your Google Ads account (campaigns, spend, clicks, conversions)"
     input:
       pathParams:
@@ -58,7 +65,7 @@ endpoints:
         query: {type: string, required: true, note: "GAQL. Metrics come back only when the FROM resource supports them and a segments.date filter is present", example: "SELECT campaign.name, campaign.status, metrics.cost_micros, metrics.clicks FROM campaign WHERE segments.date DURING LAST_30_DAYS"}
         pageToken: {type: string, required: false}
       bodyType: json
-      note: "request shape and the v21 version previously live-verified via the registry entry's examples. NO pageSize — v21 rejects it with PAGE_SIZE_NOT_SUPPORTED (verified live 2026-07-28); the page is fixed at 10,000 rows, so cap the result set with GAQL's own LIMIT clause. Money is in MICROS: divide cost_micros by 1,000,000 for the account currency. googleAds:searchStream is the same query without paging, for large pulls"
+      note: "request shape transcribed from the registry entry's examples. NO pageSize — the API rejects it with PAGE_SIZE_NOT_SUPPORTED (verified live on v21, 2026-07-28; unchanged in v25 per the release notes but not re-verified live); the page is fixed at 10,000 rows, so cap the result set with GAQL's own LIMIT clause. Money is in MICROS: divide cost_micros by 1,000,000 for the account currency. googleAds:searchStream is the same query without paging, for large pulls"
     cost: {type: free, value: 0, currency: USD, unit: call, note: included with the connected account; counts against the developer token's daily operation limit}
     test_request:
       pathParams: {customer_id: "2277522568"}
@@ -74,8 +81,8 @@ endpoints:
     platform: google
     scope: own_account
     method: POST
-    path: /v21/customers/{customer_id}:generateKeywordIdeas
-    name: "Generate keyword ideas from a seed"
+    path: /v25/customers/{customer_id}:generateKeywordIdeas
+    name: "Keyword Planner ideas by seed — volume and competition"
     summary: "Related keyword ideas from Google's own Keyword Planner, with volume and competition"
     input:
       pathParams:
@@ -101,15 +108,15 @@ endpoints:
         pageSize: 3
     verified: 2026-07-28
     example_response: examples/google-ads.google.keywords.ideas.json
-    docs_url: https://developers.google.com/google-ads/api/rest/reference/rest/v21/customers/generateKeywordIdeas
+    docs_url: https://developers.google.com/google-ads/api/rest/reference/rest/v25/customers/generateKeywordIdeas
 
   - id: google-ads.google.keywords.volume
     capability: google.keywords.volume
     platform: google
     scope: own_account
     method: POST
-    path: /v21/customers/{customer_id}:generateKeywordHistoricalMetrics
-    name: "Get historical keyword search volume"
+    path: /v25/customers/{customer_id}:generateKeywordHistoricalMetrics
+    name: "Google search volume, competition, bids by keyword list"
     summary: "Get Google search volume, competition and bid range for a list of keywords"
     input:
       pathParams:
@@ -132,7 +139,7 @@ endpoints:
         keywordPlanNetwork: "GOOGLE_SEARCH"
     verified: 2026-07-28
     example_response: examples/google-ads.google.keywords.volume.json
-    docs_url: https://developers.google.com/google-ads/api/rest/reference/rest/v21/customers/generateKeywordHistoricalMetrics
+    docs_url: https://developers.google.com/google-ads/api/rest/reference/rest/v25/customers/generateKeywordHistoricalMetrics
 
   - id: google-ads.budget.update
     kind: action
@@ -140,8 +147,8 @@ endpoints:
     platform: google-ads
     scope: own_account
     method: POST
-    path: /v21/customers/{customer_id}/campaignBudgets:mutate
-    name: "Update campaign budget"
+    path: /v25/customers/{customer_id}/campaignBudgets:mutate
+    name: "Change a campaign's daily budget in Google Ads"
     summary: "Change a campaign's daily budget in your Google Ads account"
     input:
       pathParams:
@@ -161,5 +168,5 @@ endpoints:
         validateOnly: true
     verified: 2026-07-28
     example_response: examples/google-ads.budget.update.json
-    docs_url: https://developers.google.com/google-ads/api/rest/reference/rest/v21/customers/campaignBudgets/mutate
+    docs_url: https://developers.google.com/google-ads/api/rest/reference/rest/v25/customers/campaignBudgets/mutate
 

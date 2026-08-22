@@ -1,0 +1,435 @@
+provider: fiber-ai
+source:
+  docs: https://api.fiber.ai/llms.txt
+  openapi: https://api.fiber.ai/openapi.json
+  curated: 2026-08-17
+# UNVERIFIED — transcribed from Fiber's published ai-docs + pricing.md on 2026-08-17. Do not stamp
+# `verified:` or commit example responses here; live verification is maintainer-side with a test key.
+#
+# Auth: Fiber accepts the key as JSON-body `apiKey`, query `?apiKey=`, `x-api-key`, or
+# `Authorization: Bearer`. treg's registry injects `x-api-key` so the secret never lands in a logged
+# URL. Body/query take precedence when both are present; a header-only call is valid.
+#
+# Billing: Fiber meters CREDITS. Published self-serve rate is $0.02/credit (Prospector $300/mo /
+# 15,000 credits; see fx.yaml credit_rates_usd.fiber-ai). Every response carries `chargeInfo` with
+# `creditsCharged` (or `creditsRefunded`) — that field is the source of truth after a call.
+# Product policy on reveal / kitchen-sink / reverse lookup is pay-on-success: a miss or a failed
+# validation is free. Search bills per RESULT returned, so `pageSize` is the price dial.
+#
+# Traps:
+#   - Do not send `apiKey` in the test_request body; treg injects the header.
+#   - Contact reveal defaults ALL flags true (work + personal + phone = 5 credits on Quick, 7 on
+#     Turbo). Always set enrichmentType to the fields you actually want. The test_request asks for
+#     work email only.
+#   - Kitchen-sink person (`POST /v1/kitchen-sink/person`) is the "enrich a person from any id"
+#     route — 44+ top-level fields by default, no field selector. operationId KitchenSinkProfile
+#     (PascalCase). `liveFetch: true` adds 2 credits for a live LinkedIn pull.
+#   - Live LinkedIn fetch (`/v1/linkedin-live-fetch/...`) works on STANDARD self-serve keys. It
+#     returns profile/company data, NOT emails or phones — pipe a LinkedIn URL into
+#     fiber-ai.people.contacts.reveal for contact details.
+#   - Natural-language search (`POST /v1/nlp-search/run`) RUNS the search (companies OR people;
+#     the API picks). Do not confuse it with `POST /v1/nlp-search/parse`, which only returns
+#     filters. First page = 2 credits interpretation + 1 per result; later pages drop the 2.
+#   - GitHub → LinkedIn is async: trigger returns `githubAgentRunId`, poll that id. Polling is
+#     free; the resolution charge attaches to the trigger (1 credit per person for LinkedIn-only).
+#   - GET /v1/get-org-credits is the registry probe (free). It is NOT a catalog endpoint — treg
+#     agents search by job, not by "check my balance".
+
+limits: "per-endpoint; 200 req/min on standard reveal, 120/min turbo reveal, 180/min search, 600/min live LinkedIn, 3500/min reverse-email, 30/min GitHub trigger"
+pricing_url: https://www.fiber.ai/pricing.md  # 1 credit = $0.02 on Prospector; per-op rates on api.fiber.ai/ai-docs/{operationId}.md. 7-day self-serve trial.
+
+endpoints:
+  - id: fiber-ai.people.contacts.reveal
+    domain: contacts
+    capability: people.email.find
+    platform: people
+    scope: any_account
+    method: POST
+    path: /v1/contact-details/single
+    name: "Find a person's work email by LinkedIn URL (standard)"
+    summary: "Reveal contact details (standard)"
+    input:
+      bodyType: json
+      body:
+        linkedinUrl: {type: string, required: true, note: "full LinkedIn URL, bare slug, Sales Navigator URN, or numeric user id", example: "https://www.linkedin.com/in/williamhgates/"}
+        enrichmentType: {type: object, required: false, note: "flags getWorkEmails / getPersonalEmails / getPhoneNumbers — ALL default true, which bills the 5-credit bundle. Set only what you need", example: {getWorkEmails: true, getPersonalEmails: false, getPhoneNumbers: false}}
+        validateEmails: {type: boolean, required: false, note: "bounce-validate emails before returning; default true; no extra cost"}
+      note: "operationId syncQuickContactReveal. Balanced speed/cost default. Does not return a full profile — use fiber-ai.people.enrich or fiber-ai.linkedin.user.profile for that. Pay only when deliverable contact data comes back."
+    test_request:
+      body:
+        linkedinUrl: "https://www.linkedin.com/in/williamhgates/"
+        enrichmentType: {getWorkEmails: true, getPersonalEmails: false, getPhoneNumbers: false}
+        validateEmails: true
+    cost:
+      type: per_success
+      value: 2
+      currency: credit
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://api.fiber.ai/ai-docs/syncQuickContactReveal.md
+      checked: '2026-08-17'
+      confidence: documented
+      note: "Quick Reveal (default). Work email 2, personal email 2, phone 3, all emails 3, all contacts (emails+phones) 5. Metered at the 2-credit work-email-only call treg's test_request makes. A miss / failed validation is free. Reconcile with chargeInfo.creditsCharged."
+    docs_url: https://api.fiber.ai/ai-docs/syncQuickContactReveal.md
+
+  - id: fiber-ai.people.contacts.turbo
+    domain: contacts
+    capability: people.email.find
+    platform: people
+    scope: any_account
+    method: POST
+    path: /v1/contact-details/turbo/sync
+    name: "Find a person's work email by LinkedIn URL (turbo)"
+    summary: "Reveal contact details (turbo)"
+    input:
+      bodyType: json
+      body:
+        linkedinUrl: {type: string, required: true, note: "full LinkedIn URL, bare slug, Sales Navigator URN, or numeric user id", example: "https://www.linkedin.com/in/williamhgates/"}
+        enrichmentType: {type: object, required: false, note: "same flags as standard reveal; ALL default true = 7-credit bundle", example: {getWorkEmails: true, getPersonalEmails: false, getPhoneNumbers: false}}
+      note: "operationId syncTurboContactEnrichment. Fastest sync tier, higher credits. Fall back to this when latency matters; use standard reveal otherwise."
+    test_request:
+      body:
+        linkedinUrl: "https://www.linkedin.com/in/williamhgates/"
+        enrichmentType: {getWorkEmails: true, getPersonalEmails: false, getPhoneNumbers: false}
+    cost:
+      type: per_success
+      value: 3
+      currency: credit
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://api.fiber.ai/ai-docs/syncTurboContactEnrichment.md
+      checked: '2026-08-17'
+      confidence: documented
+      note: "Turbo. Work email 3, personal email 3, phone 5, all emails 5, all contacts 7. Metered at the 3-credit work-email-only test_request. A miss is free. Timeout budget ~90s vs ~2min on standard."
+    docs_url: https://api.fiber.ai/ai-docs/syncTurboContactEnrichment.md
+
+  - id: fiber-ai.people.enrich
+    domain: contacts
+    capability: people.enrich
+    platform: people
+    scope: any_account
+    method: POST
+    path: /v1/kitchen-sink/person
+    name: "Enrich a person by LinkedIn URL, email or name"
+    summary: "Kitchen sink person lookup"
+    input:
+      bodyType: json
+      body:
+        profileIdentifier: {type: object, required: false, note: "best identifier — {identifier: linkedinSlug|linkedinUrl|userID, value: ...}", example: {identifier: "linkedinUrl", value: "https://www.linkedin.com/in/williamhgates"}}
+        emailAddress: {type: string, required: false, note: "second-best identifier when you do not have a LinkedIn URL"}
+        personName: {type: object, required: false, note: "{value, looseMatch}; pair with companyDomain / companyIdentifier for disambiguation"}
+        companyDomain: {type: object, required: false, note: "{value: 'stripe.com'} — use with personName"}
+        liveFetch: {type: boolean, required: false, note: "real-time LinkedIn pull; +2 credits; default false"}
+        numProfiles: {type: integer, required: false, note: "1-10, default 1"}
+      note: "operationId KitchenSinkProfile (PascalCase). Returns 44+ top-level fields by default (experiences, education, skills, tenures, tags, inferred location+timezone, career-began date, follower/connection counts, is-hiring / open-to-work flags) with no field selector. Prefer a LinkedIn URL. Does NOT return emails/phones — use fiber-ai.people.contacts.reveal for that."
+    test_request:
+      body:
+        profileIdentifier: {identifier: "linkedinUrl", value: "https://www.linkedin.com/in/williamhgates"}
+        liveFetch: false
+        numProfiles: 1
+    cost:
+      type: per_success
+      value: 2
+      currency: credit
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://api.fiber.ai/ai-docs/KitchenSinkProfile.md
+      checked: '2026-08-17'
+      confidence: documented
+      note: "2 credits per resolved person. liveFetch=true adds 2 credits (do not set it on the cheap test). Pay only on a resolved entity. Reconcile with chargeInfo."
+    docs_url: https://api.fiber.ai/ai-docs/KitchenSinkProfile.md
+
+  - id: fiber-ai.companies.enrich
+    domain: companies
+    capability: companies.enrich
+    platform: companies
+    scope: any_account
+    method: POST
+    path: /v1/kitchen-sink/company
+    name: "Enrich a company by domain or LinkedIn URL — tech, funding"
+    summary: "Kitchen sink company lookup"
+    input:
+      bodyType: json
+      body:
+        companyIdentifier: {type: object, required: false, note: "{identifier: linkedinSlug|linkedinUrl|linkedinOrgID, value: ...} — fastest unique match"}
+        companyDomain: {type: object, required: false, note: "{value: 'stripe.com'} — unique enough on its own", example: {value: "stripe.com"}}
+        companyName: {type: object, required: false, note: "{value} — name-only lookups collide on common names; prefer domain or LinkedIn"}
+      note: "operationId kitchenSinkCompany. Full firmographics (tech stack, funding, headcount history, social). Prefer domain or LinkedIn over a bare name."
+    test_request:
+      body:
+        companyDomain: {value: "stripe.com"}
+    cost:
+      type: per_success
+      value: 2
+      currency: credit
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://api.fiber.ai/ai-docs/kitchenSinkCompany.md
+      checked: '2026-08-17'
+      confidence: documented
+      note: 2 credits per resolved company. Pay only on a match.
+    docs_url: https://api.fiber.ai/ai-docs/kitchenSinkCompany.md
+
+  - id: fiber-ai.linkedin.user.profile
+    domain: user
+    capability: linkedin.user.profile
+    platform: linkedin
+    scope: any_account
+    method: POST
+    path: /v1/linkedin-live-fetch/profile/single
+    name: "Live-fetch a LinkedIn person profile"
+    summary: "Live fetch LinkedIn profile"
+    input:
+      bodyType: json
+      body:
+        identifier: {type: string, required: true, note: "slug, full URL, Sales Navigator URN, or numeric user id", example: "williamhgates"}
+        getDetailedEducation: {type: boolean, required: false, note: "adds school LinkedIn/website/location; slower; default false"}
+        getDetailedWorkExperience: {type: boolean, required: false, note: "adds company LinkedIn/website/location; slower; default false"}
+      note: "operationId profileLiveEnrich. Works on standard self-serve keys (no enterprise gate). 2-4s sequential, sub-second amortized in parallel. Does NOT return emails or phones."
+    test_request:
+      body:
+        identifier: "williamhgates"
+        getDetailedEducation: false
+        getDetailedWorkExperience: false
+    cost:
+      type: per_call
+      value: 2
+      currency: credit
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://api.fiber.ai/ai-docs/profileLiveEnrich.md
+      checked: '2026-08-17'
+      confidence: documented
+      note: 2 credits per live profile fetch. Rate limit 600 req/min.
+    docs_url: https://api.fiber.ai/ai-docs/profileLiveEnrich.md
+
+  - id: fiber-ai.linkedin.company.profile
+    domain: company
+    capability: linkedin.company.profile
+    platform: linkedin
+    scope: any_account
+    method: POST
+    path: /v1/linkedin-live-fetch/company/single
+    name: "Live-fetch a LinkedIn company profile — headcount history"
+    summary: "Live fetch LinkedIn company"
+    input:
+      bodyType: json
+      body:
+        type: {type: string, required: true, note: "one of slug | orgId | liUrl", example: "slug"}
+        value: {type: string, required: true, note: "slug (microsoft), URL, org id, or Fiber company id", example: "microsoft"}
+        getHistoricalHeadcount: {type: boolean, required: false, note: "headcount over time; no extra credits, may be slower; default false"}
+      note: "operationId companyLiveEnrich. Same self-serve live access as the person live-fetch. Standard keys, no demo call."
+    test_request:
+      body: {type: "slug", value: "microsoft", getHistoricalHeadcount: false}
+    cost:
+      type: per_call
+      value: 2
+      currency: credit
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://api.fiber.ai/ai-docs/companyLiveEnrich.md
+      checked: '2026-08-17'
+      confidence: documented
+      note: 2 credits per live company fetch. Rate limit 600 req/min.
+    docs_url: https://api.fiber.ai/ai-docs/companyLiveEnrich.md
+
+  - id: fiber-ai.people.identity.resolve
+    domain: contacts
+    capability: people.identity.resolve
+    platform: people
+    scope: any_account
+    method: POST
+    path: /v1/email-to-person/single
+    name: "Reverse email lookup — LinkedIn URL, name, title"
+    summary: "Find person by email (single)"
+    input:
+      bodyType: json
+      body:
+        email: {type: string, required: true, note: "the address to resolve to a LinkedIn profile", example: "support@fiber.ai"}
+      note: "operationId reverseEmailLookup. Email → LinkedIn URL, name, title, company. If you also have a name or company, KitchenSinkProfile is the stronger matcher. Role-based inboxes (info@, support@) will not resolve to a person."
+    test_request:
+      body: {email: "support@fiber.ai"}
+    cost:
+      type: per_success
+      value: 2
+      currency: credit
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://api.fiber.ai/ai-docs/reverseEmailLookup.md
+      checked: '2026-08-17'
+      confidence: documented
+      note: "2 credits per successful match — OBSERVED live 2026-08-20 on a resolving address (chargeInfo.creditsCharged 2); the catalogued test_request is a deliberate role-inbox MISS and settled at 0, confirming misses are free. Rate limit 3500 req/min — space requests, do not burst."
+    docs_url: https://api.fiber.ai/ai-docs/reverseEmailLookup.md
+
+  - id: fiber-ai.companies.search
+    domain: companies
+    capability: companies.search
+    platform: companies
+    scope: any_account
+    method: POST
+    path: /v1/company-search
+    name: "Search companies with typed filters"
+    summary: "Search for companies using filters"
+    input:
+      bodyType: json
+      body:
+        searchParams: {type: object, required: true, note: "typed filters with anyOf/noneOf/lowerBound/upperBound. Company refs use canonical LinkedIn slugs/domains, not raw name strings. Full schema at the docs URL — do not guess field names"}
+        pageSize: {type: integer, required: false, note: "1-1000, default 25 — THIS IS THE PRICE DIAL: 1 credit per company returned", example: 1}
+        cursor: {type: string, required: false, note: "opaque cursor from the previous page; not a page number"}
+      note: "operationId companySearch. Filters live in searchParams (not `filters`). estimatedCount may be present at no extra charge — you pay for records in data."
+    test_request:
+      body:
+        searchParams:
+          exactCompanyV2:
+            anyOf:
+              - {identifier: "domain", domain: "stripe.com"}
+        pageSize: 1
+    cost:
+      type: per_result
+      value: 1
+      currency: credit
+      per: 1
+      unit: result
+      source: docs
+      source_url: https://api.fiber.ai/ai-docs/companySearch.md
+      checked: '2026-08-17'
+      confidence: documented
+      note: 1 credit per company returned. pageSize=1 on the test_request is the cheapest live call. Reconcile with chargeInfo.creditsCharged.
+    docs_url: https://api.fiber.ai/ai-docs/companySearch.md
+
+  - id: fiber-ai.people.search
+    domain: contacts
+    capability: people.search
+    platform: people
+    scope: any_account
+    method: POST
+    path: /v1/people-search
+    name: "Search people by seniority or current employer"
+    summary: "Search for people using filters"
+    input:
+      bodyType: json
+      body:
+        searchParams: {type: object, required: false, note: "typed people filters. Titles use seniority groups (founder, c-suite, vp, director, …) not regex. Full schema at the docs URL"}
+        currentCompanies: {type: "array[object]", required: false, note: "pin to current employers by domain or LinkedIn slug/URL — top-level, not inside searchParams", example: [{domain: "stripe.com"}]}
+        pageSize: {type: integer, required: false, note: "1-1000, default 25 — 1 credit per profile returned", example: 1}
+        cursor: {type: string, required: false}
+      note: "operationId peopleSearch. Returns people, not emails/phones. Pipe LinkedIn URLs into fiber-ai.people.contacts.reveal."
+    test_request:
+      body:
+        currentCompanies: [{domain: "stripe.com"}]
+        pageSize: 1
+    cost:
+      type: per_result
+      value: 1
+      currency: credit
+      per: 1
+      unit: result
+      source: docs
+      source_url: https://api.fiber.ai/ai-docs/peopleSearch.md
+      checked: '2026-08-17'
+      confidence: documented
+      note: 1 credit per profile returned. pageSize is the cost dial.
+    docs_url: https://api.fiber.ai/ai-docs/peopleSearch.md
+
+  - id: fiber-ai.people.search.natural_language
+    domain: contacts
+    capability: people.search.natural_language
+    platform: people
+    scope: any_account
+    method: POST
+    path: /v1/nlp-search/run
+    name: "Search people or companies from a sentence"
+    summary: "Natural language search"
+    input:
+      bodyType: json
+      body:
+        query: {type: string, required: false, note: "freeform prose — required on the first page, ignored when pageToken is set. Spec required-array is only apiKey so a pageToken-only call is valid", example: "fintech companies in San Francisco"}
+        pageSize: {type: integer, required: false, note: "1-1000, default 25 — 1 credit per result on top of the 2-credit first-page interpretation", example: 1}
+        pageToken: {type: string, required: false, note: "nextPageToken from the prior response; do not resend query when paginating"}
+      note: "operationId slushieRun. One sentence → matching companies OR people; the API picks the return type. This RUNS the search. Use POST /v1/nlp-search/parse (not catalogued) only when you want filters without executing."
+    test_request:
+      body: {query: "fintech companies in San Francisco", pageSize: 1}
+    cost:
+      type: per_result
+      value: 1
+      currency: credit
+      per: 1
+      unit: result
+      source: docs
+      source_url: https://api.fiber.ai/ai-docs/slushieRun.md
+      checked: '2026-08-17'
+      confidence: documented
+      note: "2 credits for NL interpretation on the FIRST page only, plus 1 credit per company or profile returned. A 1-result first page is therefore 3 credits. Later pages are 1/result with no interpretation charge. cost.value is the per-result component; budget the +2 on page one."
+    docs_url: https://api.fiber.ai/ai-docs/slushieRun.md
+
+  - id: fiber-ai.people.github.to_linkedin.trigger
+    domain: contacts
+    capability: people.github.to_linkedin
+    platform: people
+    scope: any_account
+    method: POST
+    path: /v1/github-to-linkedin/trigger
+    name: "Resolve GitHub usernames to LinkedIn profiles (async)"
+    summary: "Start GitHub to LinkedIn lookup"
+    input:
+      bodyType: json
+      body:
+        people: {type: "array[object]", required: true, note: "1-1000 items of {githubUsername, customerProvidedId?}. Spec field is githubUsername", example: [{githubUsername: "torvalds"}]}
+        outputType: {type: string, required: false, note: "linkedin (default) | email | both. 'both' is 2 credits/person; linkedin-only is 1", example: "linkedin"}
+        overallContext: {type: string, required: false, note: "shared descriptor (e.g. 'Linux kernel maintainers') to disambiguate similar names"}
+      note: "operationId githubToLinkedInTrigger. Async. Response output.githubAgentRunId is the id you poll with fiber-ai.people.github.to_linkedin.poll. Charges on successful resolution; polling is free. Match rate is not 100% — skip unresolved handles, do not retry."
+    test_request:
+      body:
+        people: [{githubUsername: "torvalds"}]
+        outputType: "linkedin"
+    cost:
+      type: per_success
+      value: 5
+      currency: credit
+      per: 1
+      unit: record
+      source: observed
+      checked: '2026-08-20'
+      confidence: verified
+      note: "OBSERVED live 2026-08-20: a 1-person LinkedIn-only trigger charged 5 credits (chargeInfo.method charged-for-async-process, creditsCharged 5), matching the account's own rate card (getLiProfileFromGithubUsername = 500 centi-credits; getEmailFromGithubUsername = 300, so email-only is 3). The vendor docs' '1 credit per person' understates 5x — trust the rate card. Charge attaches to the trigger; poll is free. Rate limit 30 req/min."
+    docs_url: https://api.fiber.ai/ai-docs/githubToLinkedInTrigger.md
+
+  - id: fiber-ai.people.github.to_linkedin.poll
+    domain: contacts
+    capability: people.github.to_linkedin
+    platform: people
+    scope: any_account
+    method: POST
+    path: /v1/github-to-linkedin/polling
+    name: "Poll a GitHub-to-LinkedIn lookup job"
+    summary: "Poll GitHub to LinkedIn lookup"
+    input:
+      bodyType: json
+      body:
+        githubAgentRunId: {type: string, required: true, note: "id returned by the trigger endpoint"}
+        pageSize: {type: integer, required: false, note: "1-100, default 10"}
+        cursor: {type: string, required: false, note: "nextCursor from the previous poll page"}
+      note: "operationId githubToLinkedInPolling. Pair with fiber-ai.people.github.to_linkedin.trigger. Poll no tighter than every 5s (15s across a batch). Status NOT_STARTED|STARTED|DONE|FAILED. Do not re-trigger an in-flight run — that double-charges on success. This is where LinkedIn URLs come back."
+    untestable: "requires githubAgentRunId from a prior trigger call; a guessed id 404s and looks like a broken endpoint. Manually exercised 2026-08-20 with a fresh run id: status DONE, torvalds resolved to linkedin.com/in/linustorvalds at confidence 10/10, chargeInfo confirmed the poll itself is free"
+    cost:
+      type: free
+      value: 0
+      currency: USD
+      unit: call
+      source: docs
+      source_url: https://api.fiber.ai/ai-docs/githubToLinkedInPolling.md
+      checked: '2026-08-17'
+      confidence: documented
+      note: Polling is free. The resolution charge is on the trigger. Rate limit 60 req/min.
+    docs_url: https://api.fiber.ai/ai-docs/githubToLinkedInPolling.md
+
+proposed_capabilities:
+  people.search.natural_language: "Search people or companies from a natural-language sentence"
+  people.github.to_linkedin: "Resolve a GitHub username to a LinkedIn profile"

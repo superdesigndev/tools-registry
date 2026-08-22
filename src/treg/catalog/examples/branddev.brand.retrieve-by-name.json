@@ -1,0 +1,50 @@
+{
+ "status": "ok",
+ "brand": {
+  "domain": "anthropic.com",
+  "title": "Anthropic",
+  "description": "Anthropic is a public‑benefit corporation that conducts AI research and builds safety‑first AI products. The company develops the Claude family of large language models—including Opus, Sonnet, and Haiku—designed for c…",
+  "slogan": "AI research and products that put safety at the frontier",
+  "colors": [{"hex": "#fafaf2", "name": "Pure White", "source": "logo"}, "… further items truncated for the catalog example"],
+  "logos": [
+   {
+    "url": "https://media.brand.dev/6d3fd51d-e28a-4faa-9174-939521d41ab3.png",
+    "mode": "has_opaque_background",
+    "colors": [{"hex": "#fafaf2", "name": "Pure White"}, "… further items truncated for the catalog example"],
+    "resolution": {"width": 256, "height": 256, "aspect_ratio": 1},
+    "type": "icon"
+   },
+   "… further items truncated for the catalog example"
+  ],
+  "backdrops": [
+   {
+    "url": "https://media.brand.dev/b0ba077e-547b-455a-905c-e4a9c56f583b.jpg",
+    "colors": [{"hex": "#cb6c60", "name": "Dash of Curry"}, "… further items truncated for the catalog example"],
+    "resolution": {"width": 1000, "height": 169, "aspect_ratio": 5.92}
+   },
+   "… further items truncated for the catalog example"
+  ],
+  "address": {"country": "United States", "country_code": "US"},
+  "socials": [{"type": "x", "url": "https://x.com/anthropicai"}, "… further items truncated for the catalog example"],
+  "employees": {"range": "501 to 1000", "exact": 5700},
+  "email": "",
+  "is_nsfw": false,
+  "industries": {
+   "eic": [
+    {"industry": "Technology", "subindustry": "Artificial Intelligence & Machine Learning"},
+    "… further items truncated for the catalog example"
+   ]
+  },
+  "links": {
+   "careers": "https://www.anthropic.com/careers",
+   "privacy": "https://www.anthropic.com/legal/privacy",
+   "blog": "https://www.anthropic.com/news",
+   "pricing": null,
+   "contact": null,
+   "terms": null
+  },
+  "primary_language": "english"
+ },
+ "code": 200,
+ "key_metadata": {"credits_consumed": 10, "credits_remaining": 264}
+}

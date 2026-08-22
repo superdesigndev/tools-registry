@@ -1,0 +1,10 @@
+{
+  "id": "01a01ca2-932a-7b00-bc07-9417bb2a2b58",
+  "type": "bulk_enrichment",
+  "status": "completed",
+  "title": "Enrich 1 domains",
+  "created_at": "2026-08-20T00:46:51.6904Z",
+  "started_at": "2026-08-20T00:46:59.868504Z",
+  "completed_at": "2026-08-20T00:47:19.876756Z",
+  "credits_charged": 1
+}

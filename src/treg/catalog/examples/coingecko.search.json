@@ -1,0 +1,333 @@
+{
+  "coins": [
+    {
+      "id": "solana",
+      "name": "Solana",
+      "api_symbol": "solana",
+      "symbol": "SOL",
+      "market_cap_rank": 7,
+      "thumb": "https://coin-images.coingecko.com/coins/images/4128/thumb/solana.png",
+      "large": "https://coin-images.coingecko.com/coins/images/4128/large/solana.png"
+    },
+    {
+      "id": "solana-name-service",
+      "name": "Solana Name Service",
+      "api_symbol": "solana-name-service",
+      "symbol": "SNS",
+      "market_cap_rank": 2442,
+      "thumb": "https://coin-images.coingecko.com/coins/images/55691/thumb/0cxkA759_400x400.jpg",
+      "large": "https://coin-images.coingecko.com/coins/images/55691/large/0cxkA759_400x400.jpg"
+    },
+    {
+      "id": "green-satoshi-token",
+      "name": "STEPN Green Satoshi Token on Solana",
+      "api_symbol": "green-satoshi-token",
+      "symbol": "GST-SOL",
+      "market_cap_rank": 2542,
+      "thumb": "https://coin-images.coingecko.com/coins/images/21841/thumb/gst.png",
+      "large": "https://coin-images.coingecko.com/coins/images/21841/large/gst.png"
+    },
+    {
+      "id": "play-solana-token",
+      "name": "Play Solana Token",
+      "api_symbol": "play-solana-token",
+      "symbol": "PLAY",
+      "market_cap_rank": 2552,
+      "thumb": "https://coin-images.coingecko.com/coins/images/70610/thumb/_PLAY_200x200.png",
+      "large": "https://coin-images.coingecko.com/coins/images/70610/large/_PLAY_200x200.png"
+    },
+    {
+      "id": "pepecoin-on-solana",
+      "name": "PepeCoin on Solana",
+      "api_symbol": "pepecoin-on-solana",
+      "symbol": "PEPE",
+      "market_cap_rank": 3260,
+      "thumb": "https://coin-images.coingecko.com/coins/images/35507/thumb/pepeonsol200x200.png",
+      "large": "https://coin-images.coingecko.com/coins/images/35507/large/pepeonsol200x200.png"
+    },
+    {
+      "id": "npc-on-solana",
+      "name": "NPC On Solana",
+      "api_symbol": "npc-on-solana",
+      "symbol": "NPCS",
+      "market_cap_rank": 3314,
+      "thumb": "https://coin-images.coingecko.com/coins/images/38840/thumb/Untitled_design-62.png",
+      "large": "https://coin-images.coingecko.com/coins/images/38840/large/Untitled_design-62.png"
+    },
+    {
+      "id": "solana-fork-staccana",
+      "name": "Solana Fork Staccana",
+      "api_symbol": "solana-fork-staccana",
+      "symbol": "STACCANA",
+      "market_cap_rank": 3408,
+      "thumb": "https://coin-images.coingecko.com/coins/images/102173162/thumb/LOGO_BIG.jpeg",
+      "large": "https://coin-images.coingecko.com/coins/images/102173162/large/LOGO_BIG.jpeg"
+    },
+    {
+      "id": "harambe-2",
+      "name": "Harambe on Solana",
+      "api_symbol": "harambe-2",
+      "symbol": "HARAMBE",
+      "market_cap_rank": 3479,
+      "thumb": "https://coin-images.coingecko.com/coins/images/34668/thumb/haram_%281%29.jpg",
+      "large": "https://coin-images.coingecko.com/coins/images/34668/large/haram_%281%29.jpg"
+    },
+    {
+      "id": "solid",
+      "name": "Solana ID",
+      "api_symbol": "solid",
+      "symbol": "SOLID",
+      "market_cap_rank": 4132,
+      "thumb": "https://coin-images.coingecko.com/coins/images/54372/thumb/logo_social_media.png",
+      "large": "https://coin-images.coingecko.com/coins/images/54372/large/logo_social_media.png"
+    },
+    {
+      "id": "barbiecrashbandicootrfk88",
+      "name": "BarbieCrashBandicootRFK88",
+      "api_symbol": "barbiecrashbandicootrfk88",
+      "symbol": "SOLANA",
+      "market_cap_rank": 4157,
+      "thumb": "https://coin-images.coingecko.com/coins/images/31247/thumb/logo_200px.jpg",
+      "large": "https://coin-images.coingecko.com/coins/images/31247/large/logo_200px.jpg"
+    },
+    {
+      "id": "solana-swap",
+      "name": "Solana Swap",
+      "api_symbol": "solana-swap",
+      "symbol": "SOS",
+      "market_cap_rank": 4369,
+      "thumb": "https://coin-images.coingecko.com/coins/images/50379/thumb/200X200.png",
+      "large": "https://coin-images.coingecko.com/coins/images/50379/large/200X200.png"
+    },
+    {
+      "id": "wiener-doge-on-solana",
+      "name": "Wiener Doge on Solana",
+      "api_symbol": "wiener-doge-on-solana",
+      "symbol": "WIENER",
+      "market_cap_rank": 4552,
+      "thumb": "https://coin-images.coingecko.com/coins/images/70084/thumb/2025-09-13_11.53.34.jpg",
+      "large": "https://coin-images.coingecko.com/coins/images/70084/large/2025-09-13_11.53.34.jpg"
+    },
+    {
+      "id": "solana-shib",
+      "name": "Solana Shib ",
+      "api_symbol": "solana-shib",
+      "symbol": "SSHIB",
+      "market_cap_rank": 4919,
+      "thumb": "https://coin-images.coingecko.com/coins/images/33564/thumb/6VHL2vMKgrF1YQFSv29Rs1pj9VCRK29bD11NtDqerqHA.jpg",
+      "large": "https://coin-images.coingecko.com/coins/images/33564/large/6VHL2vMKgrF1YQFSv29Rs1pj9VCRK29bD11NtDqerqHA.jpg"
+    },
+    {
+      "id": "only-possible-on-solana",
+      "name": "Only Possible On Solana",
+      "api_symbol": "only-possible-on-solana",
+      "symbol": "OPOS",
+      "market_cap_rank": 4934,
+      "thumb": "https://coin-images.coingecko.com/coins/images/32151/thumb/8e94bc23-f4c1-4c11-9c23-d063953a0d03.png",
+      "large": "https://coin-images.coingecko.com/coins/images/32151/large/8e94bc23-f4c1-4c11-9c23-d063953a0d03.png"
+    },
+    {
+      "id": "oxygen",
+      "name": "Oxygen (Solana)",
+      "api_symbol": "oxygen",
+      "symbol": "OXY",
+      "market_cap_rank": 4967,
+      "thumb": "https://coin-images.coingecko.com/coins/images/13509/thumb/8DjBZ79V_400x400.jpg",
+      "large": "https://coin-images.coingecko.com/coins/images/13509/large/8DjBZ79V_400x400.jpg"
+    },
+    {
+      "id": "solana-spaces",
+      "name": "Solana Spaces",
+      "api_symbol": "solana-spaces",
+      "symbol": "STORE",
+      "market_cap_rank": 4982,
+      "thumb": "https://coin-images.coingecko.com/coins/images/55858/thumb/logo_colored_over_black.png",
+      "large": "https://coin-images.coingecko.com/coins/images/55858/large/logo_colored_over_black.png"
+    },
+    {
+      "id": "owo-solana",
+      "name": "OwO Solana",
+      "api_symbol": "owo-solana",
+      "symbol": "OWO",
+      "market_cap_rank": 4992,
+      "thumb": "https://coin-images.coingecko.com/coins/images/67014/thumb/GumiXqdXUAAs5lk.jpeg",
+      "large": "https://coin-images.coingecko.com/coins/images/67014/large/GumiXqdXUAAs5lk.jpeg"
+    },
+    {
+      "id": "solana-social-explorer",
+      "name": "Solana Social Explorer",
+      "api_symbol": "solana-social-explorer",
+      "symbol": "SSE",
+      "market_cap_rank": 5217,
+      "thumb": "https://coin-images.coingecko.com/coins/images/54214/thumb/8tVJPrj6_400x400.jpg",
+      "large": "https://coin-images.coingecko.com/coins/images/54214/large/8tVJPrj6_400x400.jpg"
+    },
+    {
+      "id": "solanaclawd",
+      "name": "solanaclawd",
+      "api_symbol": "solanaclawd",
+      "symbol": "CLAWD",
+      "market_cap_rank": 5398,
+      "thumb": "https://coin-images.coingecko.com/coins/images/102172785/thumb/gyyw1ex9agep8qt1br3z0mzs03ok.",
+      "large": "https://coin-images.coingecko.com/coins/images/102172785/large/gyyw1ex9agep8qt1br3z0mzs03ok."
+    },
+    {
+      "id": "baby-solana",
+      "name": "Baby Solana",
+      "api_symbol": "baby-solana",
+      "symbol": "BABYSOL",
+      "market_cap_rank": 5647,
+      "thumb": "https://coin-images.coingecko.com/coins/images/51872/thumb/Babysol_logo.png",
+      "large": "https://coin-images.coingecko.com/coins/images/51872/large/Babysol_logo.png"
+    },
+    {
+      "id": "rizz-solana",
+      "name": "RIZZ Solana",
+      "api_symbol": "rizz-solana",
+      "symbol": "RIZZ",
+      "market_cap_rank": 5727,
+      "thumb": "https://coin-images.coingecko.com/coins/images/37717/thumb/rizz.png",
+      "large": "https://coin-images.coingecko.com/coins/images/37717/large/rizz.png"
+    },
+    {
+      "id": "liquid-solana-derivative",
+      "name": "Liquid Solana Derivative",
+      "api_symbol": "liquid-solana-derivative",
+      "symbol": "LSD",
+      "market_cap_rank": 5749,
+      "thumb": "https://coin-images.coingecko.com/coins/images/33209/thumb/IMG_3480.jpeg",
+      "large": "https://coin-images.coingecko.com/coins/images/33209/large/IMG_3480.jpeg"
+    },
+    {
+      "id": "dog-emoji-on-solana",
+      "name": "Dog Emoji On Solana",
+      "api_symbol": "dog-emoji-on-solana",
+      "symbol": "🐕",
+      "market_cap_rank": 5767,
+      "thumb": "https://coin-images.coingecko.com/coins/images/50586/thumb/DLScRnWofxiYGqnvZWGy9Gt98MPqKdznaK4TRukxpump.png",
+      "large": "https://coin-images.coingecko.com/coins/images/50586/large/DLScRnWofxiYGqnvZWGy9Gt98MPqKdznaK4TRukxpump.png"
+    },
+    {
+      "id": "apu-apustaja-sol",
+      "name": "Apu Apustaja (Solana)",
+      "api_symbol": "apu-apustaja-sol",
+      "symbol": "APU",
+      "market_cap_rank": 6071,
+      "thumb": "https://coin-images.coingecko.com/coins/images/51734/thumb/apu_icon_200x200-removebg-preview.png",
+      "large": "https://coin-images.coingecko.com/coins/images/51734/large/apu_icon_200x200-removebg-preview.png"
+    },
+    {
+      "id": "starship-4",
+      "name": "Starship on Solana 🚀",
+      "api_symbol": "starship-4",
+      "symbol": "STSHIP",
+      "market_cap_rank": 6158,
+      "thumb": "https://coin-images.coingecko.com/coins/images/34033/thumb/logo200x200.png",
+      "large": "https://coin-images.coingecko.com/coins/images/34033/large/logo200x200.png"
+    }
+  ],
+  "exchanges": [
+    {
+      "id": "pancakeswap-v3-solana",
+      "name": "Pancakeswap V3 (Solana)",
+      "market_type": "spot",
+      "thumb": "https://coin-images.coingecko.com/markets/images/21995/thumb/pancakeswap.jpg",
+      "large": "https://coin-images.coingecko.com/markets/images/21995/large/pancakeswap.jpg"
+    }
+  ],
+  "icos": [],
+  "categories": [
+    {
+      "id": "token-2022",
+      "name": "Solana Token-2022"
+    },
+    {
+      "id": "solana-meme-coins",
+      "name": "Solana Meme"
+    },
+    {
+      "id": "solana-ecosystem",
+      "name": "Solana Ecosystem"
+    }
+  ],
+  "nfts": [
+    {
+      "id": "solanascape-party-hats",
+      "name": "Solanascape Party Hats",
+      "symbol": "SSPHAT",
+      "thumb": "missing_thumb.png"
+    },
+    {
+      "id": "solana-dogs",
+      "name": "Solana Dogs🦴",
+      "symbol": "SDOG",
+      "thumb": "https://coin-images.coingecko.com/nft_contracts/images/4768/thumb/solana-dogs.jpg"
+    },
+    {
+      "id": "solana-monkey-business",
+      "name": "Solana Monkey Business",
+      "symbol": "SMB",
+      "thumb": "https://coin-images.coingecko.com/nft_contracts/images/2433/thumb/solana-monkey-business.png"
+    },
+    {
+      "id": "gomining-solana",
+      "name": "GoMining Solana",
+      "symbol": "GMS",
+      "thumb": "https://coin-images.coingecko.com/nft_contracts/images/102126232/thumb/gomining-solana.png"
+    },
+    {
+      "id": "degods-solana",
+      "name": "DeGods (Solana)",
+      "symbol": "DGOD",
+      "thumb": "https://coin-images.coingecko.com/nft_contracts/images/2430/thumb/degods.png"
+    },
+    {
+      "id": "bored-ape-solana-club",
+      "name": "Bored Ape Solana Club",
+      "symbol": "BOREDAPESOLANACLUB",
+      "thumb": "https://coin-images.coingecko.com/nft_contracts/images/2671/thumb/bored-ape-solana-club.png"
+    },
+    {
+      "id": "solana-monke-rejects",
+      "name": "Solana Monke Rejects",
+      "symbol": "SMR",
+      "thumb": "https://coin-images.coingecko.com/nft_contracts/images/2677/thumb/solana-monke-rejects.gif"
+    },
+    {
+      "id": "y00ts-solana",
+      "name": "y00ts (Solana)",
+      "symbol": "Y00TSREVEAL",
+      "thumb": "https://coin-images.coingecko.com/nft_contracts/images/2432/thumb/y00ts.jpg"
+    },
+    {
+      "id": "solana-sprotos",
+      "name": "Solana Sprotos",
+      "symbol": "SPROTOS",
+      "thumb": "https://coin-images.coingecko.com/nft_contracts/images/26156/thumb/solana-sprotos.png"
+    },
+    {
+      "id": "solana-business-frogs",
+      "name": "Solana Business Frogs",
+      "symbol": "SBF",
+      "thumb": "https://coin-images.coingecko.com/nft_contracts/images/15142/thumb/solana-business-frogs.jpg"
+    },
+    {
+      "id": "npc-on-solana",
+      "name": "NPC on Solana",
+      "symbol": "NPCS",
+      "thumb": "https://coin-images.coingecko.com/nft_contracts/images/15678/thumb/npc-on-solana.png"
+    },
+    {
+      "id": "play-solana-nft",
+      "name": "Play Solana NFT",
+      "symbol": "PLAYSOLANA",
+      "thumb": "https://coin-images.coingecko.com/nft_contracts/images/14969/thumb/play-solana-nft."
+    },
+    {
+      "id": "1252",
+      "name": "NPC on Solana",
+      "symbol": "NPCS",
+      "thumb": "https://coin-images.coingecko.com/nft_contracts/images/15242/thumb/1252."
+    }
+  ]
+}

@@ -28,7 +28,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /me/adaccounts
-    name: "List ad accounts you can access"
+    name: "Meta ad accounts you can access"
     summary: "List the Meta ad accounts you can access, with their names and currencies"
     input:
       queryParams:
@@ -48,7 +48,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /{ad_account_id}/campaigns
-    name: "List campaigns in an ad account"
+    name: "Campaigns in your Meta ad account — status, budget"
     summary: "List the campaigns in your Meta ad account with status, objective and budget"
     input:
       pathParams:
@@ -73,7 +73,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /{object_id}/insights
-    name: "Get spend and performance metrics"
+    name: "Your Meta ads' spend, impressions, clicks, conversions"
     summary: "Get spend, impressions, clicks and conversions for your Meta ads"
     input:
       pathParams:

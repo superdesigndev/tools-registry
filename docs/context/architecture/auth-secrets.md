@@ -58,7 +58,12 @@ and raises a clear error when a 200 body carries no `access_token`; `_expires_at
 
 `refresh()` posts the credential's recorded `client_id_param` dialect (TikTok reads `client_key`, not
 `client_id`), snapshotted onto the blob at mint time so a refresh months later still speaks the dialect
-the grant was minted with.
+the grant was minted with. The same snapshotting covers `token_endpoint_auth_method`: X and Pinterest
+demand the secret in HTTP **Basic**, and for a while only `exchange_code` knew — so connect succeeded
+and every refresh 401'd two hours later (surfaced to callers as `502 oauth refresh failed`; ≥6 orgs
+hit it live). Now the method rides in the blob and `refresh()` honors it; a legacy blob without the
+field gets body auth, then ONE retry with Basic on a 4xx, and stamps whichever worked — existing
+broken connections self-heal on their next call, no migration.
 
 **Connect flow (mint the first token):** `consent_url(pending)` builds the provider consent URL
 (default `access_type=offline` + `prompt=consent` so a refresh token comes back); `exchange_code(pending,
@@ -88,6 +93,13 @@ consents, supplying nothing. The asymmetry is the point of a hosted registry: th
 platforms is the *approval* (a Google Ads developer token, Meta App Review), not the OAuth dance — treg
 has already cleared it. treg's own client id/secret load from `Settings` (named by
 `client_id_setting`/`client_secret_setting`, so they come from `.env` like every other setting).
+The Meta pair carries three tiers — read / post / **manage** (comments + DMs on Instagram; engagement,
+visitor content, metadata/webhooks, Messenger, Page video, leads_retrieval + its required
+pages_manage_ads rider, and catalog_management on Facebook Pages) — sized for the 2026-08 App Review
+bundle; `default_capability` is the broadest tier by design, so a plain Connect asks for manage.
+Google Search Console's hand-written tool example calls out its distinct direct-tool convention:
+substitute `{site_url}` with a value encoded exactly once (`sc-domain%3Aexample.com`), and never encode
+again a property identifier returned by the sites list.
 
 Each entry is a frozen `OAuthProvider` dataclass; `REGISTRY` is the `{service: provider}` map. Key
 module symbols:
@@ -110,6 +122,24 @@ module symbols:
   are cumulative supersets (write ⊇ read); `default_capability` is the **broadest** (an agent product needs
   write eventually, so one honest consent screen beats connecting twice). `scopes_for()` /
   `satisfied_capabilities()` decide when a later capability needs a re-consent.
+- `platform_billed` + `billed_read_usd`/`billed_write_usd`/`billed_write_link_usd` — providers whose
+  UPSTREAM bills the app owner per use, whoever's token made the call. X is the one entry: it dropped
+  plan tiers for prepaid pay-per-use (per resource read / per post written, checked 2026-08-12), so a
+  registry X connect spends treg's credits and the proxy meters those calls against the org's balance
+  (`api.py` `_billed_marketplace` → the tier-4 reserve→settle path; [money](money.md)). Gated on the
+  deploy opting in via `TREG_OAUTH_BILLED_PROVIDERS` (`config.oauth_billed_set` — empty means free,
+  the kill-switch shape `platform_providers` uses). The rates here are the fallback for uncatalogued
+  routes; a priced catalog entry wins — and since a `free` block has a falsy `usd`, "priced" has to be
+  read as *not free*, or a catalog that says $0 quietly bills the fallback instead. **Every X entry
+  therefore carries a real rate**, taken from X's per-resource-type rate card rather than one read
+  price and one write price (`x.yaml` curates five; `catalog_ingest.X_RATES` transcribes the card and
+  `X_ROUTE_RATES` maps the other 168 routes onto it), and `tests/test_marketplace_call.py` walks the
+  provider asserting the published number equals the reserved one. The `billed_*` fields here are the
+  fallback for a path no entry claims; **the $0.001 owned-read rate is deliberately not among them**,
+  since X grants it only to the app's own owner and a registry connect's member never is. `listing()` carries `metered` +
+  `billed_rates` so the dashboard can show the price BEFORE consent — and so the catalog's own price
+  display can stop calling a connected account free (`catMetered`, [dashboard](../interface/dashboard.md)). A **BYO connect is never metered** — the callback
+  stamps `secret.provider` only in registry mode, and that attribution is the whole detection.
 - `auth_kind` = `"oauth"` (treg's app), `"token"` (Slack — a workspace-scoped bot the user creates and
   pastes; `is_token_kind`), or `"key"` (an **API-key provider** connected by pasting a key: Apollo, PDL,
   Akta, Hunter, Crunchbase, Lusha, Coresignal, Diffbot, The Companies API, LeadMagic on a new
@@ -133,12 +163,48 @@ module symbols:
   `probe_json` body (Serpstat's JSON-RPC), and `token_encode="base64"` turns a pasted `login:password` into
   the Basic blob for `Basic {secret}` (DataForSEO, Moz). `can_autoprovision` (has a `base_url` and either needs no
   second credential or treg holds it) drives auto-building a callable tool on a successful connect;
-  `needs_extra_credential` covers Google Ads' `developer-token` header (a second binding the operator supplies).
+  `needs_extra_credential` covers a second header the primary slot can't carry: Google Ads'
+  `developer-token` (treg-held, via `extra_credential_setting`) and Tomba's per-user `X-Tomba-Secret`
+  (setting left empty → the user supplies it through `POST /connections/{id}/extra-credential`, which
+  rebuilds the tool with BOTH bindings — the primary half comes from `_provider_bindings`, so it follows
+  the provider's own auth shape rather than assuming OAuth). Tomba's probe (`/v1/usage`) deliberately
+  answers the key alone, so connect-time verification works before the secret is bound.
+  **Split-host vendors get one extra Tool per host** (`extra_tools`): GA4 runs reports on
+  `analyticsdata` but lists the property ids those reports need on `analyticsadmin` — one scope covers
+  both, but `/call/` resolution is per-HOST, so without a second row the agent is walled off (admin
+  path on the data host → Google 404; admin host → treg "no registered tool"; 13 calls/7 orgs observed
+  stuck there). The extra (`<connection>-admin`) binds the SAME secret, upserts idempotently on
+  connect/reconnect, and `_backfill_provider_extra_tools` runs after `init_db()` on every startup to
+  heal older connections automatically. The backfill is registry-generic: it scans provider-attributed
+  Secrets, requires the corresponding main Tool to be bound to that Secret, then calls the same extra
+  upsert, so adding a future `extra_tools` entry needs no one-off migration. Revoke already sweeps the
+  companions (any tool whose only binding was the deleted credential goes). `resource_example` closes the loop from the
+  other side: the moment the user picks their property (`POST /connections/{id}/resource`), the
+  template renders `{resource}`/`{resource_name}` into a ready-made call stamped into the data tool's
+  examples (marker `stamped: resource`, so re-picking replaces instead of piling up).
 - Post-connect helpers the dashboard/CLI drive: resource **discovery** (`supports_discovery`,
-  `discover_*` — which site/property/account this connection acts on), row **enrichment**
+  `discover_*` — which site/property/account this connection acts on), row **enrichment**.
+  Discovery can walk a SECOND listing (`discover_extra_path` + `discover_extra_list_paths`): Meta's
+  Business Manager owns assets on the user's behalf, so an agency member sees `[]` from
+  `/me/accounts` for exactly the Pages/Instagram accounts they manage all day — the Business walk
+  (`/me/businesses?fields=owned_pages{…},client_pages{…}`, gated on the `business_management` scope
+  now in every Facebook/Instagram capability) flattens nested lists of primary-shaped rows into the
+  same picker, deduped by id with the primary listing winning, and a failing extra listing is
+  swallowed (pre-scope connections get a clean permission error that must read as "no extra assets"),
   (`supports_enrichment`, `enrich_*` — Google Ads returns bare ids, so a per-row lookup fills the human name),
   and **identity** (`has_identity`, `identity_*` — providers with nothing to pick, like LinkedIn/X/TikTok,
   capture who consented instead). A `probe_path` gives registry tools a real health check.
+- **A versioned path expires on a calendar, not on a deploy.** Google Ads puts its API version in the
+  URL, so `probe_path`, `discover_path`, `enrich_path` and `examples` all hard-code one. Google sunsets
+  each major after ~12 months: v21 died on 2026-08-05 and every Ads call — including the connect-time
+  account listing — failed until the pin moved to v25 on 2026-08-17. Nothing in the codebase can catch
+  this. No commit changed, no test failed (nothing in the suite makes a live call), and the two failure
+  modes read differently: a version that **never existed** returns an HTML 404, a **sunset** one returns
+  a JSON 400 `UNSUPPORTED_VERSION`. `POST /health/run` would surface it on the day it breaks — it probes
+  every credential through the same versioned `probe_path` — but nothing schedules it; `render.yaml`
+  carries only Render's own `healthCheckPath: /meta`. Bump the version in all four places together:
+  `oauth_providers.GOOGLE_ADS`, `catalog/google-ads.yaml`, `catalog/google-ads.extended.yaml`, and
+  `scripts/catalog_ingest.py:GADS_VERSION`.
 
 ## Credential health (`health.py`)
 `run_all(db, client, org_id=None)` iterates tools (filtered to `org_id` when set, so `/health/run` never

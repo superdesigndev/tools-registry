@@ -12,7 +12,7 @@ endpoints:
   platform: companies
   method: GET
   path: /v1/company/product-reviews/
-  name: Get a company's product catalog and reviews
+  name: "Company product catalog and reviews by website — ratings"
   summary: Fetches a company's product catalog and detailed reviews per product including ratings, star distribution, pros, cons, pricing and individual review content.
   input:
     queryParams:
@@ -49,6 +49,7 @@ endpoints:
     checked: '2026-07-28'
     confidence: documented
     note: 0.0 credits for the product-list-only call (no `products` param); 1.5 credits per 50 reviews returned once `products` is passed — value here is the marginal per-50-reviews rate that applies once billed
+  platform_blocked: "upstream 403 'Your current subscription does not include access to this endpoint' on treg's shared Akta key (alternative-data tier; re-probed 2026-07-31). Works with your own Akta key on a plan that includes Alternative Signals."
   docs_url: https://docs.akta.pro/api-reference/alternative-data/product-reviews
   skipped: not called — $1.5000 would exceed this run's $0.12 budget
 - id: akta.x.jobs
@@ -57,7 +58,7 @@ endpoints:
   platform: companies
   method: GET
   path: /v1/company/jobs/
-  name: Get a company's live job postings
+  name: "Company live job postings by website — LinkedIn, Indeed"
   summary: Fetches live LinkedIn and Indeed job listings for a company, including title, location, description, compensation, experience level, and extracted key skills.
   input:
     queryParams:
@@ -91,6 +92,7 @@ endpoints:
     checked: '2026-07-28'
     confidence: documented
     note: 4 Akta credits per 10 job listings returned (llms-full.txt sample response)
+  platform_blocked: "upstream 403 'Your current subscription does not include access to this endpoint' on treg's shared Akta key (alternative-data tier; re-probed 2026-07-31). Works with your own Akta key on a plan that includes Alternative Signals."
   docs_url: https://docs.akta.pro/api-reference/alternative-data/job-posts
   skipped: not called — $4.0000 would exceed this run's $0.12 budget
 - id: akta.x.social-posts
@@ -99,7 +101,7 @@ endpoints:
   platform: companies
   method: GET
   path: /v1/company/posts/
-  name: Get a company's social media posts
+  name: "A company's social media posts with engagement metrics"
   summary: Fetches social media posts published by a company, including content type, text, publish date, paid/repost flags, an AI classification, and detailed engagement metrics.
   input:
     queryParams:
@@ -133,6 +135,7 @@ endpoints:
     checked: '2026-07-28'
     confidence: documented
     note: 1 Akta credit per 10 posts returned (llms-full.txt sample response)
+  platform_blocked: "upstream 403 'Your current subscription does not include access to this endpoint' on treg's shared Akta key (alternative-data tier; re-probed 2026-07-31). Works with your own Akta key on a plan that includes Alternative Signals."
   docs_url: https://docs.akta.pro/api-reference/alternative-data/social-posts
   skipped: not called — $1.0000 would exceed this run's $0.12 budget
 - id: akta.x.website-traffic
@@ -141,7 +144,7 @@ endpoints:
   platform: companies
   method: GET
   path: /v1/company/website-traffic/
-  name: Get a company's website traffic signals
+  name: "Company website traffic — visits, sources, engagement"
   summary: Fetches a company's website traffic signals, including engagement metrics, historical monthly visit estimates, and a breakdown of traffic by acquisition source.
   input:
     queryParams:
@@ -165,6 +168,7 @@ endpoints:
     checked: '2026-07-28'
     confidence: documented
     note: 1.5 Akta credits per request (llms-full.txt sample response)
+  platform_blocked: "upstream 403 'Your current subscription does not include access to this endpoint' on treg's shared Akta key (alternative-data tier; re-probed 2026-07-31). Works with your own Akta key on a plan that includes Alternative Signals."
   docs_url: https://docs.akta.pro/api-reference/alternative-data/website-traffic
   skipped: not called — $1.5000 would exceed this run's $0.12 budget
 - id: akta.x.company-addition
@@ -173,7 +177,7 @@ endpoints:
   platform: companies
   method: POST
   path: /v1/company/addition-requests/
-  name: Request a missing company be added
+  name: "Request a company be added to Akta — free"
   summary: Submits a company that is not yet in akta.pro's database to be added, returning a request ID to track, or the existing company if it is already present. This is a free endpoint — it does not consume API credits.
   input:
     body:
@@ -203,7 +207,7 @@ endpoints:
   platform: companies
   method: GET
   path: /v1/status/{request_id}/
-  name: Check an async request's status
+  name: "Check an async Akta request by request id"
   summary: Returns the current status of an asynchronous request, such as a company addition request, by its request ID. This is a free endpoint — it does not consume API credits.
   input:
     pathParams:

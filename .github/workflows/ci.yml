@@ -5,6 +5,13 @@ on:
     branches: [main]
   pull_request:
 
+# A new push supersedes the running build of the same branch or PR: the outdated run is cancelled
+# instead of holding a runner and queueing the new one behind it (two overlapped runs were live
+# the day this landed).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 # Least-privilege: CI only reads the repo (checkout + tests + secret scan).
 permissions:
   contents: read
@@ -12,28 +19,40 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    # A throttled shared runner once turned the 5-minute suite into 20+ (log showed 68s before the
+    # first test started). Die loudly instead of eating half an hour; a re-run usually lands on a
+    # healthier machine.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2  # the docs-only check diffs HEAD against its parent
+      - name: Detect a docs-only push
+        id: docs
+        # Direct pushes that change only docs/ and *.md skip the suite — half of one week's runs
+        # bought nothing. PULL REQUESTS ALWAYS RUN: the branch-protection check must report, and a
+        # skipped required check would block the merge forever.
+        run: |
+          ONLY=false
+          if [ "${{ github.event_name }}" = "push" ]; then
+            CHANGED=$(git diff --name-only HEAD^ HEAD || true)
+            if [ -n "$CHANGED" ] && ! echo "$CHANGED" | grep -qvE '^docs/|\.md$'; then
+              ONLY=true
+            fi
+          fi
+          echo "docs-only: $ONLY"
+          echo "only=$ONLY" >> "$GITHUB_OUTPUT"
       - uses: astral-sh/setup-uv@v7
+        if: steps.docs.outputs.only != 'true'
         with:
           python-version: "3.13"
       - name: Install dependencies
+        if: steps.docs.outputs.only != 'true'
         run: uv sync
       - name: Run tests
-        run: uv run pytest -q
-
-  gitleaks:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # scan the full history of the push/PR, not just the tip
-      - name: Install gitleaks
-        env:
-          GITLEAKS_VERSION: "8.21.2"
-        run: |
-          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
-            | tar -xz gitleaks
-          sudo mv gitleaks /usr/local/bin/
-      - name: Scan for secrets
-        run: gitleaks detect --source . --config .gitleaks.toml --verbose --redact
+        if: steps.docs.outputs.only != 'true'
+        # -n auto: the suite is 1,700+ small independent tests — serial execution is what let a
+        # throttled runner turn minutes into tens of minutes. xdist arrives via --with rather than
+        # the lockfile on purpose: it is a CI-only concern, and the team's older uv rewrites
+        # uv.lock's whole format on any touch.
+        run: uv run --with pytest-xdist pytest -n auto -q

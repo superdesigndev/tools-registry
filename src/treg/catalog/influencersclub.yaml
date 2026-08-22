@@ -1,0 +1,493 @@
+provider: influencersclub
+source:
+  docs: https://docs.influencers.club/
+  openapi: null # the reference is a Redocly site (docs.influencers.club/openapi) rendered from a spec that is not served as a document; paths below were read from its page-data, not hand-transcribed
+  curated: '2026-08-21'
+# Curated + live-tested 2026-08-21 against a real trial key (10 free credits; 3.75 spent).
+#
+# WHAT IT IS: creator / influencer intelligence across Instagram, YouTube, TikTok, Twitch, X and
+# OnlyFans (enrichment also reaches Snapchat, Discord, Pinterest, Facebook, LinkedIn). Two halves:
+#   - DISCOVERY — a filtered search (or a plain-language `nlp_search` brief) over ~300M creators,
+#     billed 0.01 credit PER CREATOR RETURNED, so `paging.limit` is the price dial. Lookalikes
+#     ("similar creators") and the audience-overlap report sit here too.
+#   - ENRICHMENT — one creator by handle, in four depths that are four prices: raw 0.03, profile
+#     0.2, analytics 0.8, full 1. Plus reverse lookup by email (0.05), connected socials (0.5),
+#     recent posts and one post's details/comments/transcript (0.03 each).
+#   The dictionaries (/discovery/classifier/*) and the credit check are free.
+#
+# THE METER: every price below was reconciled against GET /public/v1/accounts/credits/ between
+# calls. All matched the docs exactly: discovery limit=2 -> 0.02, similar limit=2 -> 0.02, raw
+# 0.03, posts 0.03, details 0.03, profile 0.2, socials 0.5, analytics 0.8, overlap 1.0 (this one
+# also echoes `credits_cost` in its body), full 1.0. A miss (creator_not_found, HTTP 400) cost 0.
+#
+# TWO TRANSPORT TRAPS, both observed live:
+#   1. COLD CALLS ARE SLOW AND THE GATEWAY CUTS THEM AT 60s. The first enrich/posts call for a
+#      handle took 54-61s; several came back as an nginx 504 HTML page — and the 0.03 for raw and
+#      posts WAS still charged on those 504s (the backend finished after the gateway gave up), while
+#      a 504 on `full` was NOT charged. Treat a 504 as "retry in a few seconds": the second call
+#      answers warm in 2-5s and is billed normally. Budget for one extra cheap-tier charge per cold
+#      handle; never loop retries blindly on the 1-credit routes.
+#   2. EVERY PATH ENDS IN A SLASH. It is a Django app: the slash-less URL 301s (with the body
+#      dropped), so a missing slash looks like an auth failure or an empty result.
+#   Also: YouTube handles are lower-cased before lookup, which BREAKS channel ids (UC… became
+#   uc…, creator_not_found). Pass `@handle` for YouTube, not the channel id, despite the docs.
+#
+# SCRUB NOTE: profile/full enrich return contact emails. The captured examples use NASA's brand
+# account (an organization, not a private individual); the email enrich route is untestable here
+# by policy — it needs a real person's address as input.
+limits: "300 requests/minute per account, every endpoint (HTTP 429 with Retry-After past it). Discovery has a fair-use cap on unique creators per billing period (10x the monthly credit allocation)"
+pricing_url: https://influencers.club/pricing/
+endpoints:
+  # --- discovery -------------------------------------------------------------------------------------
+  - id: influencersclub.creators.search
+    domain: discovery
+    capability: creators.search
+    platform: creators
+    scope: any_account
+    method: POST
+    path: /public/v1/discovery/
+    name: "Search creators by filters or a plain-language brief"
+    summary: "Search and discover creators across multiple platforms using advanced filtering and search."
+    input:
+      body:
+        platform: {type: string, required: true, note: "one of instagram | youtube | tiktok | twitter | twitch | onlyfans — the filter set changes with it", example: "instagram"}
+        paging: {type: object, required: true, note: "{limit, page}; page is 0-indexed. THIS IS THE PRICE DIAL — 0.01 credit per creator returned", example: {limit: 10, page: 0}}
+        filters: {type: object, required: true, note: "platform-specific filter object (send {} to rely on nlp_search alone). Instagram keys include location, profile_language, keywords_in_bio, hashtags, keywords_in_captions, number_of_followers {min,max}, engagement_percent {min,max}, average_likes, follower_growth, last_post, is_verified, brands, audience {age, gender, location, interests}, has_done_brand_deals, promotes_affiliate_links, exclude_handles, exclude_list. Use the dictionary routes for valid location / language / brand / interest values", example: {keywords_in_bio: ["astronomy"], number_of_followers: {min: 100000}}}
+        nlp_search: {type: string, required: false, note: "a plain-language brief ('fitness creators in New York with over 100k followers') that the API maps onto filters; combinable with explicit filters. The response adds applied_filters and an nlp_search block explaining what was inferred or dropped. An uninterpretable brief 400s and costs nothing", example: "astronomy and space creators with over 100k followers"}
+        sort: {type: object, required: false, note: "{sort_by: relevancy | engagement_rate | number_of_followers | growth_rate, sort_order: asc | desc}", example: {sort_by: number_of_followers, sort_order: desc}}
+      queryParams:
+        return_filter_values: {type: boolean, required: false, note: "PREMIUM: adds a matched_filters object per creator showing which of your filter values it matched — triples the price to 0.03 per creator", example: false}
+      note: "returns {total, limit, accounts: [{user_id, profile: {full_name, username, picture, followers, engagement_percent, …}}]}. Instagram creators over 10k followers also carry audience demographics. Every request that returns creators is billed, even an identical repeat — page deliberately, and keep `limit` small while you tune filters (a 0-creator page costs 0)"
+    test_request:
+      body: {platform: "instagram", filters: {keywords_in_bio: ["astronomy"], number_of_followers: {min: 100000}}, sort: {sort_by: "number_of_followers", sort_order: "desc"}, paging: {limit: 2, page: 0}}
+    cost:
+      type: per_result
+      value: 0.01
+      currency: credit
+      per: 1
+      unit: result
+      source: observed
+      source_url: https://docs.influencers.club/guides/usage-limits
+      checked: '2026-08-21'
+      confidence: verified
+      note: "0.01 credit per creator returned, 0 creators = 0 credits. OBSERVED 2026-08-21: limit=2 moved the meter 10.00 -> 9.98. return_filter_values=true is documented at 0.03 per creator (not observed)"
+    verified: '2026-08-21'
+    example_response: examples/influencersclub.creators.search.json
+    docs_url: https://docs.influencers.club/openapi/discovery-api/public_v1_discovery_create
+
+  - id: influencersclub.creators.similar
+    domain: discovery
+    capability: creators.lookalike
+    platform: creators
+    scope: any_account
+    method: POST
+    path: /public/v1/discovery/creators/similar/
+    name: "Find creators similar to a reference creator"
+    summary: "Discover creators similar to a reference creator based on various similarity criteria."
+    input:
+      body:
+        platform: {type: string, required: true, note: "instagram | youtube | tiktok | twitter | twitch | onlyfans", example: "instagram"}
+        filter_key: {type: string, required: true, note: "how you identify the reference creator: username | url | id", example: "username"}
+        filter_value: {type: string, required: true, note: "the reference creator's handle, profile URL or id", example: "nasa"}
+        paging: {type: object, required: true, note: "{limit, page}, page 0-indexed — the price dial, 0.01 credit per creator returned", example: {limit: 10, page: 0}}
+        filters: {type: object, required: false, note: "the same platform-specific filter object as the search route, to narrow the lookalikes (e.g. a follower range or location)"}
+      note: "same {total, limit, accounts: [...]} shape as the search route. Results count against the same per-billing-period discovery cap"
+    test_request:
+      body: {platform: "instagram", filter_key: "username", filter_value: "nasa", paging: {page: 0, limit: 2}}
+    cost:
+      type: per_result
+      value: 0.01
+      currency: credit
+      per: 1
+      unit: result
+      source: observed
+      source_url: https://docs.influencers.club/guides/usage-limits
+      checked: '2026-08-21'
+      confidence: verified
+      note: "0.01 credit per creator returned; nothing when none are. OBSERVED 2026-08-21: limit=2 moved the meter 9.98 -> 9.96"
+    verified: '2026-08-21'
+    example_response: examples/influencersclub.creators.similar.json
+    docs_url: https://docs.influencers.club/openapi/similar-creators/public_v1_discovery_creators_similar_create
+
+  - id: influencersclub.creators.audience.overlap
+    domain: discovery
+    capability: creators.audience.overlap
+    platform: creators
+    scope: any_account
+    method: POST
+    path: /public/v1/creators/audience/overlap/
+    name: "Compare audience overlap between creators"
+    summary: "Compare audience overlap between 2-10 creators on a given platform."
+    input:
+      body:
+        platform: {type: string, required: true, note: "the platform all the creators are on", example: "instagram"}
+        creators: {type: "array[string]", required: true, note: "2 to 10 handles", example: ["nasa", "spacex"]}
+      note: "returns per-creator overlap and unique-audience percentages plus report totals (total_followers, total_unique_followers). The body echoes credits_cost and credits_left. One flat credit whether you compare 2 creators or 10 — batch the comparison"
+    test_request:
+      body: {platform: "instagram", creators: ["nasa", "spacex"]}
+    cost:
+      type: per_success
+      value: 1
+      currency: credit
+      per: 1
+      unit: call
+      source: observed
+      source_url: https://docs.influencers.club/openapi/audience-overlap/public_v1_creators_audience_overlap_create
+      checked: '2026-08-21'
+      confidence: verified
+      note: "1 credit per request regardless of creator count. OBSERVED 2026-08-21: credits_cost 1.0 in the body, meter 8.25 -> 7.25"
+    verified: '2026-08-21'
+    example_response: examples/influencersclub.creators.audience.overlap.json
+    docs_url: https://docs.influencers.club/openapi/audience-overlap/public_v1_creators_audience_overlap_create
+
+  # --- dictionaries (free filter values) ------------------------------------------------------------
+  - id: influencersclub.creators.filters.locations
+    kind: utility
+    domain: discovery
+    capability: creators.filters.values
+    platform: creators
+    scope: any_account
+    method: GET
+    path: /public/v1/discovery/classifier/locations/{platform}/
+    name: "Look up valid location filter values"
+    summary: "Retrieve a list of location identifiers available for a specific platform."
+    input:
+      pathParams:
+        platform: {type: string, required: true, note: "instagram | youtube | tiktok | twitter | twitch | onlyfans", example: "instagram"}
+      queryParams:
+        search: {type: string, required: false, note: "substring / prefix match on the location name", example: "London"}
+        offset: {type: integer, required: false, example: 0}
+        limit: {type: integer, required: false, example: 20}
+      note: "returns a plain array of location strings to paste into a search's filters.location. Sibling free dictionaries on the same prefix: /languages/, /brands/, /yt-topics/, /games/ (Twitch), /audience-interests/, /audience-locations/, /audience-brand-categories/, /audience-brand-names/"
+    test_request:
+      pathParams: {platform: "instagram"}
+      queryParams: {search: "London", limit: 3}
+    cost: {type: free, value: 0, currency: USD, per: 1, unit: call, source: docs, source_url: https://docs.influencers.club/guides/usage-limits, checked: '2026-08-21', confidence: verified, note: "documented 0 credits and OBSERVED 2026-08-21 — meter unchanged"}
+    verified: '2026-08-21'
+    example_response: examples/influencersclub.creators.filters.locations.json
+    docs_url: https://docs.influencers.club/openapi/dictionary/public_v1_discovery_classifier_locations_retrieve
+
+  - id: influencersclub.creators.filters.languages
+    kind: utility
+    domain: discovery
+    capability: creators.filters.values
+    platform: creators
+    scope: any_account
+    method: GET
+    path: /public/v1/discovery/classifier/languages/
+    name: "Look up valid language filter values"
+    summary: "Languages"
+    input:
+      note: "no parameters; returns [{language, abbreviation}] — use the abbreviation in filters.profile_language"
+    test_request:
+      queryParams: {}
+    cost: {type: free, value: 0, currency: USD, per: 1, unit: call, source: docs, source_url: https://docs.influencers.club/guides/usage-limits, checked: '2026-08-21', confidence: verified, note: "documented 0 credits and OBSERVED 2026-08-21 — meter unchanged"}
+    verified: '2026-08-21'
+    example_response: examples/influencersclub.creators.filters.languages.json
+    docs_url: https://docs.influencers.club/openapi/dictionary/public_v1_discovery_classifier_languages_list
+
+  - id: influencersclub.creators.filters.audience_interests
+    kind: utility
+    domain: discovery
+    capability: creators.filters.values
+    platform: creators
+    scope: any_account
+    method: GET
+    path: /public/v1/discovery/classifier/audience-interests/
+    name: "Look up valid audience-interest filter values"
+    summary: "Audience Interests"
+    input:
+      note: "no parameters; returns the interest labels accepted by filters.audience.interests (Instagram audience filters apply to creators with 10k+ followers)"
+    test_request:
+      queryParams: {}
+    cost: {type: free, value: 0, currency: USD, per: 1, unit: call, source: docs, source_url: https://docs.influencers.club/guides/usage-limits, checked: '2026-08-21', confidence: verified, note: "documented 0 credits and OBSERVED 2026-08-21 — meter unchanged"}
+    verified: '2026-08-21'
+    example_response: examples/influencersclub.creators.filters.audience_interests.json
+    docs_url: https://docs.influencers.club/openapi/dictionary/public_v1_discovery_classifier_audience_interests_list
+
+  # --- enrichment by handle (four depths = four prices) ---------------------------------------------
+  - id: influencersclub.creators.enrich.raw
+    domain: enrich
+    capability: creators.profile
+    platform: creators
+    scope: any_account
+    method: POST
+    path: /public/v1/creators/enrich/handle/raw/
+    name: "Get a creator's raw platform profile (cheapest)"
+    summary: "Retrieve raw platform data for a creator profile using their social media handle."
+    input:
+      body:
+        handle: {type: string, required: true, note: "username, profile URL, or for YouTube an @handle (channel ids get lower-cased and fail)", example: "nasa"}
+        platform: {type: string, required: true, note: "instagram | youtube | tiktok | onlyfans | twitter | snapchat | discord | pinterest | facebook | linkedin | twitch", example: "instagram"}
+      note: "returns {result: {<platform>: {...}}} — unprocessed platform-native fields (username, full_name, follower/following/media counts, bio, recent posts) with no influencers.club scoring. The 0.03 tier: use it to confirm a handle exists before spending 0.2-1 on the scored tiers"
+    test_request:
+      body: {handle: "nasa", platform: "instagram"}
+    cost:
+      type: per_success
+      value: 0.03
+      currency: credit
+      per: 1
+      unit: call
+      source: observed
+      source_url: https://docs.influencers.club/guides/usage-limits
+      checked: '2026-08-21'
+      confidence: verified
+      note: "0.03 credit per successful request; a creator_not_found miss is free. OBSERVED 2026-08-21 — and note the cold-call 504 on this route WAS charged 0.03 (see the file header)"
+    verified: '2026-08-21'
+    example_response: examples/influencersclub.creators.enrich.raw.json
+    docs_url: https://docs.influencers.club/openapi/enrich-by-handle-raw/public_v1_creators_enrich_handle_raw_create
+
+  - id: influencersclub.creators.enrich.profile
+    domain: enrich
+    capability: creators.profile
+    platform: creators
+    scope: any_account
+    method: POST
+    path: /public/v1/creators/enrich/handle/profile/
+    name: "Get a creator's identity, contact email and profile stats"
+    summary: "Enrich by handle profile"
+    input:
+      body:
+        handle: {type: string, required: true, note: "username, profile URL, or a YouTube @handle", example: "nasa"}
+        platform: {type: string, required: true, note: "instagram | youtube | tiktok | onlyfans | twitter | snapchat | discord | pinterest | facebook | linkedin | twitch", example: "instagram"}
+        email_required: {type: string, required: false, note: "must_have rejects the match when no validated email is found — and charges nothing; preferred (default) returns the profile regardless", example: "preferred"}
+      note: "returns {result: {<platform>: {userid, full_name, followers, engagement_percent, bio, emails, location, language, category, uses_link_in_bio, …}}}. The identity + contact tier (0.2); pair with email_required=must_have for a pay-only-for-reachable-creators outreach list"
+    test_request:
+      body: {handle: "nasa", platform: "instagram"}
+    cost:
+      type: per_success
+      value: 0.2
+      currency: credit
+      per: 1
+      unit: call
+      source: observed
+      source_url: https://docs.influencers.club/guides/usage-limits
+      checked: '2026-08-21'
+      confidence: verified
+      note: "0.2 credit per successful request. OBSERVED 2026-08-21: meter 9.75 -> 9.55"
+    verified: '2026-08-21'
+    example_response: examples/influencersclub.creators.enrich.profile.json
+    docs_url: https://docs.influencers.club/openapi/enrich-by-handle-profile/public_v1_creators_enrich_handle_profile_create
+
+  - id: influencersclub.creators.enrich.analytics
+    domain: enrich
+    capability: creators.analytics
+    platform: creators
+    scope: any_account
+    method: POST
+    path: /public/v1/creators/enrich/handle/analytics/
+    name: "Get a creator's performance analytics and audience"
+    summary: "Enrich by handle analytics"
+    input:
+      body:
+        handle: {type: string, required: true, note: "username, profile URL, or a YouTube @handle", example: "nasa"}
+        platform: {type: string, required: true, note: "only platforms with analytics data: instagram | onlyfans | tiktok | twitch | twitter | youtube", example: "instagram"}
+        include_lookalikes: {type: boolean, required: false, note: "append lookalike creator recommendations", example: false}
+      note: "returns {result: {<platform>: {posting_frequency_recent_months, reels_percentage, likes_median, comments_median, income {min,max}, creator_follower_growth, brand deals, affiliate flags, audience demographics, …}}} — the performance tier (0.8), without the contact fields of the profile tier"
+    test_request:
+      body: {handle: "nasa", platform: "instagram"}
+    cost:
+      type: per_success
+      value: 0.8
+      currency: credit
+      per: 1
+      unit: call
+      source: observed
+      source_url: https://docs.influencers.club/guides/usage-limits
+      checked: '2026-08-21'
+      confidence: verified
+      note: "0.8 credit per successful request. OBSERVED 2026-08-21: meter 9.05 -> 8.25"
+    verified: '2026-08-21'
+    example_response: examples/influencersclub.creators.enrich.analytics.json
+    docs_url: https://docs.influencers.club/openapi/enrich-by-handle-analytics/public_v1_creators_enrich_handle_analytics_create
+
+  - id: influencersclub.creators.enrich.full
+    domain: enrich
+    capability: creators.profile
+    platform: creators
+    scope: any_account
+    method: POST
+    path: /public/v1/creators/enrich/handle/full/
+    name: "Get a creator's full profile, contacts and analytics"
+    summary: "Enrich by handle full"
+    input:
+      body:
+        handle: {type: string, required: true, note: "username, profile URL, or a YouTube @handle", example: "nasa"}
+        platform: {type: string, required: true, note: "instagram | youtube | tiktok | onlyfans | twitter | snapchat | discord | pinterest | facebook | linkedin | twitch", example: "instagram"}
+        email_required: {type: string, required: false, note: "must_have rejects (free) when no validated email exists; preferred is the default", example: "preferred"}
+        include_lookalikes: {type: boolean, required: false, note: "append lookalike creators", example: false}
+        include_audience_data: {type: boolean, required: false, note: "include audience demographics (default true)", example: true}
+      note: "everything the profile (0.2) and analytics (0.8) tiers return, in one 1-credit call — the same price as calling both. Use profile alone for contact lists and analytics alone for vetting; full when you need both"
+    test_request:
+      body: {handle: "nasa", platform: "instagram", include_audience_data: true}
+    cost:
+      type: per_success
+      value: 1
+      currency: credit
+      per: 1
+      unit: call
+      source: observed
+      source_url: https://docs.influencers.club/guides/usage-limits
+      checked: '2026-08-21'
+      confidence: verified
+      note: "1 credit per successful request. OBSERVED 2026-08-21: meter 7.25 -> 6.25; the cold-call 504 that preceded it was NOT charged"
+    verified: '2026-08-21'
+    example_response: examples/influencersclub.creators.enrich.full.json
+    docs_url: https://docs.influencers.club/openapi/enrich-by-handle-full/public_v1_creators_enrich_handle_full_create
+
+  - id: influencersclub.creators.enrich.email
+    domain: enrich
+    capability: creators.enrich.by_email
+    platform: creators
+    scope: any_account
+    method: POST
+    path: /public/v1/creators/enrich/email/
+    name: "Find the creator behind an email address"
+    summary: "Perform basic enrichment of creator profiles using an email address."
+    input:
+      body:
+        email: {type: string, required: true, note: "the creator's email address"}
+      note: "returns the creator's single strongest platform (highest follower count) with basic profile data and platform identifiers, across Instagram, YouTube, TikTok, Twitter, Twitch and OnlyFans. A miss is free"
+    untestable: "takes a real person's email address as input; not probed, and no example is committed (PII policy)"
+    cost:
+      type: per_success
+      value: 0.05
+      currency: credit
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://docs.influencers.club/guides/usage-limits
+      checked: '2026-08-21'
+      confidence: documented
+      note: "0.05 credit per successful request, documented; not observed"
+    docs_url: https://docs.influencers.club/openapi/enrich-by-email/public_v1_creators_enrich_email_create
+
+  - id: influencersclub.creators.socials
+    domain: enrich
+    capability: creators.socials.connected
+    platform: creators
+    scope: any_account
+    method: POST
+    path: /public/v1/creators/socials/
+    name: "List a creator's verified accounts on other platforms"
+    summary: "Discover all verified social accounts connected to a creator, given a seed platform and handle."
+    input:
+      body:
+        platform: {type: string, required: true, note: "seed platform: instagram | youtube | tiktok | onlyfans | twitter | twitch", example: "instagram"}
+        handle: {type: string, required: true, note: "the creator's handle on the seed platform", example: "nasa"}
+      note: "returns {result: [{platform, url, user_id, username, full_name, follower_count, profile_picture}]} — the cross-platform identity graph"
+    test_request:
+      body: {platform: "instagram", handle: "nasa"}
+    cost:
+      type: per_success
+      value: 0.5
+      currency: credit
+      per: 1
+      unit: call
+      source: observed
+      source_url: https://docs.influencers.club/guides/usage-limits
+      checked: '2026-08-21'
+      confidence: verified
+      note: "0.5 credit per successful request. OBSERVED 2026-08-21: meter 9.55 -> 9.05"
+    verified: '2026-08-21'
+    example_response: examples/influencersclub.creators.socials.json
+    docs_url: https://docs.influencers.club/openapi/connected-socials/public_v1_creators_socials_create
+
+  # --- content -----------------------------------------------------------------------------------------
+  - id: influencersclub.creators.posts
+    domain: content
+    capability: creators.posts
+    platform: creators
+    scope: any_account
+    method: POST
+    path: /public/v1/creators/content/posts/
+    name: "List a creator's recent posts with engagement"
+    summary: "Fetch recent posts for a creator on a given platform."
+    input:
+      body:
+        platform: {type: string, required: true, note: "instagram | tiktok | youtube", example: "instagram"}
+        handle: {type: string, required: true, note: "username, or a YouTube @handle", example: "nasa"}
+        count: {type: integer, required: false, note: "posts per page — Instagram is FIXED at 12, TikTok default 30 / max 35, YouTube default 30 / max 50. The price is per request, not per post", example: 12}
+        pagination_token: {type: string, required: false, note: "cursor from the previous page's next_token"}
+      note: "returns {result: {items: [{pk, url, taken_at, caption, media_url, like_count, comment_count, play_count, …}], next_token}}. `pk` + the creator's user id (`<pk>_<userid>`) is the post_id the details route takes"
+    test_request:
+      body: {platform: "instagram", handle: "nasa", count: 12}
+    cost:
+      type: per_success
+      value: 0.03
+      currency: credit
+      per: 1
+      unit: call
+      source: observed
+      source_url: https://docs.influencers.club/guides/usage-limits
+      checked: '2026-08-21'
+      confidence: verified
+      note: "0.03 credit per successful request (a page, whatever its size); a creator_not_found miss was free. OBSERVED 2026-08-21: meter 9.84 -> 9.81; cold-call 504s on this route were also charged"
+    verified: '2026-08-21'
+    example_response: examples/influencersclub.creators.posts.json
+    docs_url: https://docs.influencers.club/openapi/creator-posts/public_v1_creators_content_posts_create
+
+  - id: influencersclub.creators.post.details
+    domain: content
+    capability: creators.post.details
+    platform: creators
+    scope: any_account
+    method: POST
+    path: /public/v1/creators/content/details/
+    name: "Get one post's data, comments or transcript"
+    summary: "Retrieve detailed information about specific creator content."
+    input:
+      body:
+        platform: {type: string, required: true, note: "instagram | tiktok | youtube", example: "instagram"}
+        content_type: {type: string, required: true, note: "data (metadata + engagement) | comments (paginated) | transcript (spoken text) | audio (Instagram/TikTok only)", example: "data"}
+        post_id: {type: string, required: true, note: "Instagram: '<pk>_<userid>' as in the posts route; TikTok: the video id; YouTube: the video id", example: "3967213292204992434_528817151"}
+        pagination_token: {type: string, required: false, note: "for content_type=comments, the cursor for the next page"}
+      note: "returns {result: <platform-specific object>}. Brand-safety review, transcript extraction and comment pulls all go through here, one content_type per call"
+    test_request:
+      body: {platform: "instagram", content_type: "data", post_id: "3967213292204992434_528817151"}
+    cost:
+      type: per_success
+      value: 0.03
+      currency: credit
+      per: 1
+      unit: call
+      source: observed
+      source_url: https://docs.influencers.club/guides/usage-limits
+      checked: '2026-08-21'
+      confidence: verified
+      note: "0.03 credit per successful request. OBSERVED 2026-08-21: meter 9.81 -> 9.78"
+    verified: '2026-08-21'
+    example_response: examples/influencersclub.creators.post.details.json
+    docs_url: https://docs.influencers.club/openapi/post-details/public_v1_creators_content_details_create
+
+  # --- account ------------------------------------------------------------------------------------------
+  - id: influencersclub.account.usage
+    kind: account
+    domain: other
+    capability: account.usage
+    platform: account
+    scope: own_account
+    method: GET
+    path: /public/v1/accounts/credits/
+    name: "Check credit balance"
+    summary: "Check account credits and usage details"
+    input:
+      note: "no parameters. Returns {credits_available, credits_used} — the meter every price in this file was reconciled against. Also the registry's health probe"
+    test_request:
+      queryParams: {}
+    cost: {type: free, value: 0, currency: USD, per: 1, unit: call, source: docs, source_url: https://docs.influencers.club/guides/usage-limits, checked: '2026-08-21', confidence: verified, note: "documented 0 credits and OBSERVED 2026-08-21 across a dozen reads"}
+    verified: '2026-08-21'
+    example_response: examples/influencersclub.account.usage.json
+    docs_url: https://docs.influencers.club/openapi/account-credits-and-usage/account_credits_usage_retrieve
+
+proposed_capabilities:
+  creators.search: "Search creators by filters or a plain-language brief"
+  creators.lookalike: "Find creators similar to a reference creator"
+  creators.audience.overlap: "Compare audience overlap between creators"
+  creators.filters.values: "Look up valid filter values (locations, languages, interests)"
+  creators.profile: "Get a creator's profile, contacts and stats"
+  creators.analytics: "Get a creator's performance analytics and audience"
+  creators.enrich.by_email: "Find the creator behind an email address"
+  creators.socials.connected: "List a creator's accounts on other platforms"
+  creators.posts: "List a creator's recent posts with engagement"
+  creators.post.details: "Get one post's data, comments or transcript"

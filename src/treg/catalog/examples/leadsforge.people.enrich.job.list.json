@@ -1,0 +1,40 @@
+{
+  "jobs": [
+    {
+      "jobID": "98c9b6f1-1991-42dd-a061-4c6456eabdb0",
+      "channel": "phone",
+      "status": "completed",
+      "total": 1,
+      "processed": 1,
+      "succeeded": 1,
+      "failed": 0,
+      "reservedCredits": 0,
+      "createdAt": "2026-08-20T00:47:21.004103Z",
+      "updatedAt": "2026-08-20T00:47:21.273791Z",
+      "completedAt": "2026-08-20T00:47:21.272315Z",
+      "clientRequestID": "treg-verify-3",
+      "statusURL": "/public/v1/enrichment/jobs/98c9b6f1-1991-42dd-a061-4c6456eabdb0",
+      "resultsURL": "/public/v1/enrichment/jobs/98c9b6f1-1991-42dd-a061-4c6456eabdb0/results"
+    },
+    {
+      "jobID": "af10f308-7b6e-4dfe-a1b3-ccdb18022f88",
+      "channel": "linkedin",
+      "status": "completed",
+      "total": 1,
+      "processed": 1,
+      "succeeded": 1,
+      "failed": 0,
+      "reservedCredits": 1,
+      "consumedCredits": 1,
+      "createdAt": "2026-08-20T00:47:18.984773Z",
+      "updatedAt": "2026-08-20T00:47:19.819281Z",
+      "completedAt": "2026-08-20T00:47:19.805587Z",
+      "clientRequestID": "treg-verify-2",
+      "statusURL": "/public/v1/enrichment/jobs/af10f308-7b6e-4dfe-a1b3-ccdb18022f88",
+      "resultsURL": "/public/v1/enrichment/jobs/af10f308-7b6e-4dfe-a1b3-ccdb18022f88/results"
+    }
+  ],
+  "offset": 0,
+  "limit": 5,
+  "total": 3
+}

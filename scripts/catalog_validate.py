@@ -70,6 +70,8 @@ TIERS = {"core", "extended"}
 # what an endpoint IS (marketplace browse surface vs. plumbing). Optional — absent reads as "data" —
 # but a stated one must be from this set. See docs/context/architecture/catalog.md.
 KINDS = {"data", "action", "account", "utility"}
+ENDPOINT_STATUSES = {"retired", "broken"}
+QUERY_ARRAY_ENCODINGS = {"json", "comma", "repeated"}
 # the section heading an endpoint files under on its platform page — one lowercase word
 DOMAIN = re.compile(r"[a-z][a-z0-9_]*")
 REQUIRED = {
@@ -103,6 +105,31 @@ def looks_like_secret(match: str) -> bool:
 
 def fail(errors: list[str], where: str, msg: str) -> None:
     errors.append(f"{where}: {msg}")
+
+
+def check_status_marker(ep: dict, where: str, endpoint_status: dict[str, str],
+                        errors: list[str]) -> None:
+    """Validate the migration marker and its cross-catalog successor reference."""
+    status = str(ep.get("status") or "").strip()
+    note = str(ep.get("status_note") or "").strip()
+    successor = str(ep.get("superseded_by") or "").strip()
+    if status and status not in ENDPOINT_STATUSES:
+        fail(errors, where, f"status '{status}' not one of {sorted(ENDPOINT_STATUSES)}")
+    if status and not note:
+        fail(errors, where, "status requires a non-empty status_note explaining the retirement")
+    if not status and note:
+        fail(errors, where, "status_note requires status: retired or status: broken")
+    if not status and successor:
+        fail(errors, where, "superseded_by requires status: retired or status: broken")
+    if not successor:
+        return
+    if successor == ep.get("id"):
+        fail(errors, where, "superseded_by cannot point to the endpoint itself")
+    elif successor not in endpoint_status:
+        fail(errors, where, f"superseded_by target '{successor}' is not a catalog endpoint id")
+    elif endpoint_status[successor]:
+        fail(errors, where, f"superseded_by target '{successor}' is itself "
+                            f"{endpoint_status[successor]} — replacements must be live")
 
 
 def _as_date(value) -> dt.date | None:
@@ -179,6 +206,7 @@ def check_cost(cost: dict, where: str, errors: list[str], warnings: list[str]) -
 
 
 SHARED_PLAN_KIND = "treg_shared_plan"
+TRIAL_KIND = "treg_trial"
 
 
 def check_fx(errors: list[str]) -> None:
@@ -205,8 +233,26 @@ def check_fx(errors: list[str]) -> None:
                 fail(errors, where, "basis claims a treg shared-plan rate but has no "
                                     f"`kind: {SHARED_PLAN_KIND}` marker")
             continue
+        if kind == TRIAL_KIND:
+            # A ZERO rate treg set: served on treg's own free-tier key as a capped taste. The
+            # allowance is what makes $0 honest — without it the zero reads as unlimited and the
+            # shared free key dies to the first looping agent.
+            if entry.get("usd") not in (0, 0.0):
+                fail(errors, where, "a treg_trial rate must be exactly 0 — a non-zero treg-set "
+                                    "price is a shared plan, not a trial")
+            allowance = entry.get("trial_calls_per_team_day")
+            if not isinstance(allowance, int) or allowance <= 0:
+                fail(errors, where, "trial_calls_per_team_day (a positive integer) is required — "
+                                    "at $0 the allowance is the only congestion control")
+            if not basis.startswith("treg trial rate"):
+                fail(errors, where, "basis must START with 'treg trial rate' so every surface "
+                                    "showing provenance says whose $0 this is")
+            if not entry.get("source") or not entry.get("checked"):
+                fail(errors, where, "source and checked are required on a treg-set rate")
+            continue
         if kind != SHARED_PLAN_KIND:
-            fail(errors, where, f"unknown kind {kind!r} (only {SHARED_PLAN_KIND!r} exists)")
+            fail(errors, where, f"unknown kind {kind!r} (only {SHARED_PLAN_KIND!r} and "
+                                f"{TRIAL_KIND!r} exist)")
             continue
         if not isinstance(entry.get("usd"), (int, float)) or entry["usd"] <= 0:
             fail(errors, where, "a treg_shared_plan rate must carry a positive usd — null means "
@@ -227,10 +273,42 @@ def check_fx(errors: list[str]) -> None:
                                 "lives only in prose cannot be computed against")
 
 
+_WORD = re.compile(r"^[a-z0-9]+$")
+
+
+def check_aliases(errors: list[str], warnings: list[str]) -> None:
+    """aliases.yaml — the query-side vocabulary map (catalog_store.search).
+
+    Keys and values ride through the same tokenizer as queries, so anything that is not one
+    lowercase word can never match and is a silent no-op — an error, not a style point. A value
+    that occurs nowhere in the catalog's own text is dead weight (the alias exists to bridge INTO
+    the catalog's vocabulary), flagged as a warning because provider text moves under it."""
+    path = CATALOG / "aliases.yaml"
+    if not path.exists():
+        return
+    doc = yaml.safe_load(path.read_text()) or {}
+    corpus = "\n".join(p.read_text().lower() for p in CATALOG.glob("*.yaml") if p != path)
+    for key, vals in (doc.get("aliases") or {}).items():
+        where = f"aliases.yaml {key}"
+        if not _WORD.match(str(key)):
+            fail(errors, where, "key must be one lowercase word (it must survive the tokenizer)")
+        if not isinstance(vals, list) or not vals:
+            fail(errors, where, "value must be a non-empty list of words")
+            continue
+        for v in vals:
+            if not _WORD.match(str(v)):
+                fail(errors, where, f"alias {v!r} must be one lowercase word")
+            elif str(v) == str(key):
+                fail(errors, where, "alias points at itself")
+            elif str(v) not in corpus:
+                warnings.append(f"{where}: alias {v!r} occurs nowhere in the catalog — dead weight")
+
+
 def main(argv: list[str]) -> int:
     errors: list[str] = []
     warnings: list[str] = []
     check_fx(errors)
+    check_aliases(errors, warnings)
     tax = yaml.safe_load((CATALOG / "capabilities.yaml").read_text())
     platforms = set(tax.get("platforms") or {})
     capabilities = set(tax.get("capabilities") or {})
@@ -238,7 +316,19 @@ def main(argv: list[str]) -> int:
     from treg.oauth_providers import REGISTRY  # noqa: E402
 
     only = set(argv)
-    files = sorted(p for p in CATALOG.glob("*.yaml") if p.name not in ("capabilities.yaml", "fx.yaml"))
+    all_files = sorted(p for p in CATALOG.glob("*.yaml")
+                       if p.name not in ("capabilities.yaml", "fx.yaml", "aliases.yaml"))
+    # Successors can appear later in the same file or in another provider. Build the reference map
+    # before validating any row; a one-pass lookup would make validity depend on filename order.
+    endpoint_status: dict[str, str] = {}
+    for path in all_files:
+        data = yaml.safe_load(path.read_text()) or {}
+        if not isinstance(data, dict):
+            continue
+        for ep in data.get("endpoints") or []:
+            if isinstance(ep, dict) and ep.get("id"):
+                endpoint_status[str(ep["id"])] = str(ep.get("status") or "").strip()
+    files = list(all_files)
     # "tikhub" selects tikhub.yaml AND tikhub.extended.yaml — a service is both its tiers
     service_of = {p: p.stem.removesuffix(".extended") for p in files}
     if only:
@@ -329,6 +419,13 @@ def main(argv: list[str]) -> int:
                 fail(errors, where, f"bad scope '{ep.get('scope')}'")
             if ep.get("method") not in METHODS:
                 fail(errors, where, f"bad method '{ep.get('method')}'")
+            check_status_marker(ep, where, endpoint_status, errors)
+            inp = ep.get("input") or {}
+            default_array_encoding = inp.get("queryArrayEncoding")
+            if (default_array_encoding is not None
+                    and default_array_encoding not in QUERY_ARRAY_ENCODINGS):
+                fail(errors, where, "input.queryArrayEncoding must be one of "
+                     f"{sorted(QUERY_ARRAY_ENCODINGS)}")
             cost = ep.get("cost")
             if cost is not None or tier == "core":
                 # cost is optional in the extended tier — several providers publish prices per API

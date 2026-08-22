@@ -62,7 +62,7 @@ endpoints:
     platform: companies
     method: POST
     path: /v3/companies/enrich
-    name: "Reveal companies' full details by company id"
+    name: "Enrich companies by Lusha id (up to 100)"
     summary: "Enrich companies you already found in a prospecting search, by ids (max 100), into full firmographic records"
     input:
       bodyType: json
@@ -82,7 +82,7 @@ endpoints:
     platform: people
     method: POST
     path: /v3/contacts/lookalike
-    name: "Find contacts similar to a seed list"
+    name: "Find lookalike contacts from 5-100 seed contacts"
     summary: "AI-powered recommendations for contacts who share similar roles, seniority and company profile to 5-100 seed contacts"
     input:
       bodyType: json
@@ -107,7 +107,7 @@ endpoints:
     platform: companies
     method: POST
     path: /v3/companies/lookalike
-    name: "Find companies similar to a seed list"
+    name: "Find lookalike companies from 5-100 seed companies"
     summary: "AI-powered recommendations for companies of similar size, industry and profile to 5-100 seed companies"
     input:
       bodyType: json
@@ -131,7 +131,7 @@ endpoints:
     platform: people
     method: POST
     path: /v3/contacts/signals
-    name: "Get job-change signals for a list of contacts"
+    name: "Job-change and promotion signals for contact ids"
     summary: "Retrieve signal events for a list of contacts — job changes and promotions"
     input:
       bodyType: json
@@ -152,7 +152,7 @@ endpoints:
     platform: companies
     method: POST
     path: /v3/companies/signals
-    name: "Get activity signals for a list of companies"
+    name: "Hiring and headcount signals for company ids"
     summary: "Retrieve signal events for a list of companies — hiring activity, headcount changes, web traffic, IT spend and news"
     input:
       bodyType: json

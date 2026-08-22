@@ -61,7 +61,8 @@ async def test_platform_detail_groups_the_same_job_across_providers(clients: Asy
     ep = next(e for e in profile["endpoints"] if e["provider"] == "tikhub")
     assert set(ep) == {"id", "provider", "provider_display", "name", "summary", "method", "path",
                        "scope", "tier", "kind", "domain", "call_template", "cost", "verified", "docs_url",
-                       "has_example", "input", "platform_eligible", "test_request", "miss"}
+                       "has_example", "input", "platform_eligible", "platform_blocked",
+                       "test_request", "miss", "status", "status_note", "superseded_by"}
     assert ep["kind"] == "data", "an endpoint with no explicit kind is data (the browse surface)"
     assert ep["provider_display"] == P.get("tikhub").display_name
     assert ep["method"] == "GET" and ep["path"].startswith("/")
@@ -278,10 +279,13 @@ async def test_search_finds_the_job_across_providers_best_first(clients: AsyncCl
         "scrapecreators.tiktok.video.comments",
     }
     assert all(e["tier"] == "core" and e["verified"] for e in rows[:3])
-    # rank is total and stable: score desc, then core before extended, then verified before not
+    # rank is total and stable: score desc, then core before extended WITHIN a score tie — tier
+    # never outranks relevance, so a strong extended match may sit above a weak core one
     scores = [e["score"] for e in rows]
     assert scores == sorted(scores, reverse=True)
-    assert [e["tier"] for e in rows] == sorted((e["tier"] for e in rows), key=lambda t: t != "core")
+    for score in set(scores):
+        group = [e["tier"] for e in rows if e["score"] == score]
+        assert group == sorted(group, key=lambda t: t != "core")
 
     first = rows[0]
     assert first["capability"] == "tiktok.video.comments" and first["capability_description"]
@@ -335,6 +339,45 @@ async def test_endpoint_detail_answers_everything_in_one_call(clients: AsyncClie
     assert tmpl.startswith("treg call justoneapi.tiktok.video.comments")
     assert "--query awemeId=" in tmpl, "the verifier's proven request is what makes it paste-ready"
     assert isinstance(body["example_response"], (dict, list)), "inline, so parsing needs no second call"
+
+
+async def test_retired_rows_leave_discovery_but_keep_an_actionable_direct_lookup(clients: AsyncClient):
+    """A cached endpoint id needs its migration story, while a new agent must never discover it."""
+    retired = "tikhub.x.linkedin-web-search-jobs"
+    successor = "tikhub.x.linkedin-web-v2-search-jobs"
+    cat = cs.load()
+    assert retired in cat.by_id
+    assert retired not in {ep["id"] for ep in cat.endpoints}
+    assert cat.by_id[retired]["status"] == "retired"
+    assert cat.by_id[retired]["superseded_by"] == successor
+    assert not cat.by_id[successor]["status"]
+
+    detail = (await clients.get(f"/catalog/endpoints/{retired}")).json()["endpoint"]
+    assert detail["status"] == "retired"
+    assert "collapsed" in detail["status_note"]
+    assert detail["superseded_by"] == successor
+    search = (await clients.get("/catalog/search", params={"q": retired})).json()
+    assert retired not in {row["id"] for row in search["results"]}
+
+
+def test_tikhub_drift_repair_preserves_markers_and_rescues_only_real_jobs():
+    cat = cs.load()
+    marked = [ep for ep in cat.by_id.values()
+              if ep["provider"] == "tikhub" and ep.get("status")]
+    assert len(marked) == 50
+    assert {ep["status"] for ep in marked} == {"retired"}
+    assert sum(bool(ep.get("superseded_by")) for ep in marked) == 9
+    assert all(ep.get("status_note") for ep in marked)
+    assert all(ep["superseded_by"] in cat.by_id and
+               not cat.by_id[ep["superseded_by"]].get("status")
+               for ep in marked if ep.get("superseded_by"))
+
+    people = cat.by_id["justoneapi.x.linkedin-search-user-v1"]
+    assert people["capability"] == "linkedin.search.people"
+    comments = cat.by_id["tikhub.x.linkedin-web-v2-get-post-comments"]
+    assert comments["path"] == "/api/v1/linkedin/web_v2/get_post_comments"
+    assert comments["method"] == "GET"
+    assert comments["capability"] == "linkedin.post.comments"
 
 
 async def test_call_template_carries_method_and_body_for_a_post(clients: AsyncClient):
@@ -440,6 +483,19 @@ async def test_platform_eligibility_refuses_everything_it_cannot_prove():
     assert cat.platform_eligible({**ok, "verified": None}), \
         "2026-07-31 policy: the live-called stamp is no longer required — a broken route fails unbilled"
     assert not cat.platform_eligible({**ok, "cost": None}), "no price block ⇒ refuse, not free"
+    # `ok` is fully priced, so status is the ONLY axis left to explain a refusal here. A marked row
+    # keeps its historical price — it is retained to explain a cached id, not to be sold — and an
+    # eligible one would put treg's own key behind a route the provider has already removed.
+    assert not cat.platform_eligible({**ok, "status": "retired"}), "a retired route is not an offer"
+    assert not cat.platform_eligible({**ok, "status": "broken"}), "a broken route is not an offer"
+    # A plan-gated route works upstream but treg's own subscription cannot serve it — a customer
+    # discovered exactly this the hard way, via a run of 403s on akta's alternative-data family.
+    # It stays discoverable (a team's OWN key on a bigger plan serves it) but is never an offer.
+    assert not cat.platform_eligible({**ok, "platform_blocked": "plan gate"}), \
+        "a plan-gated route is not an offer, however well priced"
+    blocked = cat.by_id["akta.companies.headcount_trend"]
+    assert blocked["platform_blocked"], "the akta alt-signals family carries its plan-gate reason"
+    assert not cat.platform_eligible(blocked)
 
 
 async def test_eligibility_rides_on_the_served_row(clients: AsyncClient):
@@ -472,7 +528,49 @@ def test_call_template_falls_back_to_documented_examples(tmp_path):
         "        offset: {type: integer, required: false}\n")
     ep = cs.load(directory=tmp_path).by_id["moz.web.thing"]
     # Path params ride as --query (the server folds them into the path), required query after.
-    assert cs.call_template(ep) == "treg call moz.web.thing --query site=moz.com --query limit=<integer>"
+    assert cs.call_template(ep) == "treg call moz.web.thing --query site=moz.com --query 'limit=<integer>'"
+
+
+def test_call_templates_share_wire_encoding_and_quote_complete_query_arguments():
+    """The detail command is paste-ready, including arrays, booleans and shell metacharacters."""
+    import shlex
+
+    cat = cs.load()
+    meta = shlex.split(cs.call_template(cat.by_id["meta-ad-library.meta-ads.library.search"]))
+    meta_query = [meta[i + 1] for i, part in enumerate(meta) if part == "--query"]
+    assert 'ad_reached_countries=["US"]' in meta_query
+
+    synthetic = {
+        "id": "demo.web.query", "method": "GET",
+        "input": {"queryParams": {
+            "enabled": {"type": "boolean", "required": True, "example": True},
+            "phrase": {"type": "string", "required": True, "example": "two words"},
+        }},
+    }
+    line = cs.call_template(synthetic)
+    assert shlex.split(line)[3:] == ["--query", "enabled=true", "--query", "phrase=two words"]
+    assert "'phrase=two words'" in line
+
+
+def test_catalog_validator_rejects_an_unknown_endpoint_array_encoding(tmp_path, capsys):
+    """The endpoint encoding declaration is schema, not free-form prose. Exercise the real
+    validator so deleting its validation block cannot leave a falsely green test suite."""
+    cv = _load_validator()
+    real = cv.CATALOG
+    for name in ("capabilities.yaml", "fx.yaml"):
+        (tmp_path / name).write_text((real / name).read_text())
+    meta = (real / "meta-ad-library.yaml").read_text()
+    meta = meta.replace("queryArrayEncoding: json", "queryArrayEncoding: nonsense", 1)
+    (tmp_path / "meta-ad-library.yaml").write_text(meta)
+    original = cv.CATALOG
+    try:
+        cv.CATALOG = tmp_path
+        result = cv.main(["meta-ad-library"])
+    finally:
+        cv.CATALOG = original
+    output = capsys.readouterr().out
+    assert result == 1
+    assert "input.queryArrayEncoding must be one of" in output
 
 
 # ---- example responses -------------------------------------------------------------------
@@ -687,3 +785,160 @@ def test_a_shared_plan_rate_converts_like_any_credit():
     c = cs.load()
     out = c.cost_view({"type": "per_call", "value": 1, "currency": "credit"}, "alphavantage")
     assert out["usd"] == 0.001
+
+
+def test_the_trial_kind_check_actually_BITES(tmp_path):
+    """Every dishonest treg_trial shape refused by the REAL check: a non-zero 'trial', a zero with
+    no allowance (the congestion-control gap), a basis that does not say whose $0 it is, and prose
+    claiming a trial without the marker."""
+    cv = _load_validator()
+    bad = """
+credit_rates_usd:
+  nonzero:  {usd: 0.001, kind: treg_trial, trial_calls_per_team_day: 20, basis: "treg trial rate. x", source: "x", checked: "2026-08-15"}
+  no_cap:   {usd: 0, kind: treg_trial, basis: "treg trial rate. x", source: "x", checked: "2026-08-15"}
+  bad_cap:  {usd: 0, kind: treg_trial, trial_calls_per_team_day: 0, basis: "treg trial rate. x", source: "x", checked: "2026-08-15"}
+  wrong_basis: {usd: 0, kind: treg_trial, trial_calls_per_team_day: 20, basis: "free on our key", source: "x", checked: "2026-08-15"}
+  fine_trial: {usd: 0, kind: treg_trial, trial_calls_per_team_day: 20, basis: "treg trial rate. Served at $0 on treg's free key", source: "x", checked: "2026-08-15"}
+"""
+    (tmp_path / "fx.yaml").write_text(bad)
+    original = cv.CATALOG
+    try:
+        cv.CATALOG = tmp_path
+        errors: list[str] = []
+        cv.check_fx(errors)
+    finally:
+        cv.CATALOG = original
+    blob = "\n".join(errors)
+    for name in ("nonzero", "no_cap", "bad_cap", "wrong_basis"):
+        assert name in blob, f"{name} should have been refused:\n{blob}"
+    assert "fine_trial" not in blob, "a compliant trial entry must pass"
+
+
+def test_trial_pools_flow_from_fx_to_eligibility_and_display():
+    """The real file's three pools, end to end through the loader: a $0 price that is platform
+    eligible AND carries its allowance wherever the cost is shown — a bare $0.00 would read as
+    unlimited."""
+    from treg import catalog_store as cs
+
+    c = cs.load()
+    assert c.trial_pools == {"finnhub": 50, "twelvedata": 20, "tiingo": 20}
+    ep = c.by_id["finnhub.quote"]
+    assert c.platform_eligible(ep)
+    cost = c.cost_view(ep["cost"], "finnhub")
+    assert cost["usd"] == 0.0 and cost["trial_calls_per_team_day"] == 50
+    # and the two NON-trial own-key providers stay ineligible — the license boundary holds
+    assert not c.platform_eligible(c.by_id["polygon.prev-close"])
+    assert not c.platform_eligible(c.by_id["eodhd.eod"])
+
+
+# ---- method metadata: an endpoint treg enforces the wrong verb on cannot be called at all -------
+def test_no_tikhub_ads_route_is_recorded_as_a_GET():
+    """treg enforces the recorded method, so a wrong one is not a cosmetic error — it makes the
+    endpoint uncallable from every direction at once: POST is refused here ("… is GET"), and GET is
+    refused upstream (405). All twelve `/api/v1/tiktok/ads/*` routes shipped that way, because the
+    ingester's OPTIONS probe answers with a list and its preference order picked GET."""
+    cat = cs.load()
+    ads = [e for e in cat.endpoints if e["path"].startswith("/api/v1/tiktok/ads/")]
+    assert len(ads) >= 12
+    assert [e["id"] for e in ads if e["method"] != "POST"] == []
+
+
+def test_an_endpoint_whose_input_is_a_body_does_not_advertise_query_params():
+    """The verb and the parameter position are one decision. Correcting the method and leaving the
+    params under `queryParams` would hand callers a POST with its arguments in the wrong half of the
+    request — still uncallable, just for a new reason."""
+    cat = cs.load()
+    ep = cat.by_id["tikhub.x.tiktok-ads-search-ads"]
+    assert ep["method"] == "POST"
+    assert "queryParams" not in (ep.get("input") or {})
+    assert "keyword" in ((ep.get("input") or {}).get("body") or {})
+
+
+# ---- an id that misses -------------------------------------------------------------------------
+async def test_an_unknown_id_names_the_ids_it_nearly_matched(clients: AsyncClient):
+    """An id is not free text. An agent holding one that misses by a segment has hit a dead end
+    mid-plan, and the usual next move is to invent another and fail again."""
+    r = await clients.get("/catalog/endpoints/lusha.companies-signals")
+    assert r.status_code == 404
+    detail = r.json()["detail"]
+    assert detail["did_you_mean"] == ["lusha.x.companies-signals"]
+    assert "lusha.x.companies-signals" in detail["hint"]
+
+
+async def test_an_id_that_resembles_nothing_is_sent_to_search(clients: AsyncClient):
+    """No near miss must not become a WRONG suggestion — a confidently wrong id is worse than none."""
+    r = await clients.get("/catalog/endpoints/acme.does-not-exist")
+    assert r.status_code == 404
+    detail = r.json()["detail"]
+    assert detail["did_you_mean"] == []
+    assert "catalog search" in detail["hint"]
+
+
+# ---- the GENERATOR, not just its output ---------------------------------------------------------
+def test_the_ingester_puts_a_POST_routes_arguments_in_the_BODY():
+    """The checked-in YAML is machine-generated, so a fix that lives only in the file is undone by
+    the next `catalog_ingest.py` run. These assert the GENERATOR: the tests above inspect the
+    corrected YAML and would pass with the ingester reverted.
+
+    The two decisions have to come from one document. TikHub's Apifox docs list every TikTok-Ads
+    parameter under `parameters.query` while its OpenAPI declares the same route POST-with-a-JSON
+    body, so taking the verb from one and the position from the other produced a POST carrying its
+    arguments in the query string — uncallable, just differently."""
+    import sys
+    sys.path.insert(0, "scripts")
+    from catalog_ingest import tikhub_input_and_test
+
+    doc_op = {"parameters": {"query": [
+        {"name": "keyword", "type": "string", "required": True, "sampleValue": "shoes"},
+        {"name": "limit", "type": "integer", "required": False, "sampleValue": 20},
+    ]}}
+    spec_op = {"post": {"requestBody": {"content": {"application/json": {"schema": {}}}}},
+               "get": {}}
+
+    inp, test, reason = tikhub_input_and_test(doc_op, {}, method="POST", spec_op=spec_op)
+    assert not reason
+    assert "queryParams" not in inp and "keyword" in inp["body"], inp
+    assert inp["bodyType"] == "json"
+    assert "queryParams" not in test and test["body"]["keyword"] == "shoes", test
+
+    # a GET route is untouched — the rule keys off the spec's own body declaration, not the verb alone
+    as_get, get_test, _ = tikhub_input_and_test(doc_op, {}, method="GET", spec_op=spec_op)
+    assert "queryParams" in as_get and "body" not in as_get
+    assert "queryParams" in get_test
+
+    # …and a POST whose spec declares NO json body keeps its query string
+    no_body, _, _ = tikhub_input_and_test(doc_op, {}, method="POST", spec_op={"post": {}})
+    assert "queryParams" in no_body and "body" not in no_body
+
+
+def test_a_published_spec_outranks_the_OPTIONS_probe():
+    """The probe infers a verb from a preflight; the spec is the provider's own contract. When the
+    spec names exactly one method the spec wins, so a re-ingest inherits an upstream verb change
+    instead of re-deriving a stale guess."""
+    import sys
+    sys.path.insert(0, "scripts")
+    from catalog_ingest import resolve_method
+
+    # the case that matters: spec says POST, the probe came back GET
+    assert resolve_method(spec_op={"post": {}}, probed="GET", documented="GET") == "POST"
+    # ambiguous spec (two verbs) → the probe is still the tiebreaker it always was
+    assert resolve_method(spec_op={"get": {}, "post": {}}, probed="POST") == "POST"
+    # no spec at all → probe, then docs, then GET
+    assert resolve_method(spec_op={}, probed="POST") == "POST"
+    assert resolve_method(spec_op={}, probed=None, documented="delete") == "DELETE"
+    assert resolve_method(spec_op={}, probed=None) == "GET"
+
+
+def test_a_stored_EMPTY_json_body_survives_into_the_call_template():
+    """`--data '{}'` is not noise: these are POSTs that take no arguments but still require a JSON
+    body, and `if body:` dropped it — printing a command that differs from the one that was tested,
+    against handlers that reject an empty body outright."""
+    cat = cs.load()
+    empties = [e for e in cat.endpoints if (e.get("test_request") or {}).get("body") == {}]
+    assert empties, "the fixture for this rule is the catalog itself; it must not be empty"
+    for ep in empties:
+        line = cs.call_template(ep)
+        assert "--data '{}'" in line, f"{ep['id']}: {line}"
+    # …and a GET is not handed a body it never had
+    gets = [e for e in cat.endpoints if e["method"] == "GET"]
+    assert not any("--data" in cs.call_template(e) for e in gets)

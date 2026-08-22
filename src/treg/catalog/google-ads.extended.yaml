@@ -10,8 +10,10 @@
 # reach for out of ~180 the API defines. `input.note` names the resource and links its field
 # reference; `docs_url` goes straight to the selectable fields, segments and metrics.
 # 
-# API version v21, matching the core file and OAuthProvider.examples. A wrong version 404s as
-# HTML rather than JSON, so this must be bumped in all three places together.
+# API version v25, matching the core file and OAuthProvider.examples. Versions expire on a
+# calendar: v21 was sunset 2026-08-05 and every call 400'd with UNSUPPORTED_VERSION until this was
+# bumped on 2026-08-17. (A version that never existed 404s as HTML instead.) Bump all four places
+# together — see the header of google-ads.yaml.
 # 
 # Every call needs BOTH the OAuth bearer and a developer-token header from an approved manager
 # (MCC) account — see OAuthProvider.extra_credential_note. The adwords scope treg requests
@@ -23,15 +25,15 @@ source:
   method: official GAQL resource reference (one entry per queryable resource)
   ingested: '2026-07-28'
   spec_urls:
-  - https://developers.google.com/google-ads/api/fields/v21/overview
-  - https://developers.google.com/google-ads/api/reference/rpc/v21/overview
+  - https://developers.google.com/google-ads/api/fields/v25/overview
+  - https://developers.google.com/google-ads/api/reference/rpc/v25/overview
 endpoints:
 - id: google-ads.x.gaql-campaign
   tier: extended
   platform: google-ads
   method: POST
-  path: /v21/customers/{customer_id}/googleAds:searchStream
-  name: 'Get campaign details and performance'
+  path: /v25/customers/{customer_id}/googleAds:searchStream
+  name: "Google Ads campaign stats via GAQL"
   summary: GAQL FROM campaign — Campaigns — name, status, budget, bidding strategy, start/end dates and all campaign-level metrics
   scope: own_account
   cost:
@@ -51,15 +53,15 @@ endpoints:
       type: object
       required: true
       note: '{"query": "SELECT <fields> FROM campaign WHERE segments.date DURING LAST_30_DAYS"}'
-    note: 'Resource: campaign. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/campaign. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
-  docs_url: https://developers.google.com/google-ads/api/fields/v21/campaign
+    note: 'Resource: campaign. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v25/campaign. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
+  docs_url: https://developers.google.com/google-ads/api/fields/v25/campaign
   capability: google-ads.campaigns.performance
 - id: google-ads.x.gaql-ad-group
   tier: extended
   platform: google-ads
   method: POST
-  path: /v21/customers/{customer_id}/googleAds:searchStream
-  name: 'Get ad group details and performance'
+  path: /v25/customers/{customer_id}/googleAds:searchStream
+  name: "Google Ads ad group stats via GAQL"
   summary: GAQL FROM ad_group — Ad groups — name, status, type, CPC bid and ad-group-level metrics
   scope: own_account
   cost:
@@ -79,15 +81,15 @@ endpoints:
       type: object
       required: true
       note: '{"query": "SELECT <fields> FROM ad_group WHERE segments.date DURING LAST_30_DAYS"}'
-    note: 'Resource: ad_group. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/ad_group. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
-  docs_url: https://developers.google.com/google-ads/api/fields/v21/ad_group
+    note: 'Resource: ad_group. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v25/ad_group. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
+  docs_url: https://developers.google.com/google-ads/api/fields/v25/ad_group
   capability: google-ads.adgroups.performance
 - id: google-ads.x.gaql-ad-group-ad
   tier: extended
   platform: google-ads
   method: POST
-  path: /v21/customers/{customer_id}/googleAds:searchStream
-  name: 'Get individual ad details and performance'
+  path: /v25/customers/{customer_id}/googleAds:searchStream
+  name: "Google Ads individual ads via GAQL — headlines, URLs"
   summary: GAQL FROM ad_group_ad — The individual ads — headlines, descriptions, final URLs, approval status and per-ad metrics
   scope: own_account
   cost:
@@ -107,15 +109,15 @@ endpoints:
       type: object
       required: true
       note: '{"query": "SELECT <fields> FROM ad_group_ad WHERE segments.date DURING LAST_30_DAYS"}'
-    note: 'Resource: ad_group_ad. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/ad_group_ad. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
-  docs_url: https://developers.google.com/google-ads/api/fields/v21/ad_group_ad
+    note: 'Resource: ad_group_ad. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v25/ad_group_ad. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
+  docs_url: https://developers.google.com/google-ads/api/fields/v25/ad_group_ad
   capability: google-ads.ads.performance
 - id: google-ads.x.gaql-ad-group-criterion
   tier: extended
   platform: google-ads
   method: POST
-  path: /v21/customers/{customer_id}/googleAds:searchStream
-  name: 'Get ad group targeting and bids'
+  path: /v25/customers/{customer_id}/googleAds:searchStream
+  name: "Google Ads ad group targeting and bids via GAQL"
   summary: 'GAQL FROM ad_group_criterion — Everything targeted or excluded in an ad group: keywords, audiences, placements, with bids'
   scope: own_account
   cost:
@@ -135,15 +137,15 @@ endpoints:
       type: object
       required: true
       note: '{"query": "SELECT <fields> FROM ad_group_criterion WHERE segments.date DURING LAST_30_DAYS"}'
-    note: 'Resource: ad_group_criterion. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/ad_group_criterion. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
-  docs_url: https://developers.google.com/google-ads/api/fields/v21/ad_group_criterion
+    note: 'Resource: ad_group_criterion. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v25/ad_group_criterion. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
+  docs_url: https://developers.google.com/google-ads/api/fields/v25/ad_group_criterion
   capability: google-ads.adgroup.targeting
 - id: google-ads.x.gaql-keyword-view
   tier: extended
   platform: google-ads
   method: POST
-  path: /v21/customers/{customer_id}/googleAds:searchStream
-  name: 'Get keyword performance metrics'
+  path: /v25/customers/{customer_id}/googleAds:searchStream
+  name: "Google Ads per-keyword performance via GAQL"
   summary: GAQL FROM keyword_view — Per-keyword performance — the metrics view over ad_group_criterion keywords
   scope: own_account
   cost:
@@ -163,15 +165,15 @@ endpoints:
       type: object
       required: true
       note: '{"query": "SELECT <fields> FROM keyword_view WHERE segments.date DURING LAST_30_DAYS"}'
-    note: 'Resource: keyword_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/keyword_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
-  docs_url: https://developers.google.com/google-ads/api/fields/v21/keyword_view
+    note: 'Resource: keyword_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v25/keyword_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
+  docs_url: https://developers.google.com/google-ads/api/fields/v25/keyword_view
   capability: google-ads.keywords.performance
 - id: google-ads.x.gaql-search-term-view
   tier: extended
   platform: google-ads
   method: POST
-  path: /v21/customers/{customer_id}/googleAds:searchStream
-  name: 'Get search terms that triggered ads'
+  path: /v25/customers/{customer_id}/googleAds:searchStream
+  name: "Google Ads search terms that triggered ads via GAQL"
   summary: GAQL FROM search_term_view — The actual queries people typed that triggered your ads, and what each cost
   scope: own_account
   cost:
@@ -191,15 +193,15 @@ endpoints:
       type: object
       required: true
       note: '{"query": "SELECT <fields> FROM search_term_view WHERE segments.date DURING LAST_30_DAYS"}'
-    note: 'Resource: search_term_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/search_term_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
-  docs_url: https://developers.google.com/google-ads/api/fields/v21/search_term_view
+    note: 'Resource: search_term_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v25/search_term_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
+  docs_url: https://developers.google.com/google-ads/api/fields/v25/search_term_view
   capability: google-ads.search_terms
 - id: google-ads.x.gaql-campaign-budget
   tier: extended
   platform: google-ads
   method: POST
-  path: /v21/customers/{customer_id}/googleAds:searchStream
-  name: 'Get campaign budget details'
+  path: /v25/customers/{customer_id}/googleAds:searchStream
+  name: "Google Ads campaign budgets via GAQL"
   summary: GAQL FROM campaign_budget — Budgets — daily amount, delivery method, and which campaigns share them
   scope: own_account
   cost:
@@ -219,15 +221,15 @@ endpoints:
       type: object
       required: true
       note: '{"query": "SELECT <fields> FROM campaign_budget WHERE segments.date DURING LAST_30_DAYS"}'
-    note: 'Resource: campaign_budget. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/campaign_budget. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
-  docs_url: https://developers.google.com/google-ads/api/fields/v21/campaign_budget
+    note: 'Resource: campaign_budget. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v25/campaign_budget. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
+  docs_url: https://developers.google.com/google-ads/api/fields/v25/campaign_budget
   capability: google-ads.budgets.list
 - id: google-ads.x.gaql-campaign-criterion
   tier: extended
   platform: google-ads
   method: POST
-  path: /v21/customers/{customer_id}/googleAds:searchStream
-  name: 'Get campaign-level targeting and exclusions'
+  path: /v25/customers/{customer_id}/googleAds:searchStream
+  name: "Google Ads campaign targeting, exclusions via GAQL"
   summary: 'GAQL FROM campaign_criterion — Campaign-level targeting and exclusions: locations, languages, devices, negative keywords'
   scope: own_account
   cost:
@@ -247,15 +249,15 @@ endpoints:
       type: object
       required: true
       note: '{"query": "SELECT <fields> FROM campaign_criterion WHERE segments.date DURING LAST_30_DAYS"}'
-    note: 'Resource: campaign_criterion. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/campaign_criterion. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
-  docs_url: https://developers.google.com/google-ads/api/fields/v21/campaign_criterion
+    note: 'Resource: campaign_criterion. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v25/campaign_criterion. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
+  docs_url: https://developers.google.com/google-ads/api/fields/v25/campaign_criterion
   capability: google-ads.campaign.targeting
 - id: google-ads.x.gaql-customer
   tier: extended
   platform: google-ads
   method: POST
-  path: /v21/customers/{customer_id}/googleAds:searchStream
-  name: 'Get account details and metrics'
+  path: /v25/customers/{customer_id}/googleAds:searchStream
+  name: "Google Ads account details and metrics via GAQL"
   summary: GAQL FROM customer — The account itself — name, currency, timezone, auto-tagging, and account-level metrics
   scope: own_account
   cost:
@@ -275,15 +277,15 @@ endpoints:
       type: object
       required: true
       note: '{"query": "SELECT <fields> FROM customer WHERE segments.date DURING LAST_30_DAYS"}'
-    note: 'Resource: customer. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/customer. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
-  docs_url: https://developers.google.com/google-ads/api/fields/v21/customer
+    note: 'Resource: customer. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v25/customer. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
+  docs_url: https://developers.google.com/google-ads/api/fields/v25/customer
   capability: google-ads.account.details
 - id: google-ads.x.gaql-customer-client
   tier: extended
   platform: google-ads
   method: POST
-  path: /v21/customers/{customer_id}/googleAds:searchStream
-  name: 'List accounts under a manager account'
+  path: /v25/customers/{customer_id}/googleAds:searchStream
+  name: "Accounts under a Google Ads manager (MCC) via GAQL"
   summary: GAQL FROM customer_client — Every account under a manager (MCC), including the hierarchy level and whether it is a manager
   scope: own_account
   cost:
@@ -303,15 +305,15 @@ endpoints:
       type: object
       required: true
       note: '{"query": "SELECT <fields> FROM customer_client WHERE segments.date DURING LAST_30_DAYS"}'
-    note: 'Resource: customer_client. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/customer_client. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
-  docs_url: https://developers.google.com/google-ads/api/fields/v21/customer_client
+    note: 'Resource: customer_client. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v25/customer_client. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
+  docs_url: https://developers.google.com/google-ads/api/fields/v25/customer_client
   capability: google-ads.mcc.accounts
 - id: google-ads.x.gaql-conversion-action
   tier: extended
   platform: google-ads
   method: POST
-  path: /v21/customers/{customer_id}/googleAds:searchStream
-  name: 'Get conversion action settings'
+  path: /v25/customers/{customer_id}/googleAds:searchStream
+  name: "Google Ads conversion action settings via GAQL"
   summary: GAQL FROM conversion_action — Conversion actions — what counts as a conversion, its category, value and counting rules
   scope: own_account
   cost:
@@ -331,15 +333,15 @@ endpoints:
       type: object
       required: true
       note: '{"query": "SELECT <fields> FROM conversion_action WHERE segments.date DURING LAST_30_DAYS"}'
-    note: 'Resource: conversion_action. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/conversion_action. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
-  docs_url: https://developers.google.com/google-ads/api/fields/v21/conversion_action
+    note: 'Resource: conversion_action. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v25/conversion_action. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
+  docs_url: https://developers.google.com/google-ads/api/fields/v25/conversion_action
   capability: google-ads.conversions.actions
 - id: google-ads.x.gaql-change-event
   tier: extended
   platform: google-ads
   method: POST
-  path: /v21/customers/{customer_id}/googleAds:searchStream
-  name: 'Get recent account change history'
+  path: /v25/customers/{customer_id}/googleAds:searchStream
+  name: "Google Ads change history, last 30 days via GAQL"
   summary: GAQL FROM change_event — Who changed what in the account in the last 30 days, old value and new value
   scope: own_account
   cost:
@@ -359,15 +361,15 @@ endpoints:
       type: object
       required: true
       note: '{"query": "SELECT <fields> FROM change_event WHERE segments.date DURING LAST_30_DAYS"}'
-    note: 'Resource: change_event. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/change_event. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
-  docs_url: https://developers.google.com/google-ads/api/fields/v21/change_event
+    note: 'Resource: change_event. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v25/change_event. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
+  docs_url: https://developers.google.com/google-ads/api/fields/v25/change_event
   capability: google-ads.account.changes
 - id: google-ads.x.gaql-change-status
   tier: extended
   platform: google-ads
   method: POST
-  path: /v21/customers/{customer_id}/googleAds:searchStream
-  name: 'Get resources changed since a timestamp'
+  path: /v25/customers/{customer_id}/googleAds:searchStream
+  name: "Google Ads resources changed since a timestamp via GAQL"
   summary: GAQL FROM change_status — Which resources changed since a timestamp — the cheap way to poll for edits
   scope: own_account
   cost:
@@ -387,15 +389,15 @@ endpoints:
       type: object
       required: true
       note: '{"query": "SELECT <fields> FROM change_status WHERE segments.date DURING LAST_30_DAYS"}'
-    note: 'Resource: change_status. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/change_status. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
-  docs_url: https://developers.google.com/google-ads/api/fields/v21/change_status
+    note: 'Resource: change_status. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v25/change_status. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
+  docs_url: https://developers.google.com/google-ads/api/fields/v25/change_status
   capability: google-ads.account.changes
 - id: google-ads.x.gaql-bidding-strategy
   tier: extended
   platform: google-ads
   method: POST
-  path: /v21/customers/{customer_id}/googleAds:searchStream
-  name: 'Get portfolio bidding strategy details'
+  path: /v25/customers/{customer_id}/googleAds:searchStream
+  name: "Google Ads portfolio bidding strategies via GAQL"
   summary: GAQL FROM bidding_strategy — Portfolio bidding strategies and their targets (target CPA, target ROAS, maximise conversions)
   scope: own_account
   cost:
@@ -415,15 +417,15 @@ endpoints:
       type: object
       required: true
       note: '{"query": "SELECT <fields> FROM bidding_strategy WHERE segments.date DURING LAST_30_DAYS"}'
-    note: 'Resource: bidding_strategy. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/bidding_strategy. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
-  docs_url: https://developers.google.com/google-ads/api/fields/v21/bidding_strategy
+    note: 'Resource: bidding_strategy. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v25/bidding_strategy. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
+  docs_url: https://developers.google.com/google-ads/api/fields/v25/bidding_strategy
   capability: google-ads.bidding_strategies
 - id: google-ads.x.gaql-billing-setup
   tier: extended
   platform: google-ads
   method: POST
-  path: /v21/customers/{customer_id}/googleAds:searchStream
-  name: 'Get billing setup and payment accounts'
+  path: /v25/customers/{customer_id}/googleAds:searchStream
+  name: "Google Ads billing setups and payment accounts via GAQL"
   summary: GAQL FROM billing_setup — Billing setups and payment accounts attached to the customer
   scope: own_account
   cost:
@@ -443,15 +445,15 @@ endpoints:
       type: object
       required: true
       note: '{"query": "SELECT <fields> FROM billing_setup WHERE segments.date DURING LAST_30_DAYS"}'
-    note: 'Resource: billing_setup. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/billing_setup. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
-  docs_url: https://developers.google.com/google-ads/api/fields/v21/billing_setup
+    note: 'Resource: billing_setup. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v25/billing_setup. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
+  docs_url: https://developers.google.com/google-ads/api/fields/v25/billing_setup
   capability: google-ads.billing
 - id: google-ads.x.gaql-account-budget
   tier: extended
   platform: google-ads
   method: POST
-  path: /v21/customers/{customer_id}/googleAds:searchStream
-  name: 'Get account-level budget limits'
+  path: /v25/customers/{customer_id}/googleAds:searchStream
+  name: "Google Ads account-level budget limits via GAQL"
   summary: GAQL FROM account_budget — Account-level budgets and their approved spending limits (invoiced accounts)
   scope: own_account
   cost:
@@ -471,15 +473,15 @@ endpoints:
       type: object
       required: true
       note: '{"query": "SELECT <fields> FROM account_budget WHERE segments.date DURING LAST_30_DAYS"}'
-    note: 'Resource: account_budget. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/account_budget. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
-  docs_url: https://developers.google.com/google-ads/api/fields/v21/account_budget
+    note: 'Resource: account_budget. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v25/account_budget. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
+  docs_url: https://developers.google.com/google-ads/api/fields/v25/account_budget
   capability: google-ads.account.budget
 - id: google-ads.x.gaql-asset
   tier: extended
   platform: google-ads
   method: POST
-  path: /v21/customers/{customer_id}/googleAds:searchStream
-  name: "List assets and where they're used"
+  path: /v25/customers/{customer_id}/googleAds:searchStream
+  name: "Google Ads assets and where they are used via GAQL"
   summary: GAQL FROM asset — Assets — images, videos, text, sitelinks, callouts — and where each is used
   scope: own_account
   cost:
@@ -499,15 +501,15 @@ endpoints:
       type: object
       required: true
       note: '{"query": "SELECT <fields> FROM asset WHERE segments.date DURING LAST_30_DAYS"}'
-    note: 'Resource: asset. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/asset. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
-  docs_url: https://developers.google.com/google-ads/api/fields/v21/asset
+    note: 'Resource: asset. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v25/asset. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
+  docs_url: https://developers.google.com/google-ads/api/fields/v25/asset
   capability: google-ads.assets
 - id: google-ads.x.gaql-asset-group
   tier: extended
   platform: google-ads
   method: POST
-  path: /v21/customers/{customer_id}/googleAds:searchStream
-  name: 'Get Performance Max asset group metrics'
+  path: /v25/customers/{customer_id}/googleAds:searchStream
+  name: "Performance Max asset group metrics via GAQL"
   summary: GAQL FROM asset_group — Asset groups (Performance Max) with their status and per-group metrics
   scope: own_account
   cost:
@@ -527,15 +529,15 @@ endpoints:
       type: object
       required: true
       note: '{"query": "SELECT <fields> FROM asset_group WHERE segments.date DURING LAST_30_DAYS"}'
-    note: 'Resource: asset_group. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/asset_group. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
-  docs_url: https://developers.google.com/google-ads/api/fields/v21/asset_group
+    note: 'Resource: asset_group. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v25/asset_group. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
+  docs_url: https://developers.google.com/google-ads/api/fields/v25/asset_group
   capability: google-ads.performance_max.asset_groups
 - id: google-ads.x.gaql-campaign-asset
   tier: extended
   platform: google-ads
   method: POST
-  path: /v21/customers/{customer_id}/googleAds:searchStream
-  name: 'Get assets attached to a campaign'
+  path: /v25/customers/{customer_id}/googleAds:searchStream
+  name: "Assets attached to Google Ads campaigns via GAQL"
   summary: GAQL FROM campaign_asset — Which assets are attached to which campaign, and in what field type
   scope: own_account
   cost:
@@ -555,15 +557,15 @@ endpoints:
       type: object
       required: true
       note: '{"query": "SELECT <fields> FROM campaign_asset WHERE segments.date DURING LAST_30_DAYS"}'
-    note: 'Resource: campaign_asset. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/campaign_asset. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
-  docs_url: https://developers.google.com/google-ads/api/fields/v21/campaign_asset
+    note: 'Resource: campaign_asset. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v25/campaign_asset. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
+  docs_url: https://developers.google.com/google-ads/api/fields/v25/campaign_asset
   capability: google-ads.campaign.assets
 - id: google-ads.x.gaql-customer-asset
   tier: extended
   platform: google-ads
   method: POST
-  path: /v21/customers/{customer_id}/googleAds:searchStream
-  name: 'Get assets attached to the account'
+  path: /v25/customers/{customer_id}/googleAds:searchStream
+  name: "Google Ads account-level assets via GAQL"
   summary: GAQL FROM customer_asset — Assets attached at the account level
   scope: own_account
   cost:
@@ -583,15 +585,15 @@ endpoints:
       type: object
       required: true
       note: '{"query": "SELECT <fields> FROM customer_asset WHERE segments.date DURING LAST_30_DAYS"}'
-    note: 'Resource: customer_asset. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/customer_asset. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
-  docs_url: https://developers.google.com/google-ads/api/fields/v21/customer_asset
+    note: 'Resource: customer_asset. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v25/customer_asset. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
+  docs_url: https://developers.google.com/google-ads/api/fields/v25/customer_asset
   capability: google-ads.account.assets
 - id: google-ads.x.gaql-ad-group-ad-asset-view
   tier: extended
   platform: google-ads
   method: POST
-  path: /v21/customers/{customer_id}/googleAds:searchStream
-  name: 'Get per-asset performance within an ad'
+  path: /v25/customers/{customer_id}/googleAds:searchStream
+  name: "Google Ads per-asset performance in an ad via GAQL"
   summary: GAQL FROM ad_group_ad_asset_view — Per-asset performance inside a specific ad — which headline actually pulled
   scope: own_account
   cost:
@@ -611,15 +613,15 @@ endpoints:
       type: object
       required: true
       note: '{"query": "SELECT <fields> FROM ad_group_ad_asset_view WHERE segments.date DURING LAST_30_DAYS"}'
-    note: 'Resource: ad_group_ad_asset_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/ad_group_ad_asset_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
-  docs_url: https://developers.google.com/google-ads/api/fields/v21/ad_group_ad_asset_view
+    note: 'Resource: ad_group_ad_asset_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v25/ad_group_ad_asset_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
+  docs_url: https://developers.google.com/google-ads/api/fields/v25/ad_group_ad_asset_view
   capability: google-ads.assets.performance
 - id: google-ads.x.gaql-audience
   tier: extended
   platform: google-ads
   method: POST
-  path: /v21/customers/{customer_id}/googleAds:searchStream
-  name: 'List audiences and their segments'
+  path: /v25/customers/{customer_id}/googleAds:searchStream
+  name: "Google Ads audiences and their segments via GAQL"
   summary: GAQL FROM audience — Audiences defined in the account and their segments
   scope: own_account
   cost:
@@ -639,15 +641,15 @@ endpoints:
       type: object
       required: true
       note: '{"query": "SELECT <fields> FROM audience WHERE segments.date DURING LAST_30_DAYS"}'
-    note: 'Resource: audience. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/audience. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
-  docs_url: https://developers.google.com/google-ads/api/fields/v21/audience
+    note: 'Resource: audience. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v25/audience. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
+  docs_url: https://developers.google.com/google-ads/api/fields/v25/audience
   capability: google-ads.audiences
 - id: google-ads.x.gaql-user-list
   tier: extended
   platform: google-ads
   method: POST
-  path: /v21/customers/{customer_id}/googleAds:searchStream
-  name: 'Get remarketing and customer match lists'
+  path: /v25/customers/{customer_id}/googleAds:searchStream
+  name: "Google Ads remarketing, customer match lists via GAQL"
   summary: GAQL FROM user_list — Remarketing and customer-match lists, their size and eligibility per network
   scope: own_account
   cost:
@@ -667,15 +669,15 @@ endpoints:
       type: object
       required: true
       note: '{"query": "SELECT <fields> FROM user_list WHERE segments.date DURING LAST_30_DAYS"}'
-    note: 'Resource: user_list. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/user_list. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
-  docs_url: https://developers.google.com/google-ads/api/fields/v21/user_list
+    note: 'Resource: user_list. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v25/user_list. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
+  docs_url: https://developers.google.com/google-ads/api/fields/v25/user_list
   capability: google-ads.remarketing_lists
 - id: google-ads.x.gaql-user-interest
   tier: extended
   platform: google-ads
   method: POST
-  path: /v21/customers/{customer_id}/googleAds:searchStream
-  name: 'List interest and affinity categories'
+  path: /v25/customers/{customer_id}/googleAds:searchStream
+  name: "Affinity and in-market interest taxonomy via GAQL"
   summary: GAQL FROM user_interest — The affinity and in-market interest taxonomy available for targeting
   scope: own_account
   cost:
@@ -695,15 +697,15 @@ endpoints:
       type: object
       required: true
       note: '{"query": "SELECT <fields> FROM user_interest WHERE segments.date DURING LAST_30_DAYS"}'
-    note: 'Resource: user_interest. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/user_interest. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
-  docs_url: https://developers.google.com/google-ads/api/fields/v21/user_interest
+    note: 'Resource: user_interest. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v25/user_interest. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
+  docs_url: https://developers.google.com/google-ads/api/fields/v25/user_interest
   capability: google-ads.interests.taxonomy
 - id: google-ads.x.gaql-campaign-audience-view
   tier: extended
   platform: google-ads
   method: POST
-  path: /v21/customers/{customer_id}/googleAds:searchStream
-  name: 'Get audience performance by campaign'
+  path: /v25/customers/{customer_id}/googleAds:searchStream
+  name: "Google Ads audience performance by campaign via GAQL"
   summary: GAQL FROM campaign_audience_view — Audience performance at campaign level
   scope: own_account
   cost:
@@ -723,15 +725,15 @@ endpoints:
       type: object
       required: true
       note: '{"query": "SELECT <fields> FROM campaign_audience_view WHERE segments.date DURING LAST_30_DAYS"}'
-    note: 'Resource: campaign_audience_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/campaign_audience_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
-  docs_url: https://developers.google.com/google-ads/api/fields/v21/campaign_audience_view
+    note: 'Resource: campaign_audience_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v25/campaign_audience_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
+  docs_url: https://developers.google.com/google-ads/api/fields/v25/campaign_audience_view
   capability: google-ads.campaign.audience_performance
 - id: google-ads.x.gaql-ad-group-audience-view
   tier: extended
   platform: google-ads
   method: POST
-  path: /v21/customers/{customer_id}/googleAds:searchStream
-  name: 'Get audience performance by ad group'
+  path: /v25/customers/{customer_id}/googleAds:searchStream
+  name: "Google Ads audience performance by ad group via GAQL"
   summary: GAQL FROM ad_group_audience_view — Audience performance at ad-group level
   scope: own_account
   cost:
@@ -751,15 +753,15 @@ endpoints:
       type: object
       required: true
       note: '{"query": "SELECT <fields> FROM ad_group_audience_view WHERE segments.date DURING LAST_30_DAYS"}'
-    note: 'Resource: ad_group_audience_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/ad_group_audience_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
-  docs_url: https://developers.google.com/google-ads/api/fields/v21/ad_group_audience_view
+    note: 'Resource: ad_group_audience_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v25/ad_group_audience_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
+  docs_url: https://developers.google.com/google-ads/api/fields/v25/ad_group_audience_view
   capability: google-ads.adgroup.audience_performance
 - id: google-ads.x.gaql-age-range-view
   tier: extended
   platform: google-ads
   method: POST
-  path: /v21/customers/{customer_id}/googleAds:searchStream
-  name: 'Get performance by age bracket'
+  path: /v25/customers/{customer_id}/googleAds:searchStream
+  name: "Google Ads performance by age bracket via GAQL"
   summary: GAQL FROM age_range_view — Performance split by the viewer's age bracket
   scope: own_account
   cost:
@@ -779,15 +781,15 @@ endpoints:
       type: object
       required: true
       note: '{"query": "SELECT <fields> FROM age_range_view WHERE segments.date DURING LAST_30_DAYS"}'
-    note: 'Resource: age_range_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/age_range_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
-  docs_url: https://developers.google.com/google-ads/api/fields/v21/age_range_view
+    note: 'Resource: age_range_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v25/age_range_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
+  docs_url: https://developers.google.com/google-ads/api/fields/v25/age_range_view
   capability: google-ads.performance.age
 - id: google-ads.x.gaql-gender-view
   tier: extended
   platform: google-ads
   method: POST
-  path: /v21/customers/{customer_id}/googleAds:searchStream
-  name: 'Get performance by gender'
+  path: /v25/customers/{customer_id}/googleAds:searchStream
+  name: "Google Ads performance by gender via GAQL"
   summary: GAQL FROM gender_view — Performance split by the viewer's gender
   scope: own_account
   cost:
@@ -807,15 +809,15 @@ endpoints:
       type: object
       required: true
       note: '{"query": "SELECT <fields> FROM gender_view WHERE segments.date DURING LAST_30_DAYS"}'
-    note: 'Resource: gender_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/gender_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
-  docs_url: https://developers.google.com/google-ads/api/fields/v21/gender_view
+    note: 'Resource: gender_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v25/gender_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
+  docs_url: https://developers.google.com/google-ads/api/fields/v25/gender_view
   capability: google-ads.performance.gender
 - id: google-ads.x.gaql-parental-status-view
   tier: extended
   platform: google-ads
   method: POST
-  path: /v21/customers/{customer_id}/googleAds:searchStream
-  name: 'Get performance by parental status'
+  path: /v25/customers/{customer_id}/googleAds:searchStream
+  name: "Google Ads performance by parental status via GAQL"
   summary: GAQL FROM parental_status_view — Performance split by parental status
   scope: own_account
   cost:
@@ -835,15 +837,15 @@ endpoints:
       type: object
       required: true
       note: '{"query": "SELECT <fields> FROM parental_status_view WHERE segments.date DURING LAST_30_DAYS"}'
-    note: 'Resource: parental_status_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/parental_status_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
-  docs_url: https://developers.google.com/google-ads/api/fields/v21/parental_status_view
+    note: 'Resource: parental_status_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v25/parental_status_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
+  docs_url: https://developers.google.com/google-ads/api/fields/v25/parental_status_view
   capability: google-ads.performance.parental_status
 - id: google-ads.x.gaql-income-range-view
   tier: extended
   platform: google-ads
   method: POST
-  path: /v21/customers/{customer_id}/googleAds:searchStream
-  name: 'Get performance by household income'
+  path: /v25/customers/{customer_id}/googleAds:searchStream
+  name: "Google Ads performance by household income via GAQL"
   summary: GAQL FROM income_range_view — Performance split by household income bracket
   scope: own_account
   cost:
@@ -863,15 +865,15 @@ endpoints:
       type: object
       required: true
       note: '{"query": "SELECT <fields> FROM income_range_view WHERE segments.date DURING LAST_30_DAYS"}'
-    note: 'Resource: income_range_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/income_range_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
-  docs_url: https://developers.google.com/google-ads/api/fields/v21/income_range_view
+    note: 'Resource: income_range_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v25/income_range_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
+  docs_url: https://developers.google.com/google-ads/api/fields/v25/income_range_view
   capability: google-ads.performance.income
 - id: google-ads.x.gaql-geographic-view
   tier: extended
   platform: google-ads
   method: POST
-  path: /v21/customers/{customer_id}/googleAds:searchStream
-  name: 'Get performance by triggering location'
+  path: /v25/customers/{customer_id}/googleAds:searchStream
+  name: "Google Ads performance by triggering location via GAQL"
   summary: GAQL FROM geographic_view — Performance by the location that triggered the ad (physical or interest)
   scope: own_account
   cost:
@@ -891,15 +893,15 @@ endpoints:
       type: object
       required: true
       note: '{"query": "SELECT <fields> FROM geographic_view WHERE segments.date DURING LAST_30_DAYS"}'
-    note: 'Resource: geographic_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/geographic_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
-  docs_url: https://developers.google.com/google-ads/api/fields/v21/geographic_view
+    note: 'Resource: geographic_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v25/geographic_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
+  docs_url: https://developers.google.com/google-ads/api/fields/v25/geographic_view
   capability: google-ads.performance.geographic
 - id: google-ads.x.gaql-user-location-view
   tier: extended
   platform: google-ads
   method: POST
-  path: /v21/customers/{customer_id}/googleAds:searchStream
-  name: "Get performance by user's actual location"
+  path: /v25/customers/{customer_id}/googleAds:searchStream
+  name: "Google Ads performance by user's real location via GAQL"
   summary: GAQL FROM user_location_view — Performance by where the user actually was, ignoring location-of-interest
   scope: own_account
   cost:
@@ -919,15 +921,15 @@ endpoints:
       type: object
       required: true
       note: '{"query": "SELECT <fields> FROM user_location_view WHERE segments.date DURING LAST_30_DAYS"}'
-    note: 'Resource: user_location_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/user_location_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
-  docs_url: https://developers.google.com/google-ads/api/fields/v21/user_location_view
+    note: 'Resource: user_location_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v25/user_location_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
+  docs_url: https://developers.google.com/google-ads/api/fields/v25/user_location_view
   capability: google-ads.performance.user_location
 - id: google-ads.x.gaql-location-view
   tier: extended
   platform: google-ads
   method: POST
-  path: /v21/customers/{customer_id}/googleAds:searchStream
-  name: 'Get performance by targeted location'
+  path: /v25/customers/{customer_id}/googleAds:searchStream
+  name: "Google Ads performance by targeted location via GAQL"
   summary: GAQL FROM location_view — Performance per targeted location criterion
   scope: own_account
   cost:
@@ -947,15 +949,15 @@ endpoints:
       type: object
       required: true
       note: '{"query": "SELECT <fields> FROM location_view WHERE segments.date DURING LAST_30_DAYS"}'
-    note: 'Resource: location_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/location_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
-  docs_url: https://developers.google.com/google-ads/api/fields/v21/location_view
+    note: 'Resource: location_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v25/location_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
+  docs_url: https://developers.google.com/google-ads/api/fields/v25/location_view
   capability: google-ads.performance.location_targeting
 - id: google-ads.x.gaql-ad-schedule-view
   tier: extended
   platform: google-ads
   method: POST
-  path: /v21/customers/{customer_id}/googleAds:searchStream
-  name: 'Get performance by day and hour'
+  path: /v25/customers/{customer_id}/googleAds:searchStream
+  name: "Google Ads performance by day and hour via GAQL"
   summary: GAQL FROM ad_schedule_view — Performance by day of week and hour of day
   scope: own_account
   cost:
@@ -975,15 +977,15 @@ endpoints:
       type: object
       required: true
       note: '{"query": "SELECT <fields> FROM ad_schedule_view WHERE segments.date DURING LAST_30_DAYS"}'
-    note: 'Resource: ad_schedule_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/ad_schedule_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
-  docs_url: https://developers.google.com/google-ads/api/fields/v21/ad_schedule_view
+    note: 'Resource: ad_schedule_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v25/ad_schedule_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
+  docs_url: https://developers.google.com/google-ads/api/fields/v25/ad_schedule_view
   capability: google-ads.performance.schedule
 - id: google-ads.x.gaql-detail-placement-view
   tier: extended
   platform: google-ads
   method: POST
-  path: /v21/customers/{customer_id}/googleAds:searchStream
-  name: 'Get exact URLs and apps ads ran on'
+  path: /v25/customers/{customer_id}/googleAds:searchStream
+  name: "Exact URLs and apps your ads ran on via GAQL"
   summary: GAQL FROM detail_placement_view — Exact URLs and apps your Display/Video ads ran on
   scope: own_account
   cost:
@@ -1003,15 +1005,15 @@ endpoints:
       type: object
       required: true
       note: '{"query": "SELECT <fields> FROM detail_placement_view WHERE segments.date DURING LAST_30_DAYS"}'
-    note: 'Resource: detail_placement_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/detail_placement_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
-  docs_url: https://developers.google.com/google-ads/api/fields/v21/detail_placement_view
+    note: 'Resource: detail_placement_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v25/detail_placement_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
+  docs_url: https://developers.google.com/google-ads/api/fields/v25/detail_placement_view
   capability: google-ads.placements.detail
 - id: google-ads.x.gaql-managed-placement-view
   tier: extended
   platform: google-ads
   method: POST
-  path: /v21/customers/{customer_id}/googleAds:searchStream
-  name: 'Get performance of chosen placements'
+  path: /v25/customers/{customer_id}/googleAds:searchStream
+  name: "Google Ads managed placements performance via GAQL"
   summary: GAQL FROM managed_placement_view — Performance of placements you chose yourself
   scope: own_account
   cost:
@@ -1031,15 +1033,15 @@ endpoints:
       type: object
       required: true
       note: '{"query": "SELECT <fields> FROM managed_placement_view WHERE segments.date DURING LAST_30_DAYS"}'
-    note: 'Resource: managed_placement_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/managed_placement_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
-  docs_url: https://developers.google.com/google-ads/api/fields/v21/managed_placement_view
+    note: 'Resource: managed_placement_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v25/managed_placement_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
+  docs_url: https://developers.google.com/google-ads/api/fields/v25/managed_placement_view
   capability: google-ads.placements.managed
 - id: google-ads.x.gaql-topic-view
   tier: extended
   platform: google-ads
   method: POST
-  path: /v21/customers/{customer_id}/googleAds:searchStream
-  name: 'Get Display topic targeting performance'
+  path: /v25/customers/{customer_id}/googleAds:searchStream
+  name: "Google Ads Display topic performance via GAQL"
   summary: GAQL FROM topic_view — Performance of Display topic targeting
   scope: own_account
   cost:
@@ -1059,15 +1061,15 @@ endpoints:
       type: object
       required: true
       note: '{"query": "SELECT <fields> FROM topic_view WHERE segments.date DURING LAST_30_DAYS"}'
-    note: 'Resource: topic_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/topic_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
-  docs_url: https://developers.google.com/google-ads/api/fields/v21/topic_view
+    note: 'Resource: topic_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v25/topic_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
+  docs_url: https://developers.google.com/google-ads/api/fields/v25/topic_view
   capability: google-ads.performance.topic
 - id: google-ads.x.gaql-landing-page-view
   tier: extended
   platform: google-ads
   method: POST
-  path: /v21/customers/{customer_id}/googleAds:searchStream
-  name: 'Get performance by landing page'
+  path: /v25/customers/{customer_id}/googleAds:searchStream
+  name: "Google Ads performance by landing page via GAQL"
   summary: GAQL FROM landing_page_view — Performance grouped by the unexpanded final URL
   scope: own_account
   cost:
@@ -1087,15 +1089,15 @@ endpoints:
       type: object
       required: true
       note: '{"query": "SELECT <fields> FROM landing_page_view WHERE segments.date DURING LAST_30_DAYS"}'
-    note: 'Resource: landing_page_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/landing_page_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
-  docs_url: https://developers.google.com/google-ads/api/fields/v21/landing_page_view
+    note: 'Resource: landing_page_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v25/landing_page_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
+  docs_url: https://developers.google.com/google-ads/api/fields/v25/landing_page_view
   capability: google-ads.performance.landing_page
 - id: google-ads.x.gaql-shopping-performance-view
   tier: extended
   platform: google-ads
   method: POST
-  path: /v21/customers/{customer_id}/googleAds:searchStream
-  name: 'Get Shopping performance by product attribute'
+  path: /v25/customers/{customer_id}/googleAds:searchStream
+  name: "Shopping ads performance by product attribute via GAQL"
   summary: GAQL FROM shopping_performance_view — Shopping metrics broken down by product attributes (brand, category, item id)
   scope: own_account
   cost:
@@ -1115,15 +1117,15 @@ endpoints:
       type: object
       required: true
       note: '{"query": "SELECT <fields> FROM shopping_performance_view WHERE segments.date DURING LAST_30_DAYS"}'
-    note: 'Resource: shopping_performance_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/shopping_performance_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
-  docs_url: https://developers.google.com/google-ads/api/fields/v21/shopping_performance_view
+    note: 'Resource: shopping_performance_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v25/shopping_performance_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
+  docs_url: https://developers.google.com/google-ads/api/fields/v25/shopping_performance_view
   capability: google-ads.shopping.performance
 - id: google-ads.x.gaql-recommendation
   tier: extended
   platform: google-ads
   method: POST
-  path: /v21/customers/{customer_id}/googleAds:searchStream
-  name: 'Get optimization suggestions and impact'
+  path: /v25/customers/{customer_id}/googleAds:searchStream
+  name: "Google Ads optimisation suggestions and impact via GAQL"
   summary: GAQL FROM recommendation — Google's own optimisation suggestions for the account, with their estimated impact
   scope: own_account
   cost:
@@ -1143,15 +1145,15 @@ endpoints:
       type: object
       required: true
       note: '{"query": "SELECT <fields> FROM recommendation WHERE segments.date DURING LAST_30_DAYS"}'
-    note: 'Resource: recommendation. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/recommendation. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
-  docs_url: https://developers.google.com/google-ads/api/fields/v21/recommendation
+    note: 'Resource: recommendation. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v25/recommendation. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
+  docs_url: https://developers.google.com/google-ads/api/fields/v25/recommendation
   capability: google-ads.recommendations
 - id: google-ads.x.gaql-paid-organic-search-term-view
   tier: extended
   platform: google-ads
   method: POST
-  path: /v21/customers/{customer_id}/googleAds:searchStream
-  name: 'Get paid and organic search terms combined'
+  path: /v25/customers/{customer_id}/googleAds:searchStream
+  name: "Paid and organic search terms side by side via GAQL"
   summary: GAQL FROM paid_organic_search_term_view — Paid and organic side by side per query — needs Search Console linked
   scope: own_account
   cost:
@@ -1171,15 +1173,15 @@ endpoints:
       type: object
       required: true
       note: '{"query": "SELECT <fields> FROM paid_organic_search_term_view WHERE segments.date DURING LAST_30_DAYS"}'
-    note: 'Resource: paid_organic_search_term_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/paid_organic_search_term_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
-  docs_url: https://developers.google.com/google-ads/api/fields/v21/paid_organic_search_term_view
+    note: 'Resource: paid_organic_search_term_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v25/paid_organic_search_term_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
+  docs_url: https://developers.google.com/google-ads/api/fields/v25/paid_organic_search_term_view
   capability: google-ads.search_terms.paid_organic
 - id: google-ads.x.gaql-click-view
   tier: extended
   platform: google-ads
   method: POST
-  path: /v21/customers/{customer_id}/googleAds:searchStream
-  name: 'Get individual clicks with GCLID'
+  path: /v25/customers/{customer_id}/googleAds:searchStream
+  name: "Individual ad clicks with GCLID, last 90 days via GAQL"
   summary: GAQL FROM click_view — Individual clicks with GCLID and location, for the last 90 days
   scope: own_account
   cost:
@@ -1199,6 +1201,6 @@ endpoints:
       type: object
       required: true
       note: '{"query": "SELECT <fields> FROM click_view WHERE segments.date DURING LAST_30_DAYS"}'
-    note: 'Resource: click_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/click_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
-  docs_url: https://developers.google.com/google-ads/api/fields/v21/click_view
+    note: 'Resource: click_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v25/click_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
+  docs_url: https://developers.google.com/google-ads/api/fields/v25/click_view
   capability: google-ads.clicks

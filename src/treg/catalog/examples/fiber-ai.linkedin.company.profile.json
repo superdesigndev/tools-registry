@@ -1,0 +1,206 @@
+{
+  "output": {
+    "company": {
+      "headline": null,
+      "description": "Every company has a mission. What's ours? To empower every person and every organization to achieve more. We believe technology can and should be a force for good and that meaningful innovation contributes to a brighter world in the future and today. Our culture doesn’t just encourage curiosity; it embraces it. Each day we make progress together by showing up as our authentic selves. We show up with a learn-it-all mentality. We show up cheering on others, knowing their success doesn't diminish o… [747 chars total]",
+      "employee_count": 233092,
+      "follower_count": 28903159,
+      "founded_year": null,
+      "industries": [
+        {
+          "id": "4",
+          "name": "Software Development"
+        }
+      ],
+      "inferred_location": {
+        "street_address": "1 Microsoft Way",
+        "neighborhood": null,
+        "city": "Redmond",
+        "state_name": "Washington",
+        "state_code": "WA",
+        "county": null,
+        "postal_code": "98052",
+        "country_code": "USA",
+        "country_name": "United States of America",
+        "coordinates": {
+          "lat": 47.673904,
+          "lon": -122.121527
+        },
+        "timezone": null,
+        "full_address": "Redmond, Washington, United States of America",
+        "formatted_address": "Redmond, Washington, United States of America"
+      },
+      "linkedin_url": "https://www.linkedin.com/company/microsoft",
+      "locations": [
+        {
+          "address": "Redmond, Washington, United States of America",
+          "is_primary": true,
+          "location": {
+            "street_address": "1 Microsoft Way",
+            "neighborhood": null,
+            "city": "Redmond",
+            "state_name": "Washington",
+            "state_code": "WA",
+            "county": null,
+            "postal_code": "98052",
+            "country_code": "USA",
+            "country_name": "United States of America",
+            "coordinates": {
+              "lat": 47.673904,
+              "lon": -122.121527
+            },
+            "timezone": null,
+            "full_address": "Redmond, Washington, United States of America",
+            "formatted_address": "Redmond, Washington, United States of America"
+          }
+        },
+        {
+          "address": "North Sydney, New South Wales, Australia",
+          "is_primary": false,
+          "location": {
+            "street_address": "1 Denison Street",
+            "neighborhood": null,
+            "city": "North Sydney",
+            "state_name": "New South Wales",
+            "state_code": "NSW",
+            "county": null,
+            "postal_code": "2060",
+            "country_code": "AUS",
+            "country_name": "Australia",
+            "coordinates": {
+              "lat": -33.86873,
+              "lon": 151.20695
+            },
+            "timezone": null,
+            "full_address": "North Sydney, New South Wales, Australia",
+            "formatted_address": "North Sydney, New South Wales, Australia"
+          }
+        },
+        "… 43 more item(s) truncated"
+      ],
+      "naics_codes": null,
+      "name": "Microsoft",
+      "org_id": "1035",
+      "slug": "microsoft",
+      "specialties": [
+        "Business Software",
+        "Developer Tools",
+        "… 21 more item(s) truncated"
+      ],
+      "ticker": null,
+      "type": null,
+      "domain": "news.microsoft.com",
+      "website": "https://news.microsoft.com/",
+      "est_employee_count_lower_bound": 10001,
+      "est_employee_count_upper_bound": null,
+      "standardized_industries": [
+        "Software"
+      ],
+      "locations_stats": {
+        "NZL": 1,
+        "X-BENELUX": 2,
+        "CHE": 1,
+        "COL": 1,
+        "X-MENA": 5,
+        "MEX": 1,
+        "AUT": 1,
+        "DNK": 1,
+        "X-CENTRAL_EUROPE": 3,
+        "X-OCEANIA": 2,
+        "SWE": 1,
+        "ESP": 1,
+        "IRL": 1,
+        "USA": 1,
+        "X-EFTA": 2,
+        "X-WESTERN_EUROPE": 6,
+        "HKG": 1,
+        "X-SOUTH_EAST_ASIA": 5,
+        "X-APAC": 15,
+        "NLD": 1,
+        "MYS": 1,
+        "CHL": 1,
+        "X-SOUTH_AMERICA": 4,
+        "SAU": 1,
+        "ISR": 1,
+        "SVK": 1,
+        "X-NORTHERN_AFRICA": 1,
+        "JPN": 1,
+        "BEL": 1,
+        "CHN": 1,
+        "X-SOUTH_WEST_EUROPE": 2,
+        "X-SANCTIONED": 1,
+        "TWN": 1,
+        "FIN": 1,
+        "X-OECD": 28,
+        "THA": 1,
+        "POL": 1,
+        "KOR": 1,
+        "X-AFRICA": 2,
+        "X-CENTRAL_AMERICA": 1,
+        "X-SOUTHERN_AFRICA": 1,
+        "X-NORTHERN_EUROPE": 4,
+        "X-G20": 19,
+        "RUS": 1,
+        "CAN": 1,
+        "X-SOUTH_ASIA": 1,
+        "X-NORDICS": 4,
+        "BRA": 1,
+        "TUR": 1,
+        "NOR": 1,
+        "X-EASTERN_EUROPE": 1,
+        "X-MIDDLE_EAST": 5,
+        "PRT": 1,
+        "X-GCC": 2,
+        "X-SOUTH_WEST_ASIA": 4,
+        "IDN": 1,
+        "PHL": 1,
+        "X-EUROPEAN_UNION": 15,
+        "X-PACIFIC": 2,
+        "ARE": 1,
+        "X-BRICS": 7,
+        "DEU": 1,
+        "X-ANGLOSPHERE": 7,
+        "FRA": 1,
+        "X-LATAM": 5,
+        "ITA": 1,
+        "ARG": 1,
+        "X-EAST_ASIA": 5,
+        "X-EUROPE": 18,
+        "X-DACH": 3,
+        "GBR": 1,
+        "EGY": 1,
+        "X-NORTHERN_ASIA": 1,
+        "X-SOUTHERN_EUROPE": 1,
+        "ROU": 1,
+        "X-EMEA": 24,
+        "X-AMERICAS": 7,
+        "SGP": 1,
+        "X-SOUTH_EAST_EUROPE": 1,
+        "X-ASIA": 16,
+        "ZAF": 1,
+        "AUS": 1,
+        "IND": 1,
+        "X-NORTH_AMERICA": 2
+      },
+      "logo_url": "https://fiber-ai-images.s3.us-east-1.amazonaws.com/company/7dfdeabb49376d61b82b21230a97cda4.jpeg",
+      "historical_headcount": null,
+      "revenue_usd_lower_bound": null,
+      "revenue_usd_upper_bound": null
+    },
+    "isCached404": false
+  },
+  "chargeInfo": {
+    "method": "charged-now",
+    "creditsCharged": 2,
+    "lowCreditAlert": {
+      "getMoreCreditsUrl": "https://www.fiber.ai/app/subscription",
+      "message": "Your credits are running low. Consider topping up to avoid service interruption.",
+      "availableCredits": 487
+    }
+  },
+  "advice": [
+    "Company enriched with real-time LinkedIn data. Use people search with company scoping to find decision-makers.",
+    "Use depth chart to see the full organizational structure by function and seniority level.",
+    "… 2 more item(s) truncated"
+  ]
+}

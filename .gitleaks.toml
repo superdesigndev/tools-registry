@@ -13,6 +13,10 @@ regexes = [
   '''phx_DEMO0000PLACEHOLDER''',          # src/treg/sandbox.py — demo starter (credential to nothing)
   '''sk_live_ABCDEFGHIJKLMNOP1234''',     # tests/test_localrun.py — proves output redaction masks a key
   '''sk_test_123''',                      # tests/*.py — generic fake test key
+  # (sk_live_9f2a7c41… lived here for tests/test_error_capture.py. That test now reuses the
+  # sk_live_ABCDEFGHIJKLMNOP1234 placeholder two lines up — one entry serving both tests that need a
+  # key-shaped string — and the old value is purged from history, so the entry had nothing to guard.)
+  '''eyJhbGciOi\.JIUzI1NiIsInR5cCI6''',   # tests/test_error_capture.py — a JWT-shaped string, not a real token
 ]
 
 # The catalog's captured example responses (src/treg/catalog/examples/) are real provider replies,
@@ -30,6 +34,11 @@ regexes = [
 id = "generic-api-key"
 [rules.allowlist]
 paths = ['''src/treg/catalog/examples/.*\.json''']
+# (An allowlist entry for a real dev/e2e Fernet key lived here as a stopgap while
+# `feat/error-capture` carried it in `e2e-server.sh`. That branch now generates a fresh key per run
+# — the harness deletes its database between runs, so it never needed a constant — and the value has
+# been purged from its history, so the rule has nothing left to fire on. Removed as that entry's own
+# comment instructed. The value is still burned: rotate it in the `treg-dev-server` wrapper.)
 
 [[rules]]
 id = "linkedin-client-id"

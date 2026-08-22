@@ -1,7 +1,7 @@
 # treg — the tool catalog for your agent
 
 > **OpenRouter, but for agent tools instead of models.** Point an agent at ONE base URL with ONE
-> token and it can do the *job*: ~2,600 catalogued endpoints across ~40 providers (SEO and SERP
+> token and it can do the *job*: 2,856 catalogued endpoints across 57 providers (SEO and SERP
 > data, backlinks, social and trends, people and company enrichment, ads, scraping) — plus your
 > own team's keys, skills and CLIs. Every credential is injected **server-side**; nothing
 > sensitive lands on the agent's machine, and every call is audited.
@@ -24,7 +24,10 @@ Two kinds of tool answer to the same token, through the same `/call/`:
   subscription.
 - **Your own tools** — anything a teammate registered: an internal service, a paid API account, an
   OAuth connection, a vendor CLI, a SKILL.md. Callable by the whole team, with the credential held
-  server-side. **Your own key always wins over treg's, and those calls are never metered.**
+  server-side. **Your own key always wins over treg's, and those calls are never metered.** One
+  carve-out: an X (Twitter) connection made through treg's own app is metered per call — X bills
+  the app owner per use, whoever's account consented. A connection made with your own X developer
+  app (BYO OAuth) stays unmetered.
 
 Multi-tenant: a token = a (user, org) membership; resources are org-scoped.
 
@@ -81,9 +84,43 @@ Keys are yours alone: scoped to the caller, kept 24 hours. Nothing happens witho
 call that fails frees its key at once. Over MCP the same thing is the `idempotency_key` argument to
 `call`, and a replayed result carries `replayed: true`.
 
+### Reselling treg inside your own product
+
+If you are a platform billing your own users, run one team, one balance, one token, and tag each call
+with your ids. Set the header from YOUR BACKEND — not from the model, which will eventually drop it
+mid-chain, and a figure you cannot reconcile is worse than none:
+
+    curl "{BASE}/call/tikhub.tiktok.user.profile?uniqueId=tiktok" \
+      -H "X-Treg-Token: $TREG_TOKEN" \
+      -H "X-Treg-Meta: customer=cust_8123, workspace=ws_9"
+
+Up to 5 `key=value` pairs. Anything malformed is a 422 before the call is relayed, so it costs you
+nothing — treg refuses rather than truncating, because a shortened id merges two of your users onto
+one invoice line.
+
+Every response returns `X-Treg-Call-Id`: the key to join our records to yours. `GET /calls/{id}` reads
+one back with its ledger entries.
+
+- **Invoice from** `GET /orgs/{id}/usage/by-tag?key=customer&days=30`. Money comes from the ledger, and
+  `attributed_micro + unattributed_micro == total_micro` for every key, so nothing goes missing.
+- **Limit a user** with `PUT /orgs/{id}/budgets/customer/cust_8123 {"daily_cap_micro": 5000000}`, or
+  `{"status": "blocked"}` to cut them off. Budgets stack: a workspace ceiling and a per-user ceiling
+  both apply, and the refusal names which one hit. These caps are advisory — your balance is the hard
+  limit — so do not sell them to your users as exact.
+- **Declare** which keys carry budgets at `PATCH /orgs/{id}/settings` (up to 3).
+- **Isolate** the few who need it: `treg org agent-new bot --pin customer=cust_A` mints a token that
+  can only ever bill `cust_A`. Tag for counting, token for control.
+
+Embedding the hosted service in a product you sell needs a written agreement with us — talk to us
+first.
+
+**Building this?** Point your coding agent at **{BASE}/integrate.md** — the full integration skill:
+the three call methods, tagging from your backend, per-customer limits, and invoicing from the
+ledger.
+
 ## The catalog — tools you do not have a key for
 
-Curated endpoints across ~40 providers, grouped by what they DO: keyword and rank tracking,
+Curated endpoints across 47 providers, grouped by what they DO: keyword and rank tracking,
 backlinks and authority, AI visibility, trending and discovery, publishing to socials, people and
 company enrichment, ads management and creative, measurement. Ask for the task; the catalog tells
 you which endpoints serve it, what each costs, and how you would be served. Exact live counts:
@@ -117,6 +154,16 @@ provenance says whose price it is.
 
 An endpoint treg has no published price for is **refused**, not served free — you are told to
 connect your own key instead.
+
+**Market data** (crypto + stocks) — three ways in, by provider:
+- **coingecko** (11 endpoints) and **marketstack** (7): on treg's key, billed per call like the rest
+  of the catalog ($0.00029 and $0.000999).
+- **finnhub** (5), **twelvedata** (4), **tiingo** (4): **free trial pools** — served on treg's key at
+  $0 with a per-team daily allowance (50/20/20 calls). Past it you get a 429 naming the allowance;
+  connect your own key for unmetered calls at your plan's limits.
+- **polygon** (6) and **eodhd** (3): connect your own key (licensing keeps them off treg's key).
+(Alpha Vantage is deliberately absent: its API accepts any key, so a pasted key can never be
+verified.)
 
 **Choosing between providers of one capability — the procedure.** `treg catalog get <id>` lists
 every provider serving the same job with `COST`, `WORKS` (the success rate treg has actually
@@ -153,7 +200,9 @@ Money notes for agents:
 
 The catalog is the public half; this half is yours. Anything a teammate registered — an internal
 service, a paid API account, an OAuth connection, a vendor CLI — is callable by the whole team with
-the credential held server-side, and never metered. Discover what is there:
+the credential held server-side, and never metered (the one exception: X connections through treg's
+app — X bills the app owner per use, so those calls are priced like catalog calls and return the
+cost the same way). Discover what is there:
 
 - CLI: `treg tool ls` - names, hosts, bindings (which credential is injected where).
 - API: `GET {BASE}/tools` with your token → JSON list of `{name, base_url, host, bindings}`.
@@ -240,6 +289,11 @@ key - share access.
 
 ## MCP — connect an assistant
 
+Using ChatGPT? The plugin is in ChatGPT's Plugins directory (search "treg" → Install); the page
+{BASE}/agents/chatgpt lists what it can do by job, with prices, and {BASE}/agents/chatgpt.md is the
+same page as Markdown.
+
+
 treg is also an **MCP server** at `{BASE}/mcp/`, two ways to authenticate it:
 
 - **Header (headless, no browser):** `treg mcp install` registers it into every supported agent
@@ -278,7 +332,9 @@ life of the grant — a person in several teams is asked rather than guessed at.
 team's balance, because that is the question that actually matters there.
 
 A `call` on a CATALOG endpoint spends the team's balance and returns `cost_usd`. A `call` on one of
-the team's OWN tools is unmetered and carries no cost — the key is theirs, not ours to bill.
+the team's OWN tools is unmetered and carries no cost — the key is theirs, not ours to bill. (X
+connections through treg's app are the exception: X bills the app owner per use, so those calls
+spend the balance and report a cost like catalog calls.)
 
 Clients that register dynamically (RFC 7591) and clients that present a client-id metadata document
 are both supported; you do not need to pre-arrange anything with us.
@@ -430,7 +486,7 @@ skills` restrict it (`--dir` sets the location).
 8. **Report the outcome as a doorway, not an install log.** Nobody signed up to read which
    Python version uv picked. Open with ONE line about what they just gained, e.g.:
 
-       treg is live — your agent can now call 2,600+ tools across ~40 providers (SEO &
+       treg is live — your agent can now call 2,800+ tools across 57 providers (market data, SEO &
        keywords, social & trends, people/company enrichment, ads, scraping), with $1.00
        of free credit to spend.
 

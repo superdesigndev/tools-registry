@@ -28,7 +28,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /entities/organizations/{entity_id}
-    name: "Get a company's Crunchbase profile"
+    name: "A company's Crunchbase profile by permalink — funding"
     summary: "A company's Crunchbase profile — funding total, categories, headcount, founders"
     input:
       pathParams:
@@ -56,7 +56,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /searches/organizations
-    name: "Search companies by industry and funding"
+    name: "Search companies by industry, funding or headcount"
     summary: "Search Crunchbase companies by industry, funding, headcount, location or founding date"
     input:
       bodyType: json
@@ -87,7 +87,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /entities/people/{entity_id}
-    name: "Get a person's Crunchbase profile"
+    name: "A person's Crunchbase profile by permalink"
     summary: "A person's Crunchbase profile — current and past roles, companies founded, investments"
     input:
       pathParams:
@@ -114,7 +114,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /searches/people
-    name: "Search people by role or company"
+    name: "Search people by role, location or company"
     summary: "Search Crunchbase people by role, location or the company they are tied to"
     input:
       bodyType: json

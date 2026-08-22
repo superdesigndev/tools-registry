@@ -52,3 +52,17 @@ docs/context/interface/*-audit-*.md
 docs/assets/restyle-*.png
 docs/context/interface/*-proposal.md
 .codegraph/
+
+# e2e harness scratch (see e2e-server.sh) — the DB is disposable, never commit it.
+e2e.db*
+
+# Generated usage dashboards — regenerate with scripts/usage_report.py, never commit.
+/reports/
+
+# Review scratch: a prompt handed to an external reviewer, and its runner. Useful while a branch is
+# in review, meaningless after it merges.
+/.codex-review-prompt.md
+/.codex-review.sh
+
+# Scratch file used to compose commit messages (heredocs are blocked in this harness).
+/.git-commit-msg

@@ -1,0 +1,60 @@
+{
+  "leads": [
+    {
+      "id": "00c27863-2397-7b9d-754d-7d2c588748bb",
+      "firstName": "Jane",
+      "lastName": "Doe",
+      "jobTitle": "Chief Compliance Officer (Designate), Stripe US",
+      "location": {
+        "city": null,
+        "state": null,
+        "country": "United States"
+      },
+      "company": {
+        "id": "16a004c1-cd04-c078-f786-20cb0b2f83c1",
+        "domain": "stripe.com",
+        "website": "https://stripe.com",
+        "employeeCount": 14940,
+        "industry": "software development",
+        "keywords": null,
+        "location": {
+          "city": "South San Francisco",
+          "state": "California",
+          "country": "United States"
+        },
+        "revenueRange": {
+          "start": 1000000000,
+          "end": 5000000000
+        },
+        "yearsInBusiness": 16
+      }
+    },
+    {
+      "id": "00e59aea-3691-60c2-60ff-c109085575b1",
+      "firstName": "Alex",
+      "lastName": "Rivera",
+      "jobTitle": "Associé gérant",
+      "location": {
+        "city": "Sidi Slimane Province",
+        "state": "Rabat-salé-kénitra",
+        "country": "Morocco"
+      },
+      "company": {
+        "id": "16a004c1-cd04-c078-f786-20cb0b2f83c1",
+        "domain": "stripe.com",
+        "website": "https://stripe.com",
+        "employeeCount": 14940,
+        "industry": "software development",
+        "keywords": null,
+        "location": {
+          "city": "South San Francisco",
+          "state": "California",
+          "country": "United States"
+        },
+        "revenueRange": {
+          "start": 1000000000,
+          "end": 5000000000
+        },
+        "yearsInBusiness": 16
+  … truncated to shape …
+}

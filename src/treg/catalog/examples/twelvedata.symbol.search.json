@@ -1,0 +1,305 @@
+{
+  "data": [
+    {
+      "symbol": "AAPL",
+      "instrument_name": "Apple Inc.",
+      "exchange": "NASDAQ",
+      "mic_code": "XNGS",
+      "exchange_timezone": "America/New_York",
+      "instrument_type": "Common Stock",
+      "country": "United States",
+      "currency": "USD"
+    },
+    {
+      "symbol": "AAPL",
+      "instrument_name": "Apple Inc.",
+      "exchange": "BVC",
+      "mic_code": "XBOG",
+      "exchange_timezone": "America/New_York",
+      "instrument_type": "Common Stock",
+      "country": "Colombia",
+      "currency": "COP"
+    },
+    {
+      "symbol": "AAPL",
+      "instrument_name": "Apple Inc.",
+      "exchange": "BMV",
+      "mic_code": "XMEX",
+      "exchange_timezone": "America/Swift_Current",
+      "instrument_type": "Common Stock",
+      "country": "Mexico",
+      "currency": "MXN"
+    },
+    {
+      "symbol": "0R2V",
+      "instrument_name": "Apple Inc.",
+      "exchange": "LSE",
+      "mic_code": "XLON",
+      "exchange_timezone": "Europe/London",
+      "instrument_type": "Common Stock",
+      "country": "United Kingdom",
+      "currency": "USD"
+    },
+    {
+      "symbol": "AAPL",
+      "instrument_name": "Apple Inc.",
+      "exchange": "TSX",
+      "mic_code": "XTSE",
+      "exchange_timezone": "America/Toronto",
+      "instrument_type": "Depositary Receipt",
+      "country": "Canada",
+      "currency": "CAD"
+    },
+    {
+      "symbol": "APC",
+      "instrument_name": "Apple Inc.",
+      "exchange": "XETR",
+      "mic_code": "XETR",
+      "exchange_timezone": "Europe/Berlin",
+      "instrument_type": "Common Stock",
+      "country": "Germany",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "APC",
+      "instrument_name": "Apple Inc.",
+      "exchange": "FSX",
+      "mic_code": "XFRA",
+      "exchange_timezone": "Europe/Berlin",
+      "instrument_type": "Common Stock",
+      "country": "Germany",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "AAPL",
+      "instrument_name": "Apple Inc.",
+      "exchange": "NEO",
+      "mic_code": "NEOE",
+      "exchange_timezone": "America/Toronto",
+      "instrument_type": "Depositary Receipt",
+      "country": "Canada",
+      "currency": "CAD"
+    },
+    {
+      "symbol": "1AAPL",
+      "instrument_name": "Apple Inc.",
+      "exchange": "MTA",
+      "mic_code": "XMIL",
+      "exchange_timezone": "Europe/Rome",
+      "instrument_type": "Common Stock",
+      "country": "Italy",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "3SWP",
+      "instrument_name": "GraniteShares 3x Short Apple",
+      "exchange": "LSE",
+      "mic_code": "XLON",
+      "exchange_timezone": "Europe/London",
+      "instrument_type": "ETF",
+      "country": "United Kingdom",
+      "currency": "GBp"
+    },
+    {
+      "symbol": "APETNC",
+      "instrument_name": "FRB Compounded ETN on Apple",
+      "exchange": "JSE",
+      "mic_code": "XJSE",
+      "exchange_timezone": "Africa/Johannesburg",
+      "instrument_type": "ETF",
+      "country": "South Africa",
+      "currency": "ZAc"
+    },
+    {
+      "symbol": "APC",
+      "instrument_name": "Apple Inc.",
+      "exchange": "XSTU",
+      "mic_code": "XSTU",
+      "exchange_timezone": "Europe/Berlin",
+      "instrument_type": "Common Stock",
+      "country": "Germany",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "APETNQ",
+      "instrument_name": "Frb Quanto ETN on Apple",
+      "exchange": "JSE",
+      "mic_code": "XJSE",
+      "exchange_timezone": "Africa/Johannesburg",
+      "instrument_type": "ETF",
+      "country": "South Africa",
+      "currency": "ZAc"
+    },
+    {
+      "symbol": "AAPL",
+      "instrument_name": "Apple Inc.",
+      "exchange": "BVL",
+      "mic_code": "XLIM",
+      "exchange_timezone": "America/Lima",
+      "instrument_type": "Common Stock",
+      "country": "Peru",
+      "currency": "PEN"
+    },
+    {
+      "symbol": "AAPL",
+      "instrument_name": "Apple Inc.",
+      "exchange": "VSE",
+      "mic_code": "XWBO",
+      "exchange_timezone": "Europe/Vienna",
+      "instrument_type": "Common Stock",
+      "country": "Austria",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "4AAPL",
+      "instrument_name": "APPLE",
+      "exchange": "MTA",
+      "mic_code": "XMIL",
+      "exchange_timezone": "Europe/Rome",
+      "instrument_type": "Common Stock",
+      "country": "Italy",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "F72784",
+      "instrument_name": "Vontobel Covered Warrant on Apple Inc.",
+      "exchange": "MTA",
+      "mic_code": "XMIL",
+      "exchange_timezone": "Europe/Rome",
+      "instrument_type": "Warrant",
+      "country": "Italy",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "F72796",
+      "instrument_name": "Vontobel Warrants Call Apple Inc.",
+      "exchange": "MTA",
+      "mic_code": "XMIL",
+      "exchange_timezone": "Europe/Rome",
+      "instrument_type": "Warrant",
+      "country": "Italy",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "F75302",
+      "instrument_name": "Vontobel Call Warrant on Apple Inc.",
+      "exchange": "MTA",
+      "mic_code": "XMIL",
+      "exchange_timezone": "Europe/Rome",
+      "instrument_type": "Warrant",
+      "country": "Italy",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "F83886",
+      "instrument_name": "Vontobel Covered Warrant CW27 on Apple Inc.",
+      "exchange": "MTA",
+      "mic_code": "XMIL",
+      "exchange_timezone": "Europe/Rome",
+      "instrument_type": "Warrant",
+      "country": "Italy",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "F72792",
+      "instrument_name": "Vontobel Financial Products GmbH Covered Warrant on Apple Inc.",
+      "exchange": "MTA",
+      "mic_code": "XMIL",
+      "exchange_timezone": "Europe/Rome",
+      "instrument_type": "Warrant",
+      "country": "Italy",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "F79560",
+      "instrument_name": "Vontobel Warrant on Apple Inc.",
+      "exchange": "MTA",
+      "mic_code": "XMIL",
+      "exchange_timezone": "Europe/Rome",
+      "instrument_type": "Warrant",
+      "country": "Italy",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "F95184",
+      "instrument_name": "Apple Inc.",
+      "exchange": "MTA",
+      "mic_code": "XMIL",
+      "exchange_timezone": "Europe/Rome",
+      "instrument_type": "Warrant",
+      "country": "Italy",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "3LAP",
+      "instrument_name": "Graniteshares 3X Long Apple",
+      "exchange": "MTA",
+      "mic_code": "XMIL",
+      "exchange_timezone": "Europe/Rome",
+      "instrument_type": "ETF",
+      "country": "Italy",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "F84683",
+      "instrument_name": "Vontobel Call Warrant on Apple Inc.",
+      "exchange": "MTA",
+      "mic_code": "XMIL",
+      "exchange_timezone": "Europe/Rome",
+      "instrument_type": "Warrant",
+      "country": "Italy",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "F79559",
+      "instrument_name": "Vontobel Warrant on Apple Inc.",
+      "exchange": "MTA",
+      "mic_code": "XMIL",
+      "exchange_timezone": "Europe/Rome",
+      "instrument_type": "Warrant",
+      "country": "Italy",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "AAPL",
+      "instrument_name": "Apple Inc.",
+      "exchange": "GPW",
+      "mic_code": "XWAR",
+      "exchange_timezone": "Europe/Warsaw",
+      "instrument_type": "Common Stock",
+      "country": "Poland",
+      "currency": "PLN"
+    },
+    {
+      "symbol": "1APS",
+      "instrument_name": "Leverage Shares -1x Apple",
+      "exchange": "XETR",
+      "mic_code": "XETR",
+      "exchange_timezone": "Europe/Berlin",
+      "instrument_type": "ETF",
+      "country": "Germany",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "SAPL",
+      "instrument_name": "Leverage Shares -1x Apple",
+      "exchange": "Euronext",
+      "mic_code": "XAMS",
+      "exchange_timezone": "Europe/Amsterdam",
+      "instrument_type": "ETF",
+      "country": "Netherlands",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "F83926",
+      "instrument_name": "Vontobel PW26 Warrant on Apple Inc.",
+      "exchange": "MTA",
+      "mic_code": "XMIL",
+      "exchange_timezone": "Europe/Rome",
+      "instrument_type": "Warrant",
+      "country": "Italy",
+      "currency": "EUR"
+    }
+  ],
+  "status": "ok"
+}

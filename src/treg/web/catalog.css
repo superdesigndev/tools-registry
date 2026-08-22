@@ -1,0 +1,210 @@
+/* ================================================================
+   Skin for the server-rendered pages: /catalog, /catalog/<slug>, /docs.
+
+   Tokens lifted from landing.html's RESTYLE block so these pages read as
+   the same product. Rules of the system, unchanged: no brand accent —
+   emphasis is ink, colour is reserved for status; sans everywhere, mono
+   only for identifiers, commands and counts; Geist Pixel on the h1 only;
+   cards are surfaces (shadow, not border); layered shadows, quick eases.
+
+   These pages are the crawlable half of the catalog. Everything here has
+   to survive with JavaScript off, so there is none — no reveal
+   animations, no client-side filtering, nothing that hides content
+   behind an interaction a crawler will not perform.
+   ================================================================ */
+:root{
+  --bg:#f4f4f1; --surface:#fff; --panel:#fafaf9; --panel2:#f0f0ee;
+  --ink:#1a1a1a; --muted:#7c7c7c; --muted2:#989898;
+  --line:#2626231a; --line2:#25252233;
+  --teal:#1a7da6;
+  --green:#118453; --amber:#ba6603; --red:#c0362f;
+  --inverse:#1a1a1a; --inverse-ink:#f8f8f7;
+  --shadow-sm:0 1px 2px #00000014;
+  --shadow-md:0 1px 2px -1px #0000000a,0 4px 6px -1px #0000000f;
+  --shadow-lg:0 1px 2px -1px #0000000a,0 4px 6px -1px #0000000f,0 8px 16px #0000000a;
+  --ease:cubic-bezier(.2,.72,.25,1);
+  --r:15px; --rb:10px;
+  --display:"Geist Pixel",Georgia,serif;
+  --sans:"Suisse Intl","Inter","Segoe UI",system-ui,sans-serif;
+  --mono:"DM Mono",ui-monospace,"SF Mono",Menlo,monospace;
+}
+*{box-sizing:border-box;min-width:0}
+html{scroll-behavior:smooth}
+html,body{overflow-x:clip}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+  font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+a{color:var(--teal);text-decoration:none}
+a:hover{text-decoration:underline}
+:focus-visible{outline:0;box-shadow:0 0 0 2px var(--bg),0 0 0 3.5px var(--ink)}
+.wrap{max-width:1160px;margin:0 auto;padding:0 28px}
+
+/* ---------- nav ---------- */
+.navwrap{position:sticky;top:0;z-index:50;padding:14px 20px;background:linear-gradient(var(--bg) 60%,transparent)}
+.nav{max-width:1160px;margin:0 auto;display:flex;align-items:center;gap:22px;
+  background:rgba(255,255,255,.86);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border:1px solid var(--line);border-radius:14px;padding:10px 12px 10px 22px;
+  box-shadow:var(--shadow-md)}
+.nav .brand{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-weight:500;
+  font-size:16px;color:var(--ink)}
+.nav .brand .glyph{width:22px;height:22px;border-radius:6px;background:var(--inverse);
+  color:var(--inverse-ink);display:grid;place-items:center;font-size:13px}
+.nav .links{margin-left:auto;display:flex;align-items:center;gap:20px;font-size:14px}
+.nav .links a{color:var(--muted);font-weight:500}
+.nav .links a:hover{color:var(--ink);text-decoration:none}
+.nav .links a[aria-current]{color:var(--ink)}
+.candy{background:var(--inverse);color:var(--inverse-ink);border:0;border-radius:10px;
+  padding:8px 15px;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;
+  box-shadow:var(--shadow-md);transition:transform .16s var(--ease)}
+.candy:hover{transform:translateY(-1px);text-decoration:none;color:var(--inverse-ink)}
+
+/* ---------- page head ---------- */
+.phead{padding:34px 0 26px}
+.kicker{display:inline-block;font-family:var(--mono);font-size:12.5px;color:var(--muted);
+  letter-spacing:-.01em;margin-bottom:14px}
+.crumbs{font-family:var(--mono);font-size:12.5px;color:var(--muted2);margin-bottom:12px}
+.crumbs a{color:var(--muted)}
+h1{font-family:var(--display);font-weight:400;font-size:clamp(30px,4.4vw,50px);line-height:1.04;
+  letter-spacing:-.005em;margin:0}
+.lede{font-size:17px;color:var(--muted);max-width:60ch;margin:16px 0 0}
+.facts{display:flex;flex-wrap:wrap;gap:8px 10px;margin-top:20px;font-family:var(--mono);font-size:12.5px}
+.facts span{background:var(--surface);border-radius:8px;padding:5px 11px;box-shadow:var(--shadow-sm);
+  color:var(--muted)}
+.facts span b{color:var(--ink);font-weight:500}
+
+/* ---------- category sections ---------- */
+.cat{padding:8px 0 30px}
+.cat h2{font-size:14px;font-weight:650;letter-spacing:.02em;text-transform:uppercase;
+  color:var(--muted2);margin:26px 0 14px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(268px,1fr));gap:14px}
+
+/* ---------- platform card ---------- */
+.pcard{display:flex;flex-direction:column;background:var(--surface);border-radius:var(--r);
+  padding:17px 18px;box-shadow:var(--shadow-md);color:inherit;
+  transition:transform .18s var(--ease),box-shadow .18s var(--ease)}
+.pcard:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg);text-decoration:none}
+.pcard h3{margin:0;font-size:16.5px;font-weight:650;letter-spacing:-.01em}
+.pcard p{margin:7px 0 0;font-size:13.5px;color:var(--muted);line-height:1.5}
+/* Counts on their own line, price on the next. Right-aligning the price on the counts line fails
+   both ways at this column width: `margin-left:auto` with wrapping on drops it to a line of its own
+   anyway (leaving a dangling separator), and with wrapping off it runs past the card edge. */
+.pcard .meta{margin-top:auto;padding-top:14px;font-family:var(--mono);font-size:11.5px;
+  color:var(--muted2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pcard .from{margin-top:3px;font-family:var(--mono);font-size:11.5px;color:var(--ink);
+  font-weight:500;white-space:nowrap}
+.pcard .meta b{color:var(--ink);font-weight:500}
+.pcard .meta .dot{color:var(--line2);padding:0 4px}
+.pcard .vendors{margin-top:9px;font-family:var(--mono);font-size:11px;color:var(--muted2);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ---------- capability sections on a platform page ---------- */
+.cap{background:var(--surface);border-radius:var(--r);box-shadow:var(--shadow-md);
+  padding:18px 20px;margin-bottom:14px}
+.cap > h3{margin:0;font-size:16px;font-weight:650;letter-spacing:-.01em}
+.cap > h3 code{font-family:var(--mono);font-size:12px;font-weight:400;color:var(--muted2);
+  margin-left:9px}
+.cap > p{margin:6px 0 0;font-size:13.5px;color:var(--muted)}
+
+/* one endpoint */
+.ep{border-top:1px solid var(--line);padding:13px 0 3px;margin-top:13px}
+.ep:first-of-type{margin-top:14px}
+.eph{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.eph .name{font-weight:600;font-size:14.5px}
+.eph .price{margin-left:auto;font-family:var(--mono);font-size:12.5px;font-weight:500;
+  white-space:nowrap}
+.ep p{margin:5px 0 0;font-size:13.5px;color:var(--muted);line-height:1.5}
+.ep .tags{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;font-family:var(--mono);font-size:11px;
+  color:var(--muted2);align-items:center}
+.tag{background:var(--panel2);border-radius:6px;padding:3px 8px}
+.tag.ok{background:#1184530f;color:var(--green)}
+.ep code.id{font-family:var(--mono);font-size:11.5px;color:var(--muted2)}
+pre.call{margin:9px 0 0;background:var(--panel);border-radius:var(--rb);padding:10px 12px;
+  font-family:var(--mono);font-size:12px;color:var(--ink);overflow-x:auto;white-space:pre}
+
+/* ---------- provider table ---------- */
+.provs{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;margin-top:12px}
+.prov{background:var(--surface);border-radius:var(--rb);padding:13px 15px;box-shadow:var(--shadow-sm)}
+.prov b{font-size:14.5px}
+.prov p{margin:5px 0 0;font-size:12.5px;color:var(--muted)}
+
+/* ---------- docs page ---------- */
+.op{background:var(--surface);border-radius:var(--rb);padding:13px 16px;margin-bottom:9px;
+  box-shadow:var(--shadow-sm)}
+.op .sig{display:flex;align-items:baseline;gap:11px;flex-wrap:wrap;font-family:var(--mono);font-size:13.5px}
+.op .verb{font-weight:500;color:var(--inverse-ink);background:var(--inverse);border-radius:5px;
+  padding:2px 8px;font-size:11px;letter-spacing:.03em}
+.op p{margin:7px 0 0;font-size:13.5px;color:var(--muted);font-family:var(--sans)}
+.op .params{margin:8px 0 0;font-family:var(--mono);font-size:11.5px;color:var(--muted2)}
+.prose{max-width:72ch}
+.prose h2{font-size:20px;font-weight:650;letter-spacing:-.01em;margin:30px 0 10px}
+.prose p{margin:0 0 12px;color:var(--muted);font-size:14.5px}
+.prose code{font-family:var(--mono);font-size:13px;background:var(--panel2);border-radius:5px;
+  padding:1px 6px;color:var(--ink)}
+
+/* ---------- footer ---------- */
+footer{border-top:1px solid var(--line);margin-top:46px;padding:26px 0 40px}
+.foot-in{max-width:1160px;margin:0 auto;padding:0 28px;display:flex;align-items:center;gap:18px;
+  flex-wrap:wrap;font-size:13px}
+.foot-in .brand{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-weight:500}
+.foot-in .brand .glyph{width:20px;height:20px;border-radius:6px;background:var(--inverse);
+  color:var(--inverse-ink);display:grid;place-items:center;font-size:12px}
+.foot-in .sp{margin-left:auto}
+.foot-in a{color:var(--muted)}
+
+@media (max-width:640px){
+  .wrap,.foot-in{padding:0 18px}
+  .nav{padding:9px 10px 9px 16px;gap:12px}
+  .nav .links{gap:13px}
+  .nav .hidem{display:none}
+  .eph .price{margin-left:0}
+  .phead{padding:22px 0 18px}
+}
+
+/* ---------- "give this to your agent" — the setup line + copy, as on the landing ---------- */
+.givebox{max-width:560px;margin:34px auto 0;border-radius:var(--r);position:relative;z-index:2;
+  background:var(--surface);box-shadow:var(--shadow-lg);padding:14px 14px 12px}
+.givebox .gb-h{display:flex;align-items:center;justify-content:center;gap:10px;
+  font-size:13.5px;font-weight:600;color:var(--ink);padding:2px 4px 12px}
+.givebox .gb-h .agicons{display:flex;gap:5px}
+.givebox .gb-h img{width:19px;height:19px;display:block}
+.givebox .gb-h a:hover img{transform:translateY(-1px)}
+.givebox .gb-cmd{display:flex;align-items:center;gap:10px;background:var(--inverse);border-radius:var(--rb);
+  padding:13px 14px;text-align:left}
+.givebox .gb-cmd .ps{color:#7fdcae;flex:none;font-size:13px;font-family:var(--mono)}
+.givebox .gb-cmd code{font-family:var(--mono);font-size:12.5px;color:var(--inverse-ink);
+  white-space:nowrap;overflow-x:auto;scrollbar-width:none;flex:1}
+.givebox .gb-cmd code::-webkit-scrollbar{display:none}
+.givebox .gb-cmd button{flex:none;border:1px solid #ffffff33;background:transparent;
+  color:#d9d9d6;font-family:var(--sans);font-weight:500;font-size:11px;letter-spacing:.04em;
+  border-radius:7px;padding:5px 11px;cursor:pointer;transition:color .12s,border-color .12s}
+.givebox .gb-cmd button:hover{color:#fff;border-color:#ffffff66}
+.givebox .gb-cmd button.done{color:#7fdcae;border-color:#7fdcae66}
+
+/* ---------- brand chips + FREE badge on the agent / use-case pages ---------- */
+.tag.brand{display:inline-flex;align-items:center;gap:6px;background:var(--surface);
+  box-shadow:var(--shadow-sm);color:var(--ink);padding:4px 9px 4px 6px}
+.tag.brand:hover{text-decoration:none;box-shadow:var(--shadow-md)}
+.lg{width:18px;height:18px;border-radius:4px;display:inline-block;vertical-align:middle;margin-right:6px;object-fit:contain}
+.tag.brand .lg{margin-right:0}
+.lg-none{display:inline-grid;place-items:center;background:var(--inverse);color:var(--inverse-ink);font-size:10px}
+.price.free{color:var(--green);background:#1184530f;border-radius:6px;padding:2px 8px}
+.price .free,.free{color:var(--green)}
+details summary::-webkit-details-marker{color:var(--muted2)}
+
+/* ---------- a screenshot presented as a screenshot: browser chrome + caption ---------- */
+.shot{margin:16px 0 0;border-radius:var(--r);overflow:hidden;background:var(--panel);
+  box-shadow:var(--shadow-lg);border:1px solid var(--line)}
+.shot-bar{display:flex;align-items:center;gap:6px;padding:9px 12px;background:var(--panel2);
+  border-bottom:1px solid var(--line)}
+.shot-bar span{width:9px;height:9px;border-radius:50%;background:var(--line2);flex:none}
+.shot-bar code{margin-left:10px;font-family:var(--mono);font-size:11.5px;color:var(--muted2);
+  background:var(--surface);border-radius:6px;padding:3px 10px;flex:1;text-align:center;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.shot img{display:block;width:100%;height:auto}
+.shot figcaption{padding:10px 14px;font-size:12.5px;color:var(--muted);background:var(--surface);
+  border-top:1px solid var(--line)}
+
+/* ---------- mini fact cards: a short bold lead + one line, two or three per row ---------- */
+.minigrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:12px}
+.mini{background:var(--panel);border-radius:var(--rb);padding:11px 13px;line-height:1.5}
+.mini b{display:block;font-size:13.5px;font-weight:650;letter-spacing:-.01em;margin-bottom:3px}
+.mini span{display:block;font-size:13px;color:var(--muted)}

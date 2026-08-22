@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 158 171" fill="none" role="img" aria-label="fiber-ai">
+  <path d="M53.6823 116.382L36.6734 165.756L81.0866 149.682C86.8312 147.603 90.7458 144.28 91.8905 140.511L104.146 100.154L53.6823 116.382Z" fill="url(#fiber-ai-g0)"/>
+  <path d="M63.7031 48.5061C65.8838 42.23 71.4706 36.8105 78.2578 34.3874L158 5.91778L147.974 36.3301C145.817 42.8737 139.95 48.5256 132.855 50.8939L53.6914 77.3204L63.7031 48.5061Z" fill="url(#fiber-ai-g1)"/>
+  <path d="M13.9061 104.206C16.1411 97.7468 21.9774 92.2067 28.9936 89.8839L151.742 49.2478L141.816 78.5882C139.599 85.141 133.671 90.7672 126.551 93.0771L4.00018 132.833L13.9061 104.206Z" fill="url(#fiber-ai-g2)"/>
+  <defs>
+    <linearGradient id="fiber-ai-g0" x1="84.0024" y1="118.908" x2="85.912" y2="152.318" gradientUnits="userSpaceOnUse">
+      <stop offset="0.0001" stop-color="#030303"/>
+      <stop offset="1" stop-color="#737373"/>
+    </linearGradient>
+    <linearGradient id="fiber-ai-g1" x1="118.272" y1="2.95889" x2="86.6536" y2="96.5543" gradientUnits="userSpaceOnUse">
+      <stop offset="0.338542" stop-color="#8F8F8F"/>
+      <stop offset="1"/>
+    </linearGradient>
+    <linearGradient id="fiber-ai-g2" x1="89.5959" y1="44.6191" x2="82.1755" y2="144.251" gradientUnits="userSpaceOnUse">
+      <stop offset="0.333333" stop-color="#A4A4A4"/>
+      <stop offset="1" stop-color="#1D1D1D"/>
+    </linearGradient>
+  </defs>
+</svg>

@@ -1,0 +1,15 @@
+{
+  "jobID": "4cf14582-3878-4438-9797-e0b7919256bb",
+  "channel": "email",
+  "status": "in_progress",
+  "total": 1,
+  "processed": 0,
+  "succeeded": 0,
+  "failed": 0,
+  "reservedCredits": 0,
+  "createdAt": "2026-08-20T00:47:17.197908Z",
+  "updatedAt": "2026-08-20T00:47:17.197908Z",
+  "clientRequestID": "treg-verify-1",
+  "statusURL": "/public/v1/enrichment/jobs/4cf14582-3878-4438-9797-e0b7919256bb",
+  "resultsURL": "/public/v1/enrichment/jobs/4cf14582-3878-4438-9797-e0b7919256bb/results"
+}

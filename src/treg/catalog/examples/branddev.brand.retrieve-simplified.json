@@ -1,0 +1,28 @@
+{
+ "status": "ok",
+ "brand": {
+  "domain": "stripe.com",
+  "title": "Stripe",
+  "colors": [{"hex": "#543cfc", "name": "Meteor Shower", "source": "logo"}, "… 2 more (truncated)"],
+  "logos": [
+   {
+    "url": "https://media.brand.dev/aeb3719a-0950-4ac2-95f4-36ec03371e14.svg",
+    "mode": "dark",
+    "colors": [{"hex": "#543cfc", "name": "Meteor Shower"}, "… 1 more (truncated)"],
+    "resolution": {"width": 512, "height": 512, "aspect_ratio": 1},
+    "type": "icon"
+   },
+   "… 2 more (truncated)"
+  ],
+  "backdrops": [
+   {
+    "url": "https://media.brand.dev/86a4247b-142f-4caa-8a53-fec61ef892ad.jpg",
+    "colors": [{"hex": "#f57b2d", "name": "Iceland Poppy"}, "… 1 more (truncated)"],
+    "resolution": {"width": 1000, "height": 169, "aspect_ratio": 5.92}
+   },
+   "… 1 more (truncated)"
+  ]
+ },
+ "code": 200,
+ "key_metadata": {"credits_consumed": 10, "credits_remaining": 274}
+}

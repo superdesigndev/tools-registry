@@ -1,0 +1,35 @@
+{
+  "domain": "stripe.com",
+  "data": [
+    {
+      "slug": "contentful",
+      "name": "Contentful",
+      "icon": "Contentful.svg",
+      "website": "contentful.com",
+      "description": "Contentful is an API-first content management platform to create, manage and publish content on any digital channel.",
+      "categories": [
+        {
+          "id": 1,
+          "slug": "cms",
+          "name": "CMS"
+        }
+      ]
+    },
+    {
+      "slug": "java",
+      "name": "Java",
+      "icon": "Java.svg",
+      "website": "java.com",
+      "description": "Java is a class-based, object-oriented programming language that is designed to have as few implementation dependencies as possible.",
+      "categories": [
+        {
+          "id": 27,
+          "slug": "programming-languages",
+          "name": "Programming languages"
+        }
+      ]
+    },
+    "…2 more items truncated for the catalog example"
+  ]
+}
+

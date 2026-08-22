@@ -12,9 +12,23 @@
 # blocks, DMs and media upload each have their own scope. They are listed with `scope_gap:`
 # rather than omitted, because that list IS the decision of which scopes to add to the app.
 # 
-# Beyond scopes, most v2 routes are gated by the ACCESS TIER of the X developer plan (Free
-# posts only; Basic/Pro unlock search and timelines) — the spec cannot express that, so a
-# listed route may still answer 403 on a Free project.
+# Beyond scopes, a route may still answer 403 on a project whose access the spec cannot
+# express — the OpenAPI document lists the whole surface, not what one app may reach.
+#
+# EVERY ENTRY IS PRICED, AND NONE OF THEM ARE FREE. X bills the APP OWNER per use (prepaid
+# credits, no plan tiers since Feb 2026), so a call on a registry connect spends treg's money and
+# is metered from the team balance. The rates come from X's RATE CARD PER RESOURCE TYPE, not one
+# read price and one write price: posts $0.005 and users $0.010 per resource returned, DM events
+# $0.010, lists/spaces/communities/notes $0.005, likes/mutes/blocks $0.001; writes are per request
+# — a post $0.015 ($0.200 with a URL), a list $0.010 to create but $0.005 to manage, an
+# interaction $0.015 to create and $0.010 to delete. `catalog_ingest.X_ROUTE_RATES` is the mapping,
+# and each entry's note names the row it was priced from.
+#
+# OWNED READS ($0.001) DO NOT APPLY HERE. That rate needs the authenticated user to own the
+# developer app; on a registry connect the app is treg's, so a member reading their own timeline
+# pays the ordinary Posts rate. `confidence: inferred` marks the routes whose resource type the
+# card does not name — those quote treg's own fallback, so the published price and the metered
+# price cannot drift apart.
 # 
 # scope: GET routes that read public data are `any_account`; writes and anything touching
 # /me, DMs, bookmarks, blocks, mutes, compliance or usage are `own_account`.
@@ -32,15 +46,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/account_activity/subscriptions/count
-  name: "Count active activity subscriptions"
+  name: "Count your Account Activity subscriptions"
   summary: Get Account Activity Subscription Count
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: post
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.005 per resource — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
 - id: x.x.validate-account-activity-subscription
   kind: account
@@ -48,15 +67,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/account_activity/webhooks/{webhook_id}/subscriptions/all
-  name: "Check a webhook subscription is active"
+  name: "Check an Account Activity subscription by webhook id"
   summary: Validate Account Activity Subscription
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: post
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.005 per resource — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.read, dm.write'
   input:
@@ -70,15 +94,20 @@ endpoints:
   platform: x
   method: POST
   path: /2/account_activity/webhooks/{webhook_id}/subscriptions/all
-  name: "Subscribe a webhook to account activity"
+  name: "Subscribe a webhook to Account Activity events"
   summary: Create subscription
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.015
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.015 per request — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.read, dm.write'
   input:
@@ -97,15 +126,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/account_activity/webhooks/{webhook_id}/subscriptions/all/list
-  name: "List webhook activity subscriptions"
+  name: "List Account Activity subscriptions by webhook id"
   summary: Get Account Activity Subscriptions
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: post
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.005 per resource — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
   input:
     pathParams:
@@ -118,15 +152,20 @@ endpoints:
   platform: x
   method: DELETE
   path: /2/account_activity/webhooks/{webhook_id}/subscriptions/{user_id}/all
-  name: "Unsubscribe a user from a webhook"
+  name: "Remove a user's Account Activity subscription"
   summary: Delete subscription
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.015
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.015 per request — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
   input:
     pathParams:
@@ -142,15 +181,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/activity/stream
-  name: "Stream account activity events"
+  name: "Stream activity events in real time"
   summary: Activity Stream
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: post
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.005 per resource — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
   input:
     queryParams:
@@ -172,15 +216,20 @@ endpoints:
   platform: x
   method: DELETE
   path: /2/activity/subscriptions
-  name: "Delete activity subscriptions by ID"
+  name: "Delete activity subscriptions by subscription ids"
   summary: Delete X activity subscriptions by IDs
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.015
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.015 per request — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
   input:
     queryParams:
@@ -193,15 +242,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/activity/subscriptions
-  name: "List activity subscriptions"
+  name: "List your activity subscriptions"
   summary: Get X activity subscriptions
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: post
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.005 per resource — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: like.read'
   input:
@@ -223,11 +277,16 @@ endpoints:
   summary: Create X activity subscription
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.015
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.015 per request — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
   input:
     bodyType: json
@@ -241,15 +300,20 @@ endpoints:
   platform: x
   method: DELETE
   path: /2/activity/subscriptions/{subscription_id}
-  name: "Delete an activity subscription"
+  name: "Delete an activity subscription by subscription id"
   summary: Deletes X activity subscription
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.015
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.015 per request — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
   input:
     pathParams:
@@ -262,15 +326,20 @@ endpoints:
   platform: x
   method: PUT
   path: /2/activity/subscriptions/{subscription_id}
-  name: "Update an activity subscription"
+  name: "Update an activity subscription by subscription id"
   summary: Update X activity subscription
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.015
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.015 per request — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
   input:
     pathParams:
@@ -288,15 +357,20 @@ endpoints:
   platform: x
   method: POST
   path: /2/articles/draft
-  name: "Article create draft"
+  name: "Create a draft X Article"
   summary: Create draft Article
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.005
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: 'X''s rate card, content: $0.005 per request; which row applies is a judgement call, and this takes the dearer reading'
   docs_url: https://docs.x.com/x-api
   input:
     bodyType: json
@@ -311,15 +385,20 @@ endpoints:
   platform: x
   method: POST
   path: /2/articles/{article_id}/publish
-  name: "Article publish"
+  name: "Publish a drafted Article by article id"
   summary: Publish Article
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.005
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: 'X''s rate card, content: $0.005 per request; which row applies is a judgement call, and this takes the dearer reading'
   docs_url: https://docs.x.com/x-api
   input:
     pathParams:
@@ -336,11 +415,16 @@ endpoints:
   summary: List scheduled broadcasts
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: post
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.005 per resource — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: broadcast.read'
   input:
@@ -364,15 +448,20 @@ endpoints:
   platform: x
   method: POST
   path: /2/broadcasts/scheduled
-  name: "Create scheduled broadcast"
+  name: "Schedule a broadcast"
   summary: Create a scheduled broadcast
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.005
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: 'X''s rate card, content: $0.005 per request; which row applies is a judgement call, and this takes the dearer reading'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: broadcast.read, broadcast.write'
   input:
@@ -388,15 +477,20 @@ endpoints:
   platform: x
   method: DELETE
   path: /2/broadcasts/scheduled/{id}
-  name: "Delete scheduled broadcast"
+  name: "Delete a scheduled broadcast by id"
   summary: Delete a scheduled broadcast
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.005
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: 'X''s rate card, content: $0.005 per request; which row applies is a judgement call, and this takes the dearer reading'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: broadcast.read, broadcast.write'
   input:
@@ -414,15 +508,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/broadcasts/scheduled/{id}
-  name: "Get scheduled broadcast"
+  name: "Look up a scheduled broadcast by id"
   summary: Get a scheduled broadcast
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: post
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.005 per resource — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: broadcast.read'
   input:
@@ -437,15 +536,20 @@ endpoints:
   platform: x
   method: PUT
   path: /2/broadcasts/scheduled/{id}
-  name: "Update scheduled broadcast"
+  name: "Update a scheduled broadcast by id"
   summary: Update a scheduled broadcast
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.015
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.015 per request — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: broadcast.read, broadcast.write'
   input:
@@ -465,15 +569,20 @@ endpoints:
   platform: x
   method: POST
   path: /2/broadcasts/scheduled/{id}/live
-  name: "Go live scheduled broadcast"
+  name: "Go live on a scheduled broadcast by id"
   summary: Go live on a scheduled broadcast
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.005
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: 'X''s rate card, content: $0.005 per request; which row applies is a judgement call, and this takes the dearer reading'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: broadcast.read, broadcast.write'
   input:
@@ -488,15 +597,20 @@ endpoints:
   platform: x
   method: POST
   path: /2/broadcasts/{id}/chat
-  name: "Send broadcast chat"
+  name: "Send a chat message to a live broadcast"
   summary: Send a chat message to a live broadcast
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.005
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: 'X''s rate card, content: $0.005 per request; which row applies is a judgement call, and this takes the dearer reading'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: broadcast.read, broadcast.write'
   input:
@@ -515,15 +629,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/chat/conversations
-  name: "List chat conversations"
+  name: "List your chat conversations"
   summary: Get Chat Conversations
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: post
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.005 per resource — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.read'
   input:
@@ -541,15 +660,20 @@ endpoints:
   platform: x
   method: POST
   path: /2/chat/conversations/group
-  name: "Create chat conversation"
+  name: "Create a group chat conversation"
   summary: Create Chat Group Conversation
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.015
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: 'X''s rate card, dm create: $0.015 per request; which row applies is a judgement call, and this takes the dearer reading'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.write'
   input:
@@ -565,15 +689,20 @@ endpoints:
   platform: x
   method: POST
   path: /2/chat/conversations/group/initialize
-  name: "Initialize chat group"
+  name: "Initialize a chat group"
   summary: Initialize Chat Group
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.015
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: 'X''s rate card, dm create: $0.015 per request; which row applies is a judgement call, and this takes the dearer reading'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.write'
   capability: x.chat.group.initialize
@@ -582,15 +711,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/chat/conversations/{id}
-  name: "Look up a chat conversation"
+  name: "Look up a chat conversation by id"
   summary: Get Chat Conversation
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: post
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.005 per resource — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.read'
   input:
@@ -604,15 +738,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/chat/conversations/{id}/events
-  name: "Events in a chat conversation"
+  name: "List events in a chat conversation by id"
   summary: Get Chat Conversation Events
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.01
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: result
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, dm event: $0.01 per resource returned'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.read'
   input:
@@ -634,15 +773,20 @@ endpoints:
   platform: x
   method: POST
   path: /2/chat/conversations/{id}/keys
-  name: "Add encryption keys to a conversation"
+  name: "Add encryption keys to a chat conversation"
   summary: Add Conversation Keys
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.015
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: 'X''s rate card, dm create: $0.015 per request; which row applies is a judgement call, and this takes the dearer reading'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.write'
   input:
@@ -661,15 +805,20 @@ endpoints:
   platform: x
   method: POST
   path: /2/chat/conversations/{id}/members
-  name: "Add chat group members"
+  name: "Add members to a group chat conversation"
   summary: Add members to a Chat group conversation
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.015
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: 'X''s rate card, dm create: $0.015 per request; which row applies is a judgement call, and this takes the dearer reading'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.write'
   input:
@@ -689,15 +838,20 @@ endpoints:
   platform: x
   method: POST
   path: /2/chat/conversations/{id}/messages
-  name: "Send chat message"
+  name: "Send a chat message to a conversation"
   summary: Send Chat Message
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.015
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, dm create: $0.015 per request'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.write'
   input:
@@ -717,15 +871,20 @@ endpoints:
   platform: x
   method: POST
   path: /2/chat/conversations/{id}/messages/delete
-  name: "Delete chat messages"
+  name: "Delete chat messages in a conversation"
   summary: Delete Chat messages
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.015
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, dm create: $0.015 per request'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.write'
   input:
@@ -745,15 +904,20 @@ endpoints:
   platform: x
   method: POST
   path: /2/chat/conversations/{id}/read
-  name: "Mark chat conversation read"
+  name: "Mark a chat conversation as read"
   summary: Mark Conversation as Read
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.015
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: 'X''s rate card, dm create: $0.015 per request; which row applies is a judgement call, and this takes the dearer reading'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.write'
   input:
@@ -772,15 +936,20 @@ endpoints:
   platform: x
   method: POST
   path: /2/chat/conversations/{id}/typing
-  name: "Send chat typing indicator"
+  name: "Send a typing indicator to a chat conversation"
   summary: Send Typing Indicator
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.015
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: 'X''s rate card, dm create: $0.015 per request; which row applies is a judgement call, and this takes the dearer reading'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.write'
   input:
@@ -794,15 +963,20 @@ endpoints:
   platform: x
   method: POST
   path: /2/chat/media/upload/initialize
-  name: "Chat media upload initialize"
+  name: "Initialize a chat media upload"
   summary: Initialize Chat Media Upload
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.015
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.015 per request — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: media.write'
   input:
@@ -818,15 +992,20 @@ endpoints:
   platform: x
   method: POST
   path: /2/chat/media/upload/{id}/append
-  name: "Chat media upload append"
+  name: "Append to a chat media upload"
   summary: Append Chat Media Upload
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.015
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.015 per request — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: media.write'
   input:
@@ -846,15 +1025,20 @@ endpoints:
   platform: x
   method: POST
   path: /2/chat/media/upload/{id}/finalize
-  name: "Chat media upload finalize"
+  name: "Finalize a chat media upload"
   summary: Finalize Chat Media Upload
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.015
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.015 per request — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: media.write'
   input:
@@ -873,15 +1057,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/chat/media/{id}/{media_hash_key}
-  name: "Chat media download"
+  name: "Download a chat media file by id"
   summary: Download Chat Media
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: post
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.005 per resource — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: media.write'
   input:
@@ -898,15 +1087,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/communities/search
-  name: "Search communities"
+  name: "Search Communities by keyword"
   summary: Search Communities
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: result
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, community: $0.005 per resource returned'
   docs_url: https://docs.x.com/x-api
   input:
     queryParams:
@@ -928,15 +1122,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/communities/{id}
-  name: "Look up a Community by ID"
+  name: "Look up a Community by id"
   summary: Get Communities by ID
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: result
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, community: $0.005 per resource returned'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: list.read'
   input:
@@ -951,15 +1150,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/compliance/jobs
-  name: "List compliance jobs"
+  name: "List compliance jobs by type"
   summary: Get Compliance Jobs
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: post
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.005 per resource — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
   input:
     queryParams:
@@ -975,15 +1179,20 @@ endpoints:
   platform: x
   method: POST
   path: /2/compliance/jobs
-  name: "Create compliance jobs"
+  name: "Create a compliance job"
   summary: Create Compliance Job
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.015
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.015 per request — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
   input:
     bodyType: json
@@ -997,15 +1206,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/compliance/jobs/{id}
-  name: "Look up a compliance job by ID"
+  name: "Look up a compliance job by id"
   summary: Get Compliance Job by ID
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: post
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.005 per resource — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
   input:
     pathParams:
@@ -1018,15 +1232,20 @@ endpoints:
   platform: x
   method: DELETE
   path: /2/connections
-  name: "Close specific streaming connections"
+  name: "Terminate streaming connections by uuid"
   summary: Terminate multiple connections
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.015
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.015 per request — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
   input:
     bodyType: json
@@ -1044,11 +1263,16 @@ endpoints:
   summary: Get Connection History
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: post
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.005 per resource — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
   input:
     queryParams:
@@ -1070,15 +1294,20 @@ endpoints:
   platform: x
   method: DELETE
   path: /2/connections/all
-  name: "Close all streaming connections"
+  name: "Terminate all streaming connections"
   summary: Terminate all connections
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.015
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.015 per request — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
 - id: x.x.delete-connections-by-endpoint
   kind: account
@@ -1086,15 +1315,20 @@ endpoints:
   platform: x
   method: DELETE
   path: /2/connections/{endpoint_id}
-  name: "Close connections for one stream"
+  name: "Terminate streaming connections by endpoint id"
   summary: Terminate connections by endpoint
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.015
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.015 per request — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
   input:
     pathParams:
@@ -1107,15 +1341,20 @@ endpoints:
   platform: x
   method: POST
   path: /2/dm_conversations
-  name: "Start a group message conversation"
+  name: "Start a group direct message conversation"
   summary: Create DM conversation
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.015
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, dm create: $0.015 per request'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.write'
   input:
@@ -1130,15 +1369,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/dm_conversations/media/{dm_id}/{media_id}/{resource_id}
-  name: "Dm conversations media download"
+  name: "Download media from a direct message"
   summary: Download DM Media
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.01
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: result
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, dm event: $0.01 per resource returned'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.read'
   input:
@@ -1158,15 +1402,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/dm_conversations/with/{participant_id}/dm_events
-  name: "Message history with one participant"
+  name: "Direct message history with a user by participant id"
   summary: Get Direct Messages Events by Participant ID
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.01
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: result
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, dm event: $0.01 per resource returned'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.read'
   input:
@@ -1192,15 +1441,20 @@ endpoints:
   platform: x
   method: POST
   path: /2/dm_conversations/with/{participant_id}/messages
-  name: "Send a direct message to a user"
+  name: "Send a direct message to a user by participant id"
   summary: Create DM message by participant ID
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.015
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, dm create: $0.015 per request'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.write'
   input:
@@ -1220,15 +1474,20 @@ endpoints:
   platform: x
   method: POST
   path: /2/dm_conversations/{dm_conversation_id}/messages
-  name: "Send a message to a conversation"
+  name: "Send a direct message by conversation id"
   summary: Create Direct Messages by Conversation ID
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.015
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, dm create: $0.015 per request'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.write'
   input:
@@ -1247,15 +1506,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/dm_conversations/{id}/dm_events
-  name: "Message history in a conversation"
+  name: "Direct message history by conversation id"
   summary: Get Direct Messages Events by Conversation ID
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.01
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: result
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, dm event: $0.01 per resource returned'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.read'
   input:
@@ -1284,11 +1548,16 @@ endpoints:
   summary: Get Direct Messages Events
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.01
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: result
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, dm event: $0.01 per resource returned'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.read'
   input:
@@ -1310,15 +1579,20 @@ endpoints:
   platform: x
   method: DELETE
   path: /2/dm_events/{event_id}
-  name: "Delete direct messages events"
+  name: "Delete a direct message event by event id"
   summary: Delete DM event
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.01
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: 'X''s rate card, int delete: $0.01 per request; which row applies is a judgement call, and this takes the dearer reading'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.read, dm.write'
   input:
@@ -1332,15 +1606,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/dm_events/{event_id}
-  name: "Look up a message event by ID"
+  name: "Look up a direct message event by event id"
   summary: Get Direct Messages Events by ID
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.01
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: result
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, dm event: $0.01 per resource returned'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.read'
   input:
@@ -1355,15 +1634,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/likes/compliance/stream
-  name: "Stream likes compliance"
+  name: "Stream Likes compliance events"
   summary: Stream Likes compliance data
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.001
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: result
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, like: $0.001 per resource returned'
   docs_url: https://docs.x.com/x-api
   input:
     queryParams:
@@ -1384,15 +1668,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/likes/firehose/stream
-  name: "Stream likes firehose"
+  name: "Firehose stream of all Likes"
   summary: Stream all Likes
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.001
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: result
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, like: $0.001 per resource returned'
   docs_url: https://docs.x.com/x-api
   input:
     queryParams:
@@ -1437,15 +1726,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/likes/sample10/stream
-  name: "Stream likes sample10"
+  name: "Stream a 10% sample of Likes"
   summary: Stream sampled Likes
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.001
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: result
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, like: $0.001 per resource returned'
   docs_url: https://docs.x.com/x-api
   input:
     queryParams:
@@ -1495,11 +1789,16 @@ endpoints:
   summary: Create Lists
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.01
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, list create: $0.01 per request'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: list.read, list.write'
   input:
@@ -1515,15 +1814,20 @@ endpoints:
   platform: x
   method: DELETE
   path: /2/lists/{id}
-  name: "Delete a List"
+  name: "Delete a List by list id"
   summary: Delete List
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.005
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, list manage: $0.005 per request'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: list.write'
   input:
@@ -1537,15 +1841,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/lists/{id}
-  name: "Look up a List by ID"
+  name: "Look up a List by list id"
   summary: Get Lists by ID
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: result
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, list: $0.005 per resource returned'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: list.read'
   input:
@@ -1560,15 +1869,20 @@ endpoints:
   platform: x
   method: PUT
   path: /2/lists/{id}
-  name: "Update a List"
+  name: "Update a List by list id"
   summary: Update List
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.005
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, list manage: $0.005 per request'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: list.write'
   input:
@@ -1587,15 +1901,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/lists/{id}/followers
-  name: "List followers of a List"
+  name: "Followers of a List by list id"
   summary: Get Lists Followers
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.01
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: user
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: 'X''s rate card, user: $0.01 per resource returned; which row applies is a judgement call, and this takes the dearer reading'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: list.read'
   input:
@@ -1617,15 +1936,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/lists/{id}/members
-  name: "List members of a List"
+  name: "Members of a List by list id"
   summary: Get Lists Members
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.01
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: user
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: 'X''s rate card, user: $0.01 per resource returned; which row applies is a judgement call, and this takes the dearer reading'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: list.read'
   input:
@@ -1652,11 +1976,16 @@ endpoints:
   summary: Add Lists Member
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.005
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, list manage: $0.005 per request'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: list.write'
   input:
@@ -1676,15 +2005,20 @@ endpoints:
   platform: x
   method: DELETE
   path: /2/lists/{id}/members/{user_id}
-  name: "Remove a member from a List"
+  name: "Remove a member from a List by user id"
   summary: Remove a List member
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.005
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, list manage: $0.005 per request'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: list.write'
   input:
@@ -1701,15 +2035,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/lists/{id}/tweets
-  name: "Posts from a List timeline"
+  name: "Tweets from a List timeline by list id"
   summary: Get Lists Posts
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: post
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, posts: $0.005 per resource returned'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: list.read'
   input:
@@ -1731,15 +2070,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/media
-  name: "Look up media by key"
+  name: "Look up media by media keys"
   summary: Get Media by media keys
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: post
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.005 per resource — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
   input:
     queryParams:
@@ -1752,15 +2096,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/media/analytics
-  name: "Analytics for your media"
+  name: "Analytics for your media by media keys"
   summary: Get Media analytics
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: post
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.005 per resource — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
   input:
     queryParams:
@@ -1783,15 +2132,20 @@ endpoints:
   platform: x
   method: POST
   path: /2/media/metadata
-  name: "Create media metadata"
+  name: "Create metadata for uploaded media"
   summary: Create Media metadata
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.005
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, media meta: $0.005 per request'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: media.write'
   input:
@@ -1807,15 +2161,20 @@ endpoints:
   platform: x
   method: DELETE
   path: /2/media/subtitles
-  name: "Delete media subtitles"
+  name: "Delete subtitles from uploaded media"
   summary: Delete Media subtitles
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.005
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, media meta: $0.005 per request'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: media.write'
   input:
@@ -1831,15 +2190,20 @@ endpoints:
   platform: x
   method: POST
   path: /2/media/subtitles
-  name: "Create media subtitles"
+  name: "Add subtitles to uploaded media"
   summary: Create Media subtitles
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.005
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, media meta: $0.005 per request'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: media.write'
   input:
@@ -1855,15 +2219,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/media/upload
-  name: "Check media upload status"
+  name: "Check media upload status by media id"
   summary: Get Media upload status
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: post
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.005 per resource — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: media.write'
   input:
@@ -1885,11 +2254,16 @@ endpoints:
   summary: Upload media
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.015
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.015 per request — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: media.write'
   input:
@@ -1905,15 +2279,20 @@ endpoints:
   platform: x
   method: POST
   path: /2/media/upload/initialize
-  name: "Initialize media upload"
+  name: "Initialize a media upload"
   summary: Initialize media upload
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.015
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.015 per request — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: media.write'
   input:
@@ -1929,15 +2308,20 @@ endpoints:
   platform: x
   method: POST
   path: /2/media/upload/{id}/append
-  name: "Append media upload"
+  name: "Append to a media upload by id"
   summary: Append Media Upload
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.015
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.015 per request — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: media.write'
   input:
@@ -1957,15 +2341,20 @@ endpoints:
   platform: x
   method: POST
   path: /2/media/upload/{id}/finalize
-  name: "Finalize media upload"
+  name: "Finalize a media upload by id"
   summary: Finalize Media upload
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.015
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.015 per request — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: media.write'
   input:
@@ -1979,15 +2368,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/media/{media_key}
-  name: "Look up one media item by key"
+  name: "Look up one media item by media key"
   summary: Get Media by media key
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: post
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.005 per resource — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
   input:
     pathParams:
@@ -2000,15 +2394,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/news/search
-  name: "Search news"
+  name: "Search news stories by keyword"
   summary: Search News
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: result
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: 'X''s rate card, note: $0.005 per resource returned; which row applies is a judgement call, and this takes the dearer reading'
   docs_url: https://docs.x.com/x-api
   input:
     queryParams:
@@ -2027,15 +2426,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/news/{id}
-  name: "Look up news stories by ID"
+  name: "Look up news stories by id"
   summary: Get news stories by ID
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: result
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: 'X''s rate card, note: $0.005 per resource returned; which row applies is a judgement call, and this takes the dearer reading'
   docs_url: https://docs.x.com/x-api
   input:
     pathParams:
@@ -2053,11 +2457,16 @@ endpoints:
   summary: Create Community Notes
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.005
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: 'X''s rate card, content: $0.005 per request; which row applies is a judgement call, and this takes the dearer reading'
   docs_url: https://docs.x.com/x-api
   input:
     bodyType: json
@@ -2076,11 +2485,16 @@ endpoints:
   summary: Evaluate Community Notes
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.005
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: 'X''s rate card, content: $0.005 per request; which row applies is a judgement call, and this takes the dearer reading'
   docs_url: https://docs.x.com/x-api
   input:
     bodyType: json
@@ -2098,11 +2512,16 @@ endpoints:
   summary: Search Community Notes Written
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: result
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, note: $0.005 per resource returned'
   docs_url: https://docs.x.com/x-api
   input:
     queryParams:
@@ -2125,11 +2544,16 @@ endpoints:
   summary: Search Eligible Posts
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: result
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, note: $0.005 per resource returned'
   docs_url: https://docs.x.com/x-api
   input:
     queryParams:
@@ -2152,15 +2576,20 @@ endpoints:
   platform: x
   method: DELETE
   path: /2/notes/{id}
-  name: "Delete a Community Note"
+  name: "Delete a Community Note by id"
   summary: Delete a Community Note
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.005
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: 'X''s rate card, content: $0.005 per request; which row applies is a judgement call, and this takes the dearer reading'
   docs_url: https://docs.x.com/x-api
   input:
     pathParams:
@@ -2174,30 +2603,40 @@ endpoints:
   platform: x
   method: GET
   path: /2/openapi.json
-  name: "Fetch the OpenAPI specification"
+  name: "OpenAPI specification of the X API"
   summary: Get OpenAPI Spec.
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: post
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.005 per resource — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
 - id: x.x.get-spaces-by-ids
   tier: extended
   platform: x
   method: GET
   path: /2/spaces
-  name: "Look up Spaces by ID"
+  name: "Look up Spaces by space ids"
   summary: Get Spaces by IDs
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: result
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, space: $0.005 per resource returned'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: space.read'
   input:
@@ -2211,15 +2650,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/spaces/by/creator_ids
-  name: "Spaces hosted by given creators"
+  name: "Spaces hosted by creators, by user ids"
   summary: Get Spaces by Creator IDs
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: result
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, space: $0.005 per resource returned'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: space.read'
   input:
@@ -2233,15 +2677,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/spaces/search
-  name: "Search spaces"
+  name: "Search Spaces by keyword"
   summary: Search Spaces
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: result
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, space: $0.005 per resource returned'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: space.read'
   input:
@@ -2261,15 +2710,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/spaces/{id}
-  name: "Look up a Space by ID"
+  name: "Look up a Space by space id"
   summary: Get Spaces by ID
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: result
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, space: $0.005 per resource returned'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: space.read'
   input:
@@ -2283,15 +2737,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/spaces/{id}/buyers
-  name: "Ticket buyers for a Space"
+  name: "Ticket buyers of a Space by space id"
   summary: Get Space ticket buyers
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.01
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: user
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: 'X''s rate card, user: $0.01 per resource returned; which row applies is a judgement call, and this takes the dearer reading'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: space.read'
   input:
@@ -2313,15 +2772,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/spaces/{id}/tweets
-  name: "Posts shared in a Space"
+  name: "Tweets shared in a Space by space id"
   summary: Get Space Posts
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: post
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, posts: $0.005 per resource returned'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: space.read'
   input:
@@ -2343,15 +2807,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/trends/by/woeid/{woeid}
-  name: "Trending topics for a location"
+  name: "Trending topics by location WOEID"
   summary: Get Trends by Woeid
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.01
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, trends: $0.01 per request'
   docs_url: https://docs.x.com/x-api
   input:
     pathParams:
@@ -2368,15 +2837,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/tweets
-  name: "Look up posts by ID"
+  name: "Look up tweets by post ids"
   summary: Get Posts by IDs
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: post
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, posts: $0.005 per resource returned'
   docs_url: https://docs.x.com/x-api
   input:
     queryParams:
@@ -2389,15 +2863,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/tweets/analytics
-  name: "Analytics for your posts"
+  name: "Analytics for your tweets by post ids"
   summary: Get Posts Analytics
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: post
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.005 per resource — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
   input:
     queryParams:
@@ -2420,15 +2899,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/tweets/compliance/stream
-  name: "Stream posts compliance"
+  name: "Stream Posts compliance events"
   summary: Stream Posts compliance data
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: post
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.005 per resource — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
   input:
     queryParams:
@@ -2453,15 +2937,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/tweets/counts/all
-  name: "Count matching posts, full archive"
+  name: "Count tweets matching a query — full archive"
   summary: Get Posts Counts All
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.01
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, counts all: $0.01 per request'
   docs_url: https://docs.x.com/x-api
   input:
     queryParams:
@@ -2500,15 +2989,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/tweets/counts/recent
-  name: "Count matching posts, last 7 days"
+  name: "Count tweets matching a query — last 7 days"
   summary: Get Posts Counts Recent
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.005
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, counts recent: $0.005 per request'
   docs_url: https://docs.x.com/x-api
   input:
     queryParams:
@@ -2548,15 +3042,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/tweets/firehose/stream
-  name: "Stream posts firehose"
+  name: "Firehose stream of all tweets"
   summary: Stream all Posts
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: post
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, posts: $0.005 per resource returned'
   docs_url: https://docs.x.com/x-api
   input:
     queryParams:
@@ -2605,15 +3104,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/tweets/firehose/stream/lang/en
-  name: "Stream posts firehose en"
+  name: "Firehose stream of English tweets"
   summary: Stream English Posts
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: post
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, posts: $0.005 per resource returned'
   docs_url: https://docs.x.com/x-api
   input:
     queryParams:
@@ -2662,15 +3166,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/tweets/firehose/stream/lang/ja
-  name: "Stream posts firehose ja"
+  name: "Firehose stream of Japanese tweets"
   summary: Stream Japanese Posts
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: post
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, posts: $0.005 per resource returned'
   docs_url: https://docs.x.com/x-api
   input:
     queryParams:
@@ -2719,15 +3228,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/tweets/firehose/stream/lang/ko
-  name: "Stream posts firehose ko"
+  name: "Firehose stream of Korean tweets"
   summary: Stream Korean Posts
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: post
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, posts: $0.005 per resource returned'
   docs_url: https://docs.x.com/x-api
   input:
     queryParams:
@@ -2776,15 +3290,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/tweets/firehose/stream/lang/pt
-  name: "Stream posts firehose pt"
+  name: "Firehose stream of Portuguese tweets"
   summary: Stream Portuguese Posts
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: post
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, posts: $0.005 per resource returned'
   docs_url: https://docs.x.com/x-api
   input:
     queryParams:
@@ -2834,15 +3353,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/tweets/label/stream
-  name: "Stream post label events"
+  name: "Stream tweet label events"
   summary: Stream Post labels
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: post
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.005 per resource — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
   input:
     queryParams:
@@ -2863,15 +3387,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/tweets/sample/stream
-  name: "Stream posts sample"
+  name: "Stream sampled tweets in real time"
   summary: Stream sampled Posts
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: post
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, posts: $0.005 per resource returned'
   docs_url: https://docs.x.com/x-api
   input:
     queryParams:
@@ -2908,15 +3437,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/tweets/sample10/stream
-  name: "Stream posts sample10"
+  name: "Stream a 10% sample of tweets"
   summary: Stream 10% sampled Posts
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: post
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, posts: $0.005 per resource returned'
   docs_url: https://docs.x.com/x-api
   input:
     queryParams:
@@ -2965,15 +3499,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/tweets/search/all
-  name: "Search the full post archive"
+  name: "Search the full tweet archive by keyword query"
   summary: Search Posts All
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: post
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, posts: $0.005 per resource returned'
   docs_url: https://docs.x.com/x-api
   input:
     queryParams:
@@ -3012,15 +3551,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/tweets/search/recent
-  name: "Search posts from the last 7 days"
+  name: "Search tweets from the last 7 days by keyword"
   summary: Search Posts Recent
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: post
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, posts: $0.005 per resource returned'
   docs_url: https://docs.x.com/x-api
   input:
     queryParams:
@@ -3060,15 +3604,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/tweets/search/stream
-  name: "Stream posts"
+  name: "Stream tweets matching your filter rules"
   summary: Stream filtered Posts
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: post
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, posts: $0.005 per resource returned'
   docs_url: https://docs.x.com/x-api
   input:
     queryParams:
@@ -3119,11 +3668,16 @@ endpoints:
   summary: Get filtered-stream rules
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: post
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.005 per resource — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
   input:
     queryParams:
@@ -3144,15 +3698,20 @@ endpoints:
   platform: x
   method: POST
   path: /2/tweets/search/stream/rules
-  name: "Add or delete stream rules"
+  name: "Add or delete filtered-stream rules"
   summary: Update stream rules
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.015
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.015 per request — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
   input:
     queryParams:
@@ -3178,11 +3737,16 @@ endpoints:
   summary: Get Rule Counts
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: post
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.005 per resource — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
   input:
     queryParams:
@@ -3195,15 +3759,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/tweets/search/webhooks
-  name: "List search stream webhook links"
+  name: "List filtered-stream webhook links"
   summary: Get stream links
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: post
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.005 per resource — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
 - id: x.x.delete-webhooks-stream-link
   kind: account
@@ -3211,15 +3780,20 @@ endpoints:
   platform: x
   method: DELETE
   path: /2/tweets/search/webhooks/{webhook_id}
-  name: "Delete webhooks stream link"
+  name: "Delete a filtered-stream webhook link by webhook id"
   summary: Delete stream link
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.015
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.015 per request — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
   input:
     pathParams:
@@ -3232,15 +3806,20 @@ endpoints:
   platform: x
   method: POST
   path: /2/tweets/search/webhooks/{webhook_id}
-  name: "Create webhooks stream link"
+  name: "Link a webhook to the filtered stream by webhook id"
   summary: Create stream link
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.015
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.015 per request — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
   input:
     pathParams:
@@ -3253,15 +3832,20 @@ endpoints:
   platform: x
   method: DELETE
   path: /2/tweets/{id}
-  name: "Delete a post"
+  name: "Delete a tweet by post id"
   summary: Delete Posts
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.01
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: 'X''s rate card, int delete: $0.01 per request; which row applies is a judgement call, and this takes the dearer reading'
   docs_url: https://docs.x.com/x-api
   input:
     pathParams:
@@ -3274,15 +3858,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/tweets/{id}
-  name: "Look up a post by ID"
+  name: "Look up a tweet by post id"
   summary: Get Posts by ID
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: post
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, posts: $0.005 per resource returned'
   docs_url: https://docs.x.com/x-api
   input:
     pathParams:
@@ -3295,15 +3884,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/tweets/{id}/liking_users
-  name: "List users who liked a post"
+  name: "Users who liked a tweet by post id"
   summary: Get Posts Liking Users
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.01
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: user
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: 'X''s rate card, user: $0.01 per resource returned; which row applies is a judgement call, and this takes the dearer reading'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: like.read'
   input:
@@ -3325,15 +3919,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/tweets/{id}/quote_tweets
-  name: "List quote posts of a post"
+  name: "Quote tweets of a post by post id"
   summary: Get Posts Quoted Posts
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: post
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, posts: $0.005 per resource returned'
   docs_url: https://docs.x.com/x-api
   input:
     pathParams:
@@ -3357,15 +3956,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/tweets/{id}/retweeted_by
-  name: "List users who reposted a post"
+  name: "Users who reposted a tweet by post id"
   summary: Get Posts Reposted by
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.01
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: user
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: 'X''s rate card, user: $0.01 per resource returned; which row applies is a judgement call, and this takes the dearer reading'
   docs_url: https://docs.x.com/x-api
   input:
     pathParams:
@@ -3386,15 +3990,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/tweets/{id}/retweets
-  name: "List reposts of a post"
+  name: "Reposts of a tweet by post id"
   summary: Get Posts Reposts
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: post
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, posts: $0.005 per resource returned'
   docs_url: https://docs.x.com/x-api
   input:
     pathParams:
@@ -3416,15 +4025,20 @@ endpoints:
   platform: x
   method: PUT
   path: /2/tweets/{tweet_id}/hidden
-  name: "Hide a reply to your post"
+  name: "Hide a reply to your tweet by post id"
   summary: Hide reply
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.005
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, content: $0.005 per request'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: tweet.moderate.write'
   input:
@@ -3444,15 +4058,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/usage/tweets
-  name: "Post usage against your plan cap"
+  name: "Tweet usage against your plan cap"
   summary: Get Usage
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: post
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.005 per resource — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
   input:
     queryParams:
@@ -3464,15 +4083,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/users
-  name: "Look up users by ID"
+  name: "Look up users by user ids"
   summary: Get Users by IDs
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.01
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: user
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, user: $0.01 per resource returned'
   docs_url: https://docs.x.com/x-api
   input:
     queryParams:
@@ -3485,15 +4109,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/users/by
-  name: "Look up users by username"
+  name: "Look up users by usernames"
   summary: Get Users by Usernames
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.01
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: user
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, user: $0.01 per resource returned'
   docs_url: https://docs.x.com/x-api
   input:
     queryParams:
@@ -3507,15 +4136,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/users/compliance/stream
-  name: "Stream users compliance"
+  name: "Stream Users compliance events"
   summary: Stream Users compliance data
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: post
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.005 per resource — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
   input:
     queryParams:
@@ -3540,15 +4174,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/users/personalized_trends
-  name: "Personalized trends for the user"
+  name: "Personalized trends for the connected user"
   summary: Get Trends Personalized Trends
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.01
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: 'X''s rate card, trends: $0.01 per request; which row applies is a judgement call, and this takes the dearer reading'
   docs_url: https://docs.x.com/x-api
   capability: x.trending.personalized
 - id: x.x.get-users-public-keys
@@ -3557,15 +4196,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/users/public_keys
-  name: "Look up encryption public keys"
+  name: "Look up encryption public keys by user ids"
   summary: Get public keys
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: post
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.005 per resource — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.read'
   input:
@@ -3578,15 +4222,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/users/reposts_of_me
-  name: "List reposts of your posts"
+  name: "Reposts of your tweets"
   summary: Get Users Reposts of Me
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: post
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, posts: $0.005 per resource returned'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: timeline.read'
   input:
@@ -3604,15 +4253,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/users/search
-  name: "Search users"
+  name: "Search users by keyword"
   summary: Search Users
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.01
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: user
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, user: $0.01 per resource returned'
   docs_url: https://docs.x.com/x-api
   input:
     queryParams:
@@ -3631,15 +4285,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/users/{id}
-  name: "Look up a user by ID"
+  name: "Look up a user by user id"
   summary: Get Users by ID
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.01
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: user
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, user: $0.01 per resource returned'
   docs_url: https://docs.x.com/x-api
   input:
     pathParams:
@@ -3652,15 +4311,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/users/{id}/affiliates
-  name: "Affiliated accounts of a user"
+  name: "Affiliated accounts of a user by user id"
   summary: Get Users Affiliates
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.01
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: user
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: 'X''s rate card, user: $0.01 per resource returned; which row applies is a judgement call, and this takes the dearer reading'
   docs_url: https://docs.x.com/x-api
   input:
     pathParams:
@@ -3681,15 +4345,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/users/{id}/blocking
-  name: "Accounts a user has blocked"
+  name: "Accounts a user has blocked, by user id"
   summary: Get Users Blocking
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.001
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: result
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, block: $0.001 per resource returned'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: block.read'
   input:
@@ -3710,15 +4379,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/users/{id}/bookmarks
-  name: "Bookmarked posts of a user"
+  name: "Your bookmarked tweets by user id"
   summary: Get Users Bookmarks
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: post
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, posts: $0.005 per resource returned'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: bookmark.read'
   input:
@@ -3741,15 +4415,20 @@ endpoints:
   platform: x
   method: POST
   path: /2/users/{id}/bookmarks
-  name: "Bookmark a post"
+  name: "Bookmark a tweet"
   summary: Create Users Bookmark
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.005
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, bookmark: $0.005 per request'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: bookmark.write'
   input:
@@ -3768,15 +4447,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/users/{id}/bookmarks/folders
-  name: "Bookmark folders of a user"
+  name: "Your bookmark folders by user id"
   summary: Get Users Bookmark Folders
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: post
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.005 per resource — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: bookmark.read'
   input:
@@ -3803,11 +4487,16 @@ endpoints:
   summary: Create Bookmark Folder
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.005
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, bookmark: $0.005 per request'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: bookmark.write'
   input:
@@ -3826,15 +4515,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/users/{id}/bookmarks/folders/{folder_id}
-  name: "Bookmarks in a folder"
+  name: "Bookmarked tweets in a folder by folder id"
   summary: Get Users Bookmarks by Folder ID
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: post
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.005 per resource — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: bookmark.read'
   input:
@@ -3860,15 +4554,20 @@ endpoints:
   platform: x
   method: DELETE
   path: /2/users/{id}/bookmarks/{tweet_id}
-  name: "Remove a bookmark"
+  name: "Remove a bookmark by post id"
   summary: Delete Bookmark
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.005
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, bookmark: $0.005 per request'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: bookmark.write'
   input:
@@ -3886,15 +4585,20 @@ endpoints:
   platform: x
   method: POST
   path: /2/users/{id}/dm/block
-  name: "Block a user from messaging you"
+  name: "Block direct messages from a user by user id"
   summary: Block Users Dms
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.01
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: 'X''s rate card, privacy: $0.01 per request; which row applies is a judgement call, and this takes the dearer reading'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.write'
   input:
@@ -3909,15 +4613,20 @@ endpoints:
   platform: x
   method: POST
   path: /2/users/{id}/dm/unblock
-  name: "Unblock a user from messaging you"
+  name: "Unblock direct messages from a user by user id"
   summary: Unblock Users Dms
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.01
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: 'X''s rate card, privacy: $0.01 per request; which row applies is a judgement call, and this takes the dearer reading'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.write'
   input:
@@ -3931,15 +4640,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/users/{id}/followed_lists
-  name: "Lists a user follows"
+  name: "Lists a user follows, by user id"
   summary: Get Users Followed Lists
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: result
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, list: $0.005 per resource returned'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: list.read'
   input:
@@ -3962,15 +4676,20 @@ endpoints:
   platform: x
   method: POST
   path: /2/users/{id}/followed_lists
-  name: "Follow list"
+  name: "Follow a List"
   summary: Follow List
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.005
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, list manage: $0.005 per request'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: list.write'
   input:
@@ -3990,15 +4709,20 @@ endpoints:
   platform: x
   method: DELETE
   path: /2/users/{id}/followed_lists/{list_id}
-  name: "Unfollow list"
+  name: "Unfollow a List by list id"
   summary: Unfollow a List
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.005
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, list manage: $0.005 per request'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: list.write'
   input:
@@ -4015,15 +4739,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/users/{id}/followers
-  name: "Followers of a user"
+  name: "Followers of a user by user id"
   summary: Get Users Followers
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.01
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: user
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, user: $0.01 per resource returned'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: follows.read'
   input:
@@ -4045,15 +4774,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/users/{id}/following
-  name: "Accounts a user follows"
+  name: "Accounts a user follows, by user id"
   summary: Get Users Following
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.01
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: user
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, user: $0.01 per resource returned'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: follows.read'
   input:
@@ -4076,15 +4810,20 @@ endpoints:
   platform: x
   method: POST
   path: /2/users/{id}/following
-  name: "Follow user"
+  name: "Follow a user by user id"
   summary: Follow User
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.015
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, interaction: $0.015 per request'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: follows.write'
   input:
@@ -4103,15 +4842,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/users/{id}/liked_tweets
-  name: "Posts a user has liked"
+  name: "Tweets a user has liked, by user id"
   summary: Get Users Liked Posts
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: post
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, posts: $0.005 per resource returned'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: like.read'
   input:
@@ -4134,15 +4878,20 @@ endpoints:
   platform: x
   method: POST
   path: /2/users/{id}/likes
-  name: "Like post"
+  name: "Like a post"
   summary: Like Post
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.015
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, interaction: $0.015 per request'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: like.write'
   input:
@@ -4162,15 +4911,20 @@ endpoints:
   platform: x
   method: DELETE
   path: /2/users/{id}/likes/{tweet_id}
-  name: "Unlike post"
+  name: "Unlike a post by post id"
   summary: Unlike Post
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.01
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, int delete: $0.01 per request'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: like.write'
   input:
@@ -4187,15 +4941,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/users/{id}/list_memberships
-  name: "Lists a user belongs to"
+  name: "Lists a user is a member of, by user id"
   summary: Get Users List Memberships
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: result
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, list: $0.005 per resource returned'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: list.read'
   input:
@@ -4216,15 +4975,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/users/{id}/mentions
-  name: "Posts mentioning a user"
+  name: "Tweets mentioning a user by user id"
   summary: Get Users Mentions
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: post
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, posts: $0.005 per resource returned'
   docs_url: https://docs.x.com/x-api
   input:
     pathParams:
@@ -4259,15 +5023,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/users/{id}/muting
-  name: "Accounts a user has muted"
+  name: "Accounts a user has muted, by user id"
   summary: Get Users Muting
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.001
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: result
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, mute: $0.001 per resource returned'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: mute.read'
   input:
@@ -4289,15 +5058,20 @@ endpoints:
   platform: x
   method: POST
   path: /2/users/{id}/muting
-  name: "Mute user"
+  name: "Mute a user by user id"
   summary: Mute User
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.015
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, interaction: $0.015 per request'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: mute.write'
   input:
@@ -4316,15 +5090,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/users/{id}/owned_lists
-  name: "Lists a user owns"
+  name: "Lists a user owns, by user id"
   summary: Get Users Owned Lists
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: result
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, list: $0.005 per resource returned'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: list.read'
   input:
@@ -4346,15 +5125,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/users/{id}/pinned_lists
-  name: "Lists a user has pinned"
+  name: "Lists a user has pinned, by user id"
   summary: Get Users Pinned Lists
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: result
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, list: $0.005 per resource returned'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: list.read'
   input:
@@ -4369,15 +5153,20 @@ endpoints:
   platform: x
   method: POST
   path: /2/users/{id}/pinned_lists
-  name: "Pin list"
+  name: "Pin a List"
   summary: Pin List
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.005
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, list manage: $0.005 per request'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: list.write'
   input:
@@ -4397,15 +5186,20 @@ endpoints:
   platform: x
   method: DELETE
   path: /2/users/{id}/pinned_lists/{list_id}
-  name: "Unpin list"
+  name: "Unpin a List by list id"
   summary: Unpin a List
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.005
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, list manage: $0.005 per request'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: list.write'
   input:
@@ -4423,15 +5217,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/users/{id}/public_keys
-  name: "Public keys for one user"
+  name: "Encryption public keys of a user by user id"
   summary: Get public keys
   scope: any_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: post
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.005 per resource — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.read'
   input:
@@ -4449,11 +5248,16 @@ endpoints:
   summary: Add public key
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.015
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.015 per request — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.write'
   input:
@@ -4472,15 +5276,20 @@ endpoints:
   platform: x
   method: POST
   path: /2/users/{id}/retweets
-  name: "Repost post"
+  name: "Repost a tweet"
   summary: Repost Post
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.015
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, interaction: $0.015 per request'
   docs_url: https://docs.x.com/x-api
   input:
     pathParams:
@@ -4499,15 +5308,20 @@ endpoints:
   platform: x
   method: DELETE
   path: /2/users/{id}/retweets/{source_tweet_id}
-  name: "Unrepost post"
+  name: "Undo a repost by post id"
   summary: Unrepost Post
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.01
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, int delete: $0.01 per request'
   docs_url: https://docs.x.com/x-api
   input:
     pathParams:
@@ -4523,15 +5337,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/users/{id}/timelines/reverse_chronological
-  name: "Reverse-chronological home timeline"
+  name: "Home timeline tweets, newest first, by user id"
   summary: Get Users Timeline
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: post
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, posts: $0.005 per resource returned'
   docs_url: https://docs.x.com/x-api
   input:
     pathParams:
@@ -4570,15 +5389,20 @@ endpoints:
   platform: x
   method: DELETE
   path: /2/users/{source_user_id}/following/{target_user_id}
-  name: "Unfollow user"
+  name: "Unfollow a user by user id"
   summary: Unfollow User
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.01
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, int delete: $0.01 per request'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: follows.write'
   input:
@@ -4596,15 +5420,20 @@ endpoints:
   platform: x
   method: DELETE
   path: /2/users/{source_user_id}/muting/{target_user_id}
-  name: "Unmute user"
+  name: "Unmute a user by user id"
   summary: Unmute User
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.005
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: documented
+    note: 'X''s rate card, mute delete: $0.005 per request'
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: mute.write'
   input:
@@ -4622,15 +5451,20 @@ endpoints:
   platform: x
   method: GET
   path: /2/webhooks
-  name: "List registered webhooks"
+  name: "List your registered webhooks"
   summary: Get webhook
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_result
+    value: 0.005
     currency: USD
-    unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    per: 1
+    unit: post
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.005 per resource — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
 - id: x.x.create-webhooks
   kind: account
@@ -4638,15 +5472,20 @@ endpoints:
   platform: x
   method: POST
   path: /2/webhooks
-  name: "Create webhooks"
+  name: "Register a webhook"
   summary: Create webhook
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.015
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.015 per request — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
   input:
     bodyType: json
@@ -4660,15 +5499,20 @@ endpoints:
   platform: x
   method: POST
   path: /2/webhooks/replay
-  name: "Create webhook replay job"
+  name: "Create a webhook replay job"
   summary: Create replay job for webhook
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.015
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.015 per request — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
   input:
     bodyType: json
@@ -4682,15 +5526,20 @@ endpoints:
   platform: x
   method: DELETE
   path: /2/webhooks/{webhook_id}
-  name: "Delete webhooks"
+  name: "Delete a webhook by webhook id"
   summary: Delete webhook
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.015
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.015 per request — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
   input:
     pathParams:
@@ -4703,15 +5552,20 @@ endpoints:
   platform: x
   method: PUT
   path: /2/webhooks/{webhook_id}
-  name: "Validate webhooks"
+  name: "Validate a webhook by webhook id"
   summary: Validate webhook
   scope: own_account
   cost:
-    type: free
-    value: 0
+    type: per_call
+    value: 0.015
     currency: USD
+    per: 1
     unit: call
-    note: no per-call charge; consumed from the X API plan's monthly post cap
+    source: docs
+    source_url: https://docs.x.com/x-api/getting-started/pricing
+    checked: '2026-08-18'
+    confidence: inferred
+    note: X publishes no rate for this route's resource, so treg meters it at $0.015 per request — the same figure the proxy falls back to
   docs_url: https://docs.x.com/x-api
   input:
     pathParams:

@@ -26,7 +26,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /v2/user/info/
-    name: "Get your profile and follower counts"
+    name: "Your TikTok profile — follower and like counts"
     summary: "Get your own TikTok profile with follower, following and total-like counts"
     input:
       queryParams:
@@ -41,7 +41,7 @@ endpoints:
     scope: own_account
     method: POST
     path: /v2/video/list/
-    name: "List your videos with engagement stats"
+    name: "Your TikTok videos — views, likes, comments, shares"
     summary: "List your own TikTok videos with view, like, comment and share counts"
     input:
       queryParams:
@@ -81,7 +81,7 @@ endpoints:
     scope: own_account
     method: POST
     path: /v2/post/publish/creator_info/query/
-    name: "Get creator posting permissions and limits"
+    name: "Your TikTok posting permissions and limits"
     summary: "Get what the connected TikTok creator is allowed to post (privacy options, limits)"
     input:
       note: "no parameters — an empty POST with Content-Type: application/json; charset=UTF-8. Returns creator_nickname, privacy_level_options (the ONLY privacy_level values the direct-post call will accept for this creator), max_video_post_duration_sec, and the comment/duet/stitch toggles the account has disabled. TikTok's own guidelines REQUIRE calling this before a direct post and showing the creator these options — an app that hardcodes them fails audit. Needs video.publish or video.upload"
@@ -96,7 +96,7 @@ endpoints:
     scope: own_account
     method: POST
     path: /v2/post/publish/video/init/
-    name: "Publish a video to TikTok"
+    name: "Publish a video to your TikTok profile"
     summary: "Publish a video directly to your own TikTok profile"
     input:
       body:
@@ -115,7 +115,7 @@ endpoints:
     scope: own_account
     method: POST
     path: /v2/post/publish/inbox/video/init/
-    name: "Send a video draft to your inbox"
+    name: "Send a video draft to your TikTok inbox"
     summary: "Send a video to your TikTok inbox as a draft for you to finish and post"
     input:
       body:
@@ -133,7 +133,7 @@ endpoints:
     scope: own_account
     method: POST
     path: /v2/post/publish/content/init/
-    name: "Publish a photo post"
+    name: "Publish a photo post to your TikTok profile"
     summary: "Publish a photo post to your own TikTok profile, or send it to your inbox"
     input:
       body:
@@ -154,7 +154,7 @@ endpoints:
     scope: own_account
     method: POST
     path: /v2/post/publish/status/fetch/
-    name: "Check publish status"
+    name: "Check a TikTok upload's publish status"
     summary: "Check whether a TikTok upload has finished publishing"
     input:
       body:

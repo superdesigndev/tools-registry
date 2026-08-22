@@ -1,0 +1,43 @@
+{
+  "success": true,
+  "items": [
+    {
+      "name": "__icypeas__individual",
+      "user": "ACCOUNT_ID",
+      "results": {
+        "firstname": "Patrick",
+        "lastname": "Collison",
+        "gender": "UNKNOWN",
+        "fullname": "Patrick Collison",
+        "li": "",
+        "emails": [
+          {
+            "email": "collison@stripe.com",
+            "certainty": "ultra_sure",
+            "mxRecords": [
+              "google.com",
+              "googlemail.com"
+            ],
+            "mxProvider": "google"
+          }
+        ],
+        "phones": [],
+        "saasServices": []
+      },
+      "order": 0,
+      "status": "FOUND",
+      "userData": {
+        "webhookUrl": "",
+        "externalId": "",
+        "provider": "api"
+      },
+      "system": {
+        "createdAt": "2026-08-20T00:45:19.685Z",
+        "modifiedAt": "2026-08-20T00:45:21.591Z"
+      },
+      "_id": "mP6hHKABeMoKaEB1K1HF"
+    }
+  ],
+  "sorts": "…pagination cursor elided…",
+  "total": 1
+}

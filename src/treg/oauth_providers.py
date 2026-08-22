@@ -80,7 +80,7 @@ class OAuthProvider:
     base_url: str = ""  # upstream API root, so a successful connect can auto-provision the tool
     # Copy-paste sample calls stamped onto the provisioned tool's `examples`, surfaced by
     # `tool ls`. The single most useful thing to carry here is the API VERSION: Google's REST APIs
-    # version the URL path (v21/...) and a wrong guess returns an HTML 404, not a hint — agents
+    # version the URL path (v25/...) and a wrong guess returns an HTML 404, not a hint — agents
     # otherwise burn calls guessing. `{resource}` is a placeholder the agent substitutes.
     examples: tuple[dict, ...] = ()
     docs_url: str = ""
@@ -145,6 +145,23 @@ class OAuthProvider:
     # Settings attribute holding TREG's own value for it. When set, users supply nothing and the
     # tool is provisioned with a platform binding; the per-user prompt is only the fallback.
     extra_credential_setting: str = ""
+    # TIER 4 ONLY: settings attribute holding treg's own second credential for platform-served
+    # calls, when the extra credential is PER-USER (extra_credential_setting stays empty so a
+    # user's connect never rides treg's half of the pair — Tomba rejects a mismatched key/secret).
+    # `_platform_bindings` appends it as a second header binding; user connections are untouched.
+    platform_extra_setting: str = ""
+
+    # Some providers bill the OWNER OF THE APP per use, whoever's token made the call — X moved to
+    # prepaid pay-per-use in Feb 2026 (per resource read, per post written; no plans). For those,
+    # a registry connect rides treg's app and every call spends treg's credits, so the proxy meters
+    # it against the org's balance (api.py, same reserve→settle path as tier 4) when the deployment
+    # allow-lists the provider (`TREG_OAUTH_BILLED_PROVIDERS` — see config.oauth_billed_set).
+    # The rates are the provider-level DEFAULTS, used when the called route has no priced catalog
+    # entry; a curated endpoint's own `cost` (catalog/x.yaml) wins when the path matches one.
+    platform_billed: bool = False
+    billed_read_usd: float = 0.0        # per resource returned, GET routes
+    billed_write_usd: float = 0.0       # per request, write routes
+    billed_write_link_usd: float = 0.0  # per request when the posted text carries a URL (X: 13x)
 
     @property
     def needs_extra_credential(self) -> bool:
@@ -175,6 +192,32 @@ class OAuthProvider:
     discover_nested_key: str = ""
     discover_id_field: str = "id"
     discover_label_field: str = ""
+    # Meta's Business Manager owns assets on the user's BEHALF: an agency member reaches a Page
+    # through business-level access with no personal role on it, so the primary listing answers []
+    # for exactly the accounts they manage all day. `discover_extra_path` is a second listing
+    # fetched the same way (same discover_key), whose rows each HOLD lists of primary-shaped rows
+    # at the dotted paths in `discover_extra_list_paths`. The flattened entries merge after the
+    # primary ones and the picker dedupes by id, so a directly-managed Page never doubles. A
+    # failing extra listing is swallowed: connections that consented before the scope it needs
+    # (business_management) simply lack it, and the primary listing has already answered.
+    discover_extra_path: str = ""
+    discover_extra_list_paths: tuple[str, ...] = ()
+
+    # Some vendors split ONE product across hosts: GA4 runs reports on analyticsdata but lists the
+    # properties those reports need on analyticsadmin. The credential already covers both — Google
+    # scopes are per-capability, not per-host — but /call/ resolution is per-HOST, so without a
+    # second Tool row the agent is trapped: the admin path 404s on the data host (Google) and the
+    # admin host 404s in treg ("no registered tool"). Observed live: 13 calls / 7 orgs stuck at
+    # exactly that wall while runReport itself worked fine. Each entry provisions one extra Tool
+    # bound to the SAME secret: {"suffix", "base_url", optional "probe_path", optional "examples"}.
+    # The suffix names it `<connection>-<suffix>` so a second account's tools stay distinct too.
+    extra_tools: tuple = ()
+
+    # Rendered into the DATA tool's examples the moment the user picks their site/property/account
+    # (`POST /connections/{id}/resource`). `{resource}` = the picked id (resource_ref) and
+    # `{resource_name}` = its human label. This closes the discovery loop from the other side:
+    # the agent reads the ready-made call off the tool instead of hunting the admin API for ids.
+    resource_example: dict | None = None
 
     # Some listings return only ids — Google Ads' listAccessibleCustomers gives
     # ["customers/6186675831", …] and nothing else. "6186675831" tells a user nothing about which
@@ -304,6 +347,8 @@ GOOGLE_SEARCH_CONSOLE = OAuthProvider(
     examples=(
         {"method": "POST", "path": "webmasters/v3/sites/{site_url}/searchAnalytics/query",
          "note": "Search analytics. {site_url} is sc-domain:example.com or https://example.com/. "
+                 "Pass {site_url} percent-encoded exactly once (sc-domain%3Aexample.com); never "
+                 "re-encode a value read from the sites list. "
                  "Body: {\"startDate\":\"2026-06-01\",\"endDate\":\"2026-06-28\","
                  "\"dimensions\":[\"query\"]}. For a site TOTAL, omit dimensions — summing a "
                  "dimension does NOT equal the total."},
@@ -339,8 +384,8 @@ GOOGLE_ANALYTICS = OAuthProvider(
          "note": "Data API v1beta. Body: {\"dateRanges\":[{\"startDate\":\"28daysAgo\","
                  "\"endDate\":\"yesterday\"}],\"dimensions\":[{\"name\":\"pagePath\"}],"
                  "\"metrics\":[{\"name\":\"screenPageViews\"}]}. Use 'yesterday', not 'today' "
-                 "(today is a partial day). The Admin API (property listing) is a different host — "
-                 "use `treg connections resources`."},
+                 "(today is a partial day). Don't know your property id? The companion "
+                 "`google-analytics-admin` tool lists them: GET v1beta/accountSummaries."},
     ),
     # No probe_path: the Data API is POST-only (runReport), and a probe must be a cheap GET on
     # base_url. Don't "fix" this by pointing at analyticsadmin — the probe runs against the
@@ -355,6 +400,26 @@ GOOGLE_ANALYTICS = OAuthProvider(
     discover_nested_key="propertySummaries",
     discover_id_field="property",
     discover_label_field="displayName",
+    # The Admin API as a CALLABLE tool, not just connect-time discovery. Agents need it mid-task
+    # ("which property id do I report on?"), and analytics.readonly already authorizes its reads —
+    # without this row they called admin paths on the data host (Google 404) or the admin host with
+    # no tool registered (treg 404). Both doors shut; this opens the correct one.
+    extra_tools=(
+        {"suffix": "admin",
+         "base_url": "https://analyticsadmin.googleapis.com",
+         "probe_path": "/v1beta/accountSummaries",
+         "examples": [
+             {"method": "GET", "path": "v1beta/accountSummaries",
+              "note": "Every account and GA4 property this credential can see — the property ids "
+                      "that runReport (on the google-analytics tool) needs."},
+         ]},
+    ),
+    resource_example={
+        "method": "POST", "path": "v1beta/{resource}:runReport",
+        "note": "Your property “{resource_name}”. Body: {\"dateRanges\":[{\"startDate\":"
+                "\"28daysAgo\",\"endDate\":\"yesterday\"}],\"dimensions\":[{\"name\":\"pagePath\"}],"
+                "\"metrics\":[{\"name\":\"screenPageViews\"}]}",
+    },
 )
 
 GOOGLE_BUSINESS_PROFILE = OAuthProvider(
@@ -403,11 +468,12 @@ GOOGLE_ADS = OAuthProvider(
     base_url="https://googleads.googleapis.com",
     docs_url="https://developers.google.com/google-ads/api/docs/start",
     examples=(
-        {"method": "POST", "path": "v21/customers/{customer_id}/googleAds:search",
-         "note": "GAQL read. API version v21 (verified 2026-07-22); a wrong version 404s as HTML. "
+        {"method": "POST", "path": "v25/customers/{customer_id}/googleAds:search",
+         "note": "GAQL read. API version v25 (released 2026-07-22, sunsets ~Aug 2027). A version "
+                 "that never existed 404s as HTML; a SUNSET one 400s with UNSUPPORTED_VERSION. "
                  "Body: {\"query\":\"SELECT campaign.name, metrics.cost_micros FROM campaign "
                  "WHERE segments.date DURING LAST_30_DAYS\"}"},
-        {"method": "POST", "path": "v21/customers/{customer_id}/campaignBudgets:mutate",
+        {"method": "POST", "path": "v25/customers/{customer_id}/campaignBudgets:mutate",
          "note": "Mutate. Add \"validateOnly\":true first to dry-run. amountMicros: $1 = 1000000."},
     ),
     # Every Ads request carries TWO credentials: the user's OAuth bearer AND a `developer-token`
@@ -425,10 +491,10 @@ GOOGLE_ADS = OAuthProvider(
     # Which ad account should this connection act on? listAccessibleCustomers returns the accounts
     # the CONNECTED USER can reach — never ours.
     resource_label="account",
-    probe_path="/v21/customers:listAccessibleCustomers",
-    discover_path="/v21/customers:listAccessibleCustomers",
+    probe_path="/v25/customers:listAccessibleCustomers",
+    discover_path="/v25/customers:listAccessibleCustomers",
     discover_key="resourceNames",
-    enrich_path="/v21/customers/{id}/googleAds:search",
+    enrich_path="/v25/customers/{id}/googleAds:search",
     enrich_body={"query": "SELECT customer.descriptive_name FROM customer LIMIT 1"},
     enrich_label_path="results.0.customer.descriptiveName",
     enrich_header_name="login-customer-id",
@@ -582,6 +648,21 @@ X = OAuthProvider(
     identity_path="/2/users/me",
     identity_id_path="data.id",
     identity_label_path="data.username",
+    # X bills treg's app per use (prepaid credits, no plans — docs.x.com/x-api/getting-started/
+    # pricing, re-read 2026-08-18). The card prices EVERY resource type separately, so these two
+    # numbers are only a FALLBACK for a path no catalog entry claims (a route X ships that we have
+    # not re-ingested): the post-read rate for a GET, the post-write rate for anything else. Both
+    # catalog files now price every known route from the card itself — `catalog_ingest.X_RATES` —
+    # so the fallback should be reached rarely, and when it is, it is a signal to re-ingest.
+    # Note the exposure it carries: a fallback GET that turns out to have returned USERS was billed
+    # at $0.005 and cost us $0.010. Raising it to the dearer rate would over-bill the far more
+    # common post read, so the fix is coverage, not a bigger guess.
+    # The $0.001 "owned read" rate is deliberately absent: X grants it only to an app's OWN owner,
+    # which a registry connect's member never is.
+    platform_billed=True,
+    billed_read_usd=0.005,
+    billed_write_usd=0.015,
+    billed_write_link_usd=0.20,
 )
 
 # TikTok grants scopes through PRODUCTS, not à la carte: user.info.basic rides on Login Kit,
@@ -646,7 +727,17 @@ _META_CONSENT_NOTICE = (
 
 # pages_show_list is the floor for BOTH providers: it is what returns the Page list, and an
 # Instagram professional account is only reachable *through* the Page it is linked to.
-_FB_READ = ["pages_show_list", "pages_read_engagement", "read_insights"]
+# business_management sits next to it for the same reason it does on META_ADS: most agency-held
+# Pages and Instagram accounts are OWNED by a Business portfolio, where the member has
+# business-level access and no personal Page role — without this scope /me/businesses answers
+# "Missing Permission" and those assets are undiscoverable, so the connect consents cleanly and
+# then offers an empty picker. (The scope already has Advanced Access on our Meta app.)
+_FB_READ = ["pages_show_list", "pages_read_engagement", "read_insights", "business_management"]
+
+# One request walks the Business graph: each business row holds owned_pages and client_pages
+# (the agency case), every entry shaped exactly like a /me/accounts row — so the same
+# discover_id_field/label_field read both listings.
+_META_BIZ_PAGE_LISTS = ("owned_pages.data", "client_pages.data")
 
 FACEBOOK = OAuthProvider(
     service="facebook",
@@ -659,6 +750,17 @@ FACEBOOK = OAuthProvider(
     scopes={
         "read": _FB_READ,
         "post": [*_FB_READ, "pages_manage_posts"],
+        # The full account-operations tier: engagement moderation, visitor content, settings and
+        # webhook subscriptions, Messenger, native Page video, lead retrieval — which Meta only
+        # honors alongside pages_manage_ads, so the pair travels together — and the business's
+        # product catalogs. One tier rather than several because these scopes are useless alone:
+        # an agent moderating comments needs the visitor content it moderates, and an agent
+        # working leads needs the form metadata around them.
+        "manage": [
+            *_FB_READ, "pages_manage_posts", "pages_manage_engagement",
+            "pages_read_user_content", "pages_manage_metadata", "pages_messaging",
+            "publish_video", "leads_retrieval", "pages_manage_ads", "catalog_management",
+        ],
     },
     client_id_setting="meta_client_id",
     client_secret_setting="meta_client_secret",
@@ -677,6 +779,8 @@ FACEBOOK = OAuthProvider(
     discover_key="data",
     discover_id_field="id",
     discover_label_field="name",
+    discover_extra_path="/me/businesses?fields=owned_pages{id,name},client_pages{id,name}",
+    discover_extra_list_paths=_META_BIZ_PAGE_LISTS,
     # /me returns the person, not the Page, and needs no extra scope — so it keeps working even for
     # a connection whose Page was later unassigned, which is exactly when you want the probe to
     # still distinguish "credential dead" from "asset gone".
@@ -691,11 +795,23 @@ INSTAGRAM = OAuthProvider(
     # instagram_basic alone cannot publish, and instagram_content_publish alone cannot read the
     # account it publishes to — Meta enforces that dependency in App Review, so post is a strict
     # superset rather than a swap.
+    # business_management is here for the same reason it is in _FB_READ: an agency member's
+    # Instagram accounts hang off Business-owned Pages that /me/accounts cannot see.
     scopes={
-        "read": ["instagram_basic", "instagram_manage_insights", "pages_show_list", "pages_read_engagement"],
+        "read": [
+            "instagram_basic", "instagram_manage_insights", "pages_show_list",
+            "pages_read_engagement", "business_management",
+        ],
         "post": [
             "instagram_basic", "instagram_manage_insights", "pages_show_list",
-            "pages_read_engagement", "instagram_content_publish",
+            "pages_read_engagement", "business_management", "instagram_content_publish",
+        ],
+        # Adds the two-way surfaces: comment moderation and direct messages. Kept off `post` so a
+        # publish-only connect never puts "manage your messages" on the consent screen.
+        "manage": [
+            "instagram_basic", "instagram_manage_insights", "pages_show_list",
+            "pages_read_engagement", "business_management", "instagram_content_publish",
+            "instagram_manage_comments", "instagram_manage_messages",
         ],
     },
     client_id_setting="meta_client_id",
@@ -718,6 +834,13 @@ INSTAGRAM = OAuthProvider(
     discover_key="data",
     discover_id_field="instagram_business_account.id",
     discover_label_field="instagram_business_account.username",
+    # The Business walk asks for the SAME nested field, so its flattened rows are again
+    # Page-shaped and the dotted id path above reads both listings unchanged.
+    discover_extra_path=(
+        "/me/businesses?fields=owned_pages{instagram_business_account{id,username}},"
+        "client_pages{instagram_business_account{id,username}}"
+    ),
+    discover_extra_list_paths=_META_BIZ_PAGE_LISTS,
     probe_path="/me?fields=id,name",
 )
 
@@ -1328,7 +1451,641 @@ LEADMAGIC = OAuthProvider(
     probe_path="/v1/credits",  # free — no credits consumed
 )
 
+
+FIBER_AI = OAuthProvider(
+    service="fiber-ai",
+    display_name="Fiber AI",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your Fiber API key (sk_live_...)",
+    # Fiber also accepts apiKey in the JSON body / query string, and Authorization: Bearer.
+    # Use the header so the key never lands in a logged URL.
+    token_header="x-api-key",
+    token_format="{secret}",
+    setup_url="https://fiber.ai/app/api",
+    setup_action_label="Get your Fiber AI API key",
+    setup_steps=(
+        "Sign in to Fiber AI and open the API keys page.",
+        "Create a key and copy it (sk_live_… or sk_test_…).",
+    ),
+    setup_note="Fiber charges credits per successful reveal/enrich/search; the credit balance check is free. 7-day free trial available on self-serve plans.",
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Enrichment",
+    summary="Agent-native B2B data: search, enrich, reveal work emails/phones, and run live LinkedIn fetch on standard keys.",
+    base_url="https://api.fiber.ai",
+    docs_url="https://api.fiber.ai/docs",
+    probe_path="/v1/get-org-credits",  # free; a bogus key answers 403 {"message":"Forbidden"}
+)
+
+
+# ---- more Enrichment API-key providers (2026-08 category expansion) ---------------------------
+# Eight providers added together to deepen Enrichment: company/people enrichment with prospecting
+# search (CompanyEnrich, Ocean.io), email finding & verification (Tomba, Findymail, Icypeas,
+# LeadsForge), company signals — funding, hiring, technographics (PredictLeads), and brand assets
+# (Brand.dev). Every entry below was live-verified against the real API on 2026-08-20, including
+# the bogus-key rejection each probe comment records.
+
+COMPANYENRICH = OAuthProvider(
+    service="companyenrich",
+    display_name="CompanyEnrich",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your CompanyEnrich API key",
+    # Authorization: Bearer {secret} — these are the defaults, spelled out because the API accepts
+    # the key in NO other place: there is no query-param form and no alternate header.
+    token_header="Authorization",
+    token_format="Bearer {secret}",
+    setup_url="https://app.companyenrich.com",
+    setup_action_label="Get your CompanyEnrich API key",
+    setup_steps=(
+        "Sign up at app.companyenrich.com — new accounts start with 500 free credits.",
+        "Open the dashboard and create an API token.",
+        "Copy the token and paste it here.",
+    ),
+    setup_note=(
+        "Enrichment, search and email lookups spend credits; counts, autocompletes, geo lookups, "
+        "job status and the balance check are free."
+    ),
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Enrichment",
+    summary=(
+        "Enrich and search companies and people — firmographics, tech stack, funding, "
+        "department headcount, lookalike accounts and work emails."
+    ),
+    base_url="https://api.companyenrich.com",
+    docs_url="https://docs.companyenrich.com",
+    # /me is free (spends no credits), needs auth, and returns the credit balance — the natural key
+    # check. VERIFIED live 2026-08-20: a valid key gets 200 with {credits:{used,total}}; the key
+    # "bogus123" gets a clean HTTP 401 with an application/problem+json body
+    # ({"title":"Unauthorized","status":401,"detail":"Invalid or no authorization token provided..."}),
+    # as does a request with no Authorization header at all. No status-lies-about-the-key problem
+    # here, so none of token_verify_field / token_ok_field / token_reject_field is needed, and the
+    # default reject-on-status behavior is correct.
+    probe_path="/me",
+)
+
+
+OCEANIO = OAuthProvider(
+    service="oceanio",
+    display_name="Ocean.io",
+    auth_kind="key",
+    token_label="API token",
+    token_placeholder="your Ocean.io API token",
+    # The token rides in its own header, spelled `X-Api-Token` in the docs and `x-api-token` in the
+    # OpenAPI spec; HTTP header names are case-insensitive and both were confirmed live. A query form
+    # `?apiToken=<token>` ALSO works, but that would put the token in a URL the proxy records, so the
+    # header wins — and sending BOTH at once is a documented 400 ("Conflicting API tokens provided in
+    # query parameters and headers"), which is another reason to inject exactly one form.
+    # `Authorization: Bearer <token>` is NOT accepted — it 403s exactly like a bogus token.
+    token_header="X-Api-Token",
+    token_format="{secret}",
+    setup_url="https://app.ocean.io/settings/api-tokens",
+    setup_action_label="Get your Ocean.io API token",
+    setup_steps=(
+        "Sign in to Ocean.io and open Account Settings → API Tokens.",
+        "Click Generate new token and copy it — it is shown only once.",
+    ),
+    setup_note="API access is a paid-plan feature. Search, enrich, lookup, reveal and autocomplete all spend credits from one pool; the data-fields, warm-up and balance routes are free.",
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Enrichment",
+    summary="Company and people data with web traffic, tech stack and headcount growth — plus lookalike search from seed domains.",
+    base_url="https://api.ocean.io",
+    docs_url="https://app.ocean.io/docs/",
+    # Free — GET /v2/data-fields returns the searchable industry/technology/region taxonomy and
+    # consumes no credits. A bogus token gets a clean HTTP 403 here (body:
+    # {"detail":"Current API token is not registered in our database"}), and a missing token gets
+    # 403 {"detail":"API token should be provided in headers or query parameters"}, so the default
+    # reject-on-status verify is enough — no token_verify_field / probe_reject_statuses needed.
+    probe_path="/v2/data-fields",
+)
+
+
+TOMBA = OAuthProvider(
+    service="tomba",
+    display_name="Tomba",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your Tomba API key (ta_…)",
+    token_header="X-Tomba-Key",
+    token_format="{secret}",
+    # The SECOND half of Tomba's credential pair. Without it only three routes answer.
+    extra_credential_label="API secret",
+    extra_credential_header="X-Tomba-Secret",
+    extra_credential_setting="",  # deliberately unset — see the note above
+    platform_extra_setting="platform_key_tomba_secret",  # tier 4 injects treg's OWN pair
+    extra_credential_note=(
+        "Tomba signs every request with two values. Paste the API key above, then add your API "
+        "secret (ts_…) from the same page — without it only the usage, email-format and "
+        "email-count routes will answer."
+    ),
+    setup_url="https://app.tomba.io/api",
+    setup_action_label="Get your Tomba API key and secret",
+    setup_steps=(
+        "Sign in to Tomba and open the dashboard's API page.",
+        "Copy BOTH the API key (ta_…) and the API secret (ts_…) — Tomba needs the pair.",
+    ),
+    setup_note=(
+        "Finder, verification, enrichment and search calls spend credits (phone lookups cost 5); "
+        "the usage check is free. A search that finds nothing is free, and a repeated identical "
+        "search costs nothing for the rest of the month."
+    ),
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Enrichment",
+    summary=(
+        "Find and verify work emails and phone numbers, and enrich people and companies — from a "
+        "name, a domain, a LinkedIn URL or an article byline."
+    ),
+    base_url="https://api.tomba.io",
+    docs_url="https://docs.tomba.io/api",
+    # /v1/usage is free, answers the KEY ALONE (so connect-time verification works before the
+    # secret is bound), and rejects a bogus key. Observed live 2026-08-20:
+    #   valid key  -> 200 {"data":[{"id":…,"search":0,"verifier":0,…}], "total":{…}}
+    #   bogus key  -> 400 {"errors":{"type":"authentication_failed",
+    #                                "message":"Please enter a valid KEY.","code":400}}
+    # A non-2xx is enough, so no token_verify_field / token_reject_field is needed. Do NOT probe
+    # /v1/me or /v1/account: /v1/me 400s without the secret (and its body leaks the account's
+    # secret_token), and /v1/account 401s with "Invalid or expired JWT" even for a good pair.
+    probe_path="/v1/usage",
+)
+
+
+PREDICTLEADS = OAuthProvider(
+    service="predictleads",
+    display_name="PredictLeads",
+    auth_kind="key",
+    token_label="API key : API token pair",
+    token_placeholder="key:token — both values from Your Subscription Plans, joined by a colon",
+    # PredictLeads authenticates with TWO secrets and BOTH must be present on every request
+    # (verified live 2026-08-20: key-only -> 401, token-only -> 401, both -> 200). The documented
+    # transports are the X-Api-Key + X-Api-Token headers or api_key/api_token query params — but the
+    # API ALSO accepts standard HTTP Basic with `key:token` (verified live: 200 with the real pair,
+    # 401 for a bogus pair), which fits the one-slot pasted credential exactly like DataForSEO's
+    # login:password. Base64 is handled at paste time (token_encode), so `Basic {secret}` renders
+    # the same at connect and on every proxy call, and neither value ever rides in a URL.
+    token_format="Basic {secret}",
+    token_encode="base64",
+    setup_url="https://predictleads.com/subscription_plans",
+    setup_action_label="Get your PredictLeads API key and token",
+    setup_steps=(
+        "Sign in to PredictLeads and open Your Subscription Plans.",
+        "Copy BOTH the API key and the API token.",
+        "Paste them here as one value joined by a colon: KEY:TOKEN",
+    ),
+    setup_note=(
+        "Data calls spend credits (1 per request; discovery routes bill 1 per company returned). "
+        "The subscription check is free, and new accounts get 100 credits a month at no cost."
+    ),
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Enrichment",
+    summary=(
+        "Company signals from 120M company websites — hiring, tech stack, news, funding, "
+        "products, partners and website changes, all point-in-time."
+    ),
+    base_url="https://predictleads.com/api/v3",
+    docs_url="https://docs.predictleads.com/v3/api_endpoints",
+    # FREE — spends no credits (verified live 2026-08-20: three consecutive calls left
+    # monthly_credits_used unchanged). A bad pair returns a clean 401 with
+    # {"error":{"type":"unauthorized","message":"Authentication failed."}} — no body-field
+    # trickery needed.
+    probe_path="/api_subscription",
+)
+
+
+FINDYMAIL = OAuthProvider(
+    service="findymail",
+    display_name="Findymail",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your Findymail API key",
+    # Authorization: Bearer {secret} — the defaults; confirmed live 2026-08-20.
+    # The app is behind a bot wall for anonymous requests (every path answers 403), so the exact
+    # deep link to the key page could not be confirmed from outside a session — this points at the
+    # app root, which is always correct. Deep-link it once someone with a session checks.
+    setup_url="https://app.findymail.com/",
+    setup_action_label="Get your Findymail API key",
+    setup_steps=(
+        "Sign in to Findymail and open Settings → API.",
+        "Create an API key and copy it.",
+    ),
+    setup_note=(
+        "Finding emails, phones and company data spends finder credits; verifying an address spends a "
+        "separate verifier pool. Misses are free, and the credit check itself costs nothing."
+    ),
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Enrichment",
+    summary="Find and verify B2B work emails, phones, company profiles and tech stacks — you only pay for verified results.",
+    base_url="https://app.findymail.com/api",
+    docs_url="https://app.findymail.com/docs/",
+    # /credits is free and returns both credit pools.
+    #
+    # THE LOAD-BEARING QUIRK: Findymail is a Laravel app that only speaks JSON when asked. Our probe
+    # sends no `Accept` header, so a BAD key does not 401 — it 302-redirects to the HTML login page.
+    # 302 is < 400, so the default "any >=400 is a bad key" rule would have ACCEPTED a garbage key.
+    # Two gates close it, both verified live on 2026-08-20:
+    #   probe_reject_statuses names 302 explicitly (with Accept: application/json the same request
+    #       returns 401 {"message":"Unauthenticated."}, so both statuses are listed), and
+    #   token_verify_field reads `email` off the JSON body — the account's login address, present on
+    #       every valid response and absent from the redirect (empty payload) — so a wrong path or an
+    #       unexpected status cannot slip through either.
+    # Do NOT use `credits` as the verify field: an account that has spent its allowance returns 0,
+    # which is falsy, and a valid key would be rejected.
+    probe_path="/credits",
+    probe_reject_statuses=(302, 401, 403),
+    token_verify_field="email",
+)
+
+
+BRANDDEV = OAuthProvider(
+    service="branddev",
+    display_name="Brand.dev",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your Brand.dev API key",
+    # token_header / token_format default to Authorization: Bearer {secret} — which is exactly
+    # what this API wants (verified live 2026-08-20).
+    setup_url="https://brand.dev",
+    setup_action_label="Get your Brand.dev API key",
+    setup_steps=(
+        "Create a Brand.dev account — a work email gets the larger free credit grant.",
+        "Open the dashboard's API keys page and copy your key.",
+    ),
+    setup_note="Brand lookups spend credits (10 per brand record, 5 for fonts, 1 for a "
+               "screenshot); credits are charged only on a successful response, and "
+               "malformed requests are free.",
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Enrichment",
+    summary="Turn a domain, company name, work email, ticker or card descriptor into a brand "
+            "profile — logos, colors, fonts, styleguide, slogan, socials and industry codes.",
+    base_url="https://api.brand.dev/v1",
+    docs_url="https://docs.brand.dev",
+    # There is NO free account/usage route on this API (every /v1/account, /v1/usage, /v1/key
+    # guess answers 403 "does not exist"). The probe is therefore the Coresignal pattern: call
+    # the data route with NO parameters. Observed live 2026-08-20:
+    #   valid key   -> 400 {"error_code":"INPUT_VALIDATION_ERROR", ... credits_consumed: 0}
+    #   bogus key   -> 401 {"error_code":"NOT_FOUND","message":"API key not found …"}
+    # so 400 must count as "key accepted" and only 401/403 as a rejection. The probe is FREE.
+    probe_path="/brand/retrieve",
+    probe_reject_statuses=(401, 403),
+)
+
+
+ICYPEAS = OAuthProvider(
+    service="icypeas",
+    display_name="Icypeas",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your Icypeas API key",
+    # The key rides RAW in the Authorization header — no "Bearer", no scheme prefix. The account
+    # also exposes an API *secret*, but that only signs INBOUND webhooks; no request needs it, so a
+    # single pasted key serves every endpoint.
+    token_header="Authorization",
+    token_format="{secret}",
+    setup_url="https://app.icypeas.com",
+    setup_action_label="Get your Icypeas API key",
+    setup_steps=(
+        "Sign in to Icypeas and open the API section in the sidebar.",
+        "Enable API access, then copy your API key.",
+    ),
+    setup_note="Email finding, scraping and lead-database rows spend credits; counting matches and reading results are free.",
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Enrichment",
+    summary="Find and verify work emails, scan domains, reverse-lookup profiles, and search a people and company database.",
+    base_url="https://app.icypeas.com/api",
+    docs_url="https://api-doc.icypeas.com/",
+    # The results-read route is free and needs no prior search: with a valid key it answers
+    # 200 {"success":true,...}; with a garbage key it answers a clean
+    # 401 {"error":"UserNotFoundError","code":"user_not_found_error"} (observed live 2026-08-20).
+    # It is a POST, so the probe carries a body.
+    probe_path="/bulk-single-searchs/read",
+    probe_method="POST",
+    probe_json={"limit": 1},
+)
+
+
+LEADSFORGE = OAuthProvider(
+    service="leadsforge",
+    display_name="LeadsForge",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your LeadsForge API key",
+    # The vendor's Swagger declares a bare `apiKey` in the Authorization header, and the API accepts
+    # BOTH the raw key and `Bearer <key>` (both returned 200 on /balance, 2026-08-20). We send the
+    # Bearer form — these are the transport defaults, spelled out here because the spec is ambiguous.
+    token_header="Authorization",
+    token_format="Bearer {secret}",
+    setup_url="https://app.leadsforge.ai/",
+    setup_action_label="Get your LeadsForge API key",
+    setup_steps=(
+        "Sign in to LeadsForge at app.leadsforge.ai.",
+        "Open Settings → API and create an API key.",
+        "Copy the key.",
+    ),
+    setup_note=(
+        "Lead search and the filter lists are free; you spend credits only to reveal a contact "
+        "channel (1 credit an email or LinkedIn URL, 10 a mobile number). New accounts get 100 "
+        "free credits."
+    ),
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Enrichment",
+    summary="Search 500M+ B2B contacts and reveal their work email, mobile number or LinkedIn profile.",
+    # The /public/v1 prefix is load-bearing: the bare host answers 200 with an EMPTY body and every
+    # unprefixed path 404s {"message":"Not Found"}, which is why an unprefixed probe looks alive but
+    # verifies nothing.
+    base_url="https://api.leadsforge.ai/public/v1",
+    docs_url="https://api.leadsforge.ai/public/swagger/doc.json",
+    # Free, and it rejects cleanly: a bogus key returns 401 {"message":"invalid api key",
+    # "code":"invalid_api_key"} and a missing key 401 {"message":"missing api key"} (verified live
+    # 2026-08-20). No token_verify_field / probe_reject_statuses needed — the status alone is honest.
+    probe_path="/balance",
+)
+
+
+# ---- Creator / influencer data (Enrichment shelf, 2026-08-21) ---------------------------------
+
+INFLUENCERSCLUB = OAuthProvider(
+    service="influencersclub",
+    display_name="influencers.club",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your influencers.club API key (a JWT, eyJ…)",
+    # `Authorization: Bearer <key>` — the transport defaults. The key is a long-lived JWT minted in
+    # the dashboard; the API's own OAuth credentials ride the same header, but treg only takes the key.
+    token_header="Authorization",
+    token_format="Bearer {secret}",
+    setup_url="https://dashboard.influencers.club/api",
+    setup_action_label="Get your influencers.club API key",
+    setup_steps=(
+        "Sign in to influencers.club and open the dashboard's API page.",
+        "Create an API key and copy it (it is shown once).",
+    ),
+    setup_note=(
+        "Credits are spent only when data comes back: discovery is 0.01 credit per creator returned, "
+        "a profile enrich 0.2, analytics 0.8, a full enrich 1. The dictionaries and the credit check "
+        "are free. New accounts get 10 free credits."
+    ),
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Enrichment",
+    summary="Find and enrich creators across Instagram, YouTube, TikTok, Twitch, X and OnlyFans — filters or a plain-language brief, then profile, audience, email, posts and lookalikes.",
+    base_url="https://api-dashboard.influencers.club",
+    docs_url="https://docs.influencers.club/",
+    # Free and rejects cleanly: a bogus key answers 401 {"detail":"Token is invalid",
+    # "code":"authentication_failed"}, a missing one 401 "Authentication credentials were not
+    # provided." (verified live 2026-08-21). THE TRAILING SLASH IS LOAD-BEARING: it is a Django app,
+    # and the slash-less path 301s, which the probe would read as "not a 401" (the Akta trap).
+    probe_path="/public/v1/accounts/credits/",
+)
+
+
 # ---- Advertising API-key providers (ad intelligence) -----------------------------------------
+
+# ---- Market data API-key providers -------------------------------------------------------------
+# The first category added under the shared-plan pricing ladder (docs/SHARED-PLAN-PRICING-PLAN.md);
+# provider selection: docs/MARKET-DATA-CATEGORY-RESEARCH.md. CoinGecko leads because it is the one
+# true credit-priced provider in the sector — its fx.yaml entry divides like Hunter's.
+
+COINGECKO = OAuthProvider(
+    service="coingecko",
+    display_name="CoinGecko",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your CoinGecko Pro API key",
+    token_header="x-cg-pro-api-key",
+    token_format="{secret}",  # raw key, no Bearer prefix
+    setup_url="https://www.coingecko.com/en/developers/dashboard",
+    setup_action_label="Get your CoinGecko API key",
+    setup_steps=(
+        "Sign up for a CoinGecko API plan (Basic and up) and open the developer dashboard.",
+        "Create an API key and copy it.",
+    ),
+    # The distinction that will bite users: free "demo" keys ride a DIFFERENT host
+    # (api.coingecko.com) with a different header, and that host answers 200 to anything — so a demo
+    # key can never be verified here. Saying so up front beats a confusing rejection.
+    setup_note="Needs a paid (Pro) key. Free demo keys use a different host and will not verify.",
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Market data",
+    summary="Crypto prices, market caps, volume and history across 17,000+ coins and 1,000+ exchanges.",
+    base_url="https://pro-api.coingecko.com/api/v3",
+    docs_url="https://docs.coingecko.com/reference/authentication",
+    # Free probe; validity is the HTTP status. Verified live 2026-08-14: a bogus key answers 401
+    # {"status":{"error_code":10002,...}} on the pro host, so the default reject-on-status works.
+    probe_path="/ping",
+)
+
+
+POLYGON = OAuthProvider(
+    service="polygon",
+    display_name="Polygon.io",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your Polygon API key",
+    token_header="Authorization",
+    token_format="Bearer {secret}",
+    setup_url="https://polygon.io/dashboard/keys",
+    setup_action_label="Get your Polygon API key",
+    setup_steps=(
+        "Sign up at polygon.io (rebranding to Massive) and open Dashboard → API Keys.",
+        "Copy the default key, or create one per environment.",
+    ),
+    setup_note="The free tier is 5 requests/min with 15-minute delayed data — fine for verifying.",
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Market data",
+    summary="US stocks, options, indices, forex and crypto — real-time and deep history, tick-level.",
+    base_url="https://api.polygon.io",
+    docs_url="https://polygon.io/docs",
+    # Free-tier listable reference call; a bogus key answers 401 "Unknown API Key" (verified live
+    # 2026-08-14), so the default reject-on-status works.
+    probe_path="/v3/reference/tickers?limit=1",
+)
+
+FINNHUB = OAuthProvider(
+    service="finnhub",
+    display_name="Finnhub",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your Finnhub API key",
+    token_header="X-Finnhub-Token",
+    token_format="{secret}",
+    setup_url="https://finnhub.io/dashboard",
+    setup_action_label="Get your Finnhub API key",
+    setup_steps=(
+        "Register at finnhub.io (no card needed) and open the dashboard.",
+        "Copy the API key shown at the top.",
+    ),
+    # Their free tier's terms, said before it bites: personal use only.
+    setup_note="Free-tier keys are licensed for personal, non-commercial use — a product needs a paid plan.",
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Market data",
+    summary="Real-time quotes, company fundamentals, earnings, and news sentiment.",
+    base_url="https://finnhub.io/api/v1",
+    docs_url="https://finnhub.io/docs/api",
+    # One free-tier quote; a bogus key answers 401 {"error":"Invalid API key."} (verified live 2026-08-14).
+    probe_path="/quote?symbol=AAPL",
+)
+
+TWELVEDATA = OAuthProvider(
+    service="twelvedata",
+    display_name="Twelve Data",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your Twelve Data API key",
+    token_location="query",
+    token_param="apikey",
+    token_format="{secret}",
+    setup_url="https://twelvedata.com/account/api-keys",
+    setup_action_label="Get your Twelve Data API key",
+    setup_steps=(
+        "Create a Twelve Data account (free Basic plan: 800 requests/day).",
+        "Open Account → API keys and copy the key.",
+    ),
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Market data",
+    summary="Equities, forex and crypto quotes and time series across global exchanges.",
+    base_url="https://api.twelvedata.com",
+    docs_url="https://twelvedata.com/docs",
+    # One-credit quote; a bogus key answers 401 {"code":401,...} (verified live 2026-08-14).
+    probe_path="/quote?symbol=AAPL",
+)
+
+FMP = OAuthProvider(
+    service="fmp",
+    display_name="Financial Modeling Prep",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your FMP API key",
+    token_location="query",
+    token_param="apikey",
+    token_format="{secret}",
+    setup_url="https://site.financialmodelingprep.com/developer/docs/dashboard",
+    setup_action_label="Get your FMP API key",
+    setup_steps=(
+        "Create an FMP account (free tier: 250 requests/day).",
+        "Open the developer dashboard and copy the API key.",
+    ),
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Market data",
+    summary="Company fundamentals: statements, ratios, profiles, earnings and institutional data.",
+    base_url="https://financialmodelingprep.com/api/v3",
+    docs_url="https://site.financialmodelingprep.com/developer/docs",
+    # Free-tier profile call; a bogus key answers 401 {"Error Message": ...} (verified live 2026-08-14).
+    probe_path="/profile/AAPL",
+)
+
+EODHD = OAuthProvider(
+    service="eodhd",
+    display_name="EODHD",
+    auth_kind="key",
+    token_label="API token",
+    token_placeholder="your EODHD API token",
+    token_location="query",
+    token_param="api_token",
+    token_format="{secret}",
+    setup_url="https://eodhd.com/cp/settings",
+    setup_action_label="Get your EODHD API token",
+    setup_steps=(
+        "Register at eodhd.com and open Settings.",
+        "Copy the API token.",
+    ),
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Market data",
+    summary="End-of-day and historical prices across 70+ global exchanges, plus fundamentals.",
+    base_url="https://eodhd.com/api",
+    docs_url="https://eodhd.com/financial-apis/",
+    # A bogus key answers 401 with a PLAIN-TEXT body ("Unauthenticated") — fine, the connect verify
+    # only JSON-parses JSON responses and rejects on status (verified live 2026-08-14).
+    probe_path="/eod/AAPL.US?fmt=json",
+)
+
+MARKETSTACK = OAuthProvider(
+    service="marketstack",
+    display_name="Marketstack",
+    auth_kind="key",
+    token_label="API access key",
+    token_placeholder="your Marketstack access key",
+    token_location="query",
+    token_param="access_key",
+    token_format="{secret}",
+    setup_url="https://marketstack.com/dashboard",
+    setup_action_label="Get your Marketstack access key",
+    setup_steps=(
+        "Sign up at marketstack.com (free plan available).",
+        "Copy the API access key from the dashboard.",
+    ),
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Market data",
+    summary="Global end-of-day and intraday stock prices — simple, cheap, 70+ exchanges.",
+    base_url="https://api.marketstack.com/v1",
+    docs_url="https://marketstack.com/documentation",
+    # A bogus key answers 401 {"error":{"code":"invalid_access_key",...}} (verified live 2026-08-14).
+    probe_path="/eod?symbols=AAPL",
+)
+
+TIINGO = OAuthProvider(
+    service="tiingo",
+    display_name="Tiingo",
+    auth_kind="key",
+    token_label="API token",
+    token_placeholder="your Tiingo API token",
+    token_header="Authorization",
+    token_format="Token {secret}",
+    setup_url="https://www.tiingo.com/account/api/token",
+    setup_action_label="Get your Tiingo API token",
+    setup_steps=(
+        "Create a Tiingo account and open Account → API.",
+        "Copy the API token.",
+    ),
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Market data",
+    summary="Equities with 30+ years of history, plus curated news and fundamentals.",
+    base_url="https://api.tiingo.com",
+    docs_url="https://www.tiingo.com/documentation/general/overview",
+    # NOT /api/test — that endpoint answers 200 with prose for a BAD key ("Auth Token was not
+    # correct"), the Apollo trap. The daily-metadata endpoint 403s cleanly {"detail":"Invalid
+    # token."} (verified live 2026-08-14), so reject-on-status works with this probe instead.
+    probe_path="/tiingo/daily/aapl",
+)
+
+
+# Alpha Vantage is DELIBERATELY absent. Its API served real quote data to a garbage key (verified
+# live 2026-08-14: bogus key -> HTTP 200 with the IBM quote; even premium endpoints answer 200 with
+# an upsell note), so a pasted key can never be validated at connect — the ScrapeCreators rule:
+# never ship a key provider whose key cannot be checked. Its fx.yaml shared-plan pilot rate is
+# unaffected (platform-tier serving uses OUR OWN subscribed key, which needs no connect verify).
 
 SPYFU = OAuthProvider(
     service="spyfu",
@@ -1526,7 +2283,11 @@ REGISTRY: dict[str, OAuthProvider] = {
         # SEO API-key providers
         DATAFORSEO, SERANKING, MOZ, MAJESTIC, SERPSTAT,
         # more Enrichment API-key providers
-        LUSHA, CORESIGNAL, DIFFBOT, THECOMPANIESAPI, LEADMAGIC,
+        LUSHA, CORESIGNAL, DIFFBOT, THECOMPANIESAPI, LEADMAGIC, FIBER_AI,
+        COMPANYENRICH, OCEANIO, TOMBA, PREDICTLEADS, FINDYMAIL, BRANDDEV, ICYPEAS, LEADSFORGE,
+        INFLUENCERSCLUB,
+        # Market data API-key providers
+        COINGECKO, POLYGON, FINNHUB, TWELVEDATA, FMP, EODHD, MARKETSTACK, TIINGO,
         # Advertising: API-key ad intelligence
         SPYFU, APIFY, META_AD_LIBRARY, SERPAPI,
         # Other API-key providers
@@ -1540,7 +2301,7 @@ DEFAULT_CAPABILITY = "read"
 
 # Shelf order in the marketplace. Anything carrying a category not named here sorts last, so a
 # provider added without one is visible rather than lost between the shelves.
-CATEGORY_ORDER = ("SEO", "Advertising", "Social media", "Enrichment", "Community", "Other")
+CATEGORY_ORDER = ("SEO", "Advertising", "Social media", "Enrichment", "Market data", "Community", "Other")
 
 
 def get(service: str) -> OAuthProvider | None:
@@ -1623,10 +2384,20 @@ SCOPE_LABELS: dict[str, str] = {
     "pages_read_engagement": "Read your Pages' posts, comments and reactions",
     "read_insights": "Read your Pages' reach and engagement insights",
     "pages_manage_posts": "Create, edit and delete posts on your Pages",
+    "pages_manage_engagement": "Reply to and moderate comments on your Pages' posts",
+    "pages_read_user_content": "Read what visitors post on your Pages",
+    "pages_manage_metadata": "Manage your Pages' settings and event subscriptions",
+    "pages_messaging": "Read and reply to your Pages' Messenger conversations",
+    "publish_video": "Upload videos to your Pages",
+    "leads_retrieval": "Retrieve leads from your Pages' instant forms",
+    "pages_manage_ads": "Manage ads run by your Pages",
+    "catalog_management": "Create and update your product catalogs",
     # Meta — Instagram
     "instagram_basic": "See your Instagram account, media and comments",
     "instagram_manage_insights": "Read your Instagram reach and engagement insights",
     "instagram_content_publish": "Publish posts to your Instagram account",
+    "instagram_manage_comments": "Reply to, hide and delete comments on your Instagram posts",
+    "instagram_manage_messages": "Read and reply to your Instagram direct messages",
     # Meta — Ads
     "ads_read": "Read your ad accounts, campaigns and performance",
     "business_management": "See the businesses and ad accounts you have access to",
@@ -1689,6 +2460,14 @@ def listing() -> list[dict]:
             "docs_url": p.docs_url,
             "consent_notice": p.consent_notice,
             "configured": is_configured(p),
+            # Whether calls on this connection are metered from the team balance (the provider
+            # bills treg's app per use), with the default rates — shown BEFORE consent, so nobody
+            # connects an account without seeing the price. Off unless the deployment enables it.
+            "metered": p.platform_billed and p.service in get_settings().oauth_billed_set,
+            **({"billed_rates": {"read_per_result_usd": p.billed_read_usd,
+                                 "write_per_call_usd": p.billed_write_usd,
+                                 "write_with_link_usd": p.billed_write_link_usd}}
+               if p.platform_billed and p.service in get_settings().oauth_billed_set else {}),
         }
         # Grouped first, alphabetical within a shelf — so the dashboard can render the shelves by
         # walking the list once instead of re-sorting what the registry already knows.

@@ -36,7 +36,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /oauth2/advertiser/get/
-    name: "List ad accounts"
+    name: "TikTok ad accounts this connection manages"
     summary: "List the TikTok ad accounts this connection can manage"
     input:
       queryParams:
@@ -52,7 +52,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /report/integrated/get/
-    name: "Get ad performance metrics"
+    name: "Your TikTok ads' spend, impressions, clicks, conversions"
     summary: "Get spend, impressions, clicks and conversions for your TikTok ads"
     input:
       queryParams:
@@ -79,7 +79,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /campaign/get/
-    name: "List ad campaigns"
+    name: "Campaigns in your TikTok ad account — status, budget"
     summary: "List the campaigns in your TikTok ad account with objective, status and budget"
     input:
       queryParams:
@@ -98,7 +98,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /adgroup/get/
-    name: "List ad groups"
+    name: "Ad groups in your TikTok ad account — bid, targeting"
     summary: "List the ad groups in your TikTok ad account with targeting, bid and schedule"
     input:
       queryParams:
@@ -117,7 +117,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /ad/get/
-    name: "List ads with creatives"
+    name: "Ads in your TikTok ad account, with creatives"
     summary: "List the ads in your TikTok ad account with their creatives and landing pages"
     input:
       queryParams:

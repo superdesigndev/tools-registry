@@ -1,0 +1,15 @@
+{
+  "person": {
+    "id": 256474769,
+    "name": "Patrick Collison",
+    "position": "Stripe CEO",
+    "seniority": "founder",
+    "department": "c-suite/founder",
+    "image_url": "https://api.companyenrich.com/people/image/256474769"
+  },
+  "person_id": 256474769,
+  "domain": "stripe.com",
+  "status": "found",
+  "email": "patrick@stripe.com",
+  "certainty": "very-high"
+}

@@ -1,0 +1,12 @@
+{
+  "segmentationId": 153746,
+  "segments": [
+    {
+      "segmentId": 2819,
+      "name": "Other",
+      "domains": ["stripe.com", "adyen.com", "checkout.com", "mollie.com", "razorpay.com"],
+      "companyCount": 5
+    }
+  ],
+  "status": "SUCCESSFUL"
+}

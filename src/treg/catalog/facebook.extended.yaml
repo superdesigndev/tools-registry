@@ -36,7 +36,7 @@ endpoints:
   platform: facebook
   method: DELETE
   path: /{comment_id}
-  name: "Delete a comment"
+  name: "Delete a comment on your Facebook Page"
   summary: Delete a comment on the Page's content
   scope: own_account
   cost:
@@ -54,7 +54,7 @@ endpoints:
   platform: facebook
   method: POST
   path: /{comment_id}/comments
-  name: "Reply to a comment"
+  name: "Reply to a comment as your Facebook Page"
   summary: Reply to a comment as the Page
   scope: own_account
   cost:
@@ -72,7 +72,7 @@ endpoints:
   platform: facebook
   method: POST
   path: /{comment_id}?is_hidden=true
-  name: "Hide a comment"
+  name: "Hide a comment on your Facebook Page"
   summary: Hide a comment on the Page's content
   scope: own_account
   cost:
@@ -89,7 +89,7 @@ endpoints:
   platform: facebook
   method: GET
   path: /{page_id}
-  name: "Get Page profile details"
+  name: "Your Facebook Page profile — name, category, fan count"
   summary: The Page itself — name, category, about, fan_count, link, verification status, hours
   scope: own_account
   cost:
@@ -105,7 +105,7 @@ endpoints:
   platform: facebook
   method: GET
   path: /{page_id}/albums
-  name: "List Page photo albums"
+  name: "Photo albums on your Facebook Page"
   summary: The Page's photo albums and their counts
   scope: own_account
   cost:
@@ -121,7 +121,7 @@ endpoints:
   platform: facebook
   method: GET
   path: /{page_id}/conversations
-  name: "List Page Messenger conversations"
+  name: "Messenger threads with your Facebook Page"
   summary: Messenger threads with the Page, with participants and updated_time
   scope: own_account
   cost:
@@ -138,7 +138,7 @@ endpoints:
   platform: facebook
   method: GET
   path: /{page_id}/events
-  name: "List events created by a Page"
+  name: "Events your Facebook Page created, with attendance"
   summary: Events the Page has created, with time, place and attendance counts
   scope: own_account
   cost:
@@ -154,7 +154,7 @@ endpoints:
   platform: facebook
   method: GET
   path: /{page_id}/feed
-  name: "Get Page feed posts"
+  name: "Your Facebook Page feed — own posts plus visitor posts"
   summary: 'The Page''s feed: its own posts plus visitor posts, with message, created_time and attachments'
   scope: own_account
   cost:
@@ -170,7 +170,7 @@ endpoints:
   platform: facebook
   method: GET
   path: /{page_id}/leadgen_forms
-  name: "List Page lead-ad forms"
+  name: "Lead-ad forms on your Facebook Page"
   summary: Lead-ad forms attached to the Page, and their fields
   scope: own_account
   cost:
@@ -187,7 +187,7 @@ endpoints:
   platform: facebook
   method: GET
   path: /{page_id}/live_videos
-  name: "List Page live broadcasts"
+  name: "Live broadcasts on your Facebook Page"
   summary: Live broadcasts on the Page, past and current, with status and viewer counts
   scope: own_account
   cost:
@@ -203,7 +203,7 @@ endpoints:
   platform: facebook
   method: GET
   path: /{page_id}/photos
-  name: "List photos uploaded to a Page"
+  name: "Photos uploaded to your Facebook Page"
   summary: Photos uploaded to the Page, with images, alt text and created_time
   scope: own_account
   cost:
@@ -219,7 +219,7 @@ endpoints:
   platform: facebook
   method: GET
   path: /{page_id}/published_posts
-  name: "List published Page posts"
+  name: "Posts your Facebook Page itself published"
   summary: Only the posts the Page itself published, including ones published via the API
   scope: own_account
   cost:
@@ -235,7 +235,7 @@ endpoints:
   platform: facebook
   method: GET
   path: /{page_id}/ratings
-  name: "List Page ratings and reviews"
+  name: "Ratings and reviews left on your Facebook Page"
   summary: Recommendations and reviews left on the Page, with rating, review text and reviewer
   scope: own_account
   cost:
@@ -251,7 +251,7 @@ endpoints:
   platform: facebook
   method: GET
   path: /{page_id}/roles
-  name: "List Page admins"
+  name: "Admins of your Facebook Page and their roles"
   summary: Who administers the Page and at what role level
   scope: own_account
   cost:
@@ -268,7 +268,7 @@ endpoints:
   platform: facebook
   method: GET
   path: /{page_id}/settings
-  name: "Get Page settings"
+  name: "Your Facebook Page settings — messaging, tagging"
   summary: The Page's own settings — messaging, tagging and visitor-post permissions
   scope: own_account
   cost:
@@ -284,7 +284,7 @@ endpoints:
   platform: facebook
   method: GET
   path: /{page_id}/tagged
-  name: "List posts tagging the Page"
+  name: "Posts by others that tag your Facebook Page"
   summary: Posts by other people that tagged this Page
   scope: own_account
   cost:
@@ -300,7 +300,7 @@ endpoints:
   platform: facebook
   method: GET
   path: /{page_id}/videos
-  name: "List videos on a Page"
+  name: "Videos on your Facebook Page"
   summary: Videos on the Page, with title, description, length and permalink
   scope: own_account
   cost:
@@ -316,7 +316,7 @@ endpoints:
   platform: facebook
   method: GET
   path: /{page_id}?fields=instagram_business_account
-  name: "Get linked Instagram business account"
+  name: "Instagram account linked to your Facebook Page"
   summary: The Instagram professional account linked to this Page — the id every Instagram call needs
   scope: own_account
   cost:
@@ -333,7 +333,7 @@ endpoints:
   platform: facebook
   method: DELETE
   path: /{post_id}
-  name: "Delete a post"
+  name: "Delete a post from your Facebook Page"
   summary: Delete one of the Page's posts
   scope: own_account
   cost:
@@ -349,7 +349,7 @@ endpoints:
   platform: facebook
   method: GET
   path: /{post_id}
-  name: "Get a single post"
+  name: "One Facebook Page post — message, permalink, attachments"
   summary: A single post — message, created_time, permalink_url, attachments and privacy
   scope: own_account
   cost:
@@ -366,7 +366,7 @@ endpoints:
   platform: facebook
   method: POST
   path: /{post_id}
-  name: "Update a post"
+  name: "Edit a published Facebook Page post's message"
   summary: Edit a published post's message
   scope: own_account
   cost:
@@ -382,7 +382,7 @@ endpoints:
   platform: facebook
   method: GET
   path: /{post_id}/comments
-  name: "List comments on a post"
+  name: "Comments on a Facebook Page post"
   summary: Comments on a post, with message, from, like_count and comment_count
   scope: own_account
   cost:
@@ -398,7 +398,7 @@ endpoints:
   platform: facebook
   method: GET
   path: /{post_id}/insights
-  name: "Get post performance metrics"
+  name: "One Facebook post's reach, impressions and clicks"
   summary: Per-post metrics — impressions, reach, engaged users, clicks, negative feedback
   scope: own_account
   cost:
@@ -414,7 +414,7 @@ endpoints:
   platform: facebook
   method: GET
   path: /{post_id}/likes
-  name: "List post likes"
+  name: "Who liked a Facebook Page post"
   summary: Who liked a post (summary=true gives just the total)
   scope: own_account
   cost:
@@ -430,7 +430,7 @@ endpoints:
   platform: facebook
   method: GET
   path: /{post_id}/reactions
-  name: "List reactions on a post"
+  name: "Reactions on a Facebook Page post, by type"
   summary: Reactions on a post broken down by type (LIKE, LOVE, WOW, ANGRY…)
   scope: own_account
   cost:
@@ -446,7 +446,7 @@ endpoints:
   platform: facebook
   method: GET
   path: /{post_id}/sharedposts
-  name: "List posts sharing a post"
+  name: "Posts that shared a Facebook Page post"
   summary: The posts that shared this post
   scope: own_account
   cost:

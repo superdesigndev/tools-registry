@@ -15,7 +15,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v1/account/credit-balance
-    name: "Get account credit balance"
+    name: "Check credit balance"
     summary: "Returns the number of API credits remaining on your Scrape Creators account."
     input:
       queryParams: {}
@@ -33,7 +33,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v1/tiktok/profile
-    name: "Get TikTok profile"
+    name: "TikTok user profile by username or id — bio, stats"
     summary: "Fetches public profile data for a TikTok user by their handle or user_id — useful for looking up a creator's identity, bio, and account stats."
     input:
       queryParams:
@@ -53,7 +53,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v2/tiktok/video
-    name: "Get TikTok video info"
+    name: "TikTok video by URL — engagement stats, transcript"
     summary: "Fetches detailed data for a single TikTok video by URL, including its metadata, engagement stats, and optionally its transcript/captions."
     input:
       queryParams:
@@ -72,7 +72,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v1/tiktok/video/comments
-    name: "List TikTok comments"
+    name: "TikTok video comments by URL — replies, engagement"
     summary: "Fetches comments on a TikTok video by URL — useful for reading audience reactions, replies, and engagement."
     input:
       queryParams:
@@ -91,7 +91,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v1/tiktok/search/keyword
-    name: "Search TikTok by keyword"
+    name: "Search TikTok videos by keyword"
     summary: "Searches for TikTok videos by keyword or phrase — the general video search across all of TikTok."
     input:
       queryParams:
@@ -111,7 +111,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v1/instagram/profile
-    name: "Get Instagram profile"
+    name: "Instagram profile by username — bio, followers, links"
     summary: "Retrieves comprehensive public Instagram profile information including biography, bio links, follower and following counts, verification status, and profile picture URLs."
     input:
       queryParams:
@@ -129,7 +129,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v2/instagram/user/posts
-    name: "List Instagram posts"
+    name: "Instagram user posts by username — reels, photos, videos"
     summary: "Returns a paginated feed of a user's public Instagram posts, including reels, photos, videos, and carousels."
     input:
       queryParams:
@@ -148,7 +148,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v2/instagram/post/comments
-    name: "List Instagram comments"
+    name: "Instagram post or reel comments by URL"
     summary: "Retrieves comments on a public Instagram post or reel."
     input:
       queryParams:
@@ -168,7 +168,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v1/youtube/channel
-    name: "Get YouTube channel details"
+    name: "YouTube channel profile by id or username — subscribers"
     summary: "Retrieves comprehensive YouTube channel profile data including name, avatar images, subscriber count, total video and view counts, join date, tags, and linked social accounts."
     input:
       queryParams:
@@ -189,7 +189,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v1/youtube/video
-    name: "Get YouTube video/short details"
+    name: "YouTube video or short by URL — views, chapters, captions"
     summary: "Fetches full details for a YouTube video or short, including title, description, thumbnail, view/like/comment counts, publish date, duration, chapters and caption tracks."
     input:
       queryParams:
@@ -207,7 +207,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v1/youtube/video/comments
-    name: "List YouTube comments"
+    name: "YouTube video comments by URL — replies, likes, authors"
     summary: "Fetches comments and replies from a YouTube video, including each comment's text, author details, like count, reply count, and publish date."
     input:
       queryParams:
@@ -227,7 +227,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v1/twitter/profile
-    name: "Get Twitter profile"
+    name: "X (Twitter) profile by username — account stats"
     summary: "Retrieves a Twitter user's profile by handle, including account metadata and statistics."
     input:
       queryParams:
@@ -245,7 +245,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v1/twitter/user-tweets
-    name: "List Twitter user tweets"
+    name: "X (Twitter) user tweets by username"
     summary: "Fetches tweets from a Twitter user's profile by handle."
     input:
       queryParams:
@@ -264,7 +264,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v1/linkedin/profile
-    name: "Get LinkedIn person's profile"
+    name: "LinkedIn person profile by URL — experience, education"
     summary: "Retrieves a person's public LinkedIn profile data, including their name, photo, location, follower count, about/bio summary, recent posts, work experience and education."
     input:
       queryParams:
@@ -283,7 +283,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v1/reddit/subreddit
-    name: "List subreddit posts"
+    name: "Subreddit posts by name — sorted feed"
     summary: "Fetches posts from a subreddit with sorting and filtering options."
     input:
       queryParams:
@@ -302,7 +302,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v1/reddit/search
-    name: "Search Reddit"
+    name: "Search Reddit posts by keyword"
     summary: "Searches across all of Reddit for posts matching a query."
     input:
       queryParams:

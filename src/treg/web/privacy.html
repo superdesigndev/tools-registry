@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Treg Privacy Policy</title>
 <meta name="description" content="What Treg stores, why, who it's shared with, and how to get it deleted."/>
+<link rel="canonical" href="{BASE}/privacy"/>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -38,7 +39,7 @@
       <li><b>We collect almost nothing about you.</b> An email address to sign in, the teams you're in, and a log of which tools were called. That's the account.</li>
       <li><b>Your credentials are encrypted and never returned.</b> No stored secret value is ever sent back to a client, shown in the dashboard, or read by us.</li>
       <li><b>We don't store what flows through the proxy.</b> A call's request and response bodies pass through and are gone. We keep the method, path, status code, and timestamp — not the content.</li>
-      <li><b>No trackers.</b> No analytics scripts, no advertising pixels, no third-party cookies. One session cookie, and that's it.</li>
+      <li><b>No trackers.</b> No analytics scripts, no advertising pixels, no third-party cookies. Two first-party cookies, both ours: one keeps you signed in, one (only if you arrived from a Google Ads click) tells us the ad worked.</li>
       <li><b>No training, no selling.</b> Your credentials, skills, and connected-account data are never sold and never used to train models.</li>
     </ul>
   </div>
@@ -177,7 +178,17 @@
     <tr><td>Resend</td><td>Your email address and the message body</td><td>Sends sign-in codes and invitations</td><td>USA</td></tr>
     <tr><td>Google Fonts</td><td>Your IP address, when you load a treg web page</td><td>Serves the site's typefaces</td><td>USA</td></tr>
     <tr><td>Upstream APIs you connect</td><td>Whatever your call sends them</td><td>The call you asked us to make</td><td>Varies by provider</td></tr>
+    <tr><td>Google Ads</td><td>A click id and a conversion event (signup, first call, or first payment) — only if you arrived via a Google Ads click</td><td>Measures whether the ad that brought you converted</td><td>USA</td></tr>
   </table></div>
+  <p><b>Referrals.</b> If you sign up through someone's referral link, <b>your email address is
+  shown to the person who referred you</b>, along with the date you signed up and whether your team
+  has added funds — that's how they see which of their invitations worked. Nothing else about you or
+  your usage is shared with them. If you'd rather not be visible that way, sign up without using the
+  link.</p>
+  <p>In the other direction we show you less: if you were referred, we tell you who invited you as a
+  <b>partial</b> address (<code>j&bull;&bull;&bull;@theirdomain.com</code>) and never in full. Referral
+  links are often shared publicly, and the full address of whoever posted one is not ours to hand to
+  everyone who clicks it.</p>
   <p>We'll also disclose data where legally required, or where necessary to protect the Service or
   its users from a live security threat. If we're ever compelled to hand over data about you, we'll
   tell you unless we're legally barred from doing so.</p>
@@ -186,10 +197,23 @@
   protective.</p>
 
   <h2 class="sec" id="s7"><span class="n">07</span>Cookies</h2>
-  <p>One cookie: <code>treg_session</code>. It's HTTP-only, SameSite=Lax, and secure over HTTPS. It
-  holds a signed session reference and nothing else. It's strictly necessary to keep you signed in,
-  so there's no consent banner and nothing to opt out of short of signing out.</p>
-  <p>There are no analytics, advertising, or third-party tracking cookies anywhere on the Service.</p>
+  <p><code>treg_session</code>: HTTP-only, SameSite=Lax, secure over HTTPS. It holds a signed session
+  reference and nothing else. It's strictly necessary to keep you signed in, so there's no consent
+  banner and nothing to opt out of short of signing out.</p>
+  <p><code>treg_oauth_return</code> and <code>treg_ref</code>: both HTTP-only with the same flags, and
+  both exist only when you've done the thing that sets them. The first holds the page to return you to
+  after a sign-in detour (a few minutes). The second holds a referral code if you arrived through
+  someone's invite link, so we can credit them when you create a team (30 days). Neither identifies
+  you, and neither is used for advertising.</p>
+  <p><code>treg_ad</code>: set by our own <code>/adtrack.js</code>, not a Google script — if you arrive
+  from a Google Ads click, it records which ad click led to your visit (the click id and the landing
+  page), retained for <b>90 days</b>. It exists to tell us whether an ad turned into a signup, an active
+  agent, or a paying team, so we can tell which ads to keep running. It is <b>first-party</b> (set by
+  <code>treg.to</code>, readable only by us, never by Google or any other third party) and it is
+  <b>not shared with third parties</b> beyond the conversion event itself — a signup, a first call, or
+  a first payment, each tagged with only the click id — uploaded to Google Ads so it can measure the
+  campaign. There is no advertising pixel, no third-party cookie, and no cross-site tracking script
+  anywhere on the Service.</p>
 
   <h2 class="sec" id="s8"><span class="n">08</span>How we protect it</h2>
   <ul>

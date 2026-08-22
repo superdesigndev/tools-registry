@@ -1,0 +1,53 @@
+{
+  "result": [
+    {
+      "platform": "instagram",
+      "url": "https://www.instagram.com/nasa",
+      "user_id": "528817151",
+      "username": "nasa",
+      "full_name": "NASA",
+      "follower_count": 104418412,
+      "profile_picture": "https://pictures.influencersclub.workers.dev/img/yY87NaFG4giAyD-QlL4EOXRnMPuStyEI9aQjxxG6KJeBqyXxsPhcmveHqmE4FKIhAO4T2cD0I342ot1RNs_F6lV-OuvPvfarv_xEF6qPqvAozUwTlbW7eA",
+      "engagement_percent": 0.27000001072883606,
+      "is_verified": true,
+      "has_link_in_bio": false,
+      "links_in_bio": [
+        "https://x.com/nasa",
+        "https://www.reddit.com/user/nasa",
+        "… 7 more item(s) truncated"
+      ],
+      "speaking_language": "en",
+      "has_brand_deals": true,
+      "is_business": true,
+      "is_creator": false,
+      "location": "United States",
+      "gender": "female"
+    },
+    {
+      "platform": "youtube",
+      "url": "https://www.youtube.com/channel/UCLA_DiR1FfKNvjuUpBHmylQ",
+      "user_id": "UCLA_DiR1FfKNvjuUpBHmylQ",
+      "username": "@nasa",
+      "full_name": "@nasa",
+      "follower_count": 15000000,
+      "profile_picture": "https://pictures.influencersclub.workers.dev/img/qj8cX3qdxJzb8c6atFiQ4-xdGnkEu56YzIWm2RWlM_pwN8M54StnL9AFVslk0OCtP38hZqCJFdU9tZ_yc0wJQZW5bHQvZmdjltMRojesita7GOz0DA_IwundXsFZzuhhIUhaC4E",
+      "engagement_percent": 3.569999933242798,
+      "is_verified": false,
+      "has_link_in_bio": false,
+      "links_in_bio": [
+        "https://x.com/nasa",
+        "https://www.reddit.com/user/nasa",
+        "… 7 more item(s) truncated"
+      ],
+      "speaking_language": "en",
+      "has_brand_deals": true,
+      "is_business": true,
+      "is_creator": false,
+      "location": "United States",
+      "gender": null
+    },
+    "… 2 more item(s) truncated"
+  ],
+  "credits_cost": 0.5,
+  "trial_searches_left": 8
+}

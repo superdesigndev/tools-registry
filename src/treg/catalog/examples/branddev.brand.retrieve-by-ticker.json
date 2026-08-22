@@ -1,0 +1,58 @@
+{
+ "status": "ok",
+ "brand": {
+  "domain": "nvidia.com",
+  "title": "NVIDIA",
+  "description": "NVIDIA is a global technology leader that designs and manufactures graphics processing units (GPUs), AI accelerators, and high‑performance computing platforms. The company powers gaming PCs and consoles with GeForce R…",
+  "slogan": "NVIDIA’s AI factory in the cloud.",
+  "colors": [{"hex": "#040404", "name": "Armor Wash", "source": "logo"}],
+  "logos": [
+   {
+    "url": "https://media.brand.dev/60661f47-47cc-47a5-8049-06b65086ea69.svg",
+    "mode": "light",
+    "colors": [{"hex": "#040404", "name": "Armor Wash"}],
+    "resolution": {"width": 975, "height": 180, "aspect_ratio": 5.42},
+    "type": "logo"
+   },
+   "… further items truncated for the catalog example"
+  ],
+  "backdrops": [
+   {
+    "url": "https://media.brand.dev/f5f7f2ad-c01c-429d-99a9-e1eef77d8166.jpg",
+    "colors": [{"hex": "#a0e353", "name": "Conifer"}, "… further items truncated for the catalog example"],
+    "resolution": {"width": 1000, "height": 169, "aspect_ratio": 5.92}
+   },
+   "… further items truncated for the catalog example"
+  ],
+  "address": {
+   "street": "2701 San Tomas Expressway",
+   "city": "Santa Clara",
+   "country": "United States",
+   "country_code": "US",
+   "state_province": "California",
+   "state_code": "CA",
+   "postal_code": "95050"
+  },
+  "socials": [{"type": "x", "url": "https://x.com/nvidia"}, "… further items truncated for the catalog example"],
+  "stock": {"ticker": "NVDA", "exchange": "NASDAQ"},
+  "employees": {"range": "10001+", "exact": 50938},
+  "is_nsfw": false,
+  "industries": {
+   "eic": [
+    {"industry": "Technology", "subindustry": "Hardware & Semiconductors"},
+    "… further items truncated for the catalog example"
+   ]
+  },
+  "links": {
+   "careers": "https://www.nvidia.com/en-us/about-nvidia/careers/",
+   "terms": "https://www.nvidia.com/en-us/about-nvidia/terms-of-service/",
+   "contact": "https://www.nvidia.com/en-us/contact/",
+   "privacy": "https://www.nvidia.com/en-us/about-nvidia/privacy-policy/",
+   "pricing": "https://www.nvidia.com/en-eu/gtc/pricing/",
+   "blog": "https://blogs.nvidia.com/blog/nemotron-lightning-switchyard-rtx-dgx"
+  },
+  "primary_language": "english"
+ },
+ "code": 200,
+ "key_metadata": {"credits_consumed": 10, "credits_remaining": 254}
+}

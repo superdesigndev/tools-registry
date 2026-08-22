@@ -41,7 +41,9 @@ nothing upstream, nothing spent), so it stays closed-world and non-destructive. 
 `POST /tool-requests` so rate limiting and field caps live in one place, forwarding the edge's
 `X-Forwarded-For` — the in-process relay would otherwise collapse every MCP caller into one
 rate-limit bucket. `catalog_search`'s zero-result hint names it, so an agent that just searched
-and found nothing can file the gap in the same session.
+and found nothing can file the gap in the same session — and the miss itself is logged as a
+`SearchMiss` row (`audit.record_search_miss`, `source="mcp"`): this tool reads the catalog
+in-process, so the HTTP route's own miss logging never sees an MCP agent's empty search.
 
 ## In-process, not over the network
 
@@ -61,8 +63,11 @@ memory, so a search answers in about a millisecond. That is a **speed** choice, 
 explicit slots exist for the shapes that role can't express, mirroring `treg call`'s flags —
 each of which was added because a real endpoint needed it:
 
-- `query` — ALWAYS the query string; a list value expands to repeated keys (`?tag=a&tag=b`,
-  which a dict would collapse). Composable with `body` on a POST — the Bright Data dataset shape
+- `query` — ALWAYS the query string. A team-tool list keeps the repeated-key default
+  (`?tag=a&tag=b`, which a dict would collapse); a catalog array follows its explicit
+  endpoint default `input.queryArrayEncoding` (`json`, `comma`, or `repeated`). Meta Ad Library
+  therefore receives `ad_reached_countries=["US"]` as one JSON value; an undeclared endpoint sends
+  repeated keys. Composable with `body` on a POST — the Bright Data dataset shape
   (`?dataset_id=…` + array body) was uncallable over MCP without it.
 - `body` — ALWAYS the body. Object/array → JSON; a STRING is sent raw with `content_type` naming
   it (sniffed as `application/json` when it parses as JSON — the CLI's rule). A body implies POST.
@@ -71,6 +76,13 @@ each of which was added because a real endpoint needed it:
 - An inline `?a=b` inside a passthrough URL is pulled out and merged — httpx silently DROPS a
   URL's query string whenever `params=` is passed, the same gotcha `cmd_call` guards.
 - `params` claiming the same position as an explicit slot is refused loudly, never merged.
+- **Query values are spelled the way the WIRE spells them, not the way Python does.** `str(True)`
+  is `"True"`, which any upstream documenting a boolean rejects (`{"rule": "boolean"}`). The caller
+  did nothing wrong — JSON booleans are what an MCP client sends — so the conversion is ours:
+  `true`/`false`, nested values as compact JSON (never a single-quoted `repr`), and `None` omitted
+  entirely, because that is what "no value" means over HTTP. It bit hardest where it cost money:
+  `simplified=true` is thecompaniesapi's FREE preview mode, so the mangled flag silently pushed
+  callers onto the paid path.
 - Multipart file upload stays CLI-only (`treg call --upload`) — MCP callers hold no files.
 - `call` resolves the TEAM the way `balance` does (`_resolve_org`, before anything is spent): a
   multi-team identity token used to bounce off /call's raw `choose an org (send X-Treg-Org)`
@@ -232,9 +244,57 @@ scopes. It warns when a client registered itself, because DCR is open and anyone
 name.
 
 It carries the **team picker**, and each option shows that team's balance. Which team a client spends
-from is decided here, once, and fixed on the token for the life of the grant: a person in several
-teams is asked rather than guessed at. Showing the balance is not decoration — picking a $0.00 team
-is the failure this screen exists to prevent, and it happened before the balances were added.
+from is decided here, once: a person in several teams is asked rather than guessed at. Showing the
+balance is not decoration — picking a $0.00 team is the failure this screen exists to prevent, and it
+happened before the balances were added.
+
+### …but the choice must stay visible and reversible afterwards
+
+Decided-once became **invisible and permanent**, and that combination cost a user real money
+(2026-08-17). `balance` reported the slug `superdesign-7`; `treg org ls` on their machine listed
+`superdesign` and `ai-jason` and nothing else, because the CLI was signed in as a *different account*
+from the one that had clicked Allow. Nothing in the agent could tell a plausible slug from the wrong
+team, and the first signal was spend on a balance nobody had opened. Two halves to the fix:
+
+- **`balance` and `my_tools` label the grant**: `team_name` (a slug alone cannot be sanity-checked)
+  and `identity` — the account the grant belongs to, which is usually the half that differs. If the
+  grant names a team that identity's own `/orgs` does not list, the answer says so outright. The
+  *how to move it* half of the hint is added only for an actual OAuth caller: a header token carries
+  its own team, and `treg mcp grants` would list nothing for it.
+- **The team can be moved without re-consenting.** It lives on the refresh family's `OAuthGrant`
+  authority row (`current_org_id`), not only inside the issued access token, so `GET /oauth/grants` +
+  `POST /oauth/grants/{family}/team` (`treg mcp grants`, `treg mcp use-team`) is a row update the
+  next refresh picks up, within the access token's hour. Guarded on both sides: only the grant's own
+  user may move it, and only to a team they belong to — a grant must never reach further than the
+  consent screen would have offered. A *refresh* still cannot change teams; that is not a second
+  chance to pick, it is a deliberate action by the person who made the first one.
+
+  Lifecycle rules found in review:
+
+  - **Family authority is separate from token provenance.** `OAuthGrant.current_org_id` is the one
+    mutable answer `_family_org`, listing and refresh read. `OAuthRefresh.org_id` never changes after
+    issue: a retired token replay is therefore audited against the team that token actually named,
+    not a team the family moved to later. `OAuthGrant.granted_at` is likewise the consent time, so
+    routine rotation cannot make an old authorization look newly granted. The residual window is an
+    access token already minted for the old team, which lasts at most `ACCESS_TTL_SECONDS`; future
+    rotations read the family row, so a refresh racing a move cannot revert it.
+  - **Live means non-retired and non-expired** (`_refresh_is_live`) everywhere: refresh, grant listing,
+    and team moves. An expired family is omitted from `GET /oauth/grants` and cannot be moved.
+  - **A grant dies with the membership it was consented under.** Refresh checked that the user and
+    the org still existed, never that the user was still *in* it. Calls were refused meanwhile
+    (`require_member` re-resolves membership every time), but the grant kept minting tokens and would
+    spring back to life, with no new consent, if the membership were ever restored.
+  - **A rolling deploy cannot strand a family without authority.** A35 is a startup snapshot; an old
+    instance can still issue only `OAuthRefresh` after a new instance has run it. `_ensure_grant`
+    reconstructs the missing row from the oldest refresh token before refresh, listing, and team
+    moves. Its portable upsert tolerates concurrent repair, and `granted_at` remains the oldest row's
+    consent time rather than the later repair or rotation time.
+  - **Deleting any team in a family's history revokes the whole family.** `_cascade_delete_org`
+    collects family ids through both `OAuthGrant.current_org_id` and immutable
+    `OAuthRefresh.org_id`. Otherwise deleting a former team erases the retired row that recognises a
+    replay while leaving a live token under the destination team.
+  - **"Not your team" and "no such team" answer identically** (404). Told apart, the route reports
+    whether an arbitrary slug exists on treg, to any signed-in account.
 
 Approval is a POST (a GET that granted access could be triggered by any page that can navigate),
 same-origin, and the page inherits `X-Frame-Options: DENY`.
@@ -254,6 +314,11 @@ looks merely unknown; a retired one says somebody used a credential that had alr
 that point a client retrying after a dropped response and a thief with a copy are indistinguishable,
 so the whole `family_id` is revoked. Being wrong that way costs one sign-in; being wrong the other way
 costs somebody's balance.
+
+The kept row also keeps immutable issue-time team provenance. Mutable team choice and stable consent
+time live once per family in `OAuthGrant`; startup migration A35 backfills that row from the oldest
+existing refresh token, and `_ensure_grant` performs the same reconstruction for families an old
+binary creates during the rolling-deploy window.
 
 ## Tokens are exchanged, not forwarded
 
@@ -314,3 +379,14 @@ otherwise prefers OAuth (issue #59467). The determinant is "does the server 200 
 "API key" (see [dashboard](../interface/dashboard.md)), so it carries the team and needs no second
 header. `curl {BASE}/install.sh | sh -s -- --token <key>` runs the whole thing — install, sign in,
 `treg mcp install` — in one paste.
+
+## Caller tags over MCP
+
+`X-Treg-Meta` (see [money](money.md)) is read off the MCP **transport** in `mcp.call()` and forwarded
+on the internal request, the same way `catalog_request` forwards `X-Forwarded-For`. It is deliberately
+**not** a tool argument: a model asked to pass a customer id will omit it somewhere in a chain, and a
+billing figure you cannot reconcile is worse than no figure. `x-treg-meta` is therefore also in the
+`call` tool's extra-header filter, so a model-supplied value can never contradict the transport one.
+
+A builder proxying MCP sets the header once per session on their own HTTP client; the model never sees
+it.

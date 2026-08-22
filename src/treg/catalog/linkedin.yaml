@@ -32,7 +32,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /v2/userinfo
-    name: "Get the connected member's profile"
+    name: "Your connected LinkedIn profile — name, email, member id"
     summary: "Get the connected LinkedIn member's identity (name, headline picture, email, member id)"
     input:
       note: "no parameters — the token identifies the member. Returns OpenID Connect claims: sub (the member id), name, given_name, family_name, picture, email, locale. The author URN every post needs is urn:li:person:{sub}"
@@ -46,7 +46,7 @@ endpoints:
     scope: own_account
     method: POST
     path: /rest/posts
-    name: "Create a post"
+    name: "Publish a post to your own LinkedIn feed"
     summary: "Publish a text or link post to your own LinkedIn feed"
     input:
       body:
@@ -82,7 +82,7 @@ endpoints:
     scope: own_account
     method: POST
     path: /rest/images?action=initializeUpload
-    name: "Start an image upload"
+    name: "Start an image upload for a LinkedIn post"
     summary: "Start an image upload for a LinkedIn post and get the URN to attach"
     input:
       body:
@@ -100,7 +100,7 @@ endpoints:
     scope: own_account
     method: POST
     path: /rest/videos?action=initializeUpload
-    name: "Start a video upload"
+    name: "Start a video upload for a LinkedIn post"
     summary: "Start a video upload for a LinkedIn post and get its part-upload URLs"
     input:
       body:
@@ -118,7 +118,7 @@ endpoints:
     scope: own_account
     method: POST
     path: /rest/videos?action=finalizeUpload
-    name: "Finish a video upload"
+    name: "Finish a LinkedIn video upload before attaching to a post"
     summary: "Finish a LinkedIn video upload so the video can be attached to a post"
     input:
       body:

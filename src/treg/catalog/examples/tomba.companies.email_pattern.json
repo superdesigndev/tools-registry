@@ -1,0 +1,18 @@
+{
+  "data": [
+    {
+      "format": "{last}",
+      "percentage": 2
+    },
+    {
+      "format": "{first}.{last}",
+      "percentage": 9
+    },
+    {
+      "format": "{f}{l}",
+      "percentage": 2
+    },
+    "…2 more items truncated for the catalog example"
+  ]
+}
+

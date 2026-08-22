@@ -1,0 +1,43 @@
+{
+  "pagination": {
+    "limit": 3,
+    "offset": 0,
+    "count": 3,
+    "total": 11703
+  },
+  "data": [
+    {
+      "open": 305.04,
+      "high": 307.585,
+      "low": 304.17,
+      "last": null,
+      "close": 305.26,
+      "volume": 640031.0,
+      "date": "2026-08-14T20:00:00+0000",
+      "symbol": "AAPL",
+      "exchange": "IEXG"
+    },
+    {
+      "open": 305.04,
+      "high": 307.585,
+      "low": 304.17,
+      "last": null,
+      "close": 305.26,
+      "volume": 486897.0,
+      "date": "2026-08-14T19:00:00+0000",
+      "symbol": "AAPL",
+      "exchange": "IEXG"
+    },
+    {
+      "open": 305.04,
+      "high": 307.585,
+      "low": 304.17,
+      "last": null,
+      "close": 305.26,
+      "volume": 403777.0,
+      "date": "2026-08-14T18:00:00+0000",
+      "symbol": "AAPL",
+      "exchange": "IEXG"
+    }
+  ]
+}

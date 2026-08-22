@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate every plugin's SKILL.md from the one source: `src/treg/web/skill.md`.
 
-Two shop windows, two variants, one source:
+Four shop windows, three bootstraps, one source:
 
 - **codex**  -> `plugin/skills/treg/SKILL.md` — ships an MCP connector, so its bootstrap points at
   the five tools and tells the reader NOT to reach for a terminal.
@@ -9,6 +9,12 @@ Two shop windows, two variants, one source:
   directory review), so its bootstrap says the opposite: there are no tools, install the CLI. It
   also gets a `version:` stamped into its frontmatter, which is what ClawHub requires and Claude
   Code ignores.
+- **cursor** -> `plugins/treg/skills/treg/SKILL.md` — same CLI bootstrap as claude; Cursor
+  prescribes its own layout, where the plugin root is never the repo root.
+- **dsh**    -> `dsh/skills/treg/SKILL.md` — DeepSeek Harness, the only surface that ships the
+  connector AND the CLI path in one install: the MCP row is disabled until `TREG_TOKEN` exists, so
+  its bootstrap has to cover both states and steer away from `treg mcp install`, which cannot write
+  a dsh profile. See docs/DSH-PLUGIN.md.
 
 The Claude variant sits at the REPO ROOT rather than under `plugin/` because that one path is
 simultaneously what Claude Code's plugin loader auto-discovers, what `npx skills add` resolves, and
@@ -17,8 +23,8 @@ what `clawhub skill publish` takes — one generated tree, four distribution cha
 Each plugin is a shop window, and what it ships is the SAME skill `treg skill bootstrap` already
 writes into every agent's skills dir. Copying that file by hand would be a second source of truth for
 the product's most-read page, and it would rot: the served copy changes whenever the product does,
-and nothing would notice a plugin drifting behind it. So both are generated, and
-`tests/test_plugin.py` fails if either checked-in copy is stale.
+and nothing would notice a plugin drifting behind it. So all of them are generated, and
+`tests/test_plugin.py` fails if any checked-in copy is stale.
 
 Three transformations, each for a reason the served file does not have:
 
@@ -52,6 +58,14 @@ PUBLIC_BASE = "https://treg.to"
 
 CODEX_TARGET = ROOT / "plugin" / "skills" / "treg" / "SKILL.md"
 CLAUDE_TARGET = ROOT / "skills" / "treg" / "SKILL.md"
+# Cursor's layout is prescribed by github.com/cursor/plugin-template: a marketplace manifest at the
+# repo root, and every plugin under `plugins/<name>/` with its OWN `.cursor-plugin/plugin.json`.
+# Unlike Claude Code, the plugin root is never the repo root — `source` must be `./plugins/treg`.
+CURSOR_TARGET = ROOT / "plugins" / "treg" / "skills" / "treg" / "SKILL.md"
+# DeepSeek Harness installs an npm package, not a plugin manifest: `package.json` declares
+# `dsh.bundle`, and `dsh/cordis.patch.yml` mounts `dsh/index.js` as a `ctx.skills` provider over
+# this tree. See docs/DSH-PLUGIN.md.
+DSH_TARGET = ROOT / "dsh" / "skills" / "treg" / "SKILL.md"
 
 CODEX_BOOTSTRAP = """
 ## First, check which treg you have
@@ -105,38 +119,84 @@ Either way, the rest of this page is the part that matters — **when** treg is 
 # Hence the ordered three-step block below. The order is load-bearing, not stylistic: `cmd_mcp_install`
 # reads the token from config and sys.exits before writing anything when there is none, so running it
 # ahead of `treg login` is a silent no-op an agent would move straight past.
-CLAUDE_BOOTSTRAP = """
-## First run: finish the setup, then use it
+CLI_BOOTSTRAP = """
+## First run: finish the setup
 
 This plugin ships the skill, so you have this page — but not yet the `treg` command, and not yet its
-tools. Set both up **once**, in this order, and do not stop between the steps:
+tools. Set both up **once**, in this order:
 
 ```bash
 curl -fsSL {BASE}/install.sh | sh   # 1. the CLI (skip if `treg --version` already works)
-treg login                                   # 2. sign in — opens a browser; first login registers you
+treg login                                   # 2. sign in — opens a browser
 treg mcp install                             # 3. register treg's tools into this agent
 ```
 
 Step 3 writes the token from step 2, so the order matters — run out of order it exits without
-writing anything. Afterwards the human must **restart this agent** before the tools
-(`catalog_search`, `catalog_get`, `call`, `balance`, `my_tools`) appear. Until they do, nothing is
-blocked: every command on this page works through the CLI in the meantime.
+writing anything. The tools (`catalog_search`, `catalog_get`, `call`, `balance`, `my_tools`) appear
+after the agent restarts; until then everything on this page works through the CLI.
+
+Step 1 also installs this same skill into the agent's own skills directory, which duplicates what
+the plugin already gives you — worth mentioning to the human, who can remove it.
+
+---
+"""
+
+DSH_BOOTSTRAP = """
+## First, check which treg you have
+
+This bundle ships two things: the page you are reading, and a treg MCP connector that stays
+**disabled until `TREG_TOKEN` is in dsh's environment** — a connector registered without a token is
+five tools that 401 on every call. So the first move depends on which one you got.
+
+**If you can see `mcp__treg__catalog_search`, `mcp__treg__catalog_get`, `mcp__treg__call`,
+`mcp__treg__balance` and `mcp__treg__my_tools`** — the token was there at boot and there is nothing
+to install. The rest of this page is written around the `treg` command line, so read
+`treg catalog search` as `mcp__treg__catalog_search`, `treg call` as `mcp__treg__call`, and so on.
+
+**If you cannot see them**, this profile booted without a token. Everything here still works through
+the CLI, which you set up once:
+
+```bash
+curl -fsSL {BASE}/install.sh | sh   # the CLI, pointed at treg
+treg login                                   # sign in; first login registers you
+```
 
 A new team starts with **$1.00 of free balance**, so there is nothing to pay before the first call.
 If sign-in is needed, say so plainly and stop — never ask the human for a provider's API key, which
 is the thing treg exists to avoid.
 
-One tidy-up worth mentioning to the human, not doing silently: step 1 also drops a personal copy of
-this same skill into `~/.claude/skills/treg/`. It is harmless, but it duplicates what this plugin
-already gives you, and they may prefer to delete it.
+To get the tools as well, the human exports that token in the environment dsh starts in and
+**restarts dsh** — the row is then enabled automatically:
+
+```bash
+export TREG_TOKEN=<token from {BASE} → sign in → copy token>
+```
+
+Do **not** run `treg mcp install` for this: it writes configs for Claude Code, Cursor and opencode,
+and a dsh profile is neither. This bundle already carries the dsh row.
+
+One more thing worth mentioning to the human rather than silently fixing: `install.sh` always runs
+`treg skill bootstrap`, which drops a second copy of this same page into `~/.agents/skills/treg/` —
+a directory dsh also scans. Harmless, but redundant with this bundle.
 
 ---
 """
 
-# variant -> (target, bootstrap, stamp_version). One source, two shop windows.
+# variant -> (target, bootstrap, stamp_version). One source, four shop windows.
+#
+# Claude Code and Cursor share CLI_BOOTSTRAP: both give the agent a terminal, neither ships a
+# connector, and `treg mcp install` writes a verified config for both (mcp_install.py). Keeping one
+# string rather than two near-identical ones is what stops them drifting.
+#
+# dsh gets its OWN bootstrap rather than sharing either: it is the only surface that ships the
+# connector and the CLI path in one install (the row is disabled until there is a token), and it is
+# the only one where `treg mcp install` is the wrong move — it writes configs for other agents, not
+# for a dsh profile.
 VARIANTS = {
     "codex": (CODEX_TARGET, CODEX_BOOTSTRAP, False),
-    "claude": (CLAUDE_TARGET, CLAUDE_BOOTSTRAP, True),
+    "claude": (CLAUDE_TARGET, CLI_BOOTSTRAP, True),
+    "cursor": (CURSOR_TARGET, CLI_BOOTSTRAP, True),
+    "dsh": (DSH_TARGET, DSH_BOOTSTRAP, False),
 }
 
 

@@ -1,0 +1,20 @@
+{
+  "items": [
+    {
+      "id": 130518,
+      "name": "City and County of San Francisco",
+      "latitude": 37.77823,
+      "longitude": -122.4425
+    },
+    {
+      "id": 131186,
+      "name": "San Francisco",
+      "latitude": 37.77493,
+      "longitude": -122.41942
+    },
+    "... 1 more items truncated"
+  ],
+  "page": 1,
+  "totalPages": 1,
+  "totalItems": 3
+}

@@ -1,0 +1,12 @@
+{
+  "data": [
+    {"name": "Shopify", "category": "e-commerce", "subcategory": "ecommerce-platform"},
+    {"name": "Shopify Plus", "category": "e-commerce", "subcategory": "ecommerce-platform"},
+    {"name": "Shopify POS", "category": "finance-and-accounting", "subcategory": "pos-systems"},
+    {"name": "Shopify Pay", "category": "finance-and-accounting", "subcategory": "payments-processing"},
+    {"name": "LeadDyno for Shopify", "category": null, "subcategory": null},
+    {"name": "Searchanise for Shopify", "category": "business-intelligence-and-analytics", "subcategory": "data-discovery"},
+    {"name": "Survicate for Shopify", "category": "customer-management", "subcategory": "forms-and-surveys"},
+    {"name": "Mailchimp for Shopify", "category": "it-management", "subcategory": "integration"}
+  ]
+}

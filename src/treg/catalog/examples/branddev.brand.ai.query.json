@@ -1,0 +1,7 @@
+{
+ "status": "ok",
+ "domain": "stripe.com",
+ "urls_analyzed": ["https://stripe.com", "https://stripe.com/customers/amazon", "… 4 more (truncated for the catalog example)"],
+ "data_extracted": [{"datapoint_name": "pricing_model", "datapoint_value": "Integrated per-transaction pricing with no hidden fees"}],
+ "key_metadata": {"credits_consumed": 10, "credits_remaining": 304}
+}

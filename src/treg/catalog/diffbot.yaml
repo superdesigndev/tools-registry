@@ -39,7 +39,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /enhance
-    name: "Enrich a company profile"
+    name: "Enrich a company by website, name or ticker"
     summary: "Enrich a company from website, name or ticker — industry, revenue, headcount, rivals"
     input:
       queryParams:
@@ -85,7 +85,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /enhance
-    name: "Enrich a person profile"
+    name: "Enrich a person by name, email or employer"
     summary: "Enrich a person from name, email or employer — role, employment history, profiles"
     input:
       queryParams:
@@ -128,7 +128,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /dql
-    name: "Search companies"
+    name: "Search companies by DQL filter — industry, revenue"
     summary: "Search the Diffbot Knowledge Graph for companies by DQL filter (industry, revenue)"
     input:
       queryParams:
@@ -165,7 +165,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /dql
-    name: "Search people"
+    name: "Search people by DQL filter — role, employer, skills"
     summary: "Search the Diffbot Knowledge Graph for people by DQL filter (role, employer, skills)"
     input:
       queryParams:
@@ -200,7 +200,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /enhance/bulk
-    name: "Bulk enrich companies/people"
+    name: "Bulk-enrich companies or people (async job)"
     summary: "Enrich many companies or people in one asynchronous job instead of one call each"
     input:
       bodyType: json

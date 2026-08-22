@@ -11,6 +11,7 @@ sources:
   - render.yaml
 related:
   - architecture/data-model.md
+  - architecture/ads-conversions.md
   - foundation/charter.md
 ---
 
@@ -58,6 +59,25 @@ keygen` prints a Fernet key for `TREG_SECRET_KEY`.
   Advertising OAuth platforms `microsoft_ads_*`, `snapchat_ads_*`, `tiktok_ads_*`, `pinterest_*` (all
   unset by default, so those providers ship **unconfigured** until a deployment registers a dev app).
   Empty for a provider ⇒ it lists as **unconfigured** rather than failing part-way through a consent.
+- **Ad conversion tracking** — `google_ads_customer_id` (the target Ads account) and
+  `ads_conv_refresh_token` (treg's OWN long-lived refresh token for the Data Manager uploader,
+  minted once, out of band, by an operator via the OAuth playground with scope
+  `https://www.googleapis.com/auth/datamanager`, then pasted in as a platform setting). **Both**
+  must be set or the whole feature is off (`adsconv.enabled()`): the capture script is empty,
+  attribution cookies are ignored, conversions are not queued, and the background uploader is not
+  started. The refresh token is exchanged for an access token against the SAME client it was issued
+  against — `google_ads_client_id`/`_secret` above, reused here rather than duplicated — never
+  against `google_client_id` or a customer's own OAuth app; the exchanged access token is cached in
+  process memory with its expiry so the uploader (which drains every ~300s) doesn't re-exchange on
+  every pass. `google_ads_developer_token` is NOT part of this feature — Data Manager has no
+  developer-token header at all; that setting only backs the read-side Ads catalog calls through
+  `oauth_providers.GOOGLE_ADS`. For manager-account auth, set optional
+  `google_ads_login_customer_id` to the manager MCC id; direct client auth leaves it empty. This is
+  a PLATFORM credential, deliberately separate from a customer's `google-ads` OAuth connection
+  (which grants only `adwords`, never `datamanager` — that scope would otherwise show up on every
+  customer's consent screen for a permission only treg's own marketing uploader uses). Self-hosters
+  and the test suite carry zero ad-conversion machinery by default. See
+  [ads-conversions](../architecture/ads-conversions.md).
 - **Landing live-wire (optional):** `demo_stripe_key` (`TREG_DEMO_STRIPE_KEY`, a Stripe **sandbox
   restricted** key) powers the landing sandbox's ONE real upstream call — a sandbox call to the exact
   seeded `stripe` tool relays for real with this key injected; the key exists in no sandbox org. Empty ⇒
@@ -170,13 +190,99 @@ connection metadata on `secret` (`provider`, `granted_scopes`, `resource_ref`, `
 and expire a credential; **A17–A20** the per-provider auth quirks on `pendingoauth` carried through the
 redirect (`provider`, `code_verifier`, `auth_params`, `token_endpoint_auth_method`, `client_id_param`,
 `scope_separator`, `long_lived_exchange BOOLEAN DEFAULT false`, `replaces_secret_id INTEGER`) so the
-callback exchanges the code exactly as the consent URL was built.
+callback exchanges the code exactly as the consent URL was built; and **A35** backfills one
+`oauthgrant` authority row per existing refresh family from its oldest token, using portable,
+idempotent `INSERT … SELECT … WHERE NOT EXISTS` SQL. Because a rolling deploy keeps an old binary
+alive after that snapshot, API `_ensure_grant` also reconstructs any later old-binary family at first
+refresh, listing, or team move with an `ON CONFLICT DO NOTHING` upsert supported by SQLite and
+Postgres; the oldest token's `created_at` remains the consent time; **A36** adds nullable
+`callrecord.error_request`/`error_response` evidence; **A37** adds nullable Ads attribution and
+`first_call_at` columns to `org`; and **A38** adds nullable retry/dead-letter timestamps to the Ads
+conversion outbox. The A37/A38 timestamps use portable `TIMESTAMP` DDL and require no backfill.
 
 **Audit back-pressure (`audit.py`).** Audit rows are written off the request path (fire-and-forget), and
 each write opens a DB connection from the small pool **shared** with real requests. Two limits keep
 best-effort logging from starving that pool: a loop-bound semaphore caps concurrent audit writes at
 `_MAX_CONCURRENT_WRITES`, and under an extreme burst the writer **sheds** load — it drops any audit row
 past `_MAX_PENDING` rather than let the pending set grow without bound. Audit must never OOM or wedge the
-server.
+server. Shedding is the *only* loss that should ever happen: `record_call` splats its telemetry dict
+into `CallRecord(**fields)`, so a key with no matching column used to raise inside `_write`, where the
+except swallowed it, and the whole row disappeared — a telemetry field deployed one commit ahead of its
+migration would have silently emptied the table. `_known_fields` now drops unknown keys (logging which
+ones), and `_write`'s swallow logs a warning with the traceback. **A quiet audit table is now a bug you
+can see in the logs**, not one you find out about weeks later.
 
 The proxy is thin and IO-bound (a relay, low CPU/memory), so cheap machines scale it.
+
+## The per-org daily spend cap
+
+`TREG_PLATFORM_DAILY_CAP_USD` (default **$100**) is the per-org, per-UTC-day ceiling on tier-4 spend
+*and* the ceiling a team may raise its own `Org.daily_cap_micro` to. The effective cap is the lower of
+the two (`api._effective_daily_cap`).
+
+It was $5, which is a sane blast radius for one team and fatal for a platform running its whole
+customer base through a single org — they hit it on day one. Raising it per-team is now a `PATCH
+/orgs/{id}/settings` a team can make itself up to the ceiling, so onboarding a high-volume builder is
+a conversation rather than an env-var edit that lifts the rail for every team at once.
+
+It is a **blast-radius limit**, not a billing control: it exists because auto-top-up refills the
+balance, so the balance alone is not a ceiling against a runaway agent or a mispriced catalog entry.
+Enforced fail-closed.
+
+## X pay-per-use billing (switch ON since 2026-08-18)
+
+`TREG_OAUTH_BILLED_PROVIDERS` — comma-separated providers whose upstream bill lands on TREG's
+developer app (X moved to pay-per-use: the app owner pays per call, whoever's token made it). A
+provider named here has its registry-connect calls metered against the org balance, `tier: oauth`
+in the ledger. Empty = those calls are free (the pre-2026-08-18 behaviour). Currently `x`.
+BYO-app connections are never metered. Ongoing spend is visible in the reconcile reports under
+`tier: oauth`; the burn from the free period is only in console.x.com.
+
+## Market data platform keys (2026-08-16)
+
+Five more `TREG_PLATFORM_KEY_*` env vars beside the originals, and the providers must ALSO be in
+`TREG_PLATFORM_PROVIDERS` (both halves, or tier 4 refuses):
+
+- `TREG_PLATFORM_KEY_COINGECKO` — PRO key; billed $0.00029/credit
+- `TREG_PLATFORM_KEY_MARKETSTACK` — billed $0.000999/call against a 10,000/mo vendor cap
+- `TREG_PLATFORM_KEY_FINNHUB`, `_TWELVEDATA`, `_TIINGO` — FREE-tier keys serving $0 trial pools,
+  capped per team per day from fx.yaml (`treg_trial`). These are free accounts: if one is
+  terminated, the pool dies gracefully (calls refuse, nothing bills) — replace the key or demote
+  the provider to own-key-only by removing it from the allow-list.
+
+## Enrichment platform keys (2026-08-20)
+
+Seven more slots (`TREG_PLATFORM_KEY_COMPANYENRICH`, `_OCEANIO`, `_PREDICTLEADS` — base64 of
+`api_key:api_token` —, `_FINDYMAIL`, `_BRANDDEV`, `_ICYPEAS`, `_LEADSFORGE`), all UNFUNDED at merge:
+declared in `render.yaml` and `config.py` so tier 4 can be turned on per provider by funding the
+account, setting the env var, and adding the service to `TREG_PLATFORM_PROVIDERS`. Ocean.io stays
+refused even with a key until `fx.yaml` gets a real `usd` rate (its plan price is not machine-readable).
+Tomba has NO slot on purpose: its data routes need a key+secret header pair and the platform-binding
+path injects one value — wire a paired platform binding before offering tomba on tier 4.
+
+## Creator-data platform key (2026-08-21)
+
+`TREG_PLATFORM_KEY_INFLUENCERSCLUB` — the dashboard API key (a JWT), sent as `Authorization: Bearer`.
+Declared in `config.py` and `render.yaml`; the catalog's 12 priced routes are platform-eligible
+(`fx.yaml` $0.598/credit = our own $299/mo-for-500-credits plan, bought 2026-08-21; the public
+page's "as low as $0.23" is the top of the volume slider, not what we pay. Every per-route credit
+count was observed live). The account is FUNDED: set the env var and add `influencersclub` to
+`TREG_PLATFORM_PROVIDERS`. Mind the 60s gateway 504 on cold enrichment calls: under `per_success`
+settlement a 504 relays as a failure and settles at 0, but the vendor charged two of ours — a small,
+bounded leak on the 0.03 tier, worth watching in the first reconcile report.
+
+## A db.py change needs a Postgres-shaped deploy plan
+
+SQLite cannot catch this class: it has no connection pool and no lock queue. Two rules, both from the
+2026-08-15 outage (an ALTER on `callrecord` queued behind live traffic, every new query queued behind
+the ALTER, both instances starved, and the shared Postgres stayed wedged until a database restart):
+
+- Startup migrations run with `lock_timeout = 5s` (set in `init_db`, postgres only). A contended
+  deploy therefore FAILS CLEANLY — prod keeps serving the old code — and the right response is to
+  redeploy at a quieter moment, not to raise the timeout.
+- The pool is per instance and a rolling deploy runs two: keep `pool_size + max_overflow` such that
+  DOUBLE it stays under the database plan's connection ceiling. A guard test pins this.
+
+If a deploy fails with a lock timeout in the logs, that is the mechanism working. If the database
+itself stops accepting connections, restart the POSTGRES resource, not the web service — an app
+restart cannot release server-side slots (learned the hard way).

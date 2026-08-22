@@ -1,0 +1,54 @@
+{
+  "data": {
+    "person": {
+      "name": "{…nested object truncated…}",
+      "email": "patrick@stripe.com",
+      "location": "US",
+      "gender": "male",
+      "geo": "{…nested object truncated…}",
+      "employment": "{…nested object truncated…}",
+      "facebook": "{…nested object truncated…}",
+      "github": "{…nested object truncated…}",
+      "twitter": "{…nested object truncated…}",
+      "linkedin": "{…nested object truncated…}",
+      "gravatar": "{…nested object truncated…}",
+      "verification": "{…nested object truncated…}",
+      "phone": true,
+      "indexedAt": "2026-08-20T02:46:32+02:00"
+    },
+    "company": {
+      "name": "Stripe",
+      "legalName": "Stripe",
+      "domain": "stripe.com",
+      "site": "{…nested object truncated…}",
+      "category": "{…nested object truncated…}",
+      "tags": [
+        "…truncated…"
+      ],
+      "description": "stripe is a payment processing platform enabling businesses to accept payments and manage online transactions.",
+      "foundedYear": "2010",
+      "location": "US",
+      "geo": "{…nested object truncated…}",
+      "facebook": "{…nested object truncated…}",
+      "linkedin": "{…nested object truncated…}",
+      "twitter": "{…nested object truncated…}",
+      "whois": "{…nested object truncated…}",
+      "emailProvider": "Google Workspace",
+      "type": "privately held",
+      "identifiers": "{…nested object truncated…}",
+      "metrics": "{…nested object truncated…}",
+      "indexedAt": "2026-06-30T21:31:21+02:00",
+      "tech": [
+        "…truncated…"
+      ],
+      "techCategories": [
+        "…truncated…"
+      ],
+      "parent": "{…nested object truncated…}",
+      "ultimateParent": "{…nested object truncated…}"
+    }
+  },
+  "meta": {
+    "email": "patrick@stripe.com"
+  }
+}

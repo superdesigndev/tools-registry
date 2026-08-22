@@ -1,0 +1,34 @@
+{
+ "status": "ok",
+ "domain": "stripe.com",
+ "fonts": [
+  {
+   "font": "sohne-var",
+   "uses": ["body", "div", "… 43 more (truncated for the catalog example)"],
+   "fallbacks": ["SF Pro Display", "sans-serif"],
+   "num_elements": 526,
+   "num_words": 10186,
+   "percent_elements": 100,
+   "percent_words": 100
+  }
+ ],
+ "fontLinks": {
+  "sohne-var": {
+   "type": "custom",
+   "files": {
+    "100": "https://b.stripecdn.com/mkt-ssr-statics/assets/_next/static/media/Sohne.cb178166.woff2",
+    "200": "https://b.stripecdn.com/mkt-ssr-statics/assets/_next/static/media/Sohne.cb178166.woff2",
+    "300": "https://b.stripecdn.com/mkt-ssr-statics/assets/_next/static/media/Sohne.cb178166.woff2",
+    "400": "https://b.stripecdn.com/mkt-ssr-statics/assets/_next/static/media/Sohne.cb178166.woff2",
+    "500": "https://b.stripecdn.com/mkt-ssr-statics/assets/_next/static/media/Sohne.cb178166.woff2",
+    "600": "https://b.stripecdn.com/mkt-ssr-statics/assets/_next/static/media/Sohne.cb178166.woff2",
+    "700": "https://b.stripecdn.com/mkt-ssr-statics/assets/_next/static/media/Sohne.cb178166.woff2",
+    "800": "https://b.stripecdn.com/mkt-ssr-statics/assets/_next/static/media/Sohne.cb178166.woff2",
+    "900": "https://b.stripecdn.com/mkt-ssr-statics/assets/_next/static/media/Sohne.cb178166.woff2"
+   },
+   "displayName": "Sohne Var"
+  }
+ },
+ "code": 200,
+ "key_metadata": {"credits_consumed": 5, "credits_remaining": 209}
+}

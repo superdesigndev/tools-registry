@@ -2,6 +2,14 @@
 title: Endpoint catalog — what you can DO with a connected key, and which provider should do it
 status: shipped
 sources:
+  - .github/workflows/catalog-drift.yml
+  - scripts/catalog_drift.py
+  - scripts/catalog_validate.py
+  - src/treg/catalog/aliases.yaml
+  - src/treg/catalog/google-search-console.yaml
+  - src/treg/catalog/google-search-console.extended.yaml
+  - src/treg/catalog/justoneapi.extended.yaml
+  - src/treg/catalog/tikhub.extended.yaml
   - src/treg/catalog_store.py
   - src/treg/endpoint_stats.py
 related:
@@ -28,16 +36,23 @@ The catalog adds that operations layer:
 - **verified example responses** → captured during live testing, because docs show request params
   but choosing an API comes down to what actually comes back.
 
+Path placeholders are substituted by the marketplace caller. Raw values are percent-encoded; a value
+that already contains a valid `%HH` escape is kept verbatim so callers can safely reuse encoded resource
+names returned by an upstream API. An invalid/literal `%` is still encoded as `%25`. Search Console's
+`siteUrl` examples deliberately use the raw `sc-domain:example.com` form to demonstrate the default path.
+
 ## Where things live
 
 ```
 src/treg/catalog/
   capabilities.yaml        # the shared capability taxonomy (the cross-provider join key)
+  aliases.yaml             # query word -> catalog words (search-time vocabulary bridge)
   fx.yaml                  # currency -> USD rates + per-PROVIDER credit rates (see "Cost" below)
   <service>.yaml           # CORE tier — hand-curated; <service> = OAuthProvider.service
   <service>.extended.yaml  # EXTENDED tier — machine-generated full endpoint surface
   examples/<endpoint-id>.json  # truncated, scrubbed real responses captured at verify time
 scripts/
+  catalog_drift.py            # path+method drift against providers' public OpenAPI documents
   catalog_validate.py         # schema + referential checks (run in CI / after any edit)
   catalog_verify.py           # live-tests CORE endpoints with a real credential; writes examples/
   catalog_verify_extended.py  # the same for the extended tier, in bulk, under a spend cap
@@ -71,6 +86,23 @@ not, and it should not: a provider that documents its parameters (with example v
 does) gives us everything needed to generate a test request and make the call. What stays exclusive
 to core is the part a machine cannot do — mapping the endpoint to a capability, choosing the test
 target deliberately, and a full-fidelity example. See "bulk-verifying the extended tier" below.
+
+**An ingested price is a claim we will charge on, so a generated `free` is a bug, not a default.**
+`x.extended.yaml` shipped 168 routes priced `free` off a plan-tier model X had already abolished,
+while the proxy — which skips a `free` block, its `usd` being falsy — billed the provider fallback:
+the catalog published $0 and the balance moved $0.10. Where the upstream bills *treg* (an
+`oauth_billed` provider, [auth-secrets](auth-secrets.md)), the generator must therefore price every
+route it emits, and a test walks the provider asserting the published price equals the reserved one.
+
+The second half of that lesson cost a review round: **the fix for a blanket price is not a smaller
+blanket.** The first repair priced all 74 X writes at $0.015 — the post-creation rate — when X
+publishes a row per ACTION, and creating a list is $0.010, managing one $0.005, deleting an
+interaction $0.010. Read the rate card and transcribe it (`catalog_ingest.X_RATES` is the card,
+`X_ROUTE_RATES` the route→row mapping, and each entry's note names the row it was priced from);
+where the mapping is a judgement call, `confidence: inferred` says so and takes the dearer reading,
+because treg pays the difference. Watch for **conditional** rates in particular: X's $0.001 "owned
+read" applies only when the caller owns the developer app, which on a registry connect is treg —
+quoting it for our members under-billed the very calls we are charged the most for.
 
 Core wins on collision: `catalog_ingest.py` drops any `(method, path)` the provider's core file
 already curates, so an endpoint appears exactly once across both tiers. Promoting an extended entry
@@ -126,6 +158,8 @@ endpoints:
     summary: "Public TikTok profile by username"  # the provider's own description, kept VERBATIM —
                                     #   `name` is ours to word, `summary` is theirs
     input:                           # split by location — mirrors treg's binding model
+      queryArrayEncoding: json      # optional default for array query params: json | comma |
+                                    # repeated (the compatibility default).
       queryParams:
         uniqueId: {type: string, required: false, note: "username from the profile URL", example: "tiktok"}
         secUid:   {type: string, required: false}
@@ -190,6 +224,15 @@ Rules:
   present it must still be a real cost model (`cost.type` from the same enum as core).
 - `input` / `test_request` appear when the provider publishes enough parameter documentation to
   generate them; both are machine-written and are rewritten on the next ingest.
+- Query arrays carry an explicit wire encoding when the provider does not accept repeated keys:
+  `input.queryArrayEncoding` sets the endpoint-wide format. `catalog_store.query_values()` is shared
+  by MCP request assembly and `call_template()`, so the structured schema and paste-ready command
+  cannot disagree. Complete
+  `name=value` arguments are shell-quoted with `shlex.quote` after canonical boolean/JSON encoding.
+  Endpoint declarations are only valid when every array parameter shares a wire format. Meta Ad
+  Library's array parameters all use JSON; undeclared endpoints retain repeated keys. Pinterest's
+  mixed convention remains a documented catalog gap until a live connection can verify a separate
+  per-parameter extension.
 - `verified` + `example_response` mean a live call was made and passed, and carry exactly the same
   weight as in core — the validator applies one rule to both tiers: verified ⇒ a `test_request` to
   re-verify with and an `example_response` file that exists.
@@ -256,6 +299,32 @@ Three things follow, and they are the whole point of the field:
 
 `catalog_validate.py` only checks the value when present: a stated `kind` must be one of the four.
 
+### Naming — `name` is the search surface we own
+
+`summary` is the provider's text, verbatim; `name` is OURS, and since 2026-08-20 it is searched
+(same weight as summary). That makes it the one per-endpoint field where curation may put the
+words agents type. The formula: **job + the input the caller must hold + top output facets**, ≤60
+characters, and it must read as a natural title — it is the row heading on every surface.
+
+    Linkedin: get company profile (web_v2)   ->  LinkedIn company profile by URL or slug — headcount, industry
+    Get user profile                         ->  TikTok user profile by username — followers, bio, stats
+
+The rules (applied catalog-wide in the 2026-08-20 rewrite; every new provider follows them):
+
+1. Name the JOB in task words — never the vendor's operation title or version codes.
+2. Say the INPUT ("by name", "by domain", "by ASIN", "by LinkedIn URL"). Agents search by what
+   they hold; only the caller knows its inputs — that doctrine applies to naming too.
+3. Say the top OUTPUTS when people search by them ("headcount", "reviews", "hiring signal").
+4. One concept, one word, catalog-wide: always "postings", never sometimes "vacancies";
+   `aliases.yaml` covers the agent's side, our side must be consistent.
+5. Prefer the longer word form — "postings" contains "posting"; substring matching never works
+   backward.
+6. No dead words: "API", "data", "get", "fetch", "endpoint" are soft tokens worth nothing.
+7. No stuffing. If it does not read as a title, it is wrong. Overflow vocabulary belongs in the
+   capability description (weight 3, shared by the group) or `aliases.yaml`, never in the name.
+8. TRUTH over vocabulary: derive the name only from the row's own summary, path and input fields.
+   A name claiming an output the endpoint does not return is a lie an agent will spend money on.
+
 ### Cost — the file keeps the billing unit, the server computes USD
 
 A `cost` block stays in whatever unit the PROVIDER bills in; that is the number that stays correct
@@ -313,6 +382,13 @@ and state the break-even volume, and `fee_usd_month` must be present as data (th
 `check_fx` enforces all of it). The rate is reviewed monthly against `reconcile.shared_plan_recovery`
 and edited by hand. The full ladder: docs/SHARED-PLAN-PRICING-PLAN.md; the billing side (429 never
 billable, the recovery report): architecture/money.md.
+
+A second treg-set kind, **`kind: treg_trial`**, prices a provider at exactly **$0** with a
+`trial_calls_per_team_day` allowance as data beside the zero: a capped taste served on treg's own
+FREE-tier key. The allowance is what makes $0 honest — at zero the price gives no brake, so the cap
+is the congestion control (`api._enforce_trial_allowance`, per team per UTC day, successes only,
+fail-closed). `cost_view` attaches the allowance to every $0 it serves, because a bare $0.00 reads
+as unlimited. The validator refuses a non-zero "trial" and a zero with no allowance.
 
 Each `credit_rates_usd` / `unit_rates_usd` entry carries `usd` plus the `basis`/`source`/`checked` that justify it —
 the cheapest PUBLICLY listed tier (plan price ÷ credits included), so the served figure is an upper
@@ -456,6 +532,77 @@ Three rules it must honour:
 - **Never probe with a real call.** Discovering an HTTP method by sending a GET is how you get
   billed 1400 times (see the quota trap above). TikHub's methods come from an `OPTIONS` request,
   which Starlette answers `405 + allow:` before the handler — and therefore the meter — runs.
+- **The published spec outranks the probe** (`resolve_method`). A wrong method is not a cosmetic
+  error: treg *enforces* the recorded verb, so the endpoint becomes uncallable from both sides at
+  once — POST refused here ("… is GET"), GET refused upstream (405). The probe is weaker than it
+  looks: a preflight answering with a method *list* walks its preference order and comes out `GET`
+  whatever the handler takes. So when the OpenAPI declares exactly one method, that wins; probe and
+  docs are the fallback for routes the spec doesn't describe.
+- **The verb and the parameter POSITION are one decision, from one document.** TikHub's Apifox docs
+  list every TikTok-Ads parameter under `parameters.query` while its OpenAPI declares the same route
+  POST-with-a-JSON-body. Taking the verb from one and the position from the other yields a POST
+  carrying its arguments in the query string — still uncallable, just differently. When the spec
+  declares a JSON body and the docs gave us none, the documented "query" parameters ARE that body.
+
+### Catalog rot is a category of bug, and it is not the ingester's fault
+
+The 2026-08-17 TikTok-Ads breakage was first written up here as an ingester defect. It was not, and
+the correction matters more than the original claim. Those twelve routes really were `GET` when
+ingested: TikHub's July spec says `get`, and the captured `example_response` is a **real billed 200
+from a GET on 2026-07-27**. TikHub moved them to POST some time after. The catalog did not mis-read
+the provider — it went stale, and at the time **nothing re-checked a provider's spec for drift**.
+
+That reframed the fix. Preferring the spec over the probe is a genuine hardening, but it only helps
+*at re-ingest time*, and only if the cached spec was refreshed — the cache under
+`~/.cache/treg-catalog-ingest` is what an unqualified `catalog_ingest.py <provider>` reads, so a
+re-run against a months-old cache faithfully reproduces months-old truth. A `verified:` stamp is
+evidence about the day it was written and nothing after it.
+
+`scripts/catalog_drift.py` now closes that gap without making a paid API call: it discovers public
+OpenAPI documents from each provider file's source provenance, downloads the document with no
+credential, and compares every checked-in `(path, method)`. Plain JSON is preferred; the same
+`salvage_json_map` used by the ingester recovers a complete `paths` map from a truncated document,
+and YAML OpenAPI is accepted too. An unmarked missing path, method change, or marked route that has
+reappeared exits non-zero. Known absent marked rows are reported as `acknowledged`, not drift. The
+daily `catalog-drift.yml` workflow currently runs TikHub—the provider with demonstrated production
+rot—and the script remains provider-general for every catalog file that cites a public OpenAPI URL.
+
+### Retired and broken endpoints are tombstones, not offers
+
+Provider rot must not turn an id an agent cached yesterday into either a bare provider 404 or an
+unexplained registry 404. Keep the row and add:
+
+```yaml
+status: retired                 # or broken
+status_note: why it is gone and what changed
+superseded_by: provider.live-id # optional; only when the operation is genuinely equivalent
+```
+
+`catalog_store._parse` always retains the normalised row in `by_id`, so direct endpoint inspection
+can return its story, but excludes it from `endpoints`, the source for search, browse, capability
+counts and platform eligibility. On a direct endpoint-id call, `_resolve_marketplace_call` raises an
+actionable 410 before choosing or loading any credential; the pre-relay audit class is `retired`.
+`/catalog/endpoints/{id}/access` applies the same gate. This is catalog fallback only: an org tool
+whose exact name matches the retired id resolves first and remains callable, and URL passthrough
+never enters catalog lookup.
+
+The validator treats the marker as a contract: only `retired` and `broken` are valid; every marker
+needs a non-empty note; `status_note` and `superseded_by` cannot float without `status`; and a
+successor must be a different, existing, live catalog id. A marked id is therefore an explanation,
+not an alias chain or a route treg will still spend against.
+
+### `platform_blocked:` — works upstream, but not on treg's plan
+
+A third state sits between "offer" and "tombstone": the route works and the price is real, but
+treg's own subscription cannot serve it — Akta answers every alternative-data call (jobs, posts,
+website-traffic, employee-reviews, headcount-trends, product-reviews) on the shared key with a
+free 403 "Your current subscription does not include access to this endpoint". Marking those
+`status: broken` would be a lie (a caller's OWN key on a bigger plan serves them fine) and leaving
+them unmarked sold them as platform offers — a customer ran a whole evaluation lane into that wall
+of 403s before learning the gate existed. `platform_blocked: <reason>` keeps the row in discovery
+but makes `platform_eligible()` refuse it, and the reason rides on the served row so every surface
+can say "bring your own key" *before* the call instead of relaying the 403 after it.
+
 - **Platform is the system the data is ABOUT**, not the API family it lives under: DataForSEO's
   `/v3/merchant/amazon/products/live/advanced` is `amazon`, not `merchant`. Anything not tied to
   one system is `web`. Every new slug goes into `capabilities.yaml`'s `platforms` in the same
@@ -683,6 +830,15 @@ Five rules worth keeping:
 - **A 4xx never counts against the provider.** It usually means the caller sent bad parameters;
   counting it would let one agent's mistake make a healthy endpoint look broken to everyone. Only
   2xx versus 5xx decides the rate.
+- **405 is the exception, and the rule's own justification is why.** "The caller sent bad
+  parameters" cannot apply to a method the caller was never allowed to choose: `/call/` refuses a
+  catalog call whose method differs from the recorded one with a 400, *before* relaying. So a 405
+  coming back from the provider says the RECORDED METHOD is wrong — a stale contract, which is the
+  one thing this module exists to surface — and it counts as decided against the endpoint. Without
+  it, the seven straight 405s on `tikhub.x.tiktok-ads-search-ads` sat in the excluded bucket and the
+  WORKS column read `— (7)`: indistinguishable from an endpoint nobody had tried. That is the half
+  of the 2026-08-17 report that survived two rounds of review — fixing `LAST OK` stopped the row
+  claiming success, but only this makes it say *failure*.
 - **A treg refusal is not evidence about the endpoint.** Rows with `refused_by` set (a paywall 402,
   a daily-cap 429 — see the data-model fragment) never reached the provider; they are excluded even
   from `samples`, or a burst of refused calls dresses itself up as traffic. The 2026-08-12 Hunter
@@ -693,7 +849,10 @@ Five rules worth keeping:
   YAML, surfaced through `endpoint_view` — so an agent reads "404 = no match, don't retry" instead
   of treating an expected empty answer as a failure. Only annotate what the wire has demonstrated.
 - **Below `MIN_SAMPLES` we publish the count and nothing else.** "100% from two calls" is noise
-  dressed as evidence, and on a quiet endpoint a rate could expose one org's activity.
+  dressed as evidence, and on a quiet endpoint a rate could expose one org's activity. The floor
+  applies to **decided calls** (2xx + provider-fault failures), not total traffic: four caller 422s
+  cannot lift one 200 or 405 into a published rate. Latency has its own floor of successful calls;
+  one success is not both a p50 and p95 merely because enough failures made the rate publishable.
 - **Sample size is always visible**, so `100% (8)` cannot beat `99% (121)` by looking rounder.
 - **"Free" is a price, not a missing one.** `platform_eligible` used to demand
   `confidence in (verified, documented)` for every route, but `confidence` says how much we trust a
@@ -705,6 +864,92 @@ Five rules worth keeping:
   call produced it and a **`✓` age** when it came from the catalog's `verified:` stamp — the same
   discipline `confidence:` already applies to price. The stamp is the cold-start answer: it covers
   1,380 of 1,810 eligible endpoints for free, which is why the column is useful on day one.
+- **`last_ok` means the last SUCCESS.** It was `max(created_at)` over every row, success or not, so
+  an endpoint that had been called seven times today and failed all seven read `WORKS — (7)` next
+  to `LAST OK: today` — which is how `tikhub.x.tiktok-ads-search-ads` passed for a merely new row
+  while being uncallable (2026-08-17).
+- **Below the floor, the outcome stays unpublished — not even a yes/no.** The 2026-08-17 fix first
+  added `any_ok` ("has it EVER answered?") on the argument that a boolean survives any sample size.
+  It did not survive the two rules above. On a quiet endpoint it exposed the *outcome* of one
+  tenant's one call, which is half of why the floor exists; and because `samples` counts 4xx while
+  successes do not, a single caller's malformed 422 published `any_ok: false` and made a healthy
+  endpoint look broken to every other tenant — precisely the failure the 4xx rule prevents. It was
+  removed. "Never worked" is read off `ok_rate == 0`, which is computed from DECIDED samples only,
+  so no volume of caller errors can produce it.
+
+### Search scoring — most words must match, and the rare ones decide
+
+`catalog_store.search` demanded EVERY query token match (AND). Right for the 2–3 word refinement
+("tiktok comments" must not return every tiktok endpoint), and fatal for how agents actually query:
+the day the SearchMiss log shipped it recorded "company job postings hiring open jobs linkedin" → 0
+results while three endpoints matched 6 of the 7 words. The only misses were "linkedin" on rows
+shelved under `companies` (the agent names where the data lives, the catalog names what it is), and
+"open" on the row shelved under `linkedin`. Since 2026-08-20 a query may miss one token in every
+three (1–2 words: all still required), and each matched token scores its field weight times its BM25
+idf — "by" matches 558 endpoints and is worth ~nothing, "postings" matches 4 and decides the order.
+That asymmetry is also what keeps the miss allowance safe: dropping a rare word costs more score
+than dropping filler, so full-match fluff cannot outrank a near-match on substance. Rows matching
+the same tokens in the same fields still sum identical floats, so the tie band below keeps working.
+Query-side layers close what scoring alone cannot. Function words ("on", "this", "what") and
+single-letter tokens ("K&L" tokenizes to k + l, df 2,000+) are dropped before the miss allowance is
+computed — they select nothing, but each one raised the number of real words a row had to match.
+Tokens matching over `SOFT_DF_SHARE` (25%) of the catalog ("data" 33%, "api" 50%, "get" 40%) are
+SOFT: they still add score where they match, but a row is never punished for missing them — a
+statistical stopword list no hand list would keep up with. And `aliases.yaml` bridges vocabulary:
+substring containment only works in one direction, so "cryptocurrency" never finds the catalog's
+"crypto" without the map. A token matches under its own spelling or any curated alias, same field
+weight. NOUNS ONLY: aliasing a verb to a commoner verb poisons the key (`lookup: [search, find]`
+inflated lookup's match set 27 → 689 endpoints and destroyed its ranking power). The file is
+query-side only — it rewrites no provider text, survives every re-ingest, and the validator
+(`check_aliases`) rejects entries that could not survive the tokenizer and warns on aliases whose
+target occurs nowhere in the catalog. The SearchMiss log is its feed: a zero-result query whose
+words name an existing endpoint in different vocabulary is one row here.
+
+A query token that IS a platform slug ("tiktok", "linkedin") is the caller's hard filter, but idf
+prices it low — half the catalog serves the big platforms — so rows matching a rarer facet word
+("followers") outranked rows matching the asked-for platform. Platform-slug tokens therefore score
+DOUBLE where they match; rows matching the same tokens in the same fields still sum identical
+floats, so the tie band survives.
+
+A zero-result answer surfaces its `near_misses` — the rows that just missed the admission gate,
+with the exact words each one matched and missed ("apollo.companies.jobs matches job, hiring,
+signal; misses law, firm"). The matcher had already computed this; discarding it and answering
+with prose was the least useful thing the data allowed. Served structured over MCP (`near`), in
+the HTTP route's `near` + a hint line, and as "almost:" lines in the CLI — the caller is usually
+an LLM, and told exactly what to drop it re-queries correctly on the next call.
+
+`scripts/search_bench.py` is the labeled replay (30 agent-shaped queries): sentence-style hit@8 went
+14% → 100% (hit@1 64%, MRR .766) with the 8 short-query regression rows byte-identical. The residue
+past this is semantic matching — an embedding model — which the bench so far says is not needed.
+
+### The evidence decides the ORDER, not just the detail page
+
+Token scoring ties by the dozen — all 24 `"ad library"` matches score alike — so "which 8 do I show?"
+was answered by file order. That returned seven near-duplicate tikhub rows (one of them the
+uncallable one above) and cut off `scrapecreators.x.v1-tiktok-ad-library-search`, cheaper and 17 for
+17 measured. `catalog_store.rerank()` now settles equal scores over the band `rank_band()` returns, on
+buckets rather than a weighted formula (an ok_rate and a price are different units, and a blended
+score is one nobody can predict or argue with):
+
+**relevance → measured (good · unknown · poor · never-worked) → core before extended → price**
+
+where the measured bucket comes from `ok_rate` alone — `>= 0.9` good, `None` unknown, `0` never
+worked, else poor — so a demotion always rests on calls the provider actually decided.
+
+**The band takes the tie group whole.** A cut made *inside* a group of equally relevant rows is the
+arbitrary cut, and reranking a slice that already dropped the best-measured row cannot put it back —
+so `rank_band()` keeps taking while the score stays equal to the last row kept. That group is 17 rows
+for "ad library" and 24 for "email", but 523 for the bare word "tiktok", and this is an OPEN route:
+taking every group whole would put a 523-id `IN` clause behind every search. So it is bounded at
+`RERANK_BAND` (250) and **says when it truncated** — `ranking_note` over MCP, a hint on the HTTP
+route — because a bounded cut that announces itself is the thing this fix set out to build, and a
+silent one is what it set out to remove.
+
+Two orderings there are deliberate. Evidence outranks curation, because a core row that has never
+answered is not the better suggestion. Curation outranks **price**, because `core` is the hand-picked
+route and `extended` the bulk-ingested long tail — letting a tenth of a cent promote the tail made
+`"tiktok comments"` lead with douyin danmaku. Unmeasured sits above measured-poor: a new endpoint is
+an unknown, not a suspect.
 
 Team policy sits on top: `CapabilityPin` (see [data-model](data-model.md)) lets an org fix a
 capability to one provider, enforced in `_resolve_marketplace_call` before anything is reserved.

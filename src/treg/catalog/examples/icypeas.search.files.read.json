@@ -1,0 +1,29 @@
+{
+  "success": true,
+  "total": 3,
+  "files": [
+    {
+      "name": "treg catalog verification.xlsx",
+      "file": "L3mhHKAB9iupLhv96W-F",
+      "system": {
+        "createdAt": "2026-08-20T00:46:08.271Z",
+        "modifiedAt": "2026-08-20T00:46:08.272Z"
+      },
+      "found": 0,
+      "done": 0,
+      "aborted": 0,
+      "credits-missing": 0,
+      "in-progress": 0,
+      "bad-input": 0,
+      "total": 1,
+      "endTime": 1167,
+      "fromList": false,
+      "exported": false,
+      "exportable": false,
+      "generationInProgress": false,
+      "task": "email-search",
+      "finished": false
+    }
+  ],
+  "sorts": "…pagination cursor elided…"
+}

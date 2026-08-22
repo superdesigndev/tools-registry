@@ -1,0 +1,51 @@
+{
+  "items": [
+    {
+      "id": "019258bf-d6e1-7f9e-9dc0-48a0a740782a",
+      "name": "PayPal",
+      "domain": "paypal.com",
+      "website": "https://paypal.com",
+      "type": "public",
+      "legalName": "PayPal UK Ltd",
+      "industry": "Finance",
+      "industries": [
+        "Finance/Credit Cards & Transaction Processing"
+      ],
+      "categories": [
+        "b2b",
+        "... 2 more items truncated"
+      ],
+      "employees": "over-10K",
+      "reported_employees": "over-10K",
+      "revenue": "over-1b",
+      "description": "PayPal is a global digital payments and financial services company. It provides digital wallets, online checkout, money transfers, payment cards, buy now pay later, invoicing, payment links, and busin …[truncated]",
+      "keywords": [
+        "digital payments",
+        "... 40 more items truncated"
+      ],
+      "technologies": [
+        "Dyn Managed DNS",
+        "... 10 more items truncated"
+      ],
+      "subsidiaries": [
+        "braintreepayments.com",
+        "... 3 more items truncated"
+      ],
+      "founded_year": 1998,
+      "naics_codes": [
+        "522320"
+      ],
+      "_truncated": "7 more fields omitted"
+    }
+  ],
+  "metadata": {
+    "scores": {
+      "019258bf-d6e1-7f9e-9dc0-48a0a740782a": 0.8787499
+    },
+    "totalMatching": 54000
+  },
+  "nextCursor": "lEw8bKDX9cb2cFIVrnUqwbIGb0oCiFgUik6ohbEkoEDTf49qLxIbf0oahSCbgTOV0Uuu3JETnkp1vXACaXZnhEuYoOzL5",
+  "previousCursor": null,
+  "totalItems": 100,
+  "startIndex": 0
+}

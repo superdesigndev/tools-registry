@@ -1,0 +1,12 @@
+{
+  "revenueRanges": [
+    {
+      "display": "$0-$0.1M",
+      "value": "very_small"
+    },
+    {
+      "display": "$0.1M-$0.5M",
+      "value": "small_lower"
+    }
+  ]
+}

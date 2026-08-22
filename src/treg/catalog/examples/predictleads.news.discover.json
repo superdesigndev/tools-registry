@@ -1,0 +1,50 @@
+{
+  "data": [
+    {
+      "id": "87c82084-b21c-40a1-a6d7-a9a75c7c5537",
+      "type": "news_event",
+      "attributes": {
+        "summary": "EisnerAmper LLP will attend event 21st Institute of Internal Auditors (IIA) Atlanta Conference on Aug 20th '26.",
+        "category": "attends_event",
+        "found_at": "2026-08-20T12:00:00Z",
+        "confidence": 0.862,
+        "article_sentence": "EisnerAmper is a proud sponsor of the 21st Institute of Internal Auditors (IIA) Atlanta Conference on August 20, 2026.",
+        "planning": false,
+        "effective_date": "2026-08-20",
+        "event": "21st Institute of Internal Auditors (IIA) Atlanta Conference",
+        "product_data": {
+          "full_text": null
+        }
+      },
+      "relationships": {
+        "company1": {
+          "data": {
+            "id": "3fe2bf0d-753d-5e0d-abf0-3a7a4e39f3f3",
+            "type": "company"
+          }
+        },
+        "most_relevant_source": {
+          "data": {
+            "id": "e0417754-1b5f-4054-a965-3ac2d3073e15",
+            "type": "news_article"
+          }
+        }
+      }
+    }
+  ],
+  "included": [
+    {
+      "id": "3fe2bf0d-753d-5e0d-abf0-3a7a4e39f3f3",
+      "type": "company",
+      "attributes": {
+        "domain": "eisneramper.com",
+        "company_name": "EisnerAmper LLP"
+      }
+    },
+    "… 1 more items omitted"
+  ],
+  "meta": {
+    "schema_version": "3.1",
+    "record_state": "active"
+  }
+}

@@ -32,7 +32,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /companies/{domain}
-    name: "Enrich a company by domain"
+    name: "Enrich a company by domain — 80+ datapoints"
     summary: "Enrich a company from its domain — 80+ datapoints: industry, size, revenue, socials"
     input:
       pathParams:
@@ -61,7 +61,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /companies
-    name: "Search companies by attributes"
+    name: "Search companies by industry, size, location or tech"
     summary: "Search companies by industry, size, location, technology or any other attribute filter"
     input:
       queryParams:
@@ -98,7 +98,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /companies/by-email
-    name: "Enrich company by email"
+    name: "Enrich the company behind an email address"
     summary: "Identify and enrich the company behind an email address"
     input:
       queryParams:
@@ -125,7 +125,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /companies/{domain}/email-patterns
-    name: "Get company email address patterns"
+    name: "A company's email address patterns by domain"
     summary: "Find which email-address formats a company uses, and how common each one is"
     input:
       pathParams:

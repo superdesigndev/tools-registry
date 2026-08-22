@@ -1,0 +1,41 @@
+{
+  "data": {
+    "name": {
+      "fullName": "Patrick Collison",
+      "givenName": "Patrick",
+      "familyName": "Collison"
+    },
+    "email": "patrick@stripe.com",
+    "location": "US",
+    "gender": "male",
+    "geo": {
+      "country": "United States",
+      "countryCode": "US"
+    },
+    "employment": {
+      "domain": "stripe.com",
+      "name": "Stripe",
+      "title": "social media marketing manager",
+      "role": "marketing"
+    },
+    "facebook": {},
+    "github": {},
+    "twitter": {
+      "handle": "https://twitter.com/patrickc"
+    },
+    "linkedin": {
+      "handle": "https://www.linkedin.com/in/patrickcollison"
+    },
+    "gravatar": {},
+    "verification": {
+      "date": "2026-08-20T00:00:00+02:00",
+      "status": "valid"
+    },
+    "phone": true,
+    "indexedAt": "2026-08-20T02:46:32+02:00"
+  },
+  "meta": {
+    "email": "patrick@stripe.com"
+  }
+}
+

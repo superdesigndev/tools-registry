@@ -6,10 +6,24 @@
 # routes serve ANY public account once you hold a token — so only /2/users/me is own_account;
 # the rest are any_account and overlap directly with tikhub.x.* (scraped).
 #
-# The real constraint here is not scopes but the ACCESS TIER of treg's X app: the Free tier allows
-# essentially only posting plus /2/users/me, Basic adds modest read caps, and the read endpoints
-# below answer HTTP 429 with a UsageCapExceeded payload on a tier that doesn't include them. That
-# is a plan limit, not a scope error — reconnecting will not fix it.
+# PRICING IS PAY-PER-USE AND THE BILL LANDS ON TREG. X dropped its plan tiers (Free/Basic/Pro)
+# for prepaid pay-per-use credits billed to the APP OWNER, whoever's token made the call
+# (docs.x.com/x-api/getting-started/pricing, re-read 2026-08-18): reads are per RESOURCE returned
+# — posts $0.005, users $0.010 — and writes per request — $0.015 for a post, $0.20 when its text
+# carries a URL. The card prices EVERY resource type separately (DM events $0.010, lists and spaces
+# $0.005, likes/mutes/blocks $0.001, a list $0.010 to create but $0.005 to manage); the extended
+# file carries the rest, mapped in catalog_ingest.X_ROUTE_RATES.
+#
+# THE $0.001 "OWNED READ" RATE IS NOT OURS TO CHARGE. X grants it only when the authenticated user
+# "is the owner of the developer app" — on a registry connect the app is treg's and the member is a
+# stranger to it, so /2/users/me is an ordinary User read at $0.010. This entry said $0.001 until
+# 2026-08-18, which under-billed the calls treg is charged the most for.
+#
+# 3M post reads per billing cycle; same-resource reads
+# dedupe within a 24h UTC window (treg does not pass the dedup through — a repeat read is billed).
+# The costs below are what the proxy METERS against a team's balance when a call rides a registry
+# connect (treg's app; see oauth_providers.X.platform_billed). A BYO-app connection pays X
+# directly and is never metered.
 #
 # Scopes granted: tweet.read, users.read, offline.access (+ tweet.write on the `write` capability).
 provider: x
@@ -18,8 +32,8 @@ source:
   openapi: https://api.x.com/2/openapi.json
   curated: 2026-07-28
 
-limits: "monthly post cap by tier, plus 15-minute request windows"
-pricing_url: https://developer.x.com/en/portal/products  # Monthly post CAP by tier on top of 15-minute windows.; free tier: None write-mostly, very small read allowance
+limits: "3,000,000 post reads per monthly billing cycle, plus 15-minute request windows"
+pricing_url: https://docs.x.com/x-api/getting-started/pricing  # pay-per-use, prepaid credits, no plans
 endpoints:
   - id: x.x.user.profile
     capability: x.user.profile
@@ -27,13 +41,13 @@ endpoints:
     scope: own_account
     method: GET
     path: /2/users/me
-    name: "Get your connected X profile"
+    name: "Your connected X account profile — handle, followers"
     summary: "Get the profile of the connected X account (handle, name, follower counts)"
     input:
       queryParams:
         user.fields: {type: string, required: false, note: "comma-separated extras; public_metrics carries followers_count / following_count / tweet_count", example: "id,name,username,description,public_metrics,verified,created_at"}
       note: "the only X read route guaranteed on every access tier. Its data.id is the {id} the timeline endpoints need"
-    cost: {type: free, value: 0, currency: USD, unit: call, note: 'included with the connected account; X applies per-app request caps by access tier, not per-call pricing'}
+    cost: {type: per_result, value: 0.010, currency: USD, per: 1, unit: user, source: docs, source_url: 'https://docs.x.com/x-api/getting-started/pricing', checked: '2026-08-18', confidence: documented, note: 'one user resource at the User read rate. NOT the $0.001 owned read: that needs the caller to own the developer app, and on a registry connect the app is treg''s'}
     test_request:
       queryParams: {"user.fields": "id,name,username,description,public_metrics,verified,created_at"}
     verified: 2026-07-28
@@ -50,13 +64,14 @@ endpoints:
     method: GET
     path: /2/users/by/username/{username}
     summary: "Get any public X user's profile by handle"
+    name: "X user profile by username — followers, bio, verified"
     input:
       pathParams:
         username: {type: string, required: true, note: "handle without the '@'", example: "elonmusk"}
       queryParams:
         user.fields: {type: string, required: false, example: "id,name,username,description,public_metrics,verified,created_at"}
       note: "for several handles at once use GET /2/users/by?usernames=a,b,c (up to 100) — one request against the cap instead of 100"
-    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the connected account; counts against the app's monthly post-read cap}
+    cost: {type: per_result, value: 0.010, currency: USD, per: 1, unit: user, source: docs, source_url: 'https://docs.x.com/x-api/getting-started/pricing', checked: '2026-08-18', confidence: documented, note: 'X bills the app owner $0.010 per user resource returned; the batch route (/2/users/by?usernames=a,b,c) is priced per user too, so batching saves rate-limit windows, not money'}
     test_request:
       pathParams: {username: "elonmusk"}
       queryParams: {"user.fields": "id,name,username,description,public_metrics,verified,created_at"}
@@ -70,7 +85,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /2/users/{id}/tweets
-    name: "List a user's recent posts"
+    name: "Recent tweets of a user by user id — engagement metrics"
     summary: "List the recent posts of an X user (your own or any public account)"
     input:
       pathParams:
@@ -81,8 +96,8 @@ endpoints:
         exclude: {type: string, required: false, note: "comma-separated: retweets, replies", example: "retweets,replies"}
         tweet.fields: {type: string, required: false, note: "public_metrics carries likes/reposts/replies/impressions", example: "id,text,created_at,public_metrics,referenced_tweets"}
         start_time: {type: string, required: false, note: "RFC 3339; the timeline reaches back at most 3,200 posts regardless", example: "2026-07-01T00:00:00Z"}
-      note: "posts read here count against the app's monthly cap; on the Free access tier this route answers 429 UsageCapExceeded"
-    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the connected account; consumes the app's monthly post-read allowance (tier-dependent)}
+      note: "each post returned is billed to the app owner at $0.005 — size max_results to what you actually need"
+    cost: {type: per_result, value: 0.005, currency: USD, per: 1, unit: post, source: docs, source_url: 'https://docs.x.com/x-api/getting-started/pricing', checked: '2026-08-18', confidence: documented, note: 'X bills the app owner $0.005 per post returned — pass max_results (5-100, default 10) deliberately; a default-sized page costs ~$0.05'}
     test_request:
       pathParams: {id: "44196397"}
       queryParams: {max_results: 5, "tweet.fields": "id,text,created_at,public_metrics"}
@@ -108,6 +123,7 @@ endpoints:
     method: POST
     path: /2/tweets
     summary: "Publish a post to your own X account"
+    name: "Post a tweet to your own X account"
     input:
       body:
         text: {type: string, required: true, note: "the post text — 280 characters on a standard account, 25,000 on X Premium. Every link counts as 23 characters whatever its length", example: "Shipping something new today."}
@@ -117,7 +133,7 @@ endpoints:
         geo: {type: object, required: false, note: "{\"place_id\": \"…\"}"}
       bodyType: json
       note: "needs the `write` capability (tweet.write); a connection made with `read` answers 403. Success is HTTP 201 with {data: {id, text}} — the public URL is https://x.com/<handle>/status/<data.id>, which the API does not return. Images/video are out of reach, see the block comment above"
-    cost: {type: free, value: 0, currency: USD, unit: call, note: 'included with the connected account; X caps posts by app access tier (Free = 500 posts/month, 17/day) rather than charging per call'}
+    cost: {type: per_call, value: 0.015, currency: USD, per: 1, unit: call, source: docs, source_url: 'https://docs.x.com/x-api/getting-started/pricing', checked: '2026-08-18', confidence: documented, note: 'X bills the app owner $0.015 per post created — $0.20 when the text carries a URL (the proxy prices the call at the higher rate when it sees one)'}
     unverified: "write action — this publishes to a real account; requires a deliberate manual test, never an automated verify run"
     docs_url: https://docs.x.com/x-api/posts/creation-of-a-post
 
@@ -131,6 +147,7 @@ endpoints:
     method: POST
     path: /2/tweets
     summary: "Reply to an X post, or continue your own thread"
+    name: "Reply to a tweet or continue your thread by post id"
     input:
       body:
         text: {type: string, required: true, example: "One more thing —"}
@@ -138,7 +155,7 @@ endpoints:
         quote_tweet_id: {type: string, required: false, note: "quote-posts the given id instead of replying to it — use INSTEAD of `reply`, not alongside"}
       bodyType: json
       note: "to build a thread, feed each response's data.id into the next call's reply.in_reply_to_tweet_id. Replying to a post whose author restricted replies, or that was deleted, answers 403/404 — each call is all-or-nothing, so a half-posted thread stays half-posted"
-    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the connected account; a reply counts against the same per-tier monthly post cap as an original post}
+    cost: {type: per_call, value: 0.015, currency: USD, per: 1, unit: call, source: docs, source_url: 'https://docs.x.com/x-api/getting-started/pricing', checked: '2026-08-18', confidence: documented, note: 'a reply is a post creation: $0.015 to the app owner, $0.20 when the text carries a URL'}
     unverified: "write action — this publishes to a real account; requires a deliberate manual test, never an automated verify run"
     docs_url: https://docs.x.com/x-api/posts/creation-of-a-post
 

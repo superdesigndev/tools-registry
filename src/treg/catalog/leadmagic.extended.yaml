@@ -53,7 +53,7 @@ endpoints:
     platform: people
     method: POST
     path: /v1/people/b2b-profile
-    name: "Find profile URL from email"
+    name: "Reverse email lookup — the person's profile URL"
     summary: "Performs reverse email lookup to identify professional profile URLs associated with work or personal email addresses"
     input:
       bodyType: json
@@ -70,11 +70,11 @@ endpoints:
       currency: credit
       per: 1
       unit: call
-      source: docs
+      source: observed
       source_url: https://leadmagic.io/pricing
-      checked: '2026-07-28'
-      confidence: documented
-      note: 10 credits if a profile is found; free if not found
+      checked: '2026-08-16'
+      confidence: verified
+      note: "VERIFIED live 2026-08-16 by LeadMagic's own echo: a hit answered credits_consumed: 10 (charged $0.25 exactly), a miss credits_consumed: 0 (charged $0). The 'b2b overstatement' suspicion from the August sweep was checked and REFUTED for this endpoint — the over-billing it was blamed for was the settle bug fixed in d458ee5"
     verified: 2026-07-28
     example_response: examples/leadmagic.x.b2b-profile.json
     docs_url: https://leadmagic.io/docs/api-reference/email-to-profile
@@ -102,11 +102,11 @@ endpoints:
       currency: credit
       per: 1
       unit: call
-      source: docs
+      source: observed
       source_url: https://leadmagic.io/pricing
-      checked: '2026-07-28'
-      confidence: documented
-      note: 5 credits if an email is found; free if not found
+      checked: '2026-08-16'
+      confidence: verified
+      note: "VERIFIED live 2026-08-16 by LeadMagic's own echo: credits_consumed: 5, charged $0.125 exactly. The August-sweep value was correct"
     verified: 2026-07-28
     example_response: examples/leadmagic.x.b2b-profile-email.json
     docs_url: https://leadmagic.io/docs/api-reference/profile-to-email
@@ -149,7 +149,7 @@ endpoints:
     platform: people
     method: POST
     path: /v1/people/role-finder
-    name: "Find one person by job title"
+    name: "Find one person at a company by job title"
     summary: "Locates a person at a company based on their job title, enabling targeted outreach for account-based marketing campaigns and other role-specific needs"
     input:
       bodyType: json
@@ -183,7 +183,7 @@ endpoints:
     platform: people
     method: POST
     path: /v1/people/employee-finder
-    name: "List employees at a company"
+    name: "List employees at a company by domain or name"
     summary: "Retrieves a list of employees from a company using either domain or company name"
     input:
       bodyType: json
@@ -216,7 +216,7 @@ endpoints:
     platform: people
     method: POST
     path: /v1/people/job-change-detector
-    name: "Detect if a person changed jobs"
+    name: "Detect a job change from a profile URL and last company"
     summary: "Detects whether a professional has changed jobs by comparing their current employment against a previously known company"
     input:
       bodyType: json
@@ -250,7 +250,7 @@ endpoints:
     platform: companies
     method: POST
     path: /v1/companies/competitors-search
-    name: "Find a company's competitors"
+    name: "Find a company's competitors by domain or name"
     summary: "Retrieves a comprehensive list of competing companies based on a target company identifier — domains, employee counts, industries and descriptions"
     input:
       bodyType: json
@@ -282,7 +282,7 @@ endpoints:
     platform: companies
     method: POST
     path: /v1/companies/company-funding
-    name: "Get a company's funding history"
+    name: "A company's funding history by domain or name — investors"
     summary: "Retrieves comprehensive funding information for a company, including funding history, investor details, and leadership data"
     input:
       bodyType: json
@@ -314,7 +314,7 @@ endpoints:
     platform: companies
     method: POST
     path: /v1/companies/technographics
-    name: "Get a company's tech stack"
+    name: "Detect a company's tech stack by domain"
     summary: "Analyzes a company's website to identify their technology stack, including marketing tools, analytics platforms, hosting providers, CRM systems, and more"
     input:
       bodyType: json
@@ -345,7 +345,7 @@ endpoints:
     platform: companies
     method: POST
     path: /v3/companies/search
-    name: "Search companies by firmographics, tech, funding"
+    name: "Search companies by firmographics, tech stack or funding"
     summary: "The canonical company discovery endpoint supporting both single-company lookups and broad criteria-based discovery — domain, website, name, profile URL, and extensive firmographic/technographic/funding filters with cursor pagination"
     input:
       bodyType: json
@@ -386,7 +386,7 @@ endpoints:
     platform: companies
     method: POST
     path: /v3/jobs/search
-    name: "Search open job postings and hiring signals"
+    name: "Search job postings — titles, companies, hiring signals"
     summary: "Discovers open job postings with hiring signal data including titles, companies, locations, tags, and occupation taxonomy — resolves company domains, country codes, tags and occupation values into normalized filter IDs before executing a bounded query. Searches job postings, not people"
     input:
       bodyType: json
@@ -425,7 +425,7 @@ endpoints:
     platform: companies
     method: POST
     path: /v1/jobs/jobs-finder
-    name: "Search job listings (basic)"
+    name: "Search job postings by company, location or date (basic)"
     summary: "Search for job listings filtered by company, job details, location, and posting date. Returns paginated results with company information and job descriptions"
     input:
       bodyType: json
@@ -464,7 +464,7 @@ endpoints:
     platform: google-ads
     method: POST
     path: /v1/ads/google-ads-search
-    name: "Search a company's Google Ads"
+    name: "A company's Google Ads by domain or name"
     summary: "Retrieves Google Ads data for a specified company, enabling competitive intelligence and ad strategy analysis"
     input:
       bodyType: json
@@ -494,7 +494,7 @@ endpoints:
     platform: meta-ads
     method: POST
     path: /v1/ads/meta-ads-search
-    name: "Search a company's Meta (Facebook/Instagram) ads"
+    name: "A company's Meta (Facebook/Instagram) ads by domain"
     summary: "Retrieves Meta (Facebook/Instagram) advertisements for a specified company using their domain or name"
     input:
       bodyType: json
@@ -525,7 +525,7 @@ endpoints:
     platform: companies
     method: POST
     path: /v1/ads/b2b-ads-search
-    name: "Search a company's LinkedIn ads"
+    name: "A company's LinkedIn ads by domain or name — creatives"
     summary: "Retrieves B2B advertisements for a company, returning ad creatives with metadata including headlines, CTAs, landing pages, and performance metrics"
     input:
       bodyType: json

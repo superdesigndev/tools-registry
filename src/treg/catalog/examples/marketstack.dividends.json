@@ -1,0 +1,25 @@
+{
+  "pagination": {
+    "limit": 3,
+    "offset": 0,
+    "count": 3,
+    "total": 3
+  },
+  "data": [
+    {
+      "date": "2026-08-10",
+      "dividend": 0.27,
+      "symbol": "AAPL"
+    },
+    {
+      "date": "2026-05-11",
+      "dividend": 0.27,
+      "symbol": "AAPL"
+    },
+    {
+      "date": "2026-02-09",
+      "dividend": 0.26,
+      "symbol": "AAPL"
+    }
+  ]
+}

@@ -35,7 +35,7 @@ endpoints:
   platform: meta-ads
   method: GET
   path: /me/businesses
-  name: "List Business Manager accounts"
+  name: "Business Manager accounts for your Meta login"
   summary: The Business Manager accounts this login belongs to
   scope: own_account
   cost:
@@ -50,7 +50,7 @@ endpoints:
   platform: meta-ads
   method: GET
   path: /{ad_account_id}
-  name: "Get ad account details"
+  name: "Your Meta ad account — currency, spend cap, status"
   summary: The ad account itself — name, currency, timezone, spend cap, amount_spent, account_status
   scope: own_account
   cost:
@@ -65,7 +65,7 @@ endpoints:
   platform: meta-ads
   method: GET
   path: /{ad_account_id}/activities
-  name: "Get ad account change log"
+  name: "Change history of your Meta ad account"
   summary: 'The change log: who changed what on the account and when'
   scope: own_account
   cost:
@@ -80,7 +80,7 @@ endpoints:
   platform: meta-ads
   method: GET
   path: /{ad_account_id}/adcreatives
-  name: "List ad creatives"
+  name: "Ad creatives in your Meta ad account"
   summary: The creatives — body, title, image/video, link and call-to-action
   scope: own_account
   cost:
@@ -96,7 +96,7 @@ endpoints:
   platform: meta-ads
   method: POST
   path: /{ad_account_id}/adcreatives
-  name: "Create ad creative"
+  name: "Create an ad creative in your Meta ad account"
   summary: Create an ad creative
   scope: own_account
   cost:
@@ -112,7 +112,7 @@ endpoints:
   platform: meta-ads
   method: GET
   path: /{ad_account_id}/adimages
-  name: "List uploaded ad images"
+  name: "Images uploaded to your Meta ad account"
   summary: Images uploaded to the ad account, with hash, dimensions and permalink
   scope: own_account
   cost:
@@ -127,7 +127,7 @@ endpoints:
   platform: meta-ads
   method: GET
   path: /{ad_account_id}/adlabels
-  name: "List ad labels"
+  name: "Ad labels in your Meta ad account"
   summary: Labels used to group campaigns, ad sets and ads
   scope: own_account
   cost:
@@ -142,7 +142,7 @@ endpoints:
   platform: meta-ads
   method: GET
   path: /{ad_account_id}/adrules_library
-  name: "List automated rules"
+  name: "Automated rules on your Meta ad account"
   summary: Automated rules on the account — their conditions and actions
   scope: own_account
   cost:
@@ -157,7 +157,7 @@ endpoints:
   platform: meta-ads
   method: GET
   path: /{ad_account_id}/ads
-  name: "List ads in account"
+  name: "Every ad in your Meta ad account, with status"
   summary: Every ad in the account with its creative, status and effective review status
   scope: own_account
   cost:
@@ -173,7 +173,7 @@ endpoints:
   platform: meta-ads
   method: POST
   path: /{ad_account_id}/ads
-  name: "Create ad"
+  name: "Create an ad in a Meta ad set from a creative"
   summary: Create an ad from a creative inside an ad set
   scope: own_account
   cost:
@@ -189,7 +189,7 @@ endpoints:
   platform: meta-ads
   method: GET
   path: /{ad_account_id}/adsets
-  name: "List ad sets in account"
+  name: "Ad sets in your Meta ad account — budget, targeting"
   summary: Every ad set in the account with budget, schedule, optimisation goal and targeting
   scope: own_account
   cost:
@@ -205,7 +205,7 @@ endpoints:
   platform: meta-ads
   method: POST
   path: /{ad_account_id}/adsets
-  name: "Create an ad set"
+  name: "Create a Meta ad set — targeting, budget, schedule"
   summary: Create an ad set (targeting, budget, schedule, optimisation goal)
   scope: own_account
   cost:
@@ -221,7 +221,7 @@ endpoints:
   platform: meta-ads
   method: GET
   path: /{ad_account_id}/adspixels
-  name: "List ad pixels"
+  name: "Meta pixels on your ad account, with last fired time"
   summary: Meta pixels on the account and when each last fired
   scope: own_account
   cost:
@@ -236,7 +236,7 @@ endpoints:
   platform: meta-ads
   method: GET
   path: /{ad_account_id}/advideos
-  name: "List ad videos"
+  name: "Videos uploaded to your Meta ad account"
   summary: Videos uploaded to the ad account
   scope: own_account
   cost:
@@ -252,7 +252,7 @@ endpoints:
   platform: meta-ads
   method: POST
   path: /{ad_account_id}/campaigns
-  name: "Create campaign"
+  name: "Create a Meta ad campaign — objective, status"
   summary: Create a campaign (objective, status, special ad categories)
   scope: own_account
   cost:
@@ -268,7 +268,7 @@ endpoints:
   platform: meta-ads
   method: GET
   path: /{ad_account_id}/customaudiences
-  name: "List custom and lookalike audiences"
+  name: "Custom and lookalike audiences in your Meta ad account"
   summary: Custom and lookalike audiences with approximate size and delivery status
   scope: own_account
   cost:
@@ -283,7 +283,7 @@ endpoints:
   platform: meta-ads
   method: GET
   path: /{ad_account_id}/customconversions
-  name: "List custom conversions"
+  name: "Custom conversions on your Meta ad account"
   summary: Custom conversions defined on the account and their rules
   scope: own_account
   cost:
@@ -299,7 +299,7 @@ endpoints:
   platform: meta-ads
   method: GET
   path: /{ad_account_id}/delivery_estimate
-  name: "Estimate delivery reach and bid"
+  name: "Estimate reach and bid for a Meta targeting spec"
   summary: Estimated daily reach and bid range for a targeting spec, before you spend anything
   scope: own_account
   cost:
@@ -315,7 +315,7 @@ endpoints:
   platform: meta-ads
   method: GET
   path: /{ad_account_id}/reachestimate
-  name: "Estimate audience reach"
+  name: "Estimate audience size for a Meta targeting spec"
   summary: Estimated audience size for a targeting spec
   scope: own_account
   cost:
@@ -331,7 +331,7 @@ endpoints:
   platform: meta-ads
   method: GET
   path: /{ad_account_id}/targetingbrowse
-  name: "Browse targeting taxonomy"
+  name: "Browse Meta's ad targeting taxonomy as a tree"
   summary: Browse the targeting taxonomy as a tree
   scope: own_account
   cost:
@@ -347,7 +347,7 @@ endpoints:
   platform: meta-ads
   method: GET
   path: /{ad_account_id}/targetingsearch
-  name: "Search targeting options by keyword"
+  name: "Search Meta ad targeting options by keyword"
   summary: Search Meta's targeting taxonomy (interests, behaviours, demographics) by keyword
   scope: own_account
   cost:
@@ -363,7 +363,7 @@ endpoints:
   platform: meta-ads
   method: GET
   path: /{ad_account_id}/targetingsuggestions
-  name: "Suggest related targeting interests"
+  name: "Meta targeting interests related to ones you target"
   summary: Interests related to ones you already target
   scope: own_account
   cost:
@@ -378,7 +378,7 @@ endpoints:
   platform: meta-ads
   method: GET
   path: /{ad_id}
-  name: "Get ad details"
+  name: "One Meta ad — creative, status, review status"
   summary: A single ad — its creative, status, tracking specs and review status
   scope: own_account
   cost:
@@ -394,7 +394,7 @@ endpoints:
   platform: meta-ads
   method: POST
   path: /{ad_id}
-  name: "Update ad"
+  name: "Update a Meta ad — pause it or swap its creative"
   summary: Update an ad — pause it or swap its creative
   scope: own_account
   cost:
@@ -410,7 +410,7 @@ endpoints:
   platform: meta-ads
   method: GET
   path: /{ad_id}/leads
-  name: "List leads from a lead ad"
+  name: "Leads collected by one of your Meta lead ads"
   summary: The leads a lead ad has collected
   scope: own_account
   cost:
@@ -427,7 +427,7 @@ endpoints:
   platform: meta-ads
   method: GET
   path: /{ad_id}/previews
-  name: "Preview an ad in a placement"
+  name: "Preview a Meta ad rendered in a placement"
   summary: A rendered preview of an ad in a given placement, as an iframe
   scope: own_account
   cost:
@@ -442,7 +442,7 @@ endpoints:
   platform: meta-ads
   method: GET
   path: /{adset_id}
-  name: "Get ad set details"
+  name: "One Meta ad set — targeting, budget, schedule"
   summary: A single ad set — targeting, schedule, budget, optimisation goal and billing event
   scope: own_account
   cost:
@@ -458,7 +458,7 @@ endpoints:
   platform: meta-ads
   method: POST
   path: /{adset_id}
-  name: "Update an ad set"
+  name: "Update a Meta ad set — pause, budget, targeting"
   summary: Update an ad set — pause it, change budget, schedule or targeting
   scope: own_account
   cost:
@@ -474,7 +474,7 @@ endpoints:
   platform: meta-ads
   method: GET
   path: /{adset_id}/ads
-  name: "List ads in an ad set"
+  name: "Ads inside one Meta ad set"
   summary: The ads inside one ad set
   scope: own_account
   cost:
@@ -489,7 +489,7 @@ endpoints:
   platform: meta-ads
   method: GET
   path: /{business_id}/owned_ad_accounts
-  name: "List ad accounts owned by a business"
+  name: "Ad accounts owned by a Business Manager"
   summary: The ad accounts a Business Manager owns
   scope: own_account
   cost:
@@ -504,7 +504,7 @@ endpoints:
   platform: meta-ads
   method: GET
   path: /{campaign_id}
-  name: "Get campaign details"
+  name: "One Meta campaign — objective, budget, status"
   summary: A single campaign — objective, status, budget, bid strategy and spend cap
   scope: own_account
   cost:
@@ -520,7 +520,7 @@ endpoints:
   platform: meta-ads
   method: POST
   path: /{campaign_id}
-  name: "Update campaign"
+  name: "Update a Meta campaign — pause, rename, budget"
   summary: Update a campaign — pause it, rename it, change its budget
   scope: own_account
   cost:
@@ -536,7 +536,7 @@ endpoints:
   platform: meta-ads
   method: GET
   path: /{campaign_id}/ads
-  name: "List ads in a campaign"
+  name: "Ads inside one Meta campaign"
   summary: The ads inside one campaign
   scope: own_account
   cost:
@@ -551,7 +551,7 @@ endpoints:
   platform: meta-ads
   method: GET
   path: /{campaign_id}/adsets
-  name: "List ad sets in a campaign"
+  name: "Ad sets inside one Meta campaign"
   summary: The ad sets inside one campaign
   scope: own_account
   cost:

@@ -39,7 +39,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /v1/people/email-finder
-    name: "Find a person's work email"
+    name: "Find a person's work email by name and company"
     summary: "Find someone's work email address from their name and their company's domain or name"
     input:
       bodyType: json
@@ -74,7 +74,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /v1/people/email-validation
-    name: "Verify an email address"
+    name: "Verify an email address is deliverable"
     summary: "Check an email is real and deliverable, and whether its domain is catch-all"
     input:
       bodyType: json
@@ -105,7 +105,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /v1/people/profile-search
-    name: "Enrich a person from their profile URL"
+    name: "Enrich a person by profile URL — role, work history"
     summary: "Enrich a person from their profile URL — role, employer, location and work history"
     input:
       bodyType: json
@@ -136,7 +136,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /v1/people/mobile-finder
-    name: "Find a person's mobile number"
+    name: "Find a person's mobile number by profile URL or email"
     summary: "Find someone's mobile number from their profile URL or email address"
     input:
       bodyType: json
@@ -169,7 +169,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /v1/companies/company-search
-    name: "Enrich a company from domain or name"
+    name: "Enrich a company by domain or name — headcount, revenue"
     summary: "Enrich a company from domain, name or profile URL — industry, headcount, revenue"
     input:
       bodyType: json
@@ -202,7 +202,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /v3/people/search
-    name: "Find people at a company by job title"
+    name: "Find people at a company by job title, with contact details"
     summary: "Find the people at a company by job title, optionally revealing their emails and mobiles"
     input:
       bodyType: json

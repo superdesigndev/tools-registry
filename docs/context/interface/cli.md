@@ -346,7 +346,20 @@ Bare **`treg connections`** now lists (the subparser is `required=False` with a 
   (`_print_params`), the paste-ready `RUN IT` command, and the example response pretty-printed, clipped at
   40 lines with a pointer to the full JSON. `search`/`get` are matched as positional **verbs** inside
   `cmd_catalog`, not argparse subcommands, so `treg catalog <platform>` keeps working and a multi-word
-  query needs no quoting.
+  query needs no quoting. An id that misses prints the server's `did_you_mean` ids and the exact
+  command for the first one; the old "find one with: treg catalog search …" is the fallback for a
+  miss that resembles nothing, since it sends the reader back to the step that produced the wrong id.
+  The siblings table's `WORKS` cell shows a measured `0%` for an endpoint whose decided calls all
+  failed; below the sample floor it stays the neutral `— (n)`, because the floor publishes volume and
+  never outcome.
+- **`mcp grants`** / **`mcp use-team <grant> <team>`** (`cmd_mcp_grants`, `cmd_mcp_use_team`) — which
+  MCP connections this account has authorised, and which team's balance each one spends from; and
+  moving one, without reconnecting the client. The grant id prints **whole** while every other column
+  is clipped — it is the argument `use-team` takes, and clipping it made the one command this table
+  exists to feed answer 404 for anything copied off the screen. The team was chosen once at a consent screen and then
+  appeared nowhere: an agent reports a slug, `treg org ls` lists the teams of whoever is signed in
+  *here*, and those can be two different accounts. See
+  [mcp-oauth](../architecture/mcp-oauth.md#but-the-choice-must-stay-visible-and-reversible-afterwards).
 
 `_parse_bind` defaults every field to a bearer `Authorization` header; only `secret=` is required, so a
 multi-credential tool needs no JSON.
@@ -383,3 +396,43 @@ of the kept skills** + the `--force` hint, so a caller (agent or human) decides 
 the Access agent-instruction defers to this output rather than restating the rule. The push side (`build_payload` /
 `contract_to_skill_payload`) collects those files via `skills.collect_files` (excludes `.secret*`,
 `SKILL.md`, `treg.json`, VCS/build junk, binaries, oversized files).
+
+## Caller tags and per-tag budgets
+
+For a builder reselling treg to their own users (see [api](api.md) and
+[money](../architecture/money.md)).
+
+```bash
+# a token pinned to one customer — the pin beats whatever X-Treg-Meta the holder sends
+treg org agent-new cust-a-bot --pin customer=cust_A
+```
+
+`--pin` is repeatable and survives a rotate: re-minting the same name replaces the token and keeps the
+pin, because a rotate must never silently unpin a scoped token.
+
+Two commands for a team reselling treg:
+
+```bash
+treg org budgets                                   # every per-tag limit you've set
+treg org budget-set customer cust_8123 --daily 5   # cap one of your users at $5/day
+treg org budget-set workspace ws_9 --daily 50      # budgets STACK — both apply to a call
+treg org budget-set customer cust_8123 --block     # cut one off; the caps survive
+treg usage --by customer --days 30                 # what each one consumed, from the ledger
+```
+
+`budget-set` only writes the limits you name, so `--block` never wipes a cap someone set last week.
+Caps are **advisory** — concurrent calls can overshoot slightly — and the prepaid balance is the hard
+limit; don't resell them to your users as exact.
+
+## `treg login` pins its token to your active team
+
+The token `login` stores is an **identity** token — it names a person, not a team — but the CLI
+re-mints it with the active org baked into the claim (`GET /auth/cli-token` with `X-Treg-Org`, the
+same mechanism behind the dashboard's "your API key"). `treg org use` re-pins on every switch.
+
+This matters because the token is the thing people copy *out* of the CLI: into curl, into an MCP
+client's `Authorization`, into an agent's environment. Unpinned it fails there with
+`choose an org (send X-Treg-Org)` — accurate, and useless, because the CLI had been supplying that
+header invisibly all along.
+
+Switching teams is unaffected: an explicit `X-Treg-Org` header always beats the claim.

@@ -1,0 +1,23 @@
+{
+  "data": {
+    "email": null,
+    "first_name": null,
+    "last_name": null,
+    "full_name": null,
+    "website_url": null,
+    "company": null,
+    "pattern": null,
+    "department": null,
+    "type": null,
+    "position": null,
+    "country": null,
+    "gender": null,
+    "twitter": null,
+    "linkedin": null,
+    "score": 0,
+    "accept_all": null,
+    "phone_number": false,
+    "sources": null
+  }
+}
+

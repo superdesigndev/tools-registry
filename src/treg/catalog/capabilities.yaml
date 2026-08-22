@@ -105,6 +105,7 @@ platforms:
   # --- Enrichment: B2B company & people data ---------------------------------------------------
   companies: {label: "Company data", category: "Enrichment", featured: 1, summary: "Enrich and search companies — firmographics, funding, tech stack, employees."}
   people: {label: "People & contact data", category: "Enrichment", featured: 2, summary: "Enrich people and find or verify work contact details — role, company, email, phone."}
+  creators: {label: "Creators & influencers", category: "Enrichment", featured: 3, summary: "Find and enrich creators across Instagram, YouTube, TikTok, Twitch, X and OnlyFans — profile, audience, contact email, posts and lookalikes."}
 
   ebay: {label: "eBay", category: "E-commerce", summary: "Product listings and search results from eBay."}
   walmart: {label: "Walmart", category: "E-commerce", summary: "Product listings and search results from Walmart."}
@@ -112,6 +113,10 @@ platforms:
   duckduckgo: {label: "DuckDuckGo Search Results (SERP)", category: "SEO/AEO", summary: "Organic results from DuckDuckGo."}
   yelp: {label: "Yelp", category: "Reviews & Apps", summary: "Business listings and reviews from Yelp."}
   account: {label: "The provider account itself — usage, quota, balance (not a content platform)", category: "Other"}
+
+  # --- Market data: prices & financial markets --------------------------------------------------
+  crypto: {label: "Crypto Market Data", category: "Market data", featured: 1, summary: "Live and historical prices, market caps, trends and exchanges across 17,000+ coins."}
+  stocks: {label: "Stock Market Data", category: "Market data", featured: 2, summary: "End-of-day and intraday stock prices, tickers, splits and dividends across global exchanges."}
 
 capabilities:
   # --- SEO / search -----------------------------------------------------------------------------
@@ -243,8 +248,9 @@ capabilities:
   # merged from seo-tool + enrichment proposed_capabilities (2026-07-28)
   app-store.search.apps: "Search apps by keyword"
   companies.email_pattern: "Find a company's work-email format"
-  companies.headcount_trend: "Headcount over time & by department"
+  companies.headcount_trend: "Headcount growth over time & by department"
   companies.industry.resolve: "Map free text to industry codes"
+  companies.jobs: "A company's open job postings"
   companies.news: "Recent news & signals about a company"
   companies.reviews: "Read employee reviews of a company"
   google-play.search.apps: "Search apps by keyword"
@@ -1169,3 +1175,27 @@ capabilities:
   yelp.business.profile: "Get a business's profile"
   yelp.business.reviews: "List a business's reviews"
   yelp.business.search: "Search businesses by keyword and location"
+
+  # --- Market data -------------------------------------------------------------------------------
+  crypto.price.current: "Live crypto prices in any currency"
+  crypto.price.currencies: "Quote currencies you can price against"
+  crypto.market.rankings: "Top coins by market cap, with market data"
+  crypto.coin.profile: "Full profile and market stats for one coin"
+  crypto.price.history: "Historical prices and volumes for a coin"
+  crypto.price.ohlc: "OHLC candles for a coin"
+  crypto.search: "Search coins, exchanges and categories"
+  crypto.market.trending: "Coins trending right now"
+  crypto.market.global: "Global crypto market statistics"
+  crypto.exchanges.list: "Crypto exchanges with volume and trust score"
+  stocks.eod.history: "End-of-day price history for a ticker"
+  stocks.eod.latest: "Latest end-of-day prices"
+  stocks.intraday: "Intraday prices for a ticker"
+  stocks.tickers.search: "Find tickers and the exchanges they trade on"
+  stocks.exchanges.list: "Stock exchange directory"
+  stocks.actions.splits: "Stock split history"
+  stocks.actions.dividends: "Dividend history"
+  stocks.quote.live: "Current quote for a ticker (live or delayed per plan)"
+  stocks.company.profile: "Company profile behind a ticker"
+  stocks.company.news: "News for a specific company"
+  stocks.fundamentals.metrics: "Fundamental metrics and ratios for a ticker"
+  stocks.market.status: "Is the market open right now"

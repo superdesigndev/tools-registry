@@ -45,7 +45,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /datasets/v3/scrape
-    name: "Scrape URLs into structured records"
+    name: "Scrape URLs into structured records in one call"
     summary: "Scrape one or more URLs into structured records and get them back in the same call"
     input:
       queryParams:
@@ -71,7 +71,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /datasets/v3/trigger
-    name: "Start async scrape job for URLs"
+    name: "Start an async scrape of a URL batch — snapshot id"
     summary: "Start an asynchronous scraping job over a batch of URLs and get a snapshot id back"
     input:
       queryParams:
@@ -106,7 +106,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /datasets/v3/progress/{snapshot_id}
-    name: "Check async scrape job status"
+    name: "Check an async scrape job by snapshot id"
     summary: "Check whether an asynchronous scraping job has finished"
     input:
       pathParams:
@@ -125,7 +125,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /datasets/v3/snapshot/{snapshot_id}
-    name: "Download async scrape job results"
+    name: "Download scraped records by snapshot id"
     summary: "Download the records produced by a finished scraping job"
     input:
       pathParams:
@@ -150,7 +150,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /datasets/v3/scrape
-    name: "Get Instagram user profile"
+    name: "Instagram profile by URL — followers, bio, verification"
     summary: "Get the public profile of an Instagram user (followers, bio, verification)"
     input:
       queryParams:
@@ -174,7 +174,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /datasets/v3/scrape
-    name: "Get LinkedIn member profile"
+    name: "LinkedIn member profile by URL — headline, experience"
     summary: "Get a public LinkedIn member profile (headline, experience, education)"
     input:
       queryParams:
@@ -199,7 +199,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /datasets/list
-    name: "List available datasets and scrapers"
+    name: "List available Bright Data datasets and their ids"
     summary: "List the datasets and scrapers your Bright Data account can run, with their ids"
     input:
       note: "how you discover the dataset_id every other endpoint here needs, without hardcoding ids from blog posts. Returns id, name and size per dataset, covering the Web Scraper API datasets across 250+ domains. NOTE the path sits outside the /datasets/v3/ family the rest of this file uses, and differs from the /datasets/v3/datasets guess recorded as brightdata's probe_path in oauth_providers.py — reconcile the two once a token is available"

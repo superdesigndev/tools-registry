@@ -28,7 +28,7 @@ endpoints:
     scope: own_account
     method: POST
     path: /v1beta/properties/{property_id}:runReport
-    name: "Run a custom analytics report"
+    name: "Run a custom GA4 report by property id"
     summary: "Run a traffic or behaviour report on your own Google Analytics property"
     input:
       pathParams:
@@ -62,7 +62,7 @@ endpoints:
     scope: own_account
     method: POST
     path: /v1beta/properties/{property_id}:runRealtimeReport
-    name: "Get realtime active users on your site"
+    name: "GA4 realtime active users by page, source, country"
     summary: "See who is on your site right now (active users by page, source and country)"
     input:
       pathParams:
@@ -91,7 +91,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /v1beta/properties/{property_id}/metadata
-    name: "List available dimensions and metrics"
+    name: "List your GA4 property's dimensions and metrics"
     summary: "List the dimensions and metrics your GA4 property supports, including custom ones"
     input:
       pathParams:

@@ -1,0 +1,36 @@
+{
+  "items": [
+    {
+      "id": 256474769,
+      "name": "Patrick Collison",
+      "location": {
+        "country": {
+          "_truncated_object": "4 fields"
+        },
+        "address": "San Francisco Bay Area"
+      },
+      "first_name": "Patrick",
+      "last_name": "Collison",
+      "socials": {
+        "linkedin_url": "https://www.linkedin.com/in/patrickcollison"
+      },
+      "experiences": [
+        {
+          "_truncated_object": "9 fields"
+        },
+        {
+          "_truncated_object": "9 fields"
+        },
+        "... 1 more items truncated"
+      ],
+      "position": "Stripe CEO",
+      "seniority": "founder",
+      "department": "c-suite/founder",
+      "image_url": "https://api.companyenrich.com/people/image/256474769",
+      "updated_at": "2026-08-02T00:15:55.23512Z"
+    }
+  ],
+  "page": 1,
+  "totalPages": 40,
+  "totalItems": 40
+}

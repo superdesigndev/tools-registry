@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy import JSON, Column, UniqueConstraint
+from sqlalchemy import JSON, Column, Index, UniqueConstraint
 from sqlmodel import Field, SQLModel
 
 # Role ordering for gates (owner > admin > member > viewer).
@@ -75,6 +75,32 @@ class Org(SQLModel, table=True):
     # on-session "finish this payment" link instead of starting a fresh charge the bank will re-decline.
     autotopup_recovery_pi: str | None = Field(default=None)
 
+    # ---- caller tags & spend ceiling (see api._parse_call_meta, api._enforce_tag_budgets) --------
+    # Which keys of the X-Treg-Meta bag this team may set budgets on. DECLARED rather than arbitrary
+    # because each one is an indexed lookup on every proxied call and a row per value per call —
+    # a team budgeting on `session` would write an aggregate row per conversation. Bounded at 3.
+    budget_dims: list | None = Field(default=None, sa_column=Column("budget_dims", JSON, nullable=True))
+    # The ONE dimension that scopes idempotency. Retry partitioning cannot generalize: a call tagged
+    # `customer=a, workspace=b` has no principled answer for which of them partitions its keys.
+    primary_dim: str = Field(default="customer")
+    # This team's own ceiling on daily spend from treg's keys, in micro-USD. 0 = use the deployment
+    # default. The EFFECTIVE cap is min(this, the platform ceiling): a team may lower it freely, and
+    # raising it past the ceiling is refused — which makes that a conversation with us rather than an
+    # env-var edit that lifts the blast-radius rail for every team at once.
+    daily_cap_micro: int = Field(default=0)
+
+    # ---- Google Ads attribution (see adsconv.py) --------------------------------------------------
+    # The click that produced this team, captured as a first-party cookie on landing and persisted
+    # here at signup. Kept for the life of the team: a top-up weeks later still attributes to it.
+    ad_gclid: str | None = Field(default=None)
+    # Which mutually-exclusive Google click-id field ad_gclid contains. NULL means a legacy GCLID.
+    ad_click_id_type: str | None = Field(default=None)  # gclid | gbraid | wbraid
+    ad_click_at: datetime | None = Field(default=None)
+    ad_landing: str | None = Field(default=None)  # utm_content — the landing page id (p1…p5)
+    # Set ONCE, by a guarded UPDATE in the /call/ handler. Deliberately not derived from CallRecord:
+    # audit.py sheds rows past its queue bound, so a derived value undercounts exactly under load.
+    first_call_at: datetime | None = Field(default=None)
+
     created_at: datetime = Field(default_factory=_now)
 
 
@@ -92,6 +118,11 @@ class User(SQLModel, table=True):
     token_version: int = Field(default=0)
     onboarded: bool = Field(default=False)  # has completed OR skipped first-run onboarding (don't re-offer)
     demo: bool = Field(default=False)  # a fake teammate seeded into a demo team (can't log in; excluded from stats)
+    # This person's referral code (`treg.to/?ref=<code>`). On the USER, not the Org, because a person
+    # refers a friend — and because anyone may create unlimited orgs, so a per-org code would hand the
+    # same human unlimited codes to farm with. NULL until they open the Referrals page; minted lazily
+    # so we never generate codes for the majority who never look. See referrals.py.
+    referral_code: str | None = Field(default=None, index=True, unique=True)
     created_at: datetime = Field(default_factory=_now)
 
 
@@ -129,6 +160,11 @@ class Membership(SQLModel, table=True):
     project_access: list | None = Field(default=None, sa_column=Column("project_access", JSON, nullable=True))
     # May this member use the LOCAL run tier (`treg run --local`, the grant)? False → server runs only.
     local_run_enabled: bool = Field(default=True)
+    # A token minted for ONE tag value — `{"customer": "cust_A"}` — typically because it runs on that
+    # customer's own machine. The pin WINS over the request header for the dimensions it names (see
+    # api._parse_call_meta): otherwise whoever holds the token could retag their calls and walk straight out
+    # of their own budget, which is the entire point of giving them a scoped token. NULL = unpinned.
+    pinned_tags: dict | None = Field(default=None, sa_column=Column("pinned_tags", JSON, nullable=True))
     created_at: datetime = Field(default_factory=_now)
 
 
@@ -201,8 +237,23 @@ class CallRecord(SQLModel, table=True):
     duration_ms: int | None = Field(default=None)
     response_bytes: int | None = Field(default=None)
     # sha256 of endpoint_id + the canonicalized query + body — an identity for "the same call again".
-    # Bodies are NEVER stored; this is the future cache key and the repeat-rate signal (plan phase 5).
+    # The hash itself never carries a body, so it is safe to keep forever; it is the future cache key
+    # and the repeat-rate signal (plan phase 5). For the ONE case where a body IS retained, see
+    # `error_request` below — it is deliberately narrow and does not weaken this column's guarantee.
     params_hash: str | None = Field(default=None, index=True)
+    # ---- failure evidence (NULL unless a relayed call failed) ---------------------------------
+    # The only place treg retains request or response CONTENT, and the exception to "bodies are not
+    # stored". Written on failed marketplace, own-key, and plain own-tool calls under the sanctioned
+    # reversal of PR #139: production failures without the provider's answer cannot be diagnosed.
+    # Never written for a success, and never exposed by the team-facing `/calls` route.
+    #
+    # Both are REDACTED and TRUNCATED at the point of capture (see api._secret_renderings): every
+    # injected credential is exact-matched out first, then known third-party secret shapes. They are
+    # evidence for a human, never an exact replay — `error_request` cannot reconstruct the call.
+    # Both are overwritten with '<expired>' once past the retention window, so "captured then aged
+    # out" stays distinguishable from "never captured".
+    error_request: str | None = Field(default=None)
+    error_response: str | None = Field(default=None)
     # Set when TREG refused the call before a byte went upstream; NULL when the provider answered
     # (whatever its status). Values: auth (bad/expired token) | policy (ACL/deny rule/suspension) |
     # balance (402 insufficient prepaid balance) | cap (429 daily caps) | resolution (no such tool
@@ -210,6 +261,18 @@ class CallRecord(SQLModel, table=True):
     # separates "the provider failed" from "we said no" — without it a paywall 402 is
     # indistinguishable from a provider error, and provider stats absorb our own refusals.
     refused_by: str | None = Field(default=None, index=True)
+    # ---- caller tags (X-Treg-Meta) -------------------------------------------------------------
+    # A builder reselling treg tags each call with their OWN ids ("customer=cust_8123,
+    # workspace=ws_9") so they can attribute, budget and invoice their users. `tags` is the whole
+    # bag; `budget_dim`/`budget_val` are the indexed copy of the org's PRIMARY dimension, which is
+    # what a per-tag report groups by without folding JSON (see ledger.TagSpend for the money side).
+    # "" — never NULL — because NULLs are distinct in a unique index on both engines.
+    # Echoed to the caller as X-Treg-Call-Id and used as the ledger call_id on a metered call, so a
+    # builder can join this row, the money rows and their OWN records on one value.
+    call_ref: str = Field(default="", index=True)
+    budget_dim: str = Field(default="")
+    budget_val: str = Field(default="", index=True)
+    tags: dict | None = Field(default=None, sa_column=Column("tags", JSON, nullable=True))
     created_at: datetime = Field(default_factory=_now)
 
 
@@ -348,6 +411,40 @@ class Secret(SQLModel, table=True):
     last_error: str = Field(default="")
 
     created_at: datetime = Field(default_factory=_now)
+
+
+class AdConversion(SQLModel, table=True):
+    """One conversion owed to Google Ads — an OUTBOX row, not a log line.
+
+    Written synchronously inside the transaction of the event it describes, so the event and its
+    pending conversion commit or fail together — true for `signup` (queued before `ledger.grant`,
+    whose own commit lands both) and `first_call` (queued and committed on its own dedicated
+    session). It is NOT true for `paid`: `ledger.topup()` commits internally before `billing._credit`
+    queues the conversion, so a crash between the two commits loses that conversion permanently. This
+    gap is a known, accepted trade-off (2026-08-17) rather than a reason to restructure `ledger.py` —
+    see `docs/context/architecture/ads-conversions.md`. A background worker uploads every row later;
+    until then `uploaded_at` is NULL. The unique constraint on (org_id, action) is what makes every
+    fire site idempotent — a webhook redelivery or a retried signup bounces off it instead of
+    double-counting.
+    """
+
+    __table_args__ = (UniqueConstraint("org_id", "action", name="uq_adconversion_org_action"),)
+
+    id: int | None = Field(default=None, primary_key=True)
+    org_id: int = Field(index=True, foreign_key="org.id")
+    action: str  # adsconv.ACTION_* — "signup" | "first_call" | "paid"
+    dedupe_key: str = Field(default="")  # provenance (e.g. the Stripe PaymentIntent id); not the key
+    value_usd_micro: int = Field(default=0)  # converted to AUD at upload time, never stored as AUD
+    # Naive UTC (no tzinfo): columns are TIMESTAMP WITHOUT TIME ZONE, and Postgres rejects tz-aware
+    # values into naive columns. Use _now (defined above) to stay consistent with other tables.
+    created_at: datetime = Field(default_factory=_now)
+    uploaded_at: datetime | None = Field(default=None, index=True)
+    # Retryable failures wait here with exponential backoff. Terminal per-row failures keep the
+    # outbox row and error for inspection rather than being mislabeled as uploaded or disappearing.
+    next_attempt_at: datetime | None = Field(default=None, index=True)
+    failed_at: datetime | None = Field(default=None, index=True)
+    attempts: int = Field(default=0)
+    error: str = Field(default="")
 
 
 class Tool(SQLModel, table=True):
@@ -528,6 +625,144 @@ class Hold(SQLModel, table=True):
     created_at: datetime = Field(default_factory=_now, index=True)
 
 
+class TagSpend(SQLModel, table=True):
+    """What one call cost, attributed to ONE of its caller tags. Written by `ledger.py` only, inside
+    the same transaction as the money movement — never through `audit.py`, which drops rows.
+
+    A builder reselling treg tags each call (`customer=cust_8123, workspace=ws_9`) and needs two
+    things this table provides and JSON cannot: a per-call budget check that is an INDEXED aggregate
+    (a Python fold over a day of ledger rows, per request, is the first thing that melts under a
+    successful builder), and an invoice they can defend. `reconcile.py` checks these sums against the
+    ledger so a divergence is caught rather than discovered on a customer's bill.
+
+    ONE ROW PER TAG, each carrying the FULL call amount — the same dollar appears under `customer`
+    and under `workspace`, exactly like cloud cost-allocation tags. So summing WITHIN a dimension
+    reconciles to the org total, and summing ACROSS dimensions deliberately double-counts.
+
+    `amount_micro` tracks the hold: the estimate while in flight, rewritten to the consumed figure at
+    settle, and the row is deleted on release. A cap therefore counts in-flight work at its estimate
+    and errs toward refusing, which is the right direction for money.
+    """
+
+    __table_args__ = (Index("ix_tagspend_org_dim_val_created", "org_id", "dim", "val", "created_at"),)
+
+    id: int | None = Field(default=None, primary_key=True)
+    org_id: int = Field(foreign_key="org.id", index=True)
+    dim: str  # the tag key, e.g. "customer"
+    val: str  # the tag value, e.g. "cust_8123"
+    # The hold this belongs to (== call_id). Kept after settle so a row can be traced back to its call.
+    hold_id: str = Field(index=True)
+    # False while the hold is open (amount is the ESTIMATE), True once settled (amount is CONSUMED).
+    # An invoice reads settled rows only: an open hold is not spend, and billing it double-counts when
+    # it settles. A cap reads both.
+    settled: bool = Field(default=False)
+    amount_micro: int = Field(default=0)
+    created_at: datetime = Field(default_factory=_now, index=True)
+
+
+class TagBudget(SQLModel, table=True):
+    """One builder-set limit on one tag value — `customer/cust_8123 = $5/day`.
+
+    Keyed by (dim, val), so a call tagged `customer=cust_8123, workspace=ws_9` is checked against BOTH
+    rows and budgets stack: a $50/day workspace and a $5/day user inside it are two rows, not a
+    special case. The refusal names which one breached, because a builder running stacked budgets
+    otherwise cannot tell them apart.
+
+    Doubles as the REGISTRY that bounds cardinality. A row appears on first sighting of a pair, and
+    only that miss path counts rows against the per-dimension limit — steady state is one indexed
+    lookup. Builders never pre-register: no row means unlimited. Bounding at write is the only place
+    it can be done, because a limit checked at report time is checked after the rows already exist.
+
+    NOT a balance. One org, one balance; this table sets ceilings on a shared pot and never holds
+    money of its own.
+    """
+
+    __table_args__ = (UniqueConstraint("org_id", "dim", "val", name="uq_tagbudget_org_dim_val"),)
+
+    id: int | None = Field(default=None, primary_key=True)
+    org_id: int = Field(foreign_key="org.id", index=True)
+    dim: str
+    # The tag value this row governs, or `*` for the DIMENSION'S DEFAULT — the limit every value of
+    # `dim` inherits unless it has an override. `*` can never collide with a real tag: the value
+    # charset is [A-Za-z0-9._:-], so no caller can ever send it.
+    val: str
+    # True for a row the REGISTRY created on first sighting of a value (which is what keeps the
+    # cardinality check a cheap lookup). Such a row is bookkeeping, not a decision: resolution skips
+    # it so the dimension's default still applies, and the budgets list hides it. Setting any limit
+    # on it flips this to False and makes it a real override.
+    auto: bool = Field(default=False)
+    # NULL = no ceiling on this axis. Caps are SOFT (see api._enforce_tag_budgets): the figure they
+    # test is an aggregate, not a materialized column, so concurrent calls can overshoot slightly.
+    daily_cap_micro: int | None = Field(default=None)
+    monthly_cap_micro: int | None = Field(default=None)
+    calls_per_day: int = Field(default=-1)  # -1 = unlimited, mirroring Membership.daily_call_cap
+    # "active" | "blocked". Blocking is the soft form of revocation — it needs no token management,
+    # and it is checked before the idempotency replay so a blocked user cannot be served a cached
+    # answer from before they were blocked.
+    status: str = Field(default="active")
+    note: str = Field(default="")
+    created_at: datetime = Field(default_factory=_now)
+    updated_at: datetime = Field(default_factory=_now)
+
+
+class Referral(SQLModel, table=True):
+    """One person invited another, and what we owe for it. See referrals.py and
+    docs/context/architecture/money.md.
+
+    THE ROW IS THE IDEMPOTENCY GUARD, not `ledger.grant`. `grant(once=True)` checks
+    `(org_id, kind)` with a SELECT and no backing unique index, so two concurrent redemptions
+    can both miss it — fine for a signup promo that is retried, wrong for money owed to a third
+    party. So referrals.py calls `grant(..., once=False)` and lets these two UNIQUE columns
+    arbitrate instead, the same way `CreditBlock.stripe_payment_intent` arbitrates a topup and
+    the conditional UPDATE arbitrates a reserve. Where two paths can read before either writes,
+    the database has to be the one that says no.
+
+    Status is a one-way ladder, and every terminal state is kept rather than deleted — a referral
+    we refused is the record of WHY someone was not paid, which is the first thing asked when a
+    user emails about a missing reward:
+
+        pending    attributed at signup; the friend has not topped up yet. Owes nothing.
+        qualified  the friend made their first paid top-up. Owes both bonuses, AFTER the hold.
+        paid       both grants landed. `referrer_block_id` / `referred_block_id` name them.
+        capped     qualified, but the referrer is already at their lifetime cap. Pays nothing.
+        rejected   an abuse gate said no, or the funding payment was disputed/refunded inside
+                   the hold window. `reject_reason` says which.
+    """
+
+    __table_args__ = (
+        # An org can be referred exactly once, ever. This is what stops a second signup door, a
+        # retried request, or two concurrent redemptions from paying the same bounty twice.
+        UniqueConstraint("referred_org_id", name="uq_referral_referred_org"),
+        # And one payment can fund at most one qualification, for the same reason `topup` keys on
+        # the PaymentIntent: Stripe delivers at least once and prod runs more than one instance.
+        UniqueConstraint("qualifying_payment_intent", name="uq_referral_qualifying_pi"),
+        Index("ix_referral_status_qualified", "status", "qualified_at"),
+    )
+
+    id: int | None = Field(default=None, primary_key=True)
+    code: str = Field(index=True)  # the code as typed, kept even if the referrer later changes theirs
+    referrer_user_id: int = Field(foreign_key="user.id", index=True)
+    referred_user_id: int = Field(foreign_key="user.id", index=True)
+    referred_org_id: int = Field(foreign_key="org.id")  # unique — see __table_args__
+    status: str = Field(default="pending", index=True)
+    reject_reason: str = Field(default="")
+    # The payment that qualified this referral. NULL while pending — and NULL is exempt from a
+    # unique index, so any number of pending rows coexist happily.
+    qualifying_payment_intent: str | None = Field(default=None)
+    # Stripe's stable per-card id (`pm.card.fingerprint`). NOT card data — an opaque token that only
+    # means anything inside our own Stripe account. It is the one signal that survives a fresh email
+    # address, which is exactly the abuse this program invites. Stored here and nowhere else.
+    card_fingerprint: str | None = Field(default=None, index=True)
+    # The blocks the two grants created, so a payout can be traced back into the ledger by id.
+    referrer_block_id: str | None = Field(default=None)
+    referred_block_id: str | None = Field(default=None)
+    referrer_reward_micro: int = Field(default=0)  # what was actually granted, not what was promised
+    referred_reward_micro: int = Field(default=0)
+    qualified_at: datetime | None = Field(default=None)
+    paid_at: datetime | None = Field(default=None)
+    created_at: datetime = Field(default_factory=_now, index=True)
+
+
 class Project(SQLModel, table=True):
     """An optional sub-scope INSIDE an org — "one team roster, several projects".
 
@@ -624,6 +859,23 @@ class OAuthCode(SQLModel, table=True):
     created_at: datetime = Field(default_factory=_now)
 
 
+class OAuthGrant(SQLModel, table=True):
+    """Mutable authority for one refresh-token family, separate from token provenance.
+
+    A token row records the team that token was ISSUED under and is immutable after issuance. The
+    family record records the team future tokens should spend from, which the user may change. These
+    used to be one `org_id`, so moving a grant rewrote retired rows and a later reuse-detection audit
+    blamed the destination team for a token that had actually been issued under the source team.
+
+    `granted_at` is the consent time, not a rotation time. Rotation creates token rows; it does not
+    create a new human authorization.
+    """
+
+    family_id: str = Field(primary_key=True)
+    current_org_id: int = Field(foreign_key="org.id", index=True)
+    granted_at: datetime = Field(default_factory=_now)
+
+
 class OAuthRefresh(SQLModel, table=True):
     """A refresh token: the thing that keeps a connector working past the access token's hour.
 
@@ -638,8 +890,8 @@ class OAuthRefresh(SQLModel, table=True):
     reconnects; a thief loses the token. The failure mode is inconvenience on one side and containment
     on the other, which is the right way round.
 
-    `org_id` rides along because it is what the human chose at consent. A refresh must not become a
-    chance to quietly re-pick a team.
+    `org_id` is immutable token provenance: the team this particular token was ISSUED under. Mutable
+    family authority lives in `OAuthGrant.current_org_id`, so moving a grant cannot rewrite history.
     """
 
     __table_args__ = (UniqueConstraint("token_hash", name="uq_oauth_refresh_token"),)
@@ -708,6 +960,9 @@ class IdempotentCall(SQLModel, table=True):
     key: str = Field(index=True)
     request_fingerprint: str = Field(default="")
     endpoint_id: str = Field(default="")
+    # The X-Treg-Call-Id the FIRST call returned. A replay hands this back rather than a fresh
+    # reference, so a retry resolves to the row that actually holds the money.
+    call_ref: str = Field(default="")
     status: str = Field(default="pending")     # "pending" | "done"
     # Only ever set for a METERED success. A team calling on its own key is billed by the provider,
     # not by us, and storing those responses would hold someone's data for a reason that helps nobody.
@@ -741,4 +996,23 @@ class ToolRequest(SQLModel, table=True):
     contact: str = Field(default="")  # optional reach-back (email/handle); free text, unverified
     source: str = Field(default="web", index=True)  # web | cli | mcp | api
     status: str = Field(default="open", index=True)  # open | done | dismissed — flipped by hand
+    created_at: datetime = Field(default_factory=_now, index=True)
+
+
+class SearchMiss(SQLModel, table=True):
+    """A catalog search that returned NOTHING — the demand signal one step before a ToolRequest.
+
+    Most agents that miss never file a request; they just rephrase or leave. The queries themselves
+    are the record of what the catalog was asked for and couldn't answer — the raw material for
+    deciding what to ingest next and for spotting discovery failures (the capability exists but the
+    words used to ask for it don't match). Written fire-and-forget through `audit` — losing a row
+    under load costs analytics, never a search.
+
+    Deliberately identity-free: the search endpoints are open, most missing callers hold no token,
+    and the query text is the signal — who asked matters only once they file a ToolRequest.
+    """
+
+    id: int | None = Field(default=None, primary_key=True)
+    query: str  # the search text that matched nothing, capped by the writer
+    source: str = Field(default="api", index=True)  # api (HTTP /catalog/search: web + CLI) | mcp
     created_at: datetime = Field(default_factory=_now, index=True)

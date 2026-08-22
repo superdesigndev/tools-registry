@@ -1,0 +1,39 @@
+{
+  "request_id": "8ca87385625fb810f0957f75d877fe72",
+  "results": {
+    "ticker": "AAPL",
+    "name": "Apple Inc.",
+    "market": "stocks",
+    "locale": "us",
+    "primary_exchange": "XNAS",
+    "type": "CS",
+    "active": true,
+    "currency_name": "usd",
+    "cik": "0000320193",
+    "composite_figi": "BBG000B9XRY4",
+    "share_class_figi": "BBG001S5N8V8",
+    "market_cap": 4464797487400.0,
+    "phone_number": "(408) 996-1010",
+    "address": {
+      "address1": "ONE APPLE PARK WAY",
+      "city": "CUPERTINO",
+      "state": "CA",
+      "postal_code": "95014"
+    },
+    "description": "Apple is among the largest companies in the world, with a broad portfolio of hardware and software products targeted at consumers and businesses. Apple's iPhone accounts for the majority of the firm's sales, and Apple's other products, such as the Mac, iPad, and Watch, are designed around the iPhone as the focal point of an expansive software ecosystem. Apple has progressively worked to add new applications, such as streaming video, subscription bundles, and augmented reality. The firm designs its own software and semiconductors and works with subcontractors such as Foxconn and TSMC to build its products and chips. Slightly less than half of Apple's sales come directly through its flagship stores, with the majority coming indirectly through partnerships and distribution.",
+    "sic_code": "3571",
+    "sic_description": "ELECTRONIC COMPUTERS",
+    "ticker_root": "AAPL",
+    "homepage_url": "https://www.apple.com",
+    "total_employees": 166000,
+    "list_date": "1980-12-12",
+    "branding": {
+      "logo_url": "https://api.polygon.io/v1/reference/company-branding/YXBwbGUuY29t/images/2026-08-01_logo.svg",
+      "icon_url": "https://api.polygon.io/v1/reference/company-branding/YXBwbGUuY29t/images/2026-08-01_icon.webp"
+    },
+    "share_class_shares_outstanding": 14594180000,
+    "weighted_shares_outstanding": 14594180000,
+    "round_lot": 40
+  },
+  "status": "OK"
+}

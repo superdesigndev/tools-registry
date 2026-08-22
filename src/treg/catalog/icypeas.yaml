@@ -1,0 +1,575 @@
+provider: icypeas
+source:
+  docs: https://api-doc.icypeas.com/
+  openapi: null # Icypeas documents its API on a Docusaurus site; no fetchable OpenAPI document is published
+  curated: '2026-08-20'
+# VERIFIED 2026-08-20 — every endpoint below was live-called with a real key and returned 2xx with
+# real data. Params and prices were transcribed from the official docs the same day.
+#
+# THIS PROVIDER IS ASYNCHRONOUS FOR THE THREE EMAIL ROUTES, and that shape is the single thing an
+# agent must get right:
+#   - POST /email-search, /email-verification and /domain-search return ONLY
+#     {success, item: {_id, status: "NONE"}} — no data. The work happens in the background.
+#   - You then POST the returned `_id` to /bulk-single-searchs/read (FREE) to collect the result.
+#     Typical turnaround observed 2026-08-20 was 2 seconds; poll, or register a webhook.
+#   - Terminal statuses seen on the read route: FOUND (result ready) and DEBITED (ready and billed).
+#     Both carry the payload in `results`.
+# The other routes are SYNCHRONOUS and answer with the data inline: /url-search/*, /scrape/*,
+# /find-people, /find-companies, /reverse-email-lookup* all return the result in the first response.
+# Because of that split, the two poll routes are modelled as their own endpoints below; both are
+# free, and an agent that calls a *-search route without them gets nothing but an id.
+#
+# Billing is one credit pool, per-route rates published on both the docs and the pricing page
+# (agreeing exactly). Nearly everything is billed ON A HIT: a domain scan that finds no address, a
+# profile URL that is not found and a scrape that misses cost nothing. The two exceptions worth
+# budgeting for: /email-verification is charged per address TESTED (0.1 credit, hit or miss), and
+# /reverse-email-lookup is 10 credits per found profile — 500x the cheapest route here and by far
+# the most expensive thing in this file. Both /find-people/count and /find-companies/count are
+# explicitly free, so an agent should ALWAYS size a lead-database query with a count first: the
+# search itself is 0.02 credit per row returned, and `pagination.size` (max 200) is the price dial.
+#
+# Auth is a single API key in a RAW `Authorization` header — no "Bearer", no second credential. The
+# ICYPEAS_SECRET a user also finds in their dashboard signs INBOUND WEBHOOKS and is not used by any
+# request here; one key is enough to serve every endpoint in this file.
+#
+# Not modelled here: the webhook/push-notification configuration routes (they need a caller-owned
+# callback URL the proxy cannot provide) and POST /a/actions/subscription-information (own-account
+# bookkeeping, and it takes the account holder's own email address as a body parameter).
+limits: "per-route: 10 calls/sec on the three single searches, 20-30 calls/sec on scrape / url-search / lead database, 1 call/sec on /bulk-search (up to 5,000 rows), 30 calls/min on /bulk-single-searchs/read, 15 calls/min on /search-files/read"
+pricing_url: https://www.icypeas.com/pricing
+
+proposed_capabilities:
+  companies.emails.role: "Find a company's role-based email addresses (contact@, support@, info@)"
+  people.search.count: "Count the people matching a search before paying for the rows"
+  companies.search.count: "Count the companies matching a search before paying for the rows"
+  people.profile.url: "Find a person's professional profile URL from their name and company"
+  companies.profile.url: "Find a company's professional profile URL from its name or domain"
+  people.job.start: "Start a bulk contact-data job over many rows"
+  people.job.results: "Collect the finished rows of a contact-data job"
+  people.job.status: "Check how far a bulk contact-data job has got"
+
+endpoints:
+  - id: icypeas.people.email.find
+    domain: contacts
+    capability: people.email.find
+    platform: people
+    scope: any_account
+    method: POST
+    path: /email-search
+    name: "Find a work email from a name and domain (async)"
+    summary: "Find a single email address from a firstname, a lastname and a company domain name"
+    input:
+      body:
+        firstname: {type: string, required: false, note: "can be empty if lastname is set", example: "Patrick"}
+        lastname: {type: string, required: false, note: "can be empty if firstname is set", example: "Collison"}
+        domainOrCompany: {type: string, required: true, note: "the domain OR the company name of the person", example: "stripe.com"}
+        custom: {type: object, required: false, note: "{webhookUrl, externalId} — a per-search callback URL and your own tracking id"}
+      note: "ASYNC — returns {item: {_id, status}} only. Feed that _id to icypeas.search.results.read to get the address. For more than a handful of people use icypeas.bulk.search instead (up to 5,000 rows per call)"
+    test_request:
+      body: {firstname: "Patrick", lastname: "Collison", domainOrCompany: "stripe.com"}
+    cost:
+      type: per_result
+      value: 1
+      currency: credit
+      per: 1
+      unit: result
+      source: docs
+      source_url: https://api-doc.icypeas.com/how-works/credit-cost
+      checked: '2026-08-20'
+      confidence: documented
+      note: "1 credit per FOUND email; a search that finds nothing is free"
+    verified: '2026-08-20'
+    example_response: examples/icypeas.people.email.find.json
+    docs_url: https://api-doc.icypeas.com/find-emails/email-discovery
+
+  - id: icypeas.people.email.verify
+    domain: contacts
+    capability: people.email.verify
+    platform: people
+    scope: any_account
+    method: POST
+    path: /email-verification
+    name: "Verify an email address is deliverable (async)"
+    summary: "Check whether a specific email address exists and is deliverable, including catch-all detection"
+    input:
+      body:
+        email: {type: string, required: true, note: "the address to verify", example: "patrick@stripe.com"}
+        custom: {type: object, required: false, note: "{webhookUrl, externalId}"}
+      note: "ASYNC — read the verdict with icypeas.search.results.read. The result carries a `certainty` level (e.g. ultra_sure) plus the MX records and mail provider behind the domain"
+    test_request:
+      body: {email: "patrick@stripe.com"}
+    cost:
+      type: per_call
+      value: 0.1
+      currency: credit
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://api-doc.icypeas.com/how-works/credit-cost
+      checked: '2026-08-20'
+      confidence: documented
+      note: "0.1 credit per address TESTED — charged whether or not the address turns out to be valid; ten verifications to a credit"
+    verified: '2026-08-20'
+    example_response: examples/icypeas.people.email.verify.json
+    docs_url: https://api-doc.icypeas.com/find-emails/email-verification
+
+  - id: icypeas.companies.emails.role
+    domain: contacts
+    capability: companies.emails.role
+    platform: companies
+    scope: any_account
+    method: POST
+    path: /domain-search
+    name: "Find role-based emails at a domain — contact@, support@"
+    summary: "Discover a company's role-based addresses — contact@, support@, info@, admin@ and the rest"
+    input:
+      body:
+        domainOrCompany: {type: string, required: true, note: "the domain OR the company name to scan", example: "anthropic.com"}
+        custom: {type: object, required: false, note: "{webhookUrl, externalId}"}
+      note: "ASYNC — read the addresses with icypeas.search.results.read. This finds GENERIC mailbox addresses, not named individuals; for a specific person use icypeas.people.email.find"
+    test_request:
+      body: {domainOrCompany: "anthropic.com"}
+    cost:
+      type: per_success
+      value: 1
+      currency: credit
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://api-doc.icypeas.com/how-works/credit-cost
+      checked: '2026-08-20'
+      confidence: documented
+      note: "1 credit if any email was found for the domain, however many addresses come back; nothing when the scan is empty"
+    verified: '2026-08-20'
+    example_response: examples/icypeas.companies.emails.role.json
+    docs_url: https://api-doc.icypeas.com/find-emails/domain-scan
+
+  - id: icypeas.search.results.read
+    domain: contacts
+    capability: people.job.results
+    platform: people
+    scope: any_account
+    method: POST
+    path: /bulk-single-searchs/read
+    name: "Read any search's results by id (the poll route)"
+    summary: "Collect the result of any single search, or the rows of a bulk search, by id"
+    input:
+      body:
+        id: {type: string, required: false, note: "the _id returned by a single search — the usual way to collect one result", example: "mP6hHKABeMoKaEB1K1HF"}
+        mode: {type: string, required: false, note: "'single' or 'bulk' — list your searches instead of naming one id"}
+        file: {type: string, required: false, note: "with mode=bulk, the file id returned by icypeas.bulk.search — returns that bulk's rows in input order"}
+        type: {type: string, required: false, note: "with mode=single, filter by task: email-search | email-verification | domain-search. Cannot be combined with mode=bulk"}
+        limit: {type: integer, required: false, note: "rows per page, default 10, MAX 100", example: 10}
+        next: {type: boolean, required: false, note: "true = next page, false = previous page, used with `sorts`"}
+        sorts: {type: "array", required: false, note: "the pagination cursor echoed by the previous response — pass it back to page further"}
+      note: "THE POLL ROUTE, and free. Each row's `status` says where the search got to; FOUND / DEBITED mean the payload in `results` is final. Rate limited to 30 calls/min, so poll a couple of seconds apart or register a webhook instead"
+    test_request:
+      body: {mode: "single", type: "email-search", limit: 1}
+    cost: {type: free, value: 0, currency: USD, unit: call, source: docs, source_url: "https://api-doc.icypeas.com/how-works/credit-cost", checked: '2026-08-20', confidence: documented, note: "the rate card prices the search routes; every other route including this one is free"}
+    verified: '2026-08-20'
+    example_response: examples/icypeas.search.results.read.json
+    docs_url: https://api-doc.icypeas.com/fetch-results/search-item
+
+  - id: icypeas.bulk.search
+    domain: contacts
+    capability: people.job.start
+    platform: people
+    scope: any_account
+    method: POST
+    path: /bulk-search
+    name: "Start a bulk email job (up to 5,000 rows)"
+    summary: "Queue up to 5,000 rows of email discovery, email verification or domain scanning in one call"
+    input:
+      body:
+        name: {type: string, required: true, note: "your label for the job — how you find it later", example: "Q3 prospect list"}
+        task: {type: string, required: true, note: "one of email-search | email-verification | domain-search", example: "email-search"}
+        data: {type: "array[array[string]]", required: true, note: "one array per row. email-search rows are [firstname, lastname, domainOrCompany] (one of the two names may be empty); email-verification and domain-search rows hold a single value. MAX 5,000 rows", example: [["Patrick", "Collison", "stripe.com"]]}
+        custom: {type: object, required: false, note: "{webhookUrlItem, webhookUrlBulkDone, externalIds, includeResultsInWebhook} — per-row and end-of-job callbacks, your own row ids, and whether results ride in the final webhook"}
+      note: "Returns {file, status: 'in_progress'} immediately. Track it with icypeas.search.files.read and collect rows with icypeas.search.results.read using mode=bulk and that file id. Rate limited to 1 call/sec"
+    test_request:
+      body: {name: "treg catalog verification", task: "email-search", data: [["Patrick", "Collison", "stripe.com"]]}
+    cost:
+      type: per_result
+      value: 1
+      currency: credit
+      per: 1
+      unit: result
+      source: docs
+      source_url: https://api-doc.icypeas.com/how-works/credit-cost
+      checked: '2026-08-20'
+      confidence: documented
+      note: "the job itself is free to start; each ROW bills at its task's own rate — 1 credit per found email (email-search), 1 credit per domain with a hit (domain-search), 0.1 credit per address tested (email-verification). The figure here is the email-search rate, the dearest of the three, so a verification job costs a TENTH of what this implies"
+    verified: '2026-08-20'
+    example_response: examples/icypeas.bulk.search.json
+    docs_url: https://api-doc.icypeas.com/find-emails/bulk-search
+
+  - id: icypeas.search.files.read
+    domain: contacts
+    capability: people.job.status
+    platform: people
+    scope: any_account
+    method: POST
+    path: /search-files/read
+    name: "Check bulk job progress"
+    summary: "Progress and stats for your bulk searches — how many rows are done, found, aborted or short of credits"
+    input:
+      body:
+        limit: {type: integer, required: false, note: "files per request, default 10, MAX 50", example: 2}
+        file: {type: string, required: false, note: "a single file id, to get just that job's stats"}
+        status: {type: string, required: false, note: "'in_progress' or 'done'"}
+        next: {type: boolean, required: false, note: "true = next page, false = previous page"}
+        sorts: {type: "array", required: false, note: "the cursor echoed by the previous response — [{creationDate}] tuples"}
+      note: "An empty body {} lists every job. Watch `finished` (or status='done'), then collect the rows with icypeas.search.results.read. Rate limited to 15 calls/min"
+    test_request:
+      body: {limit: 2}
+    cost: {type: free, value: 0, currency: USD, unit: call, source: docs, source_url: "https://api-doc.icypeas.com/how-works/credit-cost", checked: '2026-08-20', confidence: documented}
+    verified: '2026-08-20'
+    example_response: examples/icypeas.search.files.read.json
+    docs_url: https://api-doc.icypeas.com/fetch-results/bulk-search-files
+
+  - id: icypeas.people.identity.resolve
+    domain: contacts
+    capability: people.identity.resolve
+    platform: people
+    scope: any_account
+    method: POST
+    path: /reverse-email-lookup
+    name: "Reverse email lookup — the person's profile URL"
+    summary: "Reverse a professional email address to the person's public professional profile URL"
+    input:
+      body:
+        email: {type: string, required: true, note: "a professional (work) email address — personal mailboxes rarely resolve", example: "collison@stripe.com"}
+      note: "SYNCHRONOUS — the URL comes back in `result` with status FOUND or NOT_FOUND. THE MOST EXPENSIVE ROUTE HERE at 10 credits a hit; resolve in bulk only when the profile is genuinely worth it"
+    test_request:
+      body: {email: "collison@stripe.com"}
+    cost:
+      type: per_success
+      value: 10
+      currency: credit
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://api-doc.icypeas.com/how-works/credit-cost
+      checked: '2026-08-20'
+      confidence: documented
+      note: "10 credits per FOUND profile; a miss is free"
+    verified: '2026-08-20'
+    example_response: examples/icypeas.people.identity.resolve.json
+    docs_url: https://api-doc.icypeas.com/reverse-email-lookup
+
+  - id: icypeas.people.identity.resolve.bulk
+    domain: contacts
+    capability: people.identity.resolve
+    platform: people
+    scope: any_account
+    method: POST
+    path: /reverse-email-lookups
+    name: "Reverse up to 50 emails to profile URLs in one call"
+    summary: "Reverse up to 50 professional email addresses to their profile URLs in one call"
+    input:
+      body:
+        data: {type: "array[string]", required: true, note: "professional email addresses — MINIMUM 2, MAXIMUM 50 per request", example: ["collison@stripe.com", "patrick@stripe.com"]}
+      note: "SYNCHRONOUS — results come back in `data`, one entry per input address, in order. Same 10-credit-per-hit rate as the single route, so a full 50-address call can cost 500 credits: check the addresses are worth it first"
+    test_request:
+      body: {data: ["collison@stripe.com", "patrick@stripe.com"]}
+    cost:
+      type: per_result
+      value: 10
+      currency: credit
+      per: 1
+      unit: result
+      source: docs
+      source_url: https://api-doc.icypeas.com/how-works/credit-cost
+      checked: '2026-08-20'
+      confidence: documented
+      note: "10 credits per FOUND profile; addresses that resolve to nothing are free"
+    verified: '2026-08-20'
+    example_response: examples/icypeas.people.identity.resolve.bulk.json
+    docs_url: https://api-doc.icypeas.com/reverse-email-lookup
+
+  - id: icypeas.people.search
+    domain: contacts
+    capability: people.search
+    platform: people
+    scope: any_account
+    method: POST
+    path: /find-people
+    name: "Search people by title, company, skills or location"
+    summary: "Find people by job title, company, seniority, skills, school, location or years of experience"
+    input:
+      body:
+        query: {type: object, required: true, note: "filter object. Person filters: firstname, lastname, currentJobTitle, pastJobTitle, school, languages, skills, location, profileLocation, workLocation, keyword — each {include: [...], exclude: [...]}; totalYearsOfExperience and timeInCurrentCompany take a range like {\">=\": 5, \"<=\": 10}. Company filters come in currentCompany*/pastCompany* pairs: currentCompanyName, currentCompanyId, currentCompanyWebsite, currentCompanyUrn, currentCompany.type, currentCompany.industry, currentCompany.headcount (range), currentCompany.headcountGrowth ({min, max, timespan: 6months|12months|24months})", example: {"currentCompanyWebsite": {"include": ["stripe.com"]}, "currentJobTitle": {"include": ["Engineer"]}}}
+        pagination: {type: object, required: false, note: "{size, token}. size is 1-200, DEFAULT 100 — and it is the price dial, since every row returned costs 0.02 credit. Pass back the `token` from the previous response to page", example: {"size": 1}}
+      note: "SYNCHRONOUS — rows arrive in `leads` with the profile, current and past employer, location and headline. Locations are best given as alpha-2 country codes (FR, US); a comma narrows them (\"Paris, France\"). ALWAYS size the query with icypeas.people.search.count first — that route is free"
+    test_request:
+      body: {query: {currentCompanyWebsite: {include: ["stripe.com"]}, currentJobTitle: {include: ["Engineer"]}}, pagination: {size: 1}}
+    cost:
+      type: per_result
+      value: 0.02
+      currency: credit
+      per: 1
+      unit: result
+      source: docs
+      source_url: https://api-doc.icypeas.com/how-works/credit-cost
+      checked: '2026-08-20'
+      confidence: documented
+      note: "0.02 credit per row returned — 100 results = 2 credits. `pagination.size` (max 200) sets the bill"
+    verified: '2026-08-20'
+    example_response: examples/icypeas.people.search.json
+    docs_url: https://api-doc.icypeas.com/leads-db/find-people
+
+  - id: icypeas.people.search.count
+    domain: contacts
+    capability: people.search.count
+    platform: people
+    scope: any_account
+    method: POST
+    path: /find-people/count
+    name: "Count people matching a search (free)"
+    summary: "How many people match a query, before you pay to read any of them"
+    input:
+      body:
+        query: {type: object, required: true, note: "identical filter object to icypeas.people.search", example: {"currentCompanyWebsite": {"include": ["stripe.com"]}, "currentJobTitle": {"include": ["Engineer"]}}}
+      note: "FREE and explicitly documented as such. Returns {total, success} — use it to tune a query until the count is sane, then spend credits on the rows"
+    test_request:
+      body: {query: {currentCompanyWebsite: {include: ["stripe.com"]}, currentJobTitle: {include: ["Engineer"]}}}
+    cost: {type: free, value: 0, currency: USD, unit: call, source: docs, source_url: "https://api-doc.icypeas.com/how-works/credit-cost", checked: '2026-08-20', confidence: documented, note: "the rate card says retrieving the number of leads matching a query is free"}
+    verified: '2026-08-20'
+    example_response: examples/icypeas.people.search.count.json
+    docs_url: https://api-doc.icypeas.com/leads-db/find-people
+
+  - id: icypeas.companies.search
+    domain: companies
+    capability: companies.search
+    platform: companies
+    scope: any_account
+    method: POST
+    path: /find-companies
+    name: "Search companies by industry, headcount growth or revenue"
+    summary: "Find companies by industry, headcount, headcount growth, revenue, type, location or keyword"
+    input:
+      body:
+        query: {type: object, required: true, note: "filter object: name, lid (profile vanity id), urn (numeric id), companyId (domain / URN / profile URL / vanity name), type (Privately Held, Public Company, Nonprofit, …), industry, location, keyword — each {include: [...], exclude: [...]}; headcount and revenue take ranges like {\">\": 10}; headcountGrowth takes {min, max, timespan: 6months|12months|24months}", example: {"companyId": {"include": ["stripe.com"]}}}
+        pagination: {type: object, required: false, note: "{size, token}. size is 1-200, default 100, and every row costs 0.02 credit", example: {"size": 1}}
+      note: "SYNCHRONOUS — rows arrive in `leads` with name, profile id, description, headcount, industry, website and specialties. Size it with icypeas.companies.search.count first (free)"
+    test_request:
+      body: {query: {companyId: {include: ["stripe.com"]}}, pagination: {size: 1}}
+    cost:
+      type: per_result
+      value: 0.02
+      currency: credit
+      per: 1
+      unit: result
+      source: docs
+      source_url: https://api-doc.icypeas.com/how-works/credit-cost
+      checked: '2026-08-20'
+      confidence: documented
+      note: "0.02 credit per row returned — 100 results = 2 credits"
+    verified: '2026-08-20'
+    example_response: examples/icypeas.companies.search.json
+    docs_url: https://api-doc.icypeas.com/leads-db/find-companies
+
+  - id: icypeas.companies.search.count
+    domain: companies
+    capability: companies.search.count
+    platform: companies
+    scope: any_account
+    method: POST
+    path: /find-companies/count
+    name: "Count companies matching a search (free)"
+    summary: "How many companies match a query, before you pay to read any of them"
+    input:
+      body:
+        query: {type: object, required: true, note: "identical filter object to icypeas.companies.search", example: {"industry": {"include": ["Software Development"]}, "headcount": {">": 1000}}}
+      note: "FREE and explicitly documented as such"
+    test_request:
+      body: {query: {industry: {include: ["Software Development"]}, headcount: {">": 1000}}}
+    cost: {type: free, value: 0, currency: USD, unit: call, source: docs, source_url: "https://api-doc.icypeas.com/how-works/credit-cost", checked: '2026-08-20', confidence: documented}
+    verified: '2026-08-20'
+    example_response: examples/icypeas.companies.search.count.json
+    docs_url: https://api-doc.icypeas.com/leads-db/find-companies
+
+  - id: icypeas.people.profile.url
+    domain: contacts
+    capability: people.profile.url
+    platform: people
+    scope: any_account
+    method: POST
+    path: /url-search/profile
+    name: "Find a person's profile URL from name and company"
+    summary: "Resolve a name plus a company or job title to that person's professional profile URL"
+    input:
+      body:
+        firstname: {type: string, required: true, example: "Patrick"}
+        lastname: {type: string, required: true, example: "Collison"}
+        companyOrDomain: {type: string, required: false, note: "company name or domain — can be omitted if jobTitle is given", example: "stripe.com"}
+        jobTitle: {type: string, required: false, note: "can be omitted if companyOrDomain is given"}
+      note: "SYNCHRONOUS — {result: <profile URL>, status: FOUND|NOT_FOUND}. This is the cheap way into the scrape route: find the URL here, then read the profile with icypeas.people.enrich"
+    test_request:
+      body: {firstname: "Patrick", lastname: "Collison", companyOrDomain: "stripe.com"}
+    cost:
+      type: per_success
+      value: 1
+      currency: credit
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://api-doc.icypeas.com/how-works/credit-cost
+      checked: '2026-08-20'
+      confidence: documented
+      note: "1 credit per found URL; a miss is free"
+    verified: '2026-08-20'
+    example_response: examples/icypeas.people.profile.url.json
+    docs_url: https://api-doc.icypeas.com/scrape/user-profile-url-search
+
+  - id: icypeas.companies.profile.url
+    domain: companies
+    capability: companies.profile.url
+    platform: companies
+    scope: any_account
+    method: POST
+    path: /url-search/company
+    name: "Find a company's profile URL from its name or domain"
+    summary: "Resolve a company name or domain to its professional profile URL"
+    input:
+      body:
+        companyOrDomain: {type: string, required: true, note: "company name, domain or website", example: "stripe.com"}
+      note: "SYNCHRONOUS — {result: <company profile URL>, status: FOUND|NOT_FOUND}. Pair it with icypeas.companies.enrich to read the profile"
+    test_request:
+      body: {companyOrDomain: "stripe.com"}
+    cost:
+      type: per_success
+      value: 1
+      currency: credit
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://api-doc.icypeas.com/how-works/credit-cost
+      checked: '2026-08-20'
+      confidence: documented
+      note: "1 credit per found URL; a miss is free"
+    verified: '2026-08-20'
+    example_response: examples/icypeas.companies.profile.url.json
+    docs_url: https://api-doc.icypeas.com/scrape/company-profile-url-search
+
+  - id: icypeas.profile.url.bulk
+    domain: contacts
+    capability: people.profile.url
+    platform: people
+    scope: any_account
+    method: POST
+    path: /url-search
+    name: "Find up to 50 profile URLs in one call"
+    summary: "Resolve up to 50 people or 50 companies to their professional profile URLs in one call"
+    input:
+      body:
+        type: {type: string, required: true, note: "'profile' for people or 'company' for companies — this one field decides which shape `data` takes", example: "company"}
+        data: {type: "array[object]", required: true, note: "MAX 50 rows. With type=profile each row is {firstname, lastname, companyOrDomain|jobTitle}; with type=company each row is {companyOrDomain}", example: [{"companyOrDomain": "anthropic.com"}]}
+      note: "SYNCHRONOUS — `data` comes back one entry per input row, in order. Serves BOTH people and companies (hence the single entry); the per-URL price is the same either way"
+    test_request:
+      body: {type: "company", data: [{companyOrDomain: "anthropic.com"}]}
+    cost:
+      type: per_result
+      value: 1
+      currency: credit
+      per: 1
+      unit: result
+      source: docs
+      source_url: https://api-doc.icypeas.com/how-works/credit-cost
+      checked: '2026-08-20'
+      confidence: documented
+      note: "1 credit per found URL, rows that miss are free — so a 50-row call costs at most 50 credits"
+    verified: '2026-08-20'
+    example_response: examples/icypeas.profile.url.bulk.json
+    docs_url: https://api-doc.icypeas.com/scrape/user-profile-url-search
+
+  - id: icypeas.people.enrich
+    domain: contacts
+    capability: people.enrich
+    platform: people
+    scope: any_account
+    method: GET
+    path: /scrape/profile
+    name: "Enrich a person by profile URL — roles, education"
+    summary: "Full professional profile — headline, description, current and past roles, education, languages, location"
+    input:
+      queryParams:
+        url: {type: string, required: true, note: "the person's professional profile URL; get one from icypeas.people.profile.url if you only have a name", example: "https://www.linkedin.com/in/patrickcollison"}
+      note: "SYNCHRONOUS — the profile arrives in `result`, with `worksFor` (current roles) and `alumniOf` (past roles) as arrays. The dearest of the scrape routes at 1.5 credits"
+    test_request:
+      queryParams: {url: "https://www.linkedin.com/in/patrickcollison"}
+    cost:
+      type: per_success
+      value: 1.5
+      currency: credit
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://api-doc.icypeas.com/how-works/credit-cost
+      checked: '2026-08-20'
+      confidence: documented
+      note: "1.5 credits per found profile; a URL that resolves to nothing is free"
+    verified: '2026-08-20'
+    example_response: examples/icypeas.people.enrich.json
+    docs_url: https://api-doc.icypeas.com/scrape/scrape-profile-scraper
+
+  - id: icypeas.companies.enrich
+    domain: companies
+    capability: companies.enrich
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /scrape/company
+    name: "Enrich a company by profile URL — headcount and growth"
+    summary: "Full company profile — description, headcount and growth, industry, address, website, specialties"
+    input:
+      queryParams:
+        url: {type: string, required: true, note: "the company's professional profile URL; get one from icypeas.companies.profile.url if you only have a domain", example: "https://www.linkedin.com/company/stripe/"}
+      note: "SYNCHRONOUS — the company arrives in `result`, including a structured postal address and an employee-count history. At 0.5 credit this is the cheapest company record in this file"
+    test_request:
+      queryParams: {url: "https://www.linkedin.com/company/stripe/"}
+    cost:
+      type: per_success
+      value: 0.5
+      currency: credit
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://api-doc.icypeas.com/how-works/credit-cost
+      checked: '2026-08-20'
+      confidence: documented
+      note: "0.5 credit per found company; a miss is free"
+    verified: '2026-08-20'
+    example_response: examples/icypeas.companies.enrich.json
+    docs_url: https://api-doc.icypeas.com/scrape/scrape-company-scraper
+
+  - id: icypeas.scrape.bulk
+    domain: contacts
+    capability: people.enrich
+    platform: people
+    scope: any_account
+    method: POST
+    path: /scrape
+    name: "Enrich up to 50 profiles or companies by URL in one call"
+    summary: "Read up to 50 people profiles, or up to 50 company profiles, from their URLs in one call"
+    input:
+      body:
+        type: {type: string, required: true, note: "'profile' for people or 'company' for companies", example: "company"}
+        data: {type: "array[string]", required: true, note: "profile URLs matching `type`. MAX 50 per request", example: ["https://www.linkedin.com/company/anthropicresearch"]}
+      note: "SYNCHRONOUS — `data` comes back one entry per URL, in order, each with the same record shape as the single routes. Serves BOTH people and companies; the price follows the type (1.5 credits per profile, 0.5 per company)"
+    test_request:
+      body: {type: "company", data: ["https://www.linkedin.com/company/anthropicresearch"]}
+    cost:
+      type: per_result
+      value: 1.5
+      currency: credit
+      per: 1
+      unit: result
+      source: docs
+      source_url: https://api-doc.icypeas.com/how-works/credit-cost
+      checked: '2026-08-20'
+      confidence: documented
+      note: "type=profile bills 1.5 credits per found profile, type=company only 0.5 — the figure here is the dearer of the two, so a company batch costs a third of what it implies. Misses are free"
+    verified: '2026-08-20'
+    example_response: examples/icypeas.scrape.bulk.json
+    docs_url: https://api-doc.icypeas.com/scrape/scrape-profile-scraper

@@ -32,7 +32,7 @@ endpoints:
   platform: google-analytics
   method: GET
   path: /v1beta/accountSummaries
-  name: "List account summaries"
+  name: "List your GA4 account and property summaries"
   summary: accountSummaries.list — Returns summaries of all accounts accessible by the caller.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -59,7 +59,7 @@ endpoints:
   platform: google-analytics
   method: GET
   path: /v1beta/accounts
-  name: "List accessible accounts"
+  name: "List your GA4 accounts"
   summary: 'accounts.list — Returns all accounts accessible by the caller. Note that these accounts might not currently have GA properties. Soft-deleted (ie: "trashed") accounts are excluded by default. Returns an empty list if no relevant accounts are found. Note: The easiest way to retrieve a list of all properties you have access to is by using `ListAccountSummaries`.'
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -86,7 +86,7 @@ endpoints:
   platform: google-analytics
   method: DELETE
   path: /v1beta/accounts/{accountsId}
-  name: "Soft-delete an account"
+  name: "Soft-delete a GA4 account by account id"
   summary: 'accounts.delete — Marks target Account as soft-deleted (ie: "trashed") and returns it. This API does not have a method to restore soft-deleted accounts. However, they can be restored using the Trash Can UI. If the accounts are not restored before the expiration time, the account and all child resources (eg: Properties, GoogleAdsLinks, Streams, AccessBindings) will be permanently purged. https://su'
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -105,7 +105,7 @@ endpoints:
   platform: google-analytics
   method: GET
   path: /v1beta/accounts/{accountsId}
-  name: "Get an account"
+  name: "GA4 account details by account id"
   summary: accounts.get — Lookup for a single Account.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -124,7 +124,7 @@ endpoints:
   platform: google-analytics
   method: PATCH
   path: /v1beta/accounts/{accountsId}
-  name: "Update an account"
+  name: "Update a GA4 account's settings"
   summary: accounts.patch — Updates an account.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -153,7 +153,7 @@ endpoints:
   platform: google-analytics
   method: GET
   path: /v1beta/accounts/{accountsId}/dataSharingSettings
-  name: "Get account data sharing settings"
+  name: "GA4 account data sharing settings by account id"
   summary: accounts.getDataSharingSettings — Get data sharing settings on an account. Data sharing settings are singletons.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -171,7 +171,7 @@ endpoints:
   platform: google-analytics
   method: POST
   path: /v1beta/accounts/{accountsId}:runAccessReport
-  name: "Run account data access report"
+  name: "Run a GA4 data access report for your account"
   summary: accounts.runAccessReport — Returns a customized report of data access records. The report provides records of each time a user reads Google Analytics reporting data. Access records are retained for up to 2 years. Data Access Reports can be requested for a property. Reports may be requested for any property, but dimensions that aren't related to quota can only be requested on Google Analytics 360 p
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -194,7 +194,7 @@ endpoints:
   platform: google-analytics
   method: POST
   path: /v1beta/accounts/{accountsId}:searchChangeHistoryEvents
-  name: "Search account change history"
+  name: "Search your GA4 account's change history"
   summary: accounts.searchChangeHistoryEvents — Searches through all changes to an account or its children given the specified set of filters. Only returns the subset of changes supported by the API. The UI may return additional changes.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -219,7 +219,7 @@ endpoints:
   platform: google-analytics
   method: POST
   path: /v1beta/accounts:provisionAccountTicket
-  name: "Request an account creation ticket"
+  name: "Request a GA4 account creation ticket"
   summary: accounts.provisionAccountTicket — Requests a ticket for creating an account.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -237,7 +237,7 @@ endpoints:
   platform: google-analytics
   method: GET
   path: /v1beta/properties
-  name: "List properties under an account"
+  name: "List GA4 properties under your account"
   summary: 'properties.list — Returns child Properties under the specified parent Account. Properties will be excluded if the caller does not have access. Soft-deleted (ie: "trashed") properties are excluded by default. Returns an empty list if no relevant properties are found.'
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -268,7 +268,7 @@ endpoints:
   platform: google-analytics
   method: POST
   path: /v1beta/properties
-  name: "Create a property"
+  name: "Create a GA4 property"
   summary: properties.create — Creates a Google Analytics property with the specified location and attributes.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -288,7 +288,7 @@ endpoints:
   platform: google-analytics
   method: DELETE
   path: /v1beta/properties/{propertiesId}
-  name: "Soft-delete a property"
+  name: "Soft-delete a GA4 property by property id"
   summary: 'properties.delete — Marks target Property as soft-deleted (ie: "trashed") and returns it. This API does not have a method to restore soft-deleted properties. However, they can be restored using the Trash Can UI. If the properties are not restored before the expiration time, the Property and all child resources (eg: GoogleAdsLinks, Streams, AccessBindings) will be permanently purged. https://suppor'
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -307,7 +307,7 @@ endpoints:
   platform: google-analytics
   method: GET
   path: /v1beta/properties/{propertiesId}
-  name: "Get a property"
+  name: "GA4 property details by property id"
   summary: properties.get — Lookup for a single GA Property.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -326,7 +326,7 @@ endpoints:
   platform: google-analytics
   method: PATCH
   path: /v1beta/properties/{propertiesId}
-  name: "Update a property"
+  name: "Update a GA4 property's settings"
   summary: properties.patch — Updates a property.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -355,7 +355,7 @@ endpoints:
   platform: google-analytics
   method: GET
   path: /v1beta/properties/{propertiesId}/audienceExports
-  name: "List audience exports for a property"
+  name: "List audience exports on your GA4 property"
   summary: audienceExports.list — Lists all audience exports for a property. This method can be used for you to find and reuse existing audience exports rather than creating unnecessary new audience exports. The same audience can have multiple audience exports that represent the export of users that were in an audience on different days. See [Creating an Audience Export](https://developers.google.com/analyti
   scope: own_account
   cost: *id001
@@ -382,7 +382,7 @@ endpoints:
   platform: google-analytics
   method: POST
   path: /v1beta/properties/{propertiesId}/audienceExports
-  name: "Create an audience export"
+  name: "Create an audience export on your GA4 property"
   summary: audienceExports.create — Creates an audience export for later retrieval. This method quickly returns the audience export's resource name and initiates a long running asynchronous request to form an audience export. To export the users in an audience export, first create the audience export through this method and then send the audience resource name to the `QueryAudienceExport` method. See [Creati
   scope: own_account
   cost: *id001
@@ -404,7 +404,7 @@ endpoints:
   platform: google-analytics
   method: GET
   path: /v1beta/properties/{propertiesId}/audienceExports/{audienceExportsId}
-  name: "Get audience export details"
+  name: "GA4 audience export metadata by export id"
   summary: audienceExports.get — Gets configuration metadata about a specific audience export. This method can be used to understand an audience export after it has been created. See [Creating an Audience Export](https://developers.google.com/analytics/devguides/reporting/data/v1/audience-list-basics) for an introduction to Audience Exports with examples. Audience Export APIs have some methods at alpha and o
   scope: own_account
   cost: *id001
@@ -421,7 +421,7 @@ endpoints:
   platform: google-analytics
   method: POST
   path: /v1beta/properties/{propertiesId}/audienceExports/{audienceExportsId}:query
-  name: "Query users in an audience export"
+  name: "List users in a GA4 audience export"
   summary: audienceExports.query — Retrieves an audience export of users. After creating an audience, the users are not immediately available for exporting. First, a request to `CreateAudienceExport` is necessary to create an audience export of users, and then second, this method is used to retrieve the users in the audience export. See [Creating an Audience Export](https://developers.google.com/analytics/de
   scope: own_account
   cost: *id001
@@ -443,7 +443,7 @@ endpoints:
   platform: google-analytics
   method: GET
   path: /v1beta/properties/{propertiesId}/conversionEvents
-  name: "List conversion events (deprecated)"
+  name: "List GA4 conversion events (deprecated)"
   summary: 'conversionEvents.list — Deprecated: Use `ListKeyEvents` instead. Returns a list of conversion events in the specified parent property. Returns an empty list if no conversion events are found.'
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -471,7 +471,7 @@ endpoints:
   platform: google-analytics
   method: POST
   path: /v1beta/properties/{propertiesId}/conversionEvents
-  name: "Create a conversion event (deprecated)"
+  name: "Create a GA4 conversion event (deprecated)"
   summary: 'conversionEvents.create — Deprecated: Use `CreateKeyEvent` instead. Creates a conversion event with the specified attributes.'
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -496,7 +496,7 @@ endpoints:
   platform: google-analytics
   method: DELETE
   path: /v1beta/properties/{propertiesId}/conversionEvents/{conversionEventsId}
-  name: "Delete a conversion event (deprecated)"
+  name: "Delete a GA4 conversion event (deprecated)"
   summary: 'conversionEvents.delete — Deprecated: Use `DeleteKeyEvent` instead. Deletes a conversion event in a property.'
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -515,7 +515,7 @@ endpoints:
   platform: google-analytics
   method: GET
   path: /v1beta/properties/{propertiesId}/conversionEvents/{conversionEventsId}
-  name: "Get a conversion event (deprecated)"
+  name: "GA4 conversion event details (deprecated)"
   summary: 'conversionEvents.get — Deprecated: Use `GetKeyEvent` instead. Retrieve a single conversion event.'
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -534,7 +534,7 @@ endpoints:
   platform: google-analytics
   method: PATCH
   path: /v1beta/properties/{propertiesId}/conversionEvents/{conversionEventsId}
-  name: "Update a conversion event (deprecated)"
+  name: "Update a GA4 conversion event (deprecated)"
   summary: 'conversionEvents.patch — Deprecated: Use `UpdateKeyEvent` instead. Updates a conversion event with the specified attributes.'
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -563,7 +563,7 @@ endpoints:
   platform: google-analytics
   method: GET
   path: /v1beta/properties/{propertiesId}/customDimensions
-  name: "List custom dimensions"
+  name: "List custom dimensions on your GA4 property"
   summary: customDimensions.list — Lists CustomDimensions on a property.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -591,7 +591,7 @@ endpoints:
   platform: google-analytics
   method: POST
   path: /v1beta/properties/{propertiesId}/customDimensions
-  name: "Create a custom dimension"
+  name: "Create a custom dimension on your GA4 property"
   summary: customDimensions.create — Creates a CustomDimension.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -615,7 +615,7 @@ endpoints:
   platform: google-analytics
   method: GET
   path: /v1beta/properties/{propertiesId}/customDimensions/{customDimensionsId}
-  name: "Get a custom dimension"
+  name: "GA4 custom dimension details by dimension id"
   summary: customDimensions.get — Lookup for a single CustomDimension.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -634,7 +634,7 @@ endpoints:
   platform: google-analytics
   method: PATCH
   path: /v1beta/properties/{propertiesId}/customDimensions/{customDimensionsId}
-  name: "Update a custom dimension"
+  name: "Update a custom dimension on your GA4 property"
   summary: customDimensions.patch — Updates a CustomDimension on a property.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -664,7 +664,7 @@ endpoints:
   platform: google-analytics
   method: POST
   path: /v1beta/properties/{propertiesId}/customDimensions/{customDimensionsId}:archive
-  name: "Archive a custom dimension"
+  name: "Archive a custom dimension on your GA4 property"
   summary: customDimensions.archive — Archives a CustomDimension on a property.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -688,7 +688,7 @@ endpoints:
   platform: google-analytics
   method: GET
   path: /v1beta/properties/{propertiesId}/customMetrics
-  name: "List custom metrics"
+  name: "List custom metrics on your GA4 property"
   summary: customMetrics.list — Lists CustomMetrics on a property.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -716,7 +716,7 @@ endpoints:
   platform: google-analytics
   method: POST
   path: /v1beta/properties/{propertiesId}/customMetrics
-  name: "Create a custom metric"
+  name: "Create a custom metric on your GA4 property"
   summary: customMetrics.create — Creates a CustomMetric.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -740,7 +740,7 @@ endpoints:
   platform: google-analytics
   method: GET
   path: /v1beta/properties/{propertiesId}/customMetrics/{customMetricsId}
-  name: "Get a custom metric"
+  name: "GA4 custom metric details by metric id"
   summary: customMetrics.get — Lookup for a single CustomMetric.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -759,7 +759,7 @@ endpoints:
   platform: google-analytics
   method: PATCH
   path: /v1beta/properties/{propertiesId}/customMetrics/{customMetricsId}
-  name: "Update a custom metric"
+  name: "Update a custom metric on your GA4 property"
   summary: customMetrics.patch — Updates a CustomMetric on a property.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -789,7 +789,7 @@ endpoints:
   platform: google-analytics
   method: POST
   path: /v1beta/properties/{propertiesId}/customMetrics/{customMetricsId}:archive
-  name: "Archive a custom metric"
+  name: "Archive a custom metric on your GA4 property"
   summary: customMetrics.archive — Archives a CustomMetric on a property.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -813,7 +813,7 @@ endpoints:
   platform: google-analytics
   method: GET
   path: /v1beta/properties/{propertiesId}/dataRetentionSettings
-  name: "Get data retention settings"
+  name: "GA4 property data retention settings"
   summary: properties.getDataRetentionSettings — Returns the singleton data retention settings for this property.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -832,7 +832,7 @@ endpoints:
   platform: google-analytics
   method: PATCH
   path: /v1beta/properties/{propertiesId}/dataRetentionSettings
-  name: "Update data retention settings"
+  name: "Update your GA4 property's data retention settings"
   summary: properties.updateDataRetentionSettings — Updates the singleton data retention settings for this property.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -861,7 +861,7 @@ endpoints:
   platform: google-analytics
   method: GET
   path: /v1beta/properties/{propertiesId}/dataStreams
-  name: "List data streams"
+  name: "List data streams on your GA4 property"
   summary: dataStreams.list — Lists DataStreams on a property.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -889,7 +889,7 @@ endpoints:
   platform: google-analytics
   method: POST
   path: /v1beta/properties/{propertiesId}/dataStreams
-  name: "Create a data stream"
+  name: "Create a data stream on your GA4 property"
   summary: dataStreams.create — Creates a DataStream.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -914,7 +914,7 @@ endpoints:
   platform: google-analytics
   method: DELETE
   path: /v1beta/properties/{propertiesId}/dataStreams/{dataStreamsId}
-  name: "Delete a data stream"
+  name: "Delete a data stream from your GA4 property"
   summary: dataStreams.delete — Deletes a DataStream on a property.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -933,7 +933,7 @@ endpoints:
   platform: google-analytics
   method: GET
   path: /v1beta/properties/{propertiesId}/dataStreams/{dataStreamsId}
-  name: "Get a data stream"
+  name: "GA4 data stream details by stream id"
   summary: dataStreams.get — Lookup for a single DataStream.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -952,7 +952,7 @@ endpoints:
   platform: google-analytics
   method: PATCH
   path: /v1beta/properties/{propertiesId}/dataStreams/{dataStreamsId}
-  name: "Update a data stream"
+  name: "Update a data stream on your GA4 property"
   summary: dataStreams.patch — Updates a DataStream on a property.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -981,7 +981,7 @@ endpoints:
   platform: google-analytics
   method: GET
   path: /v1beta/properties/{propertiesId}/dataStreams/{dataStreamsId}/measurementProtocolSecrets
-  name: "List measurement protocol secrets"
+  name: "List Measurement Protocol secrets on a GA4 stream"
   summary: measurementProtocolSecrets.list — Returns child MeasurementProtocolSecrets under the specified parent Property.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -1009,7 +1009,7 @@ endpoints:
   platform: google-analytics
   method: POST
   path: /v1beta/properties/{propertiesId}/dataStreams/{dataStreamsId}/measurementProtocolSecrets
-  name: "Create a measurement protocol secret"
+  name: "Create a Measurement Protocol secret on a GA4 stream"
   summary: measurementProtocolSecrets.create — Creates a measurement protocol secret.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -1034,7 +1034,7 @@ endpoints:
   platform: google-analytics
   method: DELETE
   path: /v1beta/properties/{propertiesId}/dataStreams/{dataStreamsId}/measurementProtocolSecrets/{measurementProtocolSecretsId}
-  name: "Delete a measurement protocol secret"
+  name: "Delete a Measurement Protocol secret from a GA4 stream"
   summary: measurementProtocolSecrets.delete — Deletes target MeasurementProtocolSecret.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -1053,7 +1053,7 @@ endpoints:
   platform: google-analytics
   method: GET
   path: /v1beta/properties/{propertiesId}/dataStreams/{dataStreamsId}/measurementProtocolSecrets/{measurementProtocolSecretsId}
-  name: "Get a measurement protocol secret"
+  name: "GA4 Measurement Protocol secret by secret id"
   summary: measurementProtocolSecrets.get — Lookup for a single MeasurementProtocolSecret.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -1072,7 +1072,7 @@ endpoints:
   platform: google-analytics
   method: PATCH
   path: /v1beta/properties/{propertiesId}/dataStreams/{dataStreamsId}/measurementProtocolSecrets/{measurementProtocolSecretsId}
-  name: "Update a measurement protocol secret"
+  name: "Update a Measurement Protocol secret on a GA4 stream"
   summary: measurementProtocolSecrets.patch — Updates a measurement protocol secret.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -1101,7 +1101,7 @@ endpoints:
   platform: google-analytics
   method: GET
   path: /v1beta/properties/{propertiesId}/firebaseLinks
-  name: "List Firebase links for a property"
+  name: "List Firebase links on your GA4 property"
   summary: firebaseLinks.list — Lists FirebaseLinks on a property. Properties can have at most one FirebaseLink.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -1129,7 +1129,7 @@ endpoints:
   platform: google-analytics
   method: POST
   path: /v1beta/properties/{propertiesId}/firebaseLinks
-  name: "Create a Firebase link"
+  name: "Link Firebase to your GA4 property"
   summary: firebaseLinks.create — Creates a FirebaseLink. Properties can have at most one FirebaseLink.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -1154,7 +1154,7 @@ endpoints:
   platform: google-analytics
   method: DELETE
   path: /v1beta/properties/{propertiesId}/firebaseLinks/{firebaseLinksId}
-  name: "Delete a Firebase link"
+  name: "Delete a Firebase link from your GA4 property"
   summary: firebaseLinks.delete — Deletes a FirebaseLink on a property
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -1173,7 +1173,7 @@ endpoints:
   platform: google-analytics
   method: GET
   path: /v1beta/properties/{propertiesId}/googleAdsLinks
-  name: "List Google Ads links"
+  name: "List Google Ads links on your GA4 property"
   summary: googleAdsLinks.list — Lists GoogleAdsLinks on a property.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -1201,7 +1201,7 @@ endpoints:
   platform: google-analytics
   method: POST
   path: /v1beta/properties/{propertiesId}/googleAdsLinks
-  name: "Create a Google Ads link"
+  name: "Link Google Ads to your GA4 property"
   summary: googleAdsLinks.create — Creates a GoogleAdsLink.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -1226,7 +1226,7 @@ endpoints:
   platform: google-analytics
   method: DELETE
   path: /v1beta/properties/{propertiesId}/googleAdsLinks/{googleAdsLinksId}
-  name: "Delete a Google Ads link"
+  name: "Delete a Google Ads link from your GA4 property"
   summary: googleAdsLinks.delete — Deletes a GoogleAdsLink on a property
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -1246,7 +1246,7 @@ endpoints:
   platform: google-analytics
   method: PATCH
   path: /v1beta/properties/{propertiesId}/googleAdsLinks/{googleAdsLinksId}
-  name: "Update a Google Ads link"
+  name: "Update a Google Ads link on your GA4 property"
   summary: googleAdsLinks.patch — Updates a GoogleAdsLink on a property
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -1275,7 +1275,7 @@ endpoints:
   platform: google-analytics
   method: GET
   path: /v1beta/properties/{propertiesId}/keyEvents
-  name: "List key events"
+  name: "List key events on your GA4 property"
   summary: keyEvents.list — Returns a list of Key Events in the specified parent property. Returns an empty list if no Key Events are found.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -1303,7 +1303,7 @@ endpoints:
   platform: google-analytics
   method: POST
   path: /v1beta/properties/{propertiesId}/keyEvents
-  name: "Create a key event"
+  name: "Create a key event on your GA4 property"
   summary: keyEvents.create — Creates a Key Event.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -1328,7 +1328,7 @@ endpoints:
   platform: google-analytics
   method: DELETE
   path: /v1beta/properties/{propertiesId}/keyEvents/{keyEventsId}
-  name: "Delete a key event"
+  name: "Delete a key event from your GA4 property"
   summary: keyEvents.delete — Deletes a Key Event.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -1347,7 +1347,7 @@ endpoints:
   platform: google-analytics
   method: GET
   path: /v1beta/properties/{propertiesId}/keyEvents/{keyEventsId}
-  name: "Get a key event"
+  name: "GA4 key event details by key event id"
   summary: keyEvents.get — Retrieve a single Key Event.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -1366,7 +1366,7 @@ endpoints:
   platform: google-analytics
   method: PATCH
   path: /v1beta/properties/{propertiesId}/keyEvents/{keyEventsId}
-  name: "Update a key event"
+  name: "Update a key event on your GA4 property"
   summary: keyEvents.patch — Updates a Key Event.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -1396,7 +1396,7 @@ endpoints:
   platform: google-analytics
   method: POST
   path: /v1beta/properties/{propertiesId}:acknowledgeUserDataCollection
-  name: "Acknowledge user data collection terms"
+  name: "Acknowledge GA4 user data collection terms"
   summary: properties.acknowledgeUserDataCollection — Acknowledges the terms of user data collection for the specified property. This acknowledgement must be completed (either in the Google Analytics UI or through this API) before MeasurementProtocolSecret resources may be created.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -1420,7 +1420,7 @@ endpoints:
   platform: google-analytics
   method: POST
   path: /v1beta/properties/{propertiesId}:batchRunPivotReports
-  name: "Run multiple pivot reports in a batch"
+  name: "Run several GA4 pivot reports in one batch"
   summary: properties.batchRunPivotReports — Returns multiple pivot reports in a batch. All reports must be for the same Google Analytics property.
   scope: own_account
   cost: *id001
@@ -1442,7 +1442,7 @@ endpoints:
   platform: google-analytics
   method: POST
   path: /v1beta/properties/{propertiesId}:batchRunReports
-  name: "Run multiple reports in a batch"
+  name: "Run several GA4 reports in one batch"
   summary: properties.batchRunReports — Returns multiple reports in a batch. All reports must be for the same Google Analytics property.
   scope: own_account
   cost: *id001
@@ -1465,7 +1465,7 @@ endpoints:
   platform: google-analytics
   method: POST
   path: /v1beta/properties/{propertiesId}:checkCompatibility
-  name: "Check dimension and metric compatibility"
+  name: "Check GA4 dimension and metric compatibility"
   summary: properties.checkCompatibility — This compatibility method lists dimensions and metrics that can be added to a report request and maintain compatibility. This method fails if the request's dimensions and metrics are incompatible. In Google Analytics, reports fail if they request incompatible dimensions and/or metrics; in that case, you will need to remove dimensions and/or metrics from the incompat
   scope: own_account
   cost: *id001
@@ -1487,7 +1487,7 @@ endpoints:
   platform: google-analytics
   method: POST
   path: /v1beta/properties/{propertiesId}:runAccessReport
-  name: "Run property data access report"
+  name: "Run a GA4 data access report for your property"
   summary: properties.runAccessReport — Returns a customized report of data access records. The report provides records of each time a user reads Google Analytics reporting data. Access records are retained for up to 2 years. Data Access Reports can be requested for a property. Reports may be requested for any property, but dimensions that aren't related to quota can only be requested on Google Analytics 360
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -1510,7 +1510,7 @@ endpoints:
   platform: google-analytics
   method: POST
   path: /v1beta/properties/{propertiesId}:runPivotReport
-  name: "Run a pivot report"
+  name: "Run a GA4 pivot report by property id"
   summary: properties.runPivotReport — Returns a customized pivot report of your Google Analytics event data. Pivot reports are more advanced and expressive formats than regular reports. In a pivot report, dimensions are only visible if they are included in a pivot. Multiple pivots can be specified to further dissect your data.
   scope: own_account
   cost: *id001

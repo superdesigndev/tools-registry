@@ -37,7 +37,7 @@ endpoints:
   platform: youtube
   method: POST
   path: /upload/youtube/v3/captions
-  name: "Upload a caption track"
+  name: "Upload a caption track to your YouTube video"
   summary: captions.insert — Inserts a new resource into this collection.
   scope: own_account
   cost:
@@ -76,7 +76,7 @@ endpoints:
   platform: youtube
   method: PUT
   path: /upload/youtube/v3/captions
-  name: "Update a caption track"
+  name: "Update a caption track on your YouTube video"
   summary: captions.update — Updates an existing resource.
   scope: own_account
   cost:
@@ -115,7 +115,7 @@ endpoints:
   platform: youtube
   method: POST
   path: /upload/youtube/v3/channelBanners/insert
-  name: "Upload a channel banner image"
+  name: "Upload a banner image for your YouTube channel"
   summary: channelBanners.insert — Inserts a new resource into this collection.
   scope: own_account
   cost:
@@ -150,7 +150,7 @@ endpoints:
   platform: youtube
   method: POST
   path: /upload/youtube/v3/playlistImages
-  name: "Upload a playlist cover image"
+  name: "Upload a cover image for your YouTube playlist"
   summary: playlistImages.insert — Inserts a new resource into this collection.
   scope: own_account
   cost:
@@ -185,7 +185,7 @@ endpoints:
   platform: youtube
   method: PUT
   path: /upload/youtube/v3/playlistImages
-  name: "Update a playlist cover image"
+  name: "Update your YouTube playlist's cover image"
   summary: playlistImages.update — Updates an existing resource.
   scope: own_account
   cost:
@@ -216,7 +216,7 @@ endpoints:
   platform: youtube
   method: POST
   path: /upload/youtube/v3/watermarks/set
-  name: "Set a channel watermark image"
+  name: "Upload and set your YouTube channel watermark image"
   summary: watermarks.set — Allows upload of watermark image and setting it for a channel.
   scope: own_account
   cost:
@@ -246,7 +246,7 @@ endpoints:
   platform: youtube
   method: POST
   path: /youtube/v3/abuseReports
-  name: "Report abuse"
+  name: "File an abuse report on YouTube"
   summary: abuseReports.insert — Inserts a new resource into this collection.
   scope: own_account
   cost:
@@ -272,7 +272,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /youtube/v3/activities
-  name: "List channel activities"
+  name: "List a YouTube channel's recent activities"
   summary: activities.list — Retrieves a list of resources, possibly filtered.
   scope: any_account
   cost:
@@ -320,7 +320,7 @@ endpoints:
   platform: youtube
   method: DELETE
   path: /youtube/v3/captions
-  name: "Delete a caption track"
+  name: "Delete a caption track from your YouTube video"
   summary: captions.delete — Deletes a resource.
   scope: own_account
   cost:
@@ -348,7 +348,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /youtube/v3/captions
-  name: "List caption tracks for a video"
+  name: "List a YouTube video's caption tracks by video id"
   summary: captions.list — Retrieves a list of resources, possibly filtered.
   scope: own_account
   cost:
@@ -385,7 +385,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /youtube/v3/captions/{id}
-  name: "Download a caption track"
+  name: "Download a YouTube caption track by caption id"
   summary: captions.download — Downloads a caption track.
   scope: own_account
   cost:
@@ -424,7 +424,7 @@ endpoints:
   platform: youtube
   method: DELETE
   path: /youtube/v3/channelSections
-  name: "Delete a channel section"
+  name: "Delete a section from your YouTube channel page"
   summary: channelSections.delete — Deletes a resource.
   scope: own_account
   cost:
@@ -448,7 +448,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /youtube/v3/channelSections
-  name: "List channel sections"
+  name: "List a YouTube channel's page sections"
   summary: channelSections.list — Retrieves a list of resources, possibly filtered.
   scope: any_account
   cost:
@@ -490,7 +490,7 @@ endpoints:
   platform: youtube
   method: POST
   path: /youtube/v3/channelSections
-  name: "Create a channel section"
+  name: "Add a section to your YouTube channel page"
   summary: channelSections.insert — Inserts a new resource into this collection.
   scope: own_account
   cost:
@@ -525,7 +525,7 @@ endpoints:
   platform: youtube
   method: PUT
   path: /youtube/v3/channelSections
-  name: "Update a channel section"
+  name: "Update a section on your YouTube channel page"
   summary: channelSections.update — Updates an existing resource.
   scope: own_account
   cost:
@@ -556,7 +556,7 @@ endpoints:
   platform: youtube
   method: PUT
   path: /youtube/v3/channels
-  name: "Update channel branding settings"
+  name: "Update your YouTube channel settings"
   summary: channels.update — Updates an existing resource.
   scope: own_account
   cost:
@@ -587,7 +587,7 @@ endpoints:
   platform: youtube
   method: POST
   path: /youtube/v3/commentThreads
-  name: "Create a comment thread"
+  name: "Post a top-level comment thread on YouTube"
   summary: commentThreads.insert — Inserts a new resource into this collection.
   scope: own_account
   cost:
@@ -614,7 +614,7 @@ endpoints:
   platform: youtube
   method: DELETE
   path: /youtube/v3/comments
-  name: "Delete a comment"
+  name: "Delete a YouTube comment"
   summary: comments.delete — Deletes a resource.
   scope: own_account
   cost:
@@ -634,7 +634,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /youtube/v3/comments
-  name: "List comments"
+  name: "List YouTube comments by id or parent comment id"
   summary: comments.list — Retrieves a list of resources, possibly filtered.
   scope: any_account
   cost:
@@ -680,7 +680,7 @@ endpoints:
   platform: youtube
   method: POST
   path: /youtube/v3/comments
-  name: "Reply to a comment"
+  name: "Reply to a YouTube comment"
   summary: comments.insert — Inserts a new resource into this collection.
   scope: own_account
   cost:
@@ -707,7 +707,7 @@ endpoints:
   platform: youtube
   method: PUT
   path: /youtube/v3/comments
-  name: "Update a comment"
+  name: "Update your YouTube comment"
   summary: comments.update — Updates an existing resource.
   scope: own_account
   cost:
@@ -734,7 +734,7 @@ endpoints:
   platform: youtube
   method: POST
   path: /youtube/v3/comments/markAsSpam
-  name: "Mark comments as spam"
+  name: "Flag YouTube comments as spam"
   summary: comments.markAsSpam — Expresses the caller's opinion that one or more comments should be flagged as spam.
   scope: own_account
   cost:
@@ -756,7 +756,7 @@ endpoints:
   platform: youtube
   method: POST
   path: /youtube/v3/comments/setModerationStatus
-  name: "Set comment moderation status"
+  name: "Set moderation status of YouTube comments"
   summary: comments.setModerationStatus — Sets the moderation status of one or more comments.
   scope: own_account
   cost:
@@ -791,7 +791,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /youtube/v3/i18nLanguages
-  name: "List supported interface languages"
+  name: "List YouTube interface languages"
   summary: i18nLanguages.list — Retrieves a list of resources, possibly filtered.
   scope: any_account
   cost:
@@ -816,7 +816,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /youtube/v3/i18nRegions
-  name: "List supported content regions"
+  name: "List YouTube content regions"
   summary: i18nRegions.list — Retrieves a list of resources, possibly filtered.
   scope: any_account
   cost:
@@ -841,7 +841,7 @@ endpoints:
   platform: youtube
   method: DELETE
   path: /youtube/v3/liveBroadcasts
-  name: "Delete a live broadcast"
+  name: "Delete your YouTube live broadcast"
   summary: liveBroadcasts.delete — Delete a given broadcast.
   scope: own_account
   cost:
@@ -870,7 +870,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /youtube/v3/liveBroadcasts
-  name: "List live broadcasts"
+  name: "List your YouTube live broadcasts"
   summary: liveBroadcasts.list — Retrieve the list of broadcasts associated with the given channel.
   scope: own_account
   cost:
@@ -934,7 +934,7 @@ endpoints:
   platform: youtube
   method: POST
   path: /youtube/v3/liveBroadcasts
-  name: "Create a live broadcast"
+  name: "Create a YouTube live broadcast"
   summary: liveBroadcasts.insert — Inserts a new stream for the authenticated user.
   scope: own_account
   cost:
@@ -969,7 +969,7 @@ endpoints:
   platform: youtube
   method: PUT
   path: /youtube/v3/liveBroadcasts
-  name: "Update a live broadcast"
+  name: "Update your YouTube live broadcast settings"
   summary: liveBroadcasts.update — Updates an existing broadcast for the authenticated user.
   scope: own_account
   cost:
@@ -1004,7 +1004,7 @@ endpoints:
   platform: youtube
   method: POST
   path: /youtube/v3/liveBroadcasts/bind
-  name: "Bind a broadcast to a stream"
+  name: "Bind a YouTube live broadcast to a stream"
   summary: liveBroadcasts.bind — Bind a broadcast to a stream.
   scope: own_account
   cost:
@@ -1042,7 +1042,7 @@ endpoints:
   platform: youtube
   method: POST
   path: /youtube/v3/liveBroadcasts/cuepoint
-  name: "Insert a cuepoint in a broadcast"
+  name: "Insert a cuepoint into your YouTube live broadcast"
   summary: liveBroadcasts.insertCuepoint — Insert cuepoints in a broadcast
   scope: own_account
   cost:
@@ -1081,7 +1081,7 @@ endpoints:
   platform: youtube
   method: POST
   path: /youtube/v3/liveBroadcasts/transition
-  name: "Transition a broadcast status"
+  name: "Transition your YouTube live broadcast status"
   summary: liveBroadcasts.transition — Transition a broadcast to a given status.
   scope: own_account
   cost:
@@ -1124,7 +1124,7 @@ endpoints:
   platform: youtube
   method: DELETE
   path: /youtube/v3/liveChat/bans
-  name: "Remove a live chat ban"
+  name: "Lift a YouTube live chat ban"
   summary: liveChatBans.delete — Deletes a chat ban.
   scope: own_account
   cost:
@@ -1145,7 +1145,7 @@ endpoints:
   platform: youtube
   method: POST
   path: /youtube/v3/liveChat/bans
-  name: "Ban a user from live chat"
+  name: "Ban a user from your YouTube live chat"
   summary: liveChatBans.insert — Inserts a new resource into this collection.
   scope: own_account
   cost:
@@ -1172,7 +1172,7 @@ endpoints:
   platform: youtube
   method: DELETE
   path: /youtube/v3/liveChat/messages
-  name: "Delete a live chat message"
+  name: "Delete a YouTube live chat message"
   summary: liveChatMessages.delete — Deletes a chat message.
   scope: own_account
   cost:
@@ -1192,7 +1192,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /youtube/v3/liveChat/messages
-  name: "List live chat messages"
+  name: "List YouTube live chat messages by chat id"
   summary: liveChatMessages.list — Retrieves a list of resources, possibly filtered.
   scope: own_account
   cost:
@@ -1234,7 +1234,7 @@ endpoints:
   platform: youtube
   method: POST
   path: /youtube/v3/liveChat/messages
-  name: "Post a live chat message"
+  name: "Post a message to a YouTube live chat"
   summary: liveChatMessages.insert — Inserts a new resource into this collection.
   scope: own_account
   cost:
@@ -1260,7 +1260,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /youtube/v3/liveChat/messages/stream
-  name: "Stream live chat messages"
+  name: "Stream YouTube live chat messages by chat id"
   summary: messages.stream — Allows a user to load live chat through a server-streamed RPC.
   scope: own_account
   cost:
@@ -1302,7 +1302,7 @@ endpoints:
   platform: youtube
   method: POST
   path: /youtube/v3/liveChat/messages/transition
-  name: "Transition a live chat event"
+  name: "Transition a YouTube live chat event"
   summary: liveChatMessages.transition — Transition a durable chat event.
   scope: own_account
   cost:
@@ -1331,7 +1331,7 @@ endpoints:
   platform: youtube
   method: DELETE
   path: /youtube/v3/liveChat/moderators
-  name: "Remove a live chat moderator"
+  name: "Remove a moderator from your YouTube live chat"
   summary: liveChatModerators.delete — Deletes a chat moderator.
   scope: own_account
   cost:
@@ -1351,7 +1351,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /youtube/v3/liveChat/moderators
-  name: "List live chat moderators"
+  name: "List moderators of your YouTube live chat"
   summary: liveChatModerators.list — Retrieves a list of resources, possibly filtered.
   scope: own_account
   cost:
@@ -1385,7 +1385,7 @@ endpoints:
   platform: youtube
   method: POST
   path: /youtube/v3/liveChat/moderators
-  name: "Add a live chat moderator"
+  name: "Add a moderator to your YouTube live chat"
   summary: liveChatModerators.insert — Inserts a new resource into this collection.
   scope: own_account
   cost:
@@ -1412,7 +1412,7 @@ endpoints:
   platform: youtube
   method: DELETE
   path: /youtube/v3/liveStreams
-  name: "Delete a live stream"
+  name: "Delete your YouTube live stream"
   summary: liveStreams.delete — Deletes an existing stream for the authenticated user.
   scope: own_account
   cost:
@@ -1440,7 +1440,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /youtube/v3/liveStreams
-  name: "List live streams"
+  name: "List your YouTube live streams"
   summary: liveStreams.list — Retrieve the list of streams associated with the given channel. --
   scope: own_account
   cost:
@@ -1485,7 +1485,7 @@ endpoints:
   platform: youtube
   method: POST
   path: /youtube/v3/liveStreams
-  name: "Create a live stream"
+  name: "Create a YouTube live stream"
   summary: liveStreams.insert — Inserts a new stream for the authenticated user.
   scope: own_account
   cost:
@@ -1520,7 +1520,7 @@ endpoints:
   platform: youtube
   method: PUT
   path: /youtube/v3/liveStreams
-  name: "Update a live stream"
+  name: "Update your YouTube live stream settings"
   summary: liveStreams.update — Updates an existing stream for the authenticated user.
   scope: own_account
   cost:
@@ -1554,7 +1554,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /youtube/v3/members
-  name: "List channel members"
+  name: "List a YouTube channel's members"
   summary: members.list — Retrieves a list of members that match the request criteria for a channel.
   scope: any_account
   cost:
@@ -1600,7 +1600,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /youtube/v3/membershipsLevels
-  name: "List membership pricing levels"
+  name: "List your YouTube membership pricing levels"
   summary: membershipsLevels.list — Retrieves a list of all pricing levels offered by a creator to the fans.
   scope: own_account
   cost:
@@ -1623,7 +1623,7 @@ endpoints:
   platform: youtube
   method: DELETE
   path: /youtube/v3/playlistImages
-  name: "Delete a playlist cover image"
+  name: "Delete your YouTube playlist's cover image"
   summary: playlistImages.delete — Deletes a resource.
   scope: own_account
   cost:
@@ -1648,7 +1648,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /youtube/v3/playlistImages
-  name: "List playlist cover images"
+  name: "List a YouTube playlist's cover images"
   summary: playlistImages.list — Retrieves a list of resources, possibly filtered.
   scope: any_account
   cost:
@@ -1690,7 +1690,7 @@ endpoints:
   platform: youtube
   method: DELETE
   path: /youtube/v3/playlistItems
-  name: "Remove an item from a playlist"
+  name: "Remove a video from your YouTube playlist"
   summary: playlistItems.delete — Deletes a resource.
   scope: own_account
   cost:
@@ -1715,7 +1715,7 @@ endpoints:
   platform: youtube
   method: POST
   path: /youtube/v3/playlistItems
-  name: "Add an item to a playlist"
+  name: "Add a video to your YouTube playlist"
   summary: playlistItems.insert — Inserts a new resource into this collection.
   scope: own_account
   cost:
@@ -1746,7 +1746,7 @@ endpoints:
   platform: youtube
   method: PUT
   path: /youtube/v3/playlistItems
-  name: "Update a playlist item"
+  name: "Update a video entry in your YouTube playlist"
   summary: playlistItems.update — Updates an existing resource.
   scope: own_account
   cost:
@@ -1777,7 +1777,7 @@ endpoints:
   platform: youtube
   method: DELETE
   path: /youtube/v3/playlists
-  name: "Delete a playlist"
+  name: "Delete your YouTube playlist"
   summary: playlists.delete — Deletes a resource.
   scope: own_account
   cost:
@@ -1801,7 +1801,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /youtube/v3/playlists
-  name: "List playlists"
+  name: "List a channel's YouTube playlists"
   summary: playlists.list — Retrieves a list of resources, possibly filtered.
   scope: any_account
   cost:
@@ -1855,7 +1855,7 @@ endpoints:
   platform: youtube
   method: POST
   path: /youtube/v3/playlists
-  name: "Create a playlist"
+  name: "Create a YouTube playlist"
   summary: playlists.insert — Inserts a new resource into this collection.
   scope: own_account
   cost:
@@ -1890,7 +1890,7 @@ endpoints:
   platform: youtube
   method: PUT
   path: /youtube/v3/playlists
-  name: "Update a playlist"
+  name: "Update your YouTube playlist details"
   summary: playlists.update — Updates an existing resource.
   scope: own_account
   cost:
@@ -1921,7 +1921,7 @@ endpoints:
   platform: youtube
   method: DELETE
   path: /youtube/v3/subscriptions
-  name: "Unsubscribe from a channel"
+  name: "Unsubscribe from a YouTube channel"
   summary: subscriptions.delete — Deletes a resource.
   scope: own_account
   cost:
@@ -1941,7 +1941,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /youtube/v3/subscriptions
-  name: "List channel subscriptions"
+  name: "List YouTube channel subscriptions"
   summary: subscriptions.list — Retrieves a list of resources, possibly filtered.
   scope: own_account
   cost:
@@ -2011,7 +2011,7 @@ endpoints:
   platform: youtube
   method: POST
   path: /youtube/v3/subscriptions
-  name: "Subscribe to a channel"
+  name: "Subscribe to a YouTube channel"
   summary: subscriptions.insert — Inserts a new resource into this collection.
   scope: own_account
   cost:
@@ -2037,7 +2037,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /youtube/v3/superChatEvents
-  name: "List Super Chat events"
+  name: "List Super Chat events on your YouTube channel"
   summary: superChatEvents.list — Retrieves a list of resources, possibly filtered.
   scope: own_account
   cost:
@@ -2071,7 +2071,7 @@ endpoints:
   platform: youtube
   method: POST
   path: /youtube/v3/tests
-  name: "Run API connectivity test"
+  name: "Run a YouTube connectivity test call"
   summary: tests.insert — POST method.
   scope: own_account
   cost:
@@ -2103,7 +2103,7 @@ endpoints:
   platform: youtube
   method: DELETE
   path: /youtube/v3/thirdPartyLinks
-  name: "Delete a third-party link"
+  name: "Delete a third-party link from your YouTube channel"
   summary: thirdPartyLinks.delete — Deletes a resource.
   scope: own_account
   cost:
@@ -2140,7 +2140,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /youtube/v3/thirdPartyLinks
-  name: "List third-party links"
+  name: "List third-party links on your YouTube channel"
   summary: thirdPartyLinks.list — Retrieves a list of resources, possibly filtered.
   scope: own_account
   cost:
@@ -2178,7 +2178,7 @@ endpoints:
   platform: youtube
   method: POST
   path: /youtube/v3/thirdPartyLinks
-  name: "Create a third-party link"
+  name: "Create a third-party link on your YouTube channel"
   summary: thirdPartyLinks.insert — Inserts a new resource into this collection.
   scope: own_account
   cost:
@@ -2209,7 +2209,7 @@ endpoints:
   platform: youtube
   method: PUT
   path: /youtube/v3/thirdPartyLinks
-  name: "Update a third-party link"
+  name: "Update a third-party link on your YouTube channel"
   summary: thirdPartyLinks.update — Updates an existing resource.
   scope: own_account
   cost:
@@ -2240,7 +2240,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /youtube/v3/videoAbuseReportReasons
-  name: "List video abuse report reasons"
+  name: "List YouTube video abuse report reasons"
   summary: videoAbuseReportReasons.list — Retrieves a list of resources, possibly filtered.
   scope: own_account
   cost:
@@ -2265,7 +2265,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /youtube/v3/videoCategories
-  name: "List video categories"
+  name: "List YouTube video categories by region"
   summary: videoCategories.list — Retrieves a list of resources, possibly filtered.
   scope: any_account
   cost:
@@ -2296,7 +2296,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /youtube/v3/videoTrainability
-  name: "Get video trainability status"
+  name: "Check a YouTube video's trainability status"
   summary: videoTrainability.get — Returns the trainability status of a video.
   scope: own_account
   cost:
@@ -2318,7 +2318,7 @@ endpoints:
   platform: youtube
   method: DELETE
   path: /youtube/v3/videos
-  name: "Delete a video"
+  name: "Delete your YouTube video"
   summary: videos.delete — Deletes a resource.
   scope: own_account
   cost:
@@ -2343,7 +2343,7 @@ endpoints:
   platform: youtube
   method: PUT
   path: /youtube/v3/videos
-  name: "Update video metadata"
+  name: "Update your YouTube video's metadata"
   summary: videos.update — Updates an existing resource.
   scope: own_account
   cost:
@@ -2373,7 +2373,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /youtube/v3/videos/getRating
-  name: "Get a user's video ratings"
+  name: "Your ratings on YouTube videos by video id"
   summary: videos.getRating — Retrieves the ratings that the authorized user gave to a list of specified videos.
   scope: own_account
   cost:
@@ -2398,7 +2398,7 @@ endpoints:
   platform: youtube
   method: POST
   path: /youtube/v3/videos/rate
-  name: "Rate a video"
+  name: "Like, dislike or unrate a YouTube video"
   summary: videos.rate — Adds a like or dislike rating to a video or removes a rating from a video.
   scope: own_account
   cost:
@@ -2426,7 +2426,7 @@ endpoints:
   platform: youtube
   method: POST
   path: /youtube/v3/videos/reportAbuse
-  name: "Report a video for abuse"
+  name: "Report a YouTube video for abuse"
   summary: videos.reportAbuse — Report abuse for a video.
   scope: own_account
   cost:
@@ -2452,7 +2452,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /youtube/v3/videos:batchGetStats
-  name: "Get stats for multiple videos (batch)"
+  name: "Batch stats for your YouTube videos by video ids"
   summary: videos.batchGetStats — Retrieves a batch of VideoStat resources, possibly filtered. BatchGetStats is intentionally not atomic to provide a better user experience.
   scope: own_account
   cost:
@@ -2482,7 +2482,7 @@ endpoints:
   platform: youtube
   method: POST
   path: /youtube/v3/watermarks/unset
-  name: "Remove a channel watermark"
+  name: "Remove your YouTube channel's watermark image"
   summary: watermarks.unset — Allows removal of channel watermark.
   scope: own_account
   cost:

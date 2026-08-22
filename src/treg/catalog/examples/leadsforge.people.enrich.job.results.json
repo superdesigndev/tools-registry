@@ -1,0 +1,29 @@
+{
+  "jobID": "4cf14582-3878-4438-9797-e0b7919256bb",
+  "results": [
+    {
+      "jobID": "4cf14582-3878-4438-9797-e0b7919256bb",
+      "personID": "727b5499-6774-34b2-8c39-7dc1d8e3538f",
+      "channel": "email",
+      "status": "succeeded",
+      "payload": {
+        "email": "jane.doe@example.com"
+      },
+      "completedAt": "2026-08-20T00:47:17.73155Z",
+      "inputFirstName": "Patrick",
+      "inputLastName": "Collison",
+      "inputCompany": "Stripe",
+      "externalID": "crm-42",
+      "person": {
+        "firstName": "Patrick",
+        "lastName": "Collison",
+        "jobTitle": "CEO",
+        "company": "Stripe",
+        "location": "San Francisco Bay Area, United States"
+      }
+    }
+  ],
+  "offset": 0,
+  "limit": 10,
+  "total": 1
+}

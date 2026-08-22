@@ -1,0 +1,53 @@
+{
+  "data": [
+    {
+      "id": "d378cf5a-01b4-4f81-8f9d-64c38df3ca03",
+      "type": "news_event",
+      "attributes": {
+        "summary": "Kraken International partners with Stripe, Inc..",
+        "category": "partners_with",
+        "found_at": "2026-08-19T01:45:12Z",
+        "confidence": 0.9235,
+        "article_sentence": "By partnering with Stripe, a major player in online payment  …[truncated]",
+        "planning": false,
+        "location": "United States, Northern America, Americas",
+        "_truncated": "remaining fields omitted for brevity"
+      },
+      "relationships": {
+        "company1": {
+          "data": {
+            "id": "0653dbf3-4fd3-5c73-b41e-c8bb18bb0f3b",
+            "type": "company"
+          }
+        },
+        "company2": {
+          "data": {
+            "id": "a0383c53-8142-5e7c-8ca3-9980289a3ccc",
+            "type": "company"
+          }
+        },
+        "most_relevant_source": {
+          "data": {
+            "id": "3c030944-6ea6-46c1-bbd6-1bf9b3557217",
+            "type": "news_article"
+          }
+        }
+      }
+    }
+  ],
+  "included": [
+    {
+      "id": "0653dbf3-4fd3-5c73-b41e-c8bb18bb0f3b",
+      "type": "company",
+      "attributes": {
+        "domain": "kraken.com",
+        "company_name": "Kraken International"
+      }
+    },
+    "… 2 more items omitted"
+  ],
+  "meta": {
+    "schema_version": "3.1",
+    "record_state": "active"
+  }
+}

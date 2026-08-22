@@ -417,7 +417,8 @@ def _coerce(value, ptype: str):
     return value
 
 
-def tikhub_input_and_test(op: dict, defs: dict) -> tuple[dict, dict, str]:
+def tikhub_input_and_test(op: dict, defs: dict, *, method: str = "GET",
+                          spec_op: dict | None = None) -> tuple[dict, dict, str]:
     """Build an endpoint's `input` schema and `test_request` from one Apifox operation.
 
     Returns (input, test_request, reason). `test_request` is empty when the operation cannot be
@@ -514,11 +515,67 @@ def tikhub_input_and_test(op: dict, defs: dict) -> tuple[dict, dict, str]:
         test["queryParams"] = test_q
     if body is not None:
         test["body"] = body
+
+    # The verb and the parameter POSITION are one decision, and they were being made from two
+    # different documents. Apifox lists every TikTok-Ads parameter under `parameters.query` while
+    # the OpenAPI declares the same route POST-with-a-JSON-body, so the generator emitted a POST
+    # whose arguments sat in the query string — still uncallable, just for a new reason, and a
+    # plain re-ingest would silently undo the hand correction of 2026-08-17. When the spec says
+    # this method carries a JSON body and Apifox gave us no body of its own, the documented
+    # "query" parameters ARE that body's fields.
+    # `not _spec_declares_query`: relocate only where the spec puts EVERYTHING in the body. A route
+    # that genuinely takes both — TikHub's zhihu scholar search is the one live example — keeps its
+    # query string, and moving those params into the body would break a currently-correct endpoint.
+    # Latent rather than live today (that route's docs supply a body, so `body is None` already
+    # blocked it), which is exactly why it is worth closing before it isn't.
+    if (method not in ("GET", "HEAD", "DELETE") and body is None
+            and _spec_wants_json_body(spec_op, method)
+            and not _spec_declares_query(spec_op, method) and qs):
+        inp.pop("queryParams", None)
+        inp["bodyType"] = "json"
+        inp["body"] = qs
+        if "queryParams" in test:
+            test["body"] = test.pop("queryParams")
+
     if not test:
         # no parameters at all: the route is callable bare, and an empty test_request is the
         # honest description of that call
-        test = {"queryParams": {}}
+        test = {"body": {}} if inp.get("bodyType") == "json" or (
+            method not in ("GET", "HEAD", "DELETE") and _spec_wants_json_body(spec_op, method)
+        ) else {"queryParams": {}}
     return inp, test, ""
+
+
+def resolve_method(*, spec_op: dict | None, probed: str | None, documented: str = "") -> str:
+    """Which HTTP verb this route takes, from the three sources that claim to know.
+
+    Order matters and it was wrong. The provider's OWN OpenAPI wins whenever it names exactly one
+    method for the route; only then do we fall back to the OPTIONS probe, then the docs portal, then
+    the spec's first method, then GET. The probe infers a verb from a preflight, and a route that
+    answers with a method LIST walks the probe's preference order and comes out `GET` no matter what
+    the handler takes — so ranking it above the contract lets a guess overrule a published fact.
+
+    (This is a hardening, not the cause of the 2026-08-17 TikTok-Ads breakage — see the note at the
+    call site. Those routes really were GET when ingested; TikHub moved them afterwards.)
+    """
+    op = spec_op or {}
+    spec_methods = [m.upper() for m in ("get", "post", "put", "patch", "delete") if m in op]
+    if len(spec_methods) == 1:
+        return spec_methods[0]
+    return (probed or documented.upper() or (spec_methods[0] if spec_methods else "GET"))
+
+
+def _spec_wants_json_body(spec_op: dict | None, method: str) -> bool:
+    """Does the provider's OWN OpenAPI say this method carries a JSON request body?"""
+    op = (spec_op or {}).get(method.lower()) or {}
+    content = ((op.get("requestBody") or {}).get("content") or {})
+    return any(str(k).startswith("application/json") for k in content)
+
+
+def _spec_declares_query(spec_op: dict | None, method: str) -> bool:
+    """…and does it ALSO declare query parameters for that method?"""
+    op = (spec_op or {}).get(method.lower()) or {}
+    return any(p.get("in") == "query" for p in (op.get("parameters") or []) if isinstance(p, dict))
 
 
 def ingest_tikhub(refresh: bool) -> tuple[Path, dict]:
@@ -550,9 +607,20 @@ def ingest_tikhub(refresh: bool) -> tuple[Path, dict]:
         platform = TIKHUB_PLATFORM.get(family, family.replace("_", "-"))
         op = spec_paths.get(uri) or {}
         doc_op = docs_apis.get(uri)
-        method = (methods.get(uri)
-                  or (doc_op or {}).get("method", "").upper()
-                  or next((m.upper() for m in ("get", "post") if m in op), "GET"))
+        # The SPEC decides whenever it declares exactly one method for the route — it is the
+        # provider's own published contract, and it was wrong to rank it below an OPTIONS probe
+        # that infers a verb from a preflight (a route answering with a list walks the preference
+        # order below and comes out `GET`, whatever the handler actually takes).
+        #
+        # This is a hardening, NOT the cause of the 2026-08-17 TikTok-Ads breakage — the first
+        # write-up of that fix said otherwise and was wrong. Those routes were GET when ingested:
+        # the July spec says `get`, and the captured example_response is a real billed 200 from a
+        # GET on 2026-07-27. TikHub MOVED them to POST afterwards. The catalog did not mis-read the
+        # provider; it went stale, and nothing re-checks a provider's spec for drift. Preferring the
+        # spec narrows the window (a re-ingest now inherits the change) but does not close it —
+        # only re-ingesting does, and only if the cached spec is refreshed.
+        method = resolve_method(spec_op=op, probed=methods.get(uri),
+                                documented=(doc_op or {}).get("method", ""))
         if (method, uri) in skip:
             continue
         label = titlecase(family)
@@ -588,7 +656,7 @@ def ingest_tikhub(refresh: bool) -> tuple[Path, dict]:
         )
         if doc_op is not None:
             documented += 1
-            inp, test, reason = tikhub_input_and_test(doc_op, docs_defs)
+            inp, test, reason = tikhub_input_and_test(doc_op, docs_defs, method=method, spec_op=op)
             if inp:
                 entry["input"] = inp
             if test:
@@ -619,8 +687,8 @@ def ingest_tikhub(refresh: bool) -> tuple[Path, dict]:
         "Route list + per-endpoint USD price come from TikHub's own free rate card endpoint",
         "(get_all_endpoints_info), which is authoritative and complete. openapi.json is served",
         f"TRUNCATED by the origin (~840 KB cap), so it supplied summaries for only {from_spec} routes;",
-        "the rest have a summary derived from the route itself. HTTP methods are ground truth: an",
-        "OPTIONS request answers 405 with an `allow:` header without executing (or billing) the route.",
+        "the rest have a summary derived from the route itself. A single-method OpenAPI declaration",
+        "is method ground truth; OPTIONS is the fallback when the spec is absent or ambiguous.",
         "Skipped families: captcha, temp_mail, ios_shortcut, sora2, tikhub (own account), health.",
         "",
         f"`input` and `test_request` come from TikHub's Apifox docs API, which documents {documented}",
@@ -1330,7 +1398,7 @@ def ingest_youtube(refresh: bool) -> tuple[Path, dict]:
 # forty entries pointing at the same path, each documenting one thing you can query. That is what
 # an agent actually needs: it already knows how to POST a query, it does not know that
 # `search_term_view` is where the actual user searches live.
-GADS_VERSION = "v21"  # must track OAuthProvider.examples / core google-ads.yaml
+GADS_VERSION = "v25"  # must track OAuthProvider.examples / core google-ads.yaml
 GADS_RESOURCES: list[tuple[str, str]] = [
     ("campaign", "Campaigns — name, status, budget, bidding strategy, start/end dates and all campaign-level metrics"),
     ("ad_group", "Ad groups — name, status, type, CPC bid and ad-group-level metrics"),
@@ -1446,6 +1514,140 @@ X_OWN = re.compile(
     r"|account_activity|webhooks|reverse_chronological)\b")
 
 
+# X PRICING IS PAY-PER-USE AND THE BILL LANDS ON TREG's APP, so an extended entry that says "free"
+# is not a cosmetic slip — it is a price we published and then charged against.
+#
+# X publishes a RATE CARD PER RESOURCE TYPE, not one read price and one write price
+# (docs.x.com/x-api/getting-started/pricing). Flattening it is how "create a list" ends up billed at
+# the post-creation rate — 50% over the real $0.010. The card is transcribed below verbatim so the
+# mapping can be audited against it line by line, and every route names the row it was priced from.
+#
+# OWNED READS ($0.001/resource) DO NOT APPLY TO US. The discount needs the authenticated user to be
+# "the owner of the developer app" — on a registry connect the app is treg's and the user is a
+# stranger to it, so a connected member reading their own timeline pays the ordinary Posts rate.
+# Pricing those routes at $0.001 would have under-billed the calls treg is charged the most for.
+X_PRICING_URL = "https://docs.x.com/x-api/getting-started/pricing"
+X_PRICE_CHECKED = "2026-08-18"
+
+# (value, cost type, unit) exactly as the card states it. Reads are per RESOURCE RETURNED; the
+# entries marked per_call are the card's own per-REQUEST rows (counts and trends sit in the write
+# table despite being GETs).
+X_RATES = {
+    "posts":       (0.005, "per_result", "post"),     # Posts: Read
+    "user":        (0.010, "per_result", "user"),     # User: Read / Following-Followers: Read
+    "dm_event":    (0.010, "per_result", "result"),   # DM Event: Read
+    "list":        (0.005, "per_result", "result"),   # List: Read
+    "space":       (0.005, "per_result", "result"),   # Space: Read
+    "community":   (0.005, "per_result", "result"),   # Community: Read
+    "note":        (0.005, "per_result", "result"),   # Note: Read
+    "like":        (0.001, "per_result", "result"),   # Like: Read
+    "mute":        (0.001, "per_result", "result"),   # Mute: Read
+    "block":       (0.001, "per_result", "result"),   # Block: Read
+    "counts_recent": (0.005, "per_call", "call"),     # Counts: Recent
+    "counts_all":  (0.010, "per_call", "call"),       # Counts: All
+    "trends":      (0.010, "per_call", "call"),       # Trends
+    "post_create": (0.015, "per_call", "call"),       # Post: Create ($0.200 with a URL)
+    "dm_create":   (0.015, "per_call", "call"),       # DM Interaction: Create
+    "interaction": (0.015, "per_call", "call"),       # User Interaction: Create
+    "int_delete":  (0.010, "per_call", "call"),       # Interaction: Delete
+    "content":     (0.005, "per_call", "call"),       # Content: Manage
+    "list_create": (0.010, "per_call", "call"),       # List: Create
+    "list_manage": (0.005, "per_call", "call"),       # List: Manage
+    "bookmark":    (0.005, "per_call", "call"),       # Bookmark
+    "media_meta":  (0.005, "per_call", "call"),       # Media Metadata
+    "privacy":     (0.010, "per_call", "call"),       # Privacy: Update
+    "mute_delete": (0.005, "per_call", "call"),       # Mute: Delete
+}
+# The rate a route earns when the card names no row for its resource (webhooks, subscriptions,
+# connections, stream rules, media upload, compliance jobs, analytics). It is the figure
+# `api._oauth_billed_estimate` falls back to, so the published price still equals the metered one —
+# `inferred` says we are quoting treg's fallback, not a rate X published.
+X_FALLBACK_READ, X_FALLBACK_WRITE = "posts", "post_create"
+
+# (methods, path regex, rate key, confidence). FIRST MATCH WINS, so the specific rows precede the
+# families they sit inside. `documented` means the card names this resource; `inferred` means the
+# route's resource type is a judgement call (a route returning the users who liked a post could be
+# read as User: Read or Like: Read — it takes the dearer reading, since treg pays the difference).
+X_ROUTE_RATES: list[tuple[str, str, str, str]] = [
+    # --- writes: the specific actions first -----------------------------------------------------
+    ("POST",            r"^/2/lists$",                              "list_create", "documented"),
+    ("PUT|DELETE",      r"^/2/lists/\{[^}]+\}$",                    "list_manage", "documented"),
+    ("POST|DELETE",     r"^/2/lists/\{[^}]+\}/members",             "list_manage", "documented"),
+    ("POST|DELETE",     r"/(followed_lists|pinned_lists)(/|$)",     "list_manage", "documented"),
+    ("POST|DELETE",     r"/bookmarks(/|$)",                         "bookmark",    "documented"),
+    ("POST|DELETE",     r"^/2/media/(metadata|subtitles)$",          "media_meta",  "documented"),
+    ("DELETE",          r"/muting/",                                "mute_delete", "documented"),
+    ("DELETE",          r"/(likes|retweets|following)/",            "int_delete",  "documented"),
+    ("POST",            r"/(likes|retweets|following|muting)$",     "interaction", "documented"),
+    ("POST",            r"^/2/users/\{[^}]+\}/dm/(un)?block$",       "privacy",     "inferred"),
+    ("POST",            r"^/2/dm_conversations(/|$)|^/2/chat/conversations/\{[^}]+\}/messages",
+                                                                    "dm_create",   "documented"),
+    ("POST",            r"^/2/chat/conversations",                  "dm_create",   "inferred"),
+    ("DELETE",          r"^/2/dm_events/",                          "int_delete",  "inferred"),
+    ("DELETE",          r"^/2/tweets/\{[^}]+\}$",                   "int_delete",  "inferred"),
+    ("PUT",             r"^/2/tweets/\{[^}]+\}/hidden$",            "content",     "documented"),
+    ("POST|DELETE",     r"^/2/(notes|articles|broadcasts)",          "content",     "inferred"),
+    # --- reads: per-resource rows ---------------------------------------------------------------
+    ("GET",             r"^/2/tweets/counts/recent$",               "counts_recent", "documented"),
+    ("GET",             r"^/2/tweets/counts/all$",                  "counts_all",  "documented"),
+    ("GET",             r"^/2/trends/",                             "trends",      "documented"),
+    ("GET",             r"^/2/users/personalized_trends$",          "trends",      "inferred"),
+    ("GET",             r"^/2/likes/",                              "like",        "documented"),
+    ("GET",             r"/muting$",                                "mute",        "documented"),
+    ("GET",             r"/blocking$",                              "block",       "documented"),
+    ("GET",             r"^/2/(dm_events|dm_conversations)|^/2/chat/conversations/\{[^}]+\}/events$",
+                                                                    "dm_event",    "documented"),
+    ("GET",             r"^/2/communities/",                        "community",   "documented"),
+    ("GET",             r"^/2/spaces(/|$)(?!.*\{[^}]+\}/(tweets|buyers))", "space", "documented"),
+    ("GET",             r"^/2/notes/search/",                       "note",        "documented"),
+    ("GET",             r"^/2/lists/\{[^}]+\}$",                    "list",        "documented"),
+    ("GET",             r"/(owned_lists|followed_lists|list_memberships|pinned_lists)$",
+                                                                    "list",        "documented"),
+    ("GET",             r"^/2/lists/\{[^}]+\}/(followers|members)$",  "user",        "inferred"),
+    ("GET",             r"/(followers|following)$",                 "user",        "documented"),
+    ("GET",             r"/(liking_users|retweeted_by|buyers|members|affiliates)$",
+                                                                    "user",        "inferred"),
+    ("GET",             r"^/2/users(/by|/search)?$|^/2/users/\{[^}]+\}$", "user",   "documented"),
+    ("GET",             r"^/2/tweets(/|$)(?!.*\b(analytics|label|compliance|webhooks|rules)\b)",
+                                                                    "posts",       "documented"),
+    ("GET",             r"/(liked_tweets|mentions|bookmarks|quote_tweets|retweets|reposts_of_me"
+                        r"|notes_written|posts_eligible_for_notes|reverse_chronological)$",
+                                                                    "posts",       "documented"),
+    ("GET",             r"^/2/(lists|spaces)/\{[^}]+\}/tweets$",     "posts",       "documented"),
+    ("GET",             r"^/2/news/",                               "note",        "inferred"),
+]
+_X_COMPILED = [(set(ms.split("|")), re.compile(rx), key, conf) for ms, rx, key, conf in X_ROUTE_RATES]
+
+
+def _x_cost(method: str, path: str, scope: str = "") -> dict:
+    """The rate `api._oauth_billed_estimate` will actually charge this route, written down.
+
+    Never returns `free`: nothing on X's v2 API is free to treg any more, and a `free` block here
+    both misleads the catalog reader and is skipped by the meter (its `usd` is 0, which is falsy),
+    so the two numbers silently disagree — the display says $0 and the balance says otherwise."""
+    key = conf = None
+    for methods, rx, k, c in _X_COMPILED:
+        if method in methods and rx.search(path):
+            key, conf = k, c
+            break
+    if key is None:
+        key = X_FALLBACK_READ if method == "GET" else X_FALLBACK_WRITE
+        conf = "inferred"
+    value, ctype, unit = X_RATES[key]
+    note = (f"X's rate card, {key.replace('_', ' ')}: ${value:g} "
+            f"{'per resource returned' if ctype == 'per_result' else 'per request'}")
+    if conf == "inferred":
+        note = (f"X publishes no rate for this route's resource, so treg meters it at ${value:g} "
+                f"{'per resource' if ctype == 'per_result' else 'per request'} — the same figure "
+                f"the proxy falls back to") if key in (X_FALLBACK_READ, X_FALLBACK_WRITE) else \
+               (f"{note}; which row applies is a judgement call, and this takes the dearer reading")
+    if key == "post_create" and conf == "documented":
+        note += " — $0.200 when the text carries a URL, which the proxy prices at the higher rate"
+    return {"type": ctype, "value": value, "currency": "USD", "per": 1, "unit": unit,
+            "source": "docs", "source_url": X_PRICING_URL, "checked": X_PRICE_CHECKED,
+            "confidence": conf, "note": note}
+
+
 def _x_scopes(op: dict) -> list[str]:
     for sec in op.get("security") or []:
         for name, scopes in sec.items():
@@ -1470,6 +1672,7 @@ def ingest_x(refresh: bool) -> tuple[Path, dict]:
             slug = re.sub(r"(?<!^)(?=[A-Z])", "-", opid).lower() if opid else \
                 re.sub(r"[^a-z0-9]+", "-", f"{method}-{path}".lower()).strip("-")
             summary = clean(op.get("summary") or "") or clean(op.get("description") or "") or opid
+            scope = "own_account" if (method != "GET" or X_OWN.search(path)) else "any_account"
             entry: dict = {
                 "id": f"{provider}.x.{re.sub(r'[^a-z0-9]+', '-', slug).strip('-')}",
                 "tier": "extended",
@@ -1477,9 +1680,8 @@ def ingest_x(refresh: bool) -> tuple[Path, dict]:
                 "method": method,
                 "path": path,
                 "summary": summary[:400],
-                "scope": "own_account" if (method != "GET" or X_OWN.search(path)) else "any_account",
-                "cost": {"type": "free", "value": 0.0, "currency": "USD",
-                         "note": "no per-call charge; consumed from the X API plan's monthly post cap"},
+                "scope": scope,
+                "cost": _x_cost(method, path, scope),
                 "docs_url": "https://docs.x.com/x-api",
             }
             needed = _x_scopes(op)
@@ -1521,9 +1723,17 @@ def ingest_x(refresh: bool) -> tuple[Path, dict]:
         "blocks, DMs and media upload each have their own scope. They are listed with `scope_gap:`",
         "rather than omitted, because that list IS the decision of which scopes to add to the app.",
         "",
-        "Beyond scopes, most v2 routes are gated by the ACCESS TIER of the X developer plan (Free",
-        "posts only; Basic/Pro unlock search and timelines) — the spec cannot express that, so a",
-        "listed route may still answer 403 on a Free project.",
+        "Beyond scopes, a route may still answer 403 on a project whose access the spec cannot",
+        "express — the OpenAPI document lists the whole surface, not what one app may reach.",
+        "",
+        "EVERY ENTRY IS PRICED, AND NONE OF THEM ARE FREE. X bills the APP OWNER per use (prepaid",
+        "credits, no plan tiers since Feb 2026), so a call on a registry connect spends treg's money",
+        "and is metered from the team balance. Reads are per resource RETURNED — posts $0.005, users",
+        "$0.010 — an own-account read is $0.001, and a write is $0.015 per request ($0.20 when a",
+        "post's text carries a URL). The rates are documented; which one a route earns is read off",
+        "the resource it returns, so routes returning a resource type X publishes no rate for are",
+        "marked `confidence: inferred` at the post-read rate — the same figure the proxy's fallback",
+        "charges, so the published price and the metered price cannot drift apart.",
         "",
         "scope: GET routes that read public data are `any_account`; writes and anything touching",
         "/me, DMs, bookmarks, blocks, mutes, compliance or usage are `own_account`.",

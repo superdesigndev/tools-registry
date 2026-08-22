@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "treg",
   "displayName": "treg",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "description": "OpenRouter for tools - 2,600 agent-friendly tools, pay for the usage, not subscription",
   "author": {
     "name": "Superdesign dev, Inc.",

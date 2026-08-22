@@ -1,0 +1,62 @@
+{
+ "status": "ok",
+ "brand": {
+  "domain": "apple.com",
+  "title": "Apple",
+  "description": "Apple is a global technology company that designs, manufactures, and sells innovative consumer electronics, software, and services. Through its flagship products—including the iPhone, iPad, Mac computers, Apple Watch,…",
+  "slogan": "Think Different",
+  "colors": [{"hex": "#656565", "name": "Hard Coal", "source": "logo"}, "… further items truncated for the catalog example"],
+  "logos": [
+   {
+    "url": "https://media.brand.dev/6f58532d-994e-4671-af4f-637924c6e42f.png",
+    "mode": "has_opaque_background",
+    "colors": [{"hex": "#656565", "name": "Hard Coal"}],
+    "resolution": {"width": 302, "height": 302, "aspect_ratio": 1},
+    "type": "icon"
+   },
+   "… further items truncated for the catalog example"
+  ],
+  "backdrops": [
+   {
+    "url": "https://media.brand.dev/5627d096-03c9-43db-8095-1887f159c6e6.jpg",
+    "colors": [{"hex": "#71614d", "name": "Reed Mace Brown"}, "… further items truncated for the catalog example"],
+    "resolution": {"width": 1000, "height": 169, "aspect_ratio": 5.92}
+   },
+   "… further items truncated for the catalog example"
+  ],
+  "address": {
+   "street": "1 Apple Park Way",
+   "city": "Cupertino",
+   "country": "United States",
+   "country_code": "US",
+   "state_province": "California",
+   "state_code": "CA",
+   "postal_code": "95014"
+  },
+  "socials": [
+   {"type": "appstore", "url": "https://apps.apple.com/us/app/hello-kitty-island-adventure/id1553505132"},
+   "… further items truncated for the catalog example"
+  ],
+  "stock": {"ticker": "AAPL", "exchange": "NASDAQ"},
+  "employees": {"range": "10001+", "exact": 212430},
+  "phone": "4836393385",
+  "is_nsfw": false,
+  "industries": {
+   "eic": [
+    {"industry": "Technology", "subindustry": "Hardware & Semiconductors"},
+    "… further items truncated for the catalog example"
+   ]
+  },
+  "links": {
+   "careers": "https://www.apple.com/careers/us/",
+   "terms": "https://www.apple.com/legal/internet-services/terms/site.html",
+   "contact": "https://www.apple.com/contact/",
+   "privacy": "https://www.apple.com/privacy/",
+   "blog": null,
+   "pricing": null
+  },
+  "primary_language": "english"
+ },
+ "code": 200,
+ "key_metadata": {"credits_consumed": 10, "credits_remaining": 244}
+}

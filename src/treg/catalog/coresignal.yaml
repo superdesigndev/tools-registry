@@ -41,7 +41,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /company_multi_source/enrich
-    name: "Enrich a company by website or LinkedIn URL"
+    name: "Enrich a company by website — funding, headcount"
     summary: "Enrich a company from its website or LinkedIn URL — firmographics, funding, headcount"
     input:
       queryParams:
@@ -68,7 +68,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /company_multi_source/search/es_dsl
-    name: "Search companies by filter"
+    name: "Search companies by industry, size or country — ids, free"
     summary: "Find companies by Elasticsearch filter (industry, size, country) — ids only, free"
     input:
       bodyType: json
@@ -85,7 +85,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /company_multi_source/collect/{id}
-    name: "Get a company's full record"
+    name: "A company's full record by Coresignal id"
     summary: "Read one company's full record by the id a company search returned"
     input:
       pathParams:
@@ -111,7 +111,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /employee_multi_source/collect/{identifier}
-    name: "Get a person's full profile"
+    name: "A person's full profile by LinkedIn URL or id"
     summary: "One person's full record — role, employer, work history, education — by LinkedIn URL or id"
     input:
       pathParams:
@@ -137,7 +137,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /employee_multi_source/search/es_dsl
-    name: "Search people by filter"
+    name: "Search people by title, employer or country — ids, free"
     summary: "Find people by Elasticsearch filter (title, employer, country) — ids only, free"
     input:
       bodyType: json

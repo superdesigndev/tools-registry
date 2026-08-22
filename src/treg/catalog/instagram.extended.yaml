@@ -36,7 +36,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /ig_hashtag_search
-  name: "Search for a hashtag ID by name"
+  name: "Resolve an Instagram hashtag name to its id"
   summary: Resolve a hashtag name to its id — the first call of any hashtag lookup
   scope: own_account
   cost:
@@ -52,7 +52,7 @@ endpoints:
   platform: instagram
   method: DELETE
   path: /{ig_comment_id}
-  name: "Delete a comment"
+  name: "Delete a comment on your Instagram media"
   summary: Delete a comment on the account's own media
   scope: own_account
   cost:
@@ -68,7 +68,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /{ig_comment_id}
-  name: "Get a comment's details"
+  name: "One Instagram comment — text, username, likes"
   summary: A single comment — text, username, timestamp and like count
   scope: own_account
   cost:
@@ -83,7 +83,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /{ig_comment_id}/replies
-  name: "List replies to a comment"
+  name: "Replies under an Instagram comment"
   summary: The replies under a comment
   scope: own_account
   cost:
@@ -99,7 +99,7 @@ endpoints:
   platform: instagram
   method: POST
   path: /{ig_comment_id}/replies
-  name: "Reply to a comment"
+  name: "Reply to a comment as your Instagram account"
   summary: Reply to a comment as the account
   scope: own_account
   cost:
@@ -116,7 +116,7 @@ endpoints:
   platform: instagram
   method: POST
   path: /{ig_comment_id}?hide=true
-  name: "Hide a comment"
+  name: "Hide a comment on your Instagram media"
   summary: Hide a comment on the account's own media
   scope: own_account
   cost:
@@ -132,7 +132,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /{ig_hashtag_id}
-  name: "Get a hashtag's ID and name"
+  name: "An Instagram hashtag's id and name"
   summary: A hashtag's id and name
   scope: own_account
   cost:
@@ -147,7 +147,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /{ig_hashtag_id}/recent_media
-  name: "List recent posts for a hashtag"
+  name: "Recent public Instagram posts for a hashtag id"
   summary: The most recent public posts carrying a hashtag
   scope: own_account
   cost:
@@ -162,7 +162,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /{ig_hashtag_id}/top_media
-  name: "List top posts for a hashtag"
+  name: "Top public Instagram posts for a hashtag id"
   summary: The most popular public posts carrying a hashtag
   scope: own_account
   cost:
@@ -177,7 +177,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /{ig_media_id}
-  name: "Get a post's details"
+  name: "One of your Instagram posts — caption, media URL, counts"
   summary: A single post — caption, media_type, media_url, permalink, timestamp, like and comment counts
   scope: own_account
   cost:
@@ -192,7 +192,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /{ig_media_id}/children
-  name: "List media in a carousel post"
+  name: "Images and videos inside an Instagram carousel post"
   summary: The individual images or videos inside a carousel post
   scope: own_account
   cost:
@@ -208,7 +208,7 @@ endpoints:
   platform: instagram
   method: POST
   path: /{ig_media_id}/comments
-  name: "Comment on a post"
+  name: "Comment on your own Instagram media"
   summary: Comment on the account's own media
   scope: own_account
   cost:
@@ -224,7 +224,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /{ig_user_id}/catalog_product_search
-  name: "Search catalog products to tag"
+  name: "Search your commerce catalog for products to tag"
   summary: Search the linked commerce catalog for products to tag in a post
   scope: own_account
   cost:
@@ -241,7 +241,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /{ig_user_id}/content_publishing_limit
-  name: "Get remaining daily posting quota"
+  name: "Your remaining Instagram daily posting quota"
   summary: How many of the 24-hour posting quota (50 posts) this account has already used
   scope: own_account
   cost:
@@ -256,7 +256,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /{ig_user_id}/conversations
-  name: "List Direct message threads"
+  name: "Your Instagram Direct message threads"
   summary: Instagram Direct threads with the account
   scope: own_account
   cost:
@@ -272,7 +272,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /{ig_user_id}/live_media
-  name: "List an account's live broadcasts"
+  name: "Your Instagram live broadcasts now running"
   summary: The account's currently running live broadcasts
   scope: own_account
   cost:
@@ -287,7 +287,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /{ig_user_id}/mentioned_comment
-  name: "Get a comment mentioning this account"
+  name: "A comment that @-mentions your Instagram account"
   summary: A comment that @-mentions this account, with its thread
   scope: own_account
   cost:
@@ -302,7 +302,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /{ig_user_id}/mentioned_media
-  name: "List posts mentioning this account"
+  name: "Posts whose caption @-mentions your Instagram account"
   summary: Media whose caption @-mentions this account
   scope: own_account
   cost:
@@ -317,7 +317,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /{ig_user_id}/product_appeal
-  name: "Get shopping product appeal status"
+  name: "Status of appeals for rejected shopping products"
   summary: The status of appeals against rejected shopping products
   scope: own_account
   cost:
@@ -333,7 +333,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /{ig_user_id}/recently_searched_hashtags
-  name: "List recently searched hashtags"
+  name: "Hashtags your Instagram account searched recently"
   summary: The hashtags this account has looked up recently (the 30-per-week search quota)
   scope: own_account
   cost:
@@ -348,7 +348,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /{ig_user_id}/stories
-  name: "List an account's active stories"
+  name: "Your Instagram stories from the last 24 hours"
   summary: The account's stories from the last 24 hours
   scope: own_account
   cost:
@@ -363,7 +363,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /{ig_user_id}/tags
-  name: "List posts this account is tagged in"
+  name: "Posts where your Instagram account is tagged"
   summary: Media where another account tagged this one in the photo
   scope: own_account
   cost:
@@ -378,7 +378,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /{ig_user_id}?fields=business_discovery.username({username})
-  name: "Get another account's public profile stats"
+  name: "Another Instagram account's public stats by username"
   summary: Read ANOTHER public professional account's followers, media count and recent posts
   scope: own_account
   cost:

@@ -1,0 +1,58 @@
+{
+ "status": "ok",
+ "brand": {
+  "domain": "starbucks.com",
+  "title": "Starbucks",
+  "description": "Starbucks is a global coffeehouse chain that serves handcrafted beverages, food, and coffee products. It operates retail stores, offers online ordering, a mobile app, delivery, and a rewards program. It also sells pac…",
+  "slogan": "It’s a great day for coffee",
+  "colors": [{"hex": "#0bac66", "name": "Secret Garden"}, "… further items truncated for the catalog example"],
+  "logos": [
+   {
+    "url": "https://media.brand.dev/202f6485-af70-47d2-b815-27fdb84a5bdc.png",
+    "mode": "has_opaque_background",
+    "colors": [{"hex": "#0bac66", "name": "Secret Garden"}, "… further items truncated for the catalog example"],
+    "resolution": {"width": 180, "height": 180, "aspect_ratio": 1},
+    "type": "icon"
+   },
+   "… further items truncated for the catalog example"
+  ],
+  "backdrops": [
+   {
+    "url": "https://media.brand.dev/607d0f20-3c2c-41dc-a79d-1d7cd8c1a710.jpg",
+    "colors": [{"hex": "#b07d45", "name": "Bungalow Gold"}, "… further items truncated for the catalog example"],
+    "resolution": {"width": 1000, "height": 166, "aspect_ratio": 6.02}
+   }
+  ],
+  "address": {
+   "street": "2401 Utah Ave S",
+   "city": "Seattle",
+   "country": "United States",
+   "country_code": "US",
+   "state_province": "Washington",
+   "state_code": "WA",
+   "postal_code": "98134"
+  },
+  "socials": [{"type": "x", "url": "https://x.com/starbucks"}, "… further items truncated for the catalog example"],
+  "stock": {"ticker": "SBUX", "exchange": "NASDAQ"},
+  "email": "jane@example.com",
+  "phone": "2509012025",
+  "is_nsfw": false,
+  "industries": {
+   "eic": [
+    {"industry": "Retail & E-commerce", "subindustry": "Food, Beverage & Grocery E-commerce"},
+    "… further items truncated for the catalog example"
+   ]
+  },
+  "links": {
+   "careers": "https://careers.starbucks.com/",
+   "terms": "https://www.starbucks.com/terms/starbucks-terms-of-use/",
+   "contact": "https://www.starbucks.com/contact/",
+   "blog": null,
+   "pricing": "https://careers.starbucks.com/benefits/education/",
+   "privacy": "https://www.starbucks.com/terms/privacy-notice/"
+  },
+  "primary_language": "english"
+ },
+ "code": 200,
+ "key_metadata": {"credits_consumed": 10, "credits_remaining": 198}
+}

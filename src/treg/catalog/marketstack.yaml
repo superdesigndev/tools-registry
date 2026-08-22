@@ -1,0 +1,151 @@
+provider: marketstack
+source:
+  docs: https://marketstack.com/documentation_v1
+  openapi: null # apilayer-style rendered docs; paths transcribed and live-verified 2026-08-15
+  curated: 2026-08-15
+# The Market data category's stocks entry on the platform key. Billing is the pricing ladder's
+# MONTHLY-CAP rung (fx.yaml: Basic $9.99/mo / 10,000 requests = $0.000999/call, Commercial Use
+# included on Basic; vendor overage past the cap is $0.0039996/call). Every request counts against
+# the cap regardless of what it returns — hence `per_call` on every endpoint.
+# Honest plan limits worth knowing: Basic has NO real-time prices (end-of-day + delayed intraday),
+# and no commodities. All seven routes below answered 200 on treg's own Basic key 2026-08-15.
+pricing_url: https://marketstack.com/product
+endpoints:
+  - id: marketstack.eod
+    domain: stocks
+    capability: stocks.eod.history
+    platform: stocks
+    scope: any_account
+    method: GET
+    path: /eod
+    name: "End-of-day stock prices by ticker — OHLCV, date range"
+    summary: "Daily open/high/low/close/volume for one or more tickers, with date range and adjusted values — 70+ exchanges worldwide"
+    input:
+      queryParams:
+        symbols: {type: string, required: true, note: "comma-separated tickers (AAPL,MSFT); non-US symbols carry the exchange MIC (BMW.XETRA)", example: "AAPL"}
+        date_from: {type: string, required: false, note: "YYYY-MM-DD"}
+        date_to: {type: string, required: false, note: "YYYY-MM-DD"}
+        limit: {type: integer, required: false, note: "rows per page, default 100, max 1000"}
+        offset: {type: integer, required: false}
+        sort: {type: string, required: false, note: "DESC (default) | ASC"}
+    test_request: {queryParams: {symbols: "AAPL", limit: "3"}}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, source_url: "https://marketstack.com/product", checked: "2026-08-15", confidence: documented, note: "one request against the plan's 10,000/mo cap, whatever it returns"}
+    verified: 2026-08-15
+    example_response: examples/marketstack.eod.json
+    docs_url: https://marketstack.com/documentation_v1#eod
+  - id: marketstack.eod.latest
+    domain: stocks
+    capability: stocks.eod.latest
+    platform: stocks
+    scope: any_account
+    method: GET
+    path: /eod/latest
+    name: "Latest closing price by stock ticker — end-of-day bar"
+    summary: "The most recent end-of-day bar for one or more tickers — the quick 'what did it close at'"
+    input:
+      queryParams:
+        symbols: {type: string, required: true, example: "AAPL,MSFT"}
+    test_request: {queryParams: {symbols: "AAPL"}}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, source_url: "https://marketstack.com/product", checked: "2026-08-15", confidence: documented}
+    verified: 2026-08-15
+    example_response: examples/marketstack.eod.latest.json
+    docs_url: https://marketstack.com/documentation_v1#eod
+  - id: marketstack.intraday
+    domain: stocks
+    capability: stocks.intraday
+    platform: stocks
+    scope: any_account
+    method: GET
+    path: /intraday
+    name: "Intraday stock price bars by ticker — hourly to 1-minute"
+    summary: "Intraday bars for a ticker (hourly by default). On the Basic plan this is DELAYED data, not real-time"
+    input:
+      queryParams:
+        symbols: {type: string, required: true, example: "AAPL"}
+        interval: {type: string, required: false, note: "1min | 5min | 15min | 30min | 1hour (default) | 3hour | 6hour | 12hour | 24hour"}
+        limit: {type: integer, required: false}
+        date_from: {type: string, required: false}
+        date_to: {type: string, required: false}
+    test_request: {queryParams: {symbols: "AAPL", limit: "3"}}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, source_url: "https://marketstack.com/product", checked: "2026-08-15", confidence: documented}
+    verified: 2026-08-15
+    example_response: examples/marketstack.intraday.json
+    docs_url: https://marketstack.com/documentation_v1#intraday
+  - id: marketstack.tickers
+    domain: stocks
+    capability: stocks.tickers.search
+    platform: stocks
+    scope: any_account
+    method: GET
+    path: /tickers
+    name: "Search stock tickers by company name or symbol"
+    summary: "Search 300,000+ tickers by name or symbol and see which exchange each trades on — the symbol-resolver for the other endpoints"
+    input:
+      queryParams:
+        search: {type: string, required: false, note: "company name or symbol fragment", example: "apple"}
+        limit: {type: integer, required: false, note: "default 100, max 1000"}
+        offset: {type: integer, required: false}
+    test_request: {queryParams: {search: "apple", limit: "3"}}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, source_url: "https://marketstack.com/product", checked: "2026-08-15", confidence: documented}
+    verified: 2026-08-15
+    example_response: examples/marketstack.tickers.json
+    docs_url: https://marketstack.com/documentation_v1#tickers
+  - id: marketstack.exchanges
+    domain: stocks
+    capability: stocks.exchanges.list
+    platform: stocks
+    scope: any_account
+    method: GET
+    path: /exchanges
+    name: "Stock exchange directory — MIC codes, countries"
+    summary: "The exchanges marketstack covers, each with MIC code, country and timezone"
+    input:
+      queryParams:
+        search: {type: string, required: false}
+        limit: {type: integer, required: false}
+        offset: {type: integer, required: false}
+    test_request: {queryParams: {limit: "3"}}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, source_url: "https://marketstack.com/product", checked: "2026-08-15", confidence: documented}
+    verified: 2026-08-15
+    example_response: examples/marketstack.exchanges.json
+    docs_url: https://marketstack.com/documentation_v1#exchanges
+  - id: marketstack.splits
+    domain: stocks
+    capability: stocks.actions.splits
+    platform: stocks
+    scope: any_account
+    method: GET
+    path: /splits
+    name: "Stock split history by ticker — dates and ratios"
+    summary: "Split events for a ticker with date and ratio"
+    input:
+      queryParams:
+        symbols: {type: string, required: true, example: "AAPL"}
+        limit: {type: integer, required: false}
+        date_from: {type: string, required: false}
+        date_to: {type: string, required: false}
+    test_request: {queryParams: {symbols: "AAPL", limit: "3"}}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, source_url: "https://marketstack.com/product", checked: "2026-08-15", confidence: documented}
+    verified: 2026-08-15
+    example_response: examples/marketstack.splits.json
+    docs_url: https://marketstack.com/documentation_v1#splits
+  - id: marketstack.dividends
+    domain: stocks
+    capability: stocks.actions.dividends
+    platform: stocks
+    scope: any_account
+    method: GET
+    path: /dividends
+    name: "Dividend history by stock ticker — ex-dates, amounts"
+    summary: "Dividend payments for a ticker with ex-date and amount"
+    input:
+      queryParams:
+        symbols: {type: string, required: true, example: "AAPL"}
+        limit: {type: integer, required: false}
+        date_from: {type: string, required: false}
+        date_to: {type: string, required: false}
+    test_request: {queryParams: {symbols: "AAPL", limit: "3"}}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, source_url: "https://marketstack.com/product", checked: "2026-08-15", confidence: documented}
+    verified: 2026-08-15
+    example_response: examples/marketstack.dividends.json
+    docs_url: https://marketstack.com/documentation_v1#dividends

@@ -1,0 +1,610 @@
+{
+  "output": {
+    "searchId": "2Q0Mpwf…",
+    "parsedParams": {
+      "queryType": "structu…",
+      "companySearchParams": {
+        "industriesV2": {
+          "anyOf": [
+            "Finance"
+          ]
+        },
+        "headquartersLocation": {
+          "unionAll": [
+            {
+              "strategy": "radial-…",
+              "center": {
+                "name": "San Fra…",
+                "address": "San Fra…",
+                "latitude": 37.779238,
+                "longitude": -122.419359
+              },
+              "radius": {
+                "unit": "miles",
+                "quantity": 40
+              }
+            }
+          ]
+        },
+        "tags": {
+          "anyOf": [],
+          "allOf": [],
+          "noneOf": []
+        }
+      }
+    },
+    "nextPageToken": "gAAAAAB…",
+    "unsupportedFilters": null,
+    "autoLoosenings": [
+      "Broaden…"
+    ],
+    "notices": null,
+    "results": {
+      "resultType": "compani…",
+      "companies": [
+        {
+          "linkedin_id": "-429282…",
+          "accelerator_statuses": [],
+          "accelerators": null,
+          "blog_urls": [],
+          "custom_data": null,
+          "domains": [
+            "wellsfa…"
+          ],
+          "emails": [
+            "marsha.…",
+            "michael…",
+            "… 20 mo…"
+          ],
+          "phone_numbers": [
+            "1612667…",
+            "1800248…",
+            "… 9 mor…"
+          ],
+          "employee_count_consensus": {
+            "gte": 241241,
+            "lte": 241241
+          },
+          "facebook_urls": [
+            "https:/…",
+            "www.fac…",
+            "… 1 mor…"
+          ],
+          "fortune_rankings": [
+            {
+              "list": "fortune…",
+              "year": 2024,
+              "rank": 37
+            }
+          ],
+          "founded_on_consensus": "1852-03…",
+          "github_usernames": [],
+          "instagram_handles": [
+            "wellsfa…"
+          ],
+          "latest_funding_consensus": null,
+          "linkedin_slugs": [
+            "wells-f…",
+            "wellsfa…"
+          ],
+          "linkedin_primary_slug": "wellsfa…",
+          "li_org_id": "1235",
+          "li_category": "C",
+          "li_job_posts_stats": {
+            "total_count": 9500,
+            "seniority_stats": {
+              "Associate": {
+                "count": 5523,
+                "fraction": 0.5813684210526315
+              },
+              "Director": {
+                "count": 282,
+                "fraction": 0.02968421052631579
+              },
+              "Entry level": {
+                "count": 9,
+                "fraction": 0.0009473684210526315
+              },
+              "Executive": {
+                "count": 253,
+                "fraction": 0.02663157894736842
+              },
+              "Internship": {
+                "count": 29,
+                "fraction": 0.0030526315789473684
+              },
+              "Mid-Senior level": {
+                "count": 3400,
+                "fraction": 0.35789473684210527
+              },
+              "Not Applicable": {
+                "count": 4,
+                "fraction": 0.0004210526315789474
+              }
+            },
+            "employment_type_stats": {
+              "Contract": {
+                "count": 57,
+                "fraction": 0.006
+              },
+              "Full-time": {
+                "count": 8673,
+                "fraction": 0.9129473684210526
+              },
+              "Part-time": {
+                "count": 770,
+                "fraction": 0.08105263157894736
+              }
+            },
+            "country_location_stats": {
+              "AUS": {
+                "count": 5,
+                "fraction": 0.0005263157894736842
+              },
+              "CAN": {
+                "count": 6,
+                "fraction": 0.0006315789473684211
+              },
+              "FRA": {
+                "count": 2,
+                "fraction": 0.00021052631578947367
+              },
+              "GBR": {
+                "count": 28,
+                "fraction": 0.0029473684210526317
+              },
+              "IND": {
+                "count": 640,
+                "fraction": 0.06736842105263158
+              },
+              "IRL": {
+                "count": 5,
+                "fraction": 0.0005263157894736842
+              },
+              "JPN": {
+                "count": 2,
+                "fraction": 0.00021052631578947367
+              },
+              "PHL": {
+                "count": 91,
+                "fraction": 0.009578947368421053
+              },
+              "SGP": {
+                "count": 9,
+                "fraction": 0.0009473684210526315
+              },
+              "USA": {
+                "count": 8712,
+                "fraction": 0.9170526315789473
+              }
+            },
+            "puree_job_functions_stats": {
+              "Accounting": {
+                "count": 212,
+                "fraction": 0.02231578947368421
+              },
+              "Administrative": {
+                "count": 26,
+                "fraction": 0.0027368421052631577
+              },
+              "Analyst": {
+                "count": 768,
+                "fraction": 0.0808421052631579
+              },
+              "Art / Creative": {
+                "count": 8,
+                "fraction": 0.0008421052631578948
+              },
+              "Business Development": {
+                "count": 1066,
+                "fraction": 0.11221052631578947
+              },
+              "Consulting": {
+                "count": 119,
+                "fraction": 0.012526315789473684
+              },
+              "Design": {
+                "count": 8,
+                "fraction": 0.0008421052631578948
+              },
+              "Education": {
+                "count": 2,
+                "fraction": 0.00021052631578947367
+              },
+              "Engineering": {
+                "count": 1100,
+                "fraction": 0.11578947368421053
+              },
+              "Finance": {
+                "count": 5944,
+                "fraction": 0.6256842105263158
+              },
+              "General Business": {
+                "count": 521,
+                "fraction": 0.05484210526315789
+              },
+              "Health Care Provider": {
+                "count": 4,
+                "fraction": 0.0004210526315789474
+              },
+              "Human Resources": {
+                "count": 51,
+                "fraction": 0.005368421052631579
+              },
+              "Information Technology": {
+                "count": 1418,
+                "fraction": 0.14926315789473685
+              },
+              "Legal": {
+                "count": 51,
+                "fraction": 0.005368421052631579
+              },
+              "Management": {
+                "count": 352,
+                "fraction": 0.03705263157894737
+              },
+              "Manufacturing": {
+                "count": 312,
+                "fraction": 0.032842105263157895
+              },
+              "Marketing": {
+                "count": 177,
+                "fraction": 0.018631578947368423
+              },
+              "Product Management": {
+                "count": 136,
+                "fraction": 0.01431578947368421
+              },
+              "Project Management": {
+                "count": 53,
+                "fraction": 0.005578947368421052
+              },
+              "Public Relations": {
+                "count": 21,
+                "fraction": 0.0022105263157894735
+              },
+              "Purchasing": {
+                "count": 1,
+                "fraction": 0.00010526315789473683
+              },
+              "Quality Assurance": {
+                "count": 15,
+                "fraction": 0.0015789473684210526
+              },
+              "Research": {
+                "count": 247,
+                "fraction": 0.026
+              },
+              "Sales": {
+                "count": 6377,
+                "fraction": 0.6712631578947369
+              },
+              "Supply Chain": {
+                "count": 1,
+                "fraction": 0.00010526315789473683
+              },
+              "Training": {
+                "count": 2,
+                "fraction": 0.00021052631578947367
+              },
+              "Writing / Editing": {
+                "count": 21,
+                "fraction": 0.0022105263157894735
+              }
+            },
+            "standard_industries_stats": {
+              "Finance": {
+                "count": 9484,
+                "fraction": 0.9983157894736842
+              },
+              "Government": {
+                "count": 16,
+                "fraction": 0.0016842105263157896
+              },
+              "Healthcare": {
+                "count": 16,
+                "fraction": 0.0016842105263157896
+              },
+              "Nonprofit": {
+                "count": 16,
+                "fraction": 0.0016842105263157896
+              }
+            },
+            "job_location_type_stats": {
+              "On-site": {
+                "count": 9431,
+                "fraction": 0.9927368421052631
+              }
+            }
+          },
+          "li_description": "Wells F…",
+          "li_follower_count": 3078840,
+          "li_headline": "Send mo…",
+          "li_industries": [
+            {
+              "id": "43",
+              "name": "Financi…"
+            }
+          ],
+          "li_locations": null,
+          "li_specialties": [
+            "Busines…",
+            "Wholesa…",
+            "… 3 mor…"
+          ],
+          "location_consensus": {
+            "street_address": "420 Mon…",
+            "neighborhood": null,
+            "city": "San Fra…",
+            "state_name": "Califor…",
+            "state_code": "CA",
+            "county": null,
+            "postal_code": "94103",
+            "country_code": "USA",
+            "country_name": "United …",
+            "coordinates": {
+              "lat": 37.779238,
+              "lon": -122.419359
+            },
+            "timezone": null,
+            "full_address": "San Fra…",
+            "formatted_address": "San Fra…"
+          },
+          "locations_stats": {
+            "HKG": 1,
+            "IND": 1,
+            "USA": 2,
+            "X-AMERICAS": 2,
+            "X-ANGLOSPHERE": 2,
+            "X-APAC": 2,
+            "X-ASIA": 2,
+            "X-BRICS": 1,
+            "X-EAST_ASIA": 1,
+            "X-G20": 3,
+            "X-NORTH_AMERICA": 2,
+            "X-OECD": 2,
+            "X-SOUTH_ASIA": 1
+          },
+          "market_cap_usd": 201265000000,
+          "naics_codes": [
+            "522110",
+            "522292",
+            "… 1 mor…"
+          ],
+          "names": [
+            "Wells F…",
+            "Acordia",
+            "… 6 mor…"
+          ],
+          "preferred_name": "Wells F…",
+          "preferred_name_word_count": 2,
+          "revenue_estimate": {
+            "sources": [],
+            "fiscal_year": 2025,
+            "value_usd": {
+              "gte": 123529000000,
+              "lte": 123529000000
+            }
+          },
+          "standard_industries": [
+            "Finance",
+            "Insuran…"
+          ],
+          "status_consensus": "public",
+          "stock_info_consensus": {
+            "ticker": "WFC",
+            "exchange": "NYSE"
+          },
+          "tags": [],
+          "total_funding_consensus": null,
+          "twitter_handles": [
+            "wellsfa…"
+          ],
+          "websites": [
+            "wellsfa…"
+          ],
+          "wellfound_slugs": [
+            "company"
+          ],
+          "youtube_urls": [
+            "https:/…"
+          ],
+          "role_count_matches": null,
+          "num_matching_locations": null,
+          "linkedin_ids": [
+            "-429282…",
+            "1235"
+          ],
+          "last_sort_key": "gAAAAAB…",
+          "relevance_score": 6.488387,
+          "technology_spend_usd": 59847,
+          "historical_headcount": {
+            "latest_snapshot_date": "2024-05…",
+            "snapshots": [
+              {
+                "date": "2021-06…",
+                "employees": 319006
+              },
+              {
+                "date": "2021-07…",
+                "employees": 316647
+              },
+              "… 35 mo…"
+            ],
+            "growth": {
+              "1m": {
+                "percent": 0,
+                "quantity": 0
+              },
+              "2m": {
+                "percent": -0.00789,
+                "quantity": -1797
+              },
+              "3m": {
+                "percent": -0.00838,
+                "quantity": -1910
+              },
+              "6m": {
+                "percent": -0.05717,
+                "quantity": -13704
+              },
+              "12m": {
+                "percent": -0.11327,
+                "quantity": -28868
+              },
+              "18m": {
+                "percent": -0.14565,
+                "quantity": -38528
+              },
+              "24m": {
+                "percent": -0.17608,
+                "quantity": -48300
+              },
+              "36m": {
+                "percent": -0.29155,
+                "quantity": -93006
+              }
+            }
+          },
+          "cik_numbers": [
+            "72971"
+          ],
+          "cage_codes": [],
+          "duns_numbers": [],
+          "num_li_locations": 4,
+          "location_name": "San Fra…",
+          "crunchbase_slug": "wells-f…",
+          "primary_role": "investo…",
+          "roles": [
+            "company",
+            "investo…"
+          ],
+          "short_description": "Wells F…",
+          "long_description": "They of…",
+          "is_subsidiary": false,
+          "parent": null,
+          "num_funding_rounds": null,
+          "funding_rounds": null,
+          "num_exits": 110,
+          "investors": null,
+          "acquisitions": [
+            {
+              "price_usd": null,
+              "acquiree_name": "Merlin …",
+              "acquisition_date": "2012-04…"
+            },
+            {
+              "price_usd": null,
+              "acquiree_name": "Castle …",
+              "acquisition_date": "2011-05…"
+            },
+            "… 2 mor…"
+          ],
+          "best_funding_round": null,
+          "funding_stage": "public",
+          "alt_industries": [
+            "financi…"
+          ],
+          "alt_keywords": [
+            "busines…",
+            "wholesa…",
+            "… 87 mo…"
+          ],
+          "alt_description": "Wells F…",
+          "employee_trends": null,
+          "logo_url": "https:/…",
+          "similar_companies": [
+            {
+              "name": "Wellsfa…",
+              "industries": [],
+              "employee_count": 0,
+              "revenue": 1000000000,
+              "logo_url": "https:/…"
+            },
+            {
+              "name": "Movemen…",
+              "industries": [
+                "banking",
+                "financi…"
+              ],
+              "employee_count": 33,
+              "revenue": 80000000,
+              "logo_url": "https:/…"
+            },
+            "… 2 mor…"
+          ],
+          "full_funding_rounds": null,
+          "funding_round_stats": null,
+          "investment_stats": {
+            "investments_by_stage": [
+              {
+                "stage": "post_ip…",
+                "lead_rate": 0.3846,
+                "lead_count": 30,
+                "total_count": 78,
+                "share_of_portfolio": 0.2786,
+                "last_investment_date": "2026-08…"
+              },
+              {
+                "stage": "debt_fi…",
+                "lead_rate": 0.4857,
+                "lead_count": 34,
+                "total_count": 70,
+                "share_of_portfolio": 0.25,
+                "last_investment_date": "2026-08…"
+              },
+              "… 15 mo…"
+            ],
+            "lead_investment_rate": 0.4321,
+            "lead_investment_count": 121,
+            "total_investment_count": 280,
+            "last_investment_date": "2026-08…"
+          },
+          "is_investor": true,
+          "investor_type": "organiz…",
+          "investor_categories": [
+            "investm…"
+          ],
+          "technologies_used": [
+            {
+              "name": "slack"
+            }
+          ],
+          "platforms": {
+            "ecommerce": null,
+            "cms": [
+              "Atlassi…",
+              "SDL Tri…"
+            ],
+            "crm": [
+              "Salesfo…"
+            ],
+            "marketing": [
+              "Adobe M…",
+              "LiveRam…",
+              "… 2 mor…"
+            ],
+            "payment": [
+              "America…",
+              "Apple P…",
+              "… 2 mor…"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "chargeInfo": {
+    "method": "charged…",
+    "creditsCharged": 3,
+    "lowCreditAlert": {
+      "getMoreCreditsUrl": "https:/…",
+      "message": "Your cr…",
+      "availableCredits": 481
+    }
+  },
+  "advice": [
+    "Explore…",
+    "Fiber c…"
+  ]
+}

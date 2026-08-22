@@ -1,0 +1,54 @@
+{
+  "data": [
+    {
+      "id": "5a723c7d-7299-404b-9d2d-2c35a45303d9",
+      "type": "github_repository",
+      "attributes": {
+        "url": "https://github.com/stripe/link-cli",
+        "description": "Let your agents spend on your behalf. Your payment credentials are never exposed. You approve every purchase.",
+        "first_seen_at": "2026-05-10T01:04:45Z"
+      },
+      "relationships": {
+        "company": {
+          "data": {
+            "id": "a0383c53-8142-5e7c-8ca3-9980289a3ccc",
+            "type": "company"
+          }
+        },
+        "timeseries_datapoints": {
+          "data": [
+            {
+              "id": "a9b1b80b-2aad-4a85-812a-f28c41f7bf50",
+              "type": "timeseries_datapoint"
+            },
+            "… 5 more items omitted"
+          ]
+        }
+      }
+    }
+  ],
+  "included": [
+    {
+      "id": "a9b1b80b-2aad-4a85-812a-f28c41f7bf50",
+      "type": "timeseries_datapoint",
+      "attributes": {
+        "timestamp": "2026-05-10T03:04:45.728+02:00",
+        "data": {
+          "forks": 34,
+          "stars": 485,
+          "watches": 7,
+          "last_update_at": "2026-05-09T21:23:25Z"
+        }
+      }
+    },
+    "… 6 more items omitted"
+  ],
+  "meta": {
+    "schema_version": "3.0",
+    "record_state": "active",
+    "message_type": "ok",
+    "message": "You can try running the same query on any subsidiary company domain (bridge.xyz, chargeforstripe.com, chargestripe.com, financialnigeria.com, lemonsqueezy.com, metronome.com, ngx-stripe.dev, okayhq.com, openchannel.io, orum.io, ...). You can also try news_events, job_openings, technologies, connecti …[truncated]",
+    "redirects_to_domain": null,
+    "parent_company_domain": null
+  }
+}

@@ -1,0 +1,943 @@
+{
+  "result": {
+    "instagram": {
+      "userid": "5288171…",
+      "engagement_percent": 0.276,
+      "uses_link_in_bio": false,
+      "profile_picture": "https:/…",
+      "full_name": "NASA",
+      "follower_count": 104398568,
+      "posting_frequency_recent_months": 10.329999923706055,
+      "biography": "Making …",
+      "is_verified": true,
+      "username": "nasa",
+      "exists": true,
+      "account_type": 2,
+      "is_private": false,
+      "is_business_account": true,
+      "media_count": 4887,
+      "following_count": 92,
+      "video_content_creator": true,
+      "most_recent_post_date": "2026-08…",
+      "reels_percentage_last_12_posts": 33.33,
+      "has_merch": false,
+      "promotes_affiliate_links": false,
+      "has_paid_partnership": true,
+      "avg_likes": 538528.83,
+      "avg_comments": 1994.25,
+      "likes_median": 286939.5,
+      "comments_median": 1508.0,
+      "has_profile_pic": true,
+      "streamer": false,
+      "profile_picture_hd": "https:/…",
+      "income": {
+        "min": 3645000,
+        "max": 4738700,
+        "currency": "USD"
+      },
+      "creator_follower_growth": {
+        "6_months_ago": 8.8100004196167,
+        "12_months_ago": 9.100000381469727,
+        "3_months_ago": 6.96999979019165,
+        "9_months_ago": 9.4399995803833
+      },
+      "reels": {
+        "avg_like_count": 218618.25,
+        "avg_view_count": 6822527.5,
+        "comments_count": [
+          986,
+          979,
+          "… 2 mor…"
+        ],
+        "median_like_count": 215233.0,
+        "median_view_count": 6711303.0
+      },
+      "hashtags": [
+        "NASA",
+        "NASA",
+        "… 30 mo…"
+      ],
+      "niche_class": [
+        "Technol…"
+      ],
+      "niche_sub_class": [],
+      "locations": [],
+      "tagged": [
+        {
+          "username": "nasaweb…",
+          "userid": "5493138…"
+        }
+      ],
+      "links_in_bio": [
+        "https:/…"
+      ],
+      "hashtags_count": [
+        {
+          "name": "NASA",
+          "count": 10
+        },
+        {
+          "name": "Nebula",
+          "count": 3
+        },
+        "… 18 mo…"
+      ],
+      "brands_found": [
+        "ISS"
+      ],
+      "language_code": [
+        "en"
+      ],
+      "post_data": [
+        {
+          "post_id": "3967213…",
+          "created_at": "2026-08…",
+          "caption": "With yo…",
+          "hashtags": [
+            "#NASA",
+            "#Univer…",
+            "… 1 mor…"
+          ],
+          "post_url": "https:/…",
+          "media": [
+            {
+              "media_id": "3967213…",
+              "type": "image",
+              "url": "https:/…"
+            }
+          ],
+          "is_carousel": false,
+          "tagged_users": [],
+          "engagement": {
+            "likes": 263097,
+            "comments": 1431
+          },
+          "media_type": 1,
+          "product_type": "feed"
+        },
+        {
+          "post_id": "3966649…",
+          "created_at": "2026-08…",
+          "caption": "Soothin…",
+          "hashtags": [],
+          "post_url": "https:/…",
+          "media": [
+            {
+              "media_id": "3966649…",
+              "type": "video",
+              "url": "https:/…"
+            }
+          ],
+          "is_carousel": false,
+          "tagged_users": [],
+          "engagement": {
+            "likes": 68747,
+            "comments": 986,
+            "view_count": 2429874
+          },
+          "media_type": 2,
+          "product_type": "clips"
+        },
+        "… 10 mo…"
+      ],
+      "audience": {
+        "audience_followers": {
+          "success": true,
+          "data": {
+            "notable_users_ratio": 0.1075,
+            "audience_credibility": 0.7761,
+            "audience_types": [
+              {
+                "code": "mass_fo…",
+                "weight": 0.1851
+              },
+              {
+                "code": "suspici…",
+                "weight": 0.1233
+              },
+              "… 2 mor…"
+            ],
+            "credibility_class": "bad",
+            "audience_reachability": [
+              {
+                "code": "-500",
+                "weight": 0.4996
+              },
+              {
+                "code": "500-100…",
+                "weight": 0.2183
+              },
+              "… 2 mor…"
+            ],
+            "audience_genders": [
+              {
+                "code": "MALE",
+                "weight": 0.603492
+              },
+              {
+                "code": "FEMALE",
+                "weight": 0.396508
+              }
+            ],
+            "audience_ages": [
+              {
+                "code": "13-17",
+                "weight": 0.041531
+              },
+              {
+                "code": "18-24",
+                "weight": 0.305726
+              },
+              "… 4 mor…"
+            ],
+            "audience_genders_per_age": [
+              {
+                "code": "13-17",
+                "male": 0.015807,
+                "female": 0.025724
+              },
+              {
+                "code": "18-24",
+                "male": 0.163343,
+                "female": 0.142382
+              },
+              "… 4 mor…"
+            ],
+            "audience_ethnicities": [
+              {
+                "code": "white",
+                "name": "White /…",
+                "weight": 0.623387
+              },
+              {
+                "code": "hispani…",
+                "name": "Hispani…",
+                "weight": 0.146353
+              },
+              "… 2 mor…"
+            ],
+            "audience_languages": [
+              {
+                "code": "en",
+                "name": "English",
+                "weight": 0.502962
+              },
+              {
+                "code": "es",
+                "name": "Spanish",
+                "weight": 0.123138
+              },
+              "… 29 mo…"
+            ],
+            "audience_brand_affinity": [
+              {
+                "id": 138,
+                "name": "Apple",
+                "interest": [
+                  {
+                    "id": 3,
+                    "name": "Music"
+                  },
+                  {
+                    "id": 25,
+                    "name": "Electro…"
+                  }
+                ],
+                "weight": 0.109564,
+                "affinity": 1.120644
+              },
+              {
+                "id": 1408,
+                "name": "Walt Di…",
+                "interest": [
+                  {
+                    "id": 190,
+                    "name": "Toys, C…"
+                  }
+                ],
+                "weight": 0.099814,
+                "affinity": 1.198959
+              },
+              "… 139 m…"
+            ],
+            "audience_interests": [
+              {
+                "id": 11,
+                "name": "Camera …",
+                "weight": 0.365052,
+                "affinity": 1.705162
+              },
+              {
+                "id": 43,
+                "name": "Travel,…",
+                "weight": 0.338977,
+                "affinity": 1.817513
+              },
+              "… 25 mo…"
+            ],
+            "audience_geo": {
+              "countries": [
+                {
+                  "id": 148838,
+                  "name": "United …",
+                  "code": "US",
+                  "weight": 0.198622
+                },
+                {
+                  "id": 304716,
+                  "name": "India",
+                  "code": "IN",
+                  "weight": 0.093609
+                },
+                "… 19 mo…"
+              ],
+              "states": [
+                {
+                  "id": 165475,
+                  "name": "Califor…",
+                  "weight": 0.034212,
+                  "country": {
+                    "id": 148838,
+                    "name": "United …",
+                    "code": "US"
+                  }
+                },
+                {
+                  "id": 61320,
+                  "name": "New Yor…",
+                  "weight": 0.016869,
+                  "country": {
+                    "id": 148838,
+                    "name": "United …",
+                    "code": "US"
+                  }
+                },
+                "… 6 mor…"
+              ],
+              "subdivisions": [
+                {
+                  "id": 148838,
+                  "name": "United …",
+                  "code": "US",
+                  "items": [
+                    {
+                      "id": 165475,
+                      "name": "Califor…",
+                      "weight": 0.034212
+                    },
+                    {
+                      "id": 61320,
+                      "name": "New Yor…",
+                      "weight": 0.016869
+                    },
+                    "… 6 mor…"
+                  ]
+                },
+                {
+                  "id": 304716,
+                  "name": "India",
+                  "code": "IN",
+                  "items": [
+                    {
+                      "id": 1950884,
+                      "name": "Maharas…",
+                      "weight": 0.015681
+                    },
+                    {
+                      "id": 1942587,
+                      "name": "Uttar P…",
+                      "weight": 0.008553
+                    },
+                    "… 5 mor…"
+                  ]
+                }
+              ],
+              "cities": [
+                {
+                  "id": 175905,
+                  "name": "New Yor…",
+                  "coords": {
+                    "lat": 40.71427,
+                    "lon": -74.00597
+                  },
+                  "weight": 0.01283,
+                  "state": {
+                    "id": 61320,
+                    "name": "New Yor…"
+                  },
+                  "country": {
+                    "id": 148838,
+                    "name": "United …",
+                    "code": "US"
+                  }
+                },
+                {
+                  "id": 298285,
+                  "name": "São Pau…",
+                  "coords": {
+                    "lat": -23.5475,
+                    "lon": -46.63611
+                  },
+                  "weight": 0.011879,
+                  "country": {
+                    "id": 59470,
+                    "name": "Brazil",
+                    "code": "BR"
+                  }
+                },
+                "… 11 mo…"
+              ]
+            },
+            "audience_lookalikes": [
+              {
+                "user_id": "9532933…",
+                "username": "iss",
+                "picture": "https:/…",
+                "followers": 9029912,
+                "fullname": "Interna…",
+                "url": "https:/…",
+                "geo": {
+                  "city": {
+                    "id": 207359,
+                    "name": "Los Ang…",
+                    "coords": {
+                      "lat": 34.05223,
+                      "lon": -118.24368
+                    }
+                  },
+                  "state": {
+                    "id": 165475,
+                    "name": "Califor…",
+                    "coords": {
+                      "lat": 37.231633,
+                      "lon": -119.664078
+                    }
+                  },
+                  "subdivision": {
+                    "id": 165475,
+                    "name": "Califor…",
+                    "coords": {
+                      "lat": 37.231633,
+                      "lon": -119.664078
+                    }
+                  },
+                  "country": {
+                    "id": 148838,
+                    "name": "United …",
+                    "code": "US",
+                    "coords": {
+                      "lat": 38.89511,
+                      "lon": -77.03637
+                    }
+                  }
+                },
+                "is_verified": true,
+                "engagements": 14753,
+                "stats": [
+                  {
+                    "post_type": "all",
+                    "engagements": 14753
+                  },
+                  {
+                    "post_type": "reels",
+                    "engagements": 14753
+                  }
+                ],
+                "score": 0.143416
+              },
+              {
+                "user_id": "5951848…",
+                "username": "nasahub…",
+                "picture": "https:/…",
+                "followers": 6681226,
+                "fullname": "Hubble …",
+                "url": "https:/…",
+                "is_verified": true,
+                "engagements": 23404,
+                "stats": [
+                  {
+                    "post_type": "all",
+                    "engagements": 23404
+                  },
+                  {
+                    "post_type": "reels",
+                    "engagements": 11416
+                  }
+                ],
+                "score": 0.148861
+              },
+              "… 28 mo…"
+            ],
+            "notable_users": [
+              {
+                "user_id": "7719696",
+                "username": "arianag…",
+                "picture": "https:/…",
+                "followers": 363295904,
+                "fullname": "Ariana …",
+                "url": "https:/…",
+                "is_verified": true,
+                "engagements": 1343550,
+                "stats": [
+                  {
+                    "post_type": "all",
+                    "engagements": 1343550
+                  },
+                  {
+                    "post_type": "reels",
+                    "engagements": 492728
+                  }
+                ]
+              },
+              {
+                "user_id": "3257342…",
+                "username": "mileycy…",
+                "picture": "https:/…",
+                "followers": 205538915,
+                "fullname": "Miley C…",
+                "url": "https:/…",
+                "is_verified": true,
+                "engagements": 476669,
+                "stats": [
+                  {
+                    "post_type": "all",
+                    "engagements": 476669
+                  },
+                  {
+                    "post_type": "reels",
+                    "engagements": 763029
+                  }
+                ]
+              },
+              "… 58 mo…"
+            ]
+          },
+          "is_hidden": true
+        },
+        "audience_commenters": {
+          "success": false,
+          "error": "empty_a…"
+        },
+        "audience_likers": {
+          "success": true,
+          "data": {
+            "notable_users_ratio": 0.116372,
+            "audience_credibility": 0.894081,
+            "audience_types": [
+              {
+                "code": "mass_fo…",
+                "weight": 0.062567
+              },
+              {
+                "code": "suspici…",
+                "weight": 0.085934
+              },
+              "… 2 mor…"
+            ],
+            "credibility_class": "normal",
+            "audience_reachability": [
+              {
+                "code": "-500",
+                "weight": 0.719139
+              },
+              {
+                "code": "500-100…",
+                "weight": 0.16495
+              },
+              "… 2 mor…"
+            ],
+            "audience_accounts_created_at": [
+              {
+                "code": "2023-Q2",
+                "weight": 0.141085
+              }
+            ],
+            "audience_genders": [
+              {
+                "code": "MALE",
+                "weight": 0.457875
+              },
+              {
+                "code": "FEMALE",
+                "weight": 0.542125
+              }
+            ],
+            "audience_ages": [
+              {
+                "code": "13-17",
+                "weight": 0.064435
+              },
+              {
+                "code": "18-24",
+                "weight": 0.373563
+              },
+              "… 4 mor…"
+            ],
+            "audience_genders_per_age": [
+              {
+                "code": "13-17",
+                "male": 0.023526,
+                "female": 0.040909
+              },
+              {
+                "code": "18-24",
+                "male": 0.158711,
+                "female": 0.214851
+              },
+              "… 4 mor…"
+            ],
+            "audience_ethnicities": [
+              {
+                "code": "white",
+                "name": "White /…",
+                "weight": 0.583963
+              },
+              {
+                "code": "hispani…",
+                "name": "Hispani…",
+                "weight": 0.21165
+              },
+              "… 2 mor…"
+            ],
+            "audience_languages": [
+              {
+                "code": "en",
+                "name": "English",
+                "weight": 0.35078
+              },
+              {
+                "code": "es",
+                "name": "Spanish",
+                "weight": 0.213172
+              },
+              "… 22 mo…"
+            ],
+            "audience_brand_affinity": [
+              {
+                "id": 138,
+                "name": "Apple",
+                "interest": [
+                  {
+                    "id": 3,
+                    "name": "Music"
+                  },
+                  {
+                    "id": 25,
+                    "name": "Electro…"
+                  }
+                ],
+                "weight": 0.130952,
+                "affinity": 1.339414
+              },
+              {
+                "id": 1408,
+                "name": "Walt Di…",
+                "interest": [
+                  {
+                    "id": 190,
+                    "name": "Toys, C…"
+                  }
+                ],
+                "weight": 0.108135,
+                "affinity": 1.298905
+              },
+              "… 130 m…"
+            ],
+            "audience_interests": [
+              {
+                "id": 11,
+                "name": "Camera …",
+                "weight": 0.383679,
+                "affinity": 1.792168
+              },
+              {
+                "id": 1708,
+                "name": "Friends…",
+                "weight": 0.353615,
+                "affinity": 1.482243
+              },
+              "… 25 mo…"
+            ],
+            "audience_geo": {
+              "countries": [
+                {
+                  "id": 365331,
+                  "name": "Italy",
+                  "code": "IT",
+                  "weight": 0.219653
+                },
+                {
+                  "id": 148838,
+                  "name": "United …",
+                  "code": "US",
+                  "weight": 0.141841
+                },
+                "… 13 mo…"
+              ],
+              "states": [
+                {
+                  "id": 165475,
+                  "name": "Califor…",
+                  "weight": 0.039129,
+                  "country": {
+                    "id": 148838,
+                    "name": "United …",
+                    "code": "US"
+                  }
+                },
+                {
+                  "id": 61320,
+                  "name": "New Yor…",
+                  "weight": 0.014229,
+                  "country": {
+                    "id": 148838,
+                    "name": "United …",
+                    "code": "US"
+                  }
+                },
+                "… 5 mor…"
+              ],
+              "subdivisions": [
+                {
+                  "id": 148838,
+                  "name": "United …",
+                  "code": "US",
+                  "items": [
+                    {
+                      "id": 165475,
+                      "name": "Califor…",
+                      "weight": 0.039129
+                    },
+                    {
+                      "id": 61320,
+                      "name": "New Yor…",
+                      "weight": 0.014229
+                    },
+                    "… 5 mor…"
+                  ]
+                },
+                {
+                  "id": 304716,
+                  "name": "India",
+                  "code": "IN",
+                  "items": [
+                    {
+                      "id": 1950884,
+                      "name": "Maharas…",
+                      "weight": 0.015562
+                    },
+                    {
+                      "id": 1942587,
+                      "name": "Uttar P…",
+                      "weight": 0.012895
+                    },
+                    "… 5 mor…"
+                  ]
+                }
+              ],
+              "cities": [
+                {
+                  "id": 44875,
+                  "name": "Genoa",
+                  "coords": {
+                    "lat": 44.40478,
+                    "lon": 8.94439
+                  },
+                  "weight": 0.029791,
+                  "country": {
+                    "id": 365331,
+                    "name": "Italy",
+                    "code": "IT"
+                  }
+                },
+                {
+                  "id": 1376330,
+                  "name": "Mexico …",
+                  "coords": {
+                    "lat": 19.42847,
+                    "lon": -99.12766
+                  },
+                  "weight": 0.020009,
+                  "country": {
+                    "id": 114686,
+                    "name": "Mexico",
+                    "code": "MX"
+                  }
+                },
+                "… 9 mor…"
+              ]
+            },
+            "notable_users": [
+              {
+                "user_id": "1056653…",
+                "username": "lustful…",
+                "picture": "https:/…",
+                "followers": 17883,
+                "fullname": "🦌💕Alice…",
+                "url": "https:/…",
+                "is_verified": false,
+                "engagements": 64,
+                "stats": [
+                  {
+                    "post_type": "all",
+                    "engagements": 64
+                  },
+                  {
+                    "post_type": "reels",
+                    "engagements": 283
+                  }
+                ]
+              },
+              {
+                "user_id": "1073774…",
+                "username": "martin_…",
+                "picture": "https:/…",
+                "followers": 20409,
+                "fullname": "Martin …",
+                "url": "https:/…",
+                "geo": {
+                  "city": {
+                    "id": 7025718,
+                    "name": "Windsor",
+                    "coords": {
+                      "lat": 42.30008,
+                      "lon": -83.01654
+                    }
+                  },
+                  "subdivision": {
+                    "id": 68841,
+                    "name": "Ontario",
+                    "coords": {
+                      "lat": 50.072763,
+                      "lon": -85.830267
+                    }
+                  },
+                  "country": {
+                    "id": 1428125,
+                    "name": "Canada",
+                    "code": "CA",
+                    "coords": {
+                      "lat": 45.41117,
+                      "lon": -75.69812
+                    }
+                  }
+                },
+                "is_verified": false,
+                "engagements": 860,
+                "stats": [
+                  {
+                    "post_type": "all",
+                    "engagements": 860
+                  },
+                  {
+                    "post_type": "reels",
+                    "engagements": 60
+                  }
+                ]
+              },
+              "… 58 mo…"
+            ]
+          }
+        },
+        "audience_credibility_followers_histogram": [
+          {
+            "max": 0.551226,
+            "total": 8796
+          },
+          {
+            "min": 0.551226,
+            "max": 0.671679,
+            "total": 7037
+          },
+          "… 18 mo…"
+        ],
+        "audience_credibility_likers_histogram": [
+          {
+            "max": 0.806228,
+            "total": 8429
+          },
+          {
+            "min": 0.806228,
+            "max": 0.850295,
+            "total": 6743
+          },
+          "… 18 mo…"
+        ]
+      },
+      "brand_affinity": [
+        {
+          "name": "Apple",
+          "interest": [
+            "Music",
+            "Electro…"
+          ]
+        },
+        {
+          "name": "Walt Di…",
+          "interest": [
+            "Toys, C…"
+          ]
+        },
+        "… 139 m…"
+      ]
+    },
+    "twitch": {
+      "profileImageURL": "https:/…",
+      "first_name": "@nasa",
+      "avg_views": 1028440.1875,
+      "total_followers": 1760360,
+      "user_id": "1519209…",
+      "username": "nasa"
+    },
+    "twitter": {
+      "userid": "1134828…",
+      "username": "nasa",
+      "full_name": "NASA",
+      "follower_count": 90767256,
+      "profile_picture": "https:/…",
+      "is_verified": false,
+      "engagement_percent": 0.05000000074505806
+    },
+    "youtube": {
+      "id": "UCLA_Di…",
+      "custom_url": "@nasa",
+      "profile_picture": "https:/…",
+      "is_verified": false,
+      "engagement_percent": 3.569999933242798,
+      "first_name": "@nasa",
+      "subscriber_count": 15000000
+    },
+    "has_link_in_bio": false,
+    "speaking_language": "en",
+    "twitter_link": "https:/…",
+    "has_brand_deals": true,
+    "youtube_link": "https:/…",
+    "instagram_link": "https:/…",
+    "first_name": "@nasa",
+    "email": "public-…",
+    "is_business": true,
+    "email_type": "role_ba…",
+    "twitch_link": "https:/…",
+    "is_creator": false,
+    "location": "United …",
+    "gender": "female",
+    "creator_has": {
+      "twitter": true,
+      "youtube": true,
+      "instagram": true,
+      "twitch": true
+    },
+    "other_links": [
+      "https:/…",
+      "https:/…",
+      "… 490 m…"
+    ],
+    "links_in_bio": [
+      "https:/…",
+      "https:/…",
+      "… 7 mor…"
+    ]
+  },
+  "credits_cost": 1.0,
+  "trial_searches_left": 9
+}

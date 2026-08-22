@@ -1,0 +1,44 @@
+{
+  "data": [
+    {
+      "id": "4882748b-9d50-40e8-933e-d00a25cabd8a",
+      "type": "company",
+      "attributes": {
+        "domain": "zeroriskgrowthscaleteam.com",
+        "company_name": "Zeroriskgrowthscaleteam",
+        "friendly_company_name": "Zeroriskgrowthscaleteam",
+        "ticker": null,
+        "meta_title": null,
+        "meta_description": null,
+        "description": null,
+        "description_short": null,
+        "language": null,
+        "location": null,
+        "location_data": [],
+        "last_extraction_states": []
+      },
+      "relationships": {
+        "redirects_to": {
+          "data": null,
+          "meta": {
+            "reason": null
+          }
+        },
+        "parent_company": {
+          "data": null
+        },
+        "subsidiary_companies": {
+          "data": []
+        },
+        "similar_companies": {
+          "data": []
+        }
+      }
+    }
+  ],
+  "included": [],
+  "meta": {
+    "schema_version": "3.5",
+    "record_state": "active"
+  }
+}

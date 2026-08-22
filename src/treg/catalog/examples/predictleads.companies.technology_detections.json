@@ -1,0 +1,58 @@
+{
+  "data": [
+    {
+      "id": "5d62436e-f59f-4365-aca2-e52a8d3af51c",
+      "type": "technology_detection",
+      "attributes": {
+        "first_seen_at": "2026-08-14T19:14:43Z",
+        "last_seen_at": "2026-08-14T19:14:52Z",
+        "behind_firewall": true,
+        "score": 0.39,
+        "_truncated": "remaining fields omitted for brevity"
+      },
+      "relationships": {
+        "technology": {
+          "data": {
+            "id": "650a6a92-f6c3-43a1-b093-0e5983502d68",
+            "type": "technology"
+          }
+        },
+        "company": {
+          "data": {
+            "id": "a0383c53-8142-5e7c-8ca3-9980289a3ccc",
+            "type": "company"
+          }
+        },
+        "seen_on_subpages": {
+          "data": []
+        },
+        "seen_on_job_openings": {
+          "data": [
+            {
+              "id": "17f604d9-99ff-4431-869c-54cbae65c743",
+              "type": "job_opening"
+            },
+            "… 1 more items omitted"
+          ]
+        },
+        "_truncated": "remaining fields omitted for brevity"
+      }
+    }
+  ],
+  "included": [
+    {
+      "id": "650a6a92-f6c3-43a1-b093-0e5983502d68",
+      "type": "technology",
+      "attributes": {
+        "name": "ElevenLabs"
+      }
+    },
+    "… 3 more items omitted"
+  ],
+  "meta": {
+    "schema_version": "3.3",
+    "record_state": "active",
+    "message_type": "ok",
+    "message": "You can try running the same query on any subsidiary company domain (bridge.xyz, …[truncated]"
+  }
+}

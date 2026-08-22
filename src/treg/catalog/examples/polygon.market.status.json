@@ -1,0 +1,27 @@
+{
+  "afterHours": false,
+  "currencies": {
+    "crypto": "open",
+    "fx": "closed"
+  },
+  "earlyHours": false,
+  "exchanges": {
+    "nasdaq": "closed",
+    "nyse": "closed",
+    "otc": "closed"
+  },
+  "indicesGroups": {
+    "s_and_p": "closed",
+    "societe_generale": "closed",
+    "msci": "closed",
+    "ftse_russell": "closed",
+    "mstar": "closed",
+    "mstarc": "closed",
+    "cccy": "open",
+    "cgi": "closed",
+    "nasdaq": "closed",
+    "dow_jones": "closed"
+  },
+  "market": "closed",
+  "serverTime": "2026-08-15T08:08:15-04:00"
+}

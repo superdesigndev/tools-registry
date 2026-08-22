@@ -1,0 +1,70 @@
+{
+  "data": {
+    "name": "Stripe",
+    "legalName": "Stripe",
+    "domain": "stripe.com",
+    "site": {
+      "emailAddresses": [
+        "…truncated…"
+      ]
+    },
+    "category": {
+      "sicCode": "73",
+      "sic4Codes": [
+        "…truncated…"
+      ],
+      "naicsCode": "51",
+      "naics6Codes": [
+        "…truncated…"
+      ],
+      "naics6Codes2022": [
+        "…truncated…"
+      ]
+    },
+    "tags": [
+      "édition",
+      "…2 more items truncated for the catalog example"
+    ],
+    "description": "stripe is a payment processing platform enabling businesses to accept payments and manage online transactions.",
+    "foundedYear": "2010",
+    "location": "US",
+    "geo": {
+      "streetNumber": "354 oyster point blvd",
+      "streetName": "354 oyster point blvd",
+      "streetAddress": "354 oyster point blvd",
+      "city": "San Francisco",
+      "postalCode": "94107",
+      "state": "California",
+      "stateCode": "California",
+      "country": "United States",
+      "countryCode": "US"
+    },
+    "facebook": {
+      "handle": "stripehq"
+    },
+    "linkedin": {
+      "handle": "stripe"
+    },
+    "twitter": {
+      "handle": "stripe"
+    },
+    "whois": {
+      "registrar_name": "safenames ltd.",
+      "created_date": "1995-09-12T06:00:00+02:00",
+      "referral_url": "http://www.safenames.net"
+    },
+    "emailProvider": "Google Workspace",
+    "type": "privately held",
+    "identifiers": {},
+    "metrics": {
+      "trafficRank": "243",
+      "employees": "5K-10K",
+      "annualRevenue": "$100M-$250M",
+      "estimatedAnnualRevenue": "$100M-$250M"
+    }
+  },
+  "meta": {
+    "domain": "stripe.com"
+  },
+  "_note": "truncated: 18 of 23 company fields shown"
+}

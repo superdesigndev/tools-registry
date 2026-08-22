@@ -1,0 +1,26 @@
+{
+  "organization_job_postings": [
+    {
+      "id": "6a77fb8c46d00b0001f9073e",
+      "title": "Chief Operating Officer - Law Firm",
+      "url": "https://how-to-manage-a-small-law-firm.breezy.hr/p/ce59be36cb60-chief-operating-officer-law-firm",
+      "city": "Fort Lauderdale",
+      "state": "Florida",
+      "country": "United States",
+      "last_seen_at": "2026-08-18T18:47:16.000+00:00",
+      "posted_at": "2026-08-08T11:07:33.000+00:00"
+    },
+    {
+      "id": "6a66cbf4fe3efa00011b0b09",
+      "title": "Human Resource Director",
+      "url": "https://how-to-manage-a-small-law-firm.breezy.hr/p/cedce1c59f98-human-resource-director",
+      "city": "Miami",
+      "state": "Florida",
+      "country": "United States",
+      "last_seen_at": "2026-08-18T20:04:29.000+00:00",
+      "posted_at": "2026-07-25T11:01:36.000+00:00"
+    }
+  ],
+  "pagination": {"page": 1, "per_page": 2, "total_entries": 12, "total_pages": 6},
+  "_scrubbed": true
+}

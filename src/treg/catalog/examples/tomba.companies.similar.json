@@ -1,0 +1,39 @@
+{
+  "data": [
+    {
+      "website_url": "fairbit.com",
+      "name": "Fairbit",
+      "industries": "Information Technology and Services"
+    },
+    {
+      "website_url": "t1payments.com",
+      "name": "T1 Payments",
+      "industries": "Financial Services"
+    },
+    {
+      "website_url": "victorypayments.com",
+      "name": "Victory Payments",
+      "industries": "Financial Services"
+    },
+    "…22 more items truncated for the catalog example"
+  ],
+  "meta": {
+    "total": 37,
+    "pageSize": 25,
+    "current": 1,
+    "total_pages": 2,
+    "params": {
+      "domain": "",
+      "company": "",
+      "page": 0,
+      "limit": 0,
+      "department": null,
+      "country": null,
+      "type": "",
+      "live": false,
+      "enrich_mobile": false,
+      "webhook_url": null
+    }
+  }
+}
+

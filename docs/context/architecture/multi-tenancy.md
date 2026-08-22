@@ -143,7 +143,11 @@ pair, so every list/create/mutation and the proxy are scoped to the caller's org
   with no code (403 if `invite.email != user.email`, 409 if already a member). The code path stays.
 - **Org management endpoints:** `register_user` (`POST /users`, legacy open-registration, used by the
   test fixture) still creates the user + an org + owner membership via `_make_org_membership` (mints the
-  token) — NOT reached by the dashboard/CLI login doors, which no longer auto-make an org. `create_org`
+  token) — NOT reached by the dashboard/CLI login doors, which no longer auto-make an org. Both this door
+  and `create_org` below now also read the first-party ad-click cookie (`api._ad_attribution_from`) and,
+  when enabled and present, stamp `Org.ad_gclid`/`ad_click_id_type`/`ad_landing`/`ad_click_at` on the
+  new org — preserving whether the click was a GCLID, GBRAID or WBRAID — see
+  [ads-conversions](ads-conversions.md). `create_org`
   (`POST /orgs`, `require_identity`),
   `list_orgs` (`GET /orgs`), `create_invite` (`POST /orgs/{id}/invites`, admin+), `accept_invite`
   (`POST /invites/accept`, open + code-protected → registers the user if new, joins them to the invited
@@ -162,7 +166,9 @@ pair, so every list/create/mutation and the proxy are scoped to the caller's org
 - **Org administration:** `set_member_role` (`PATCH /orgs/{id}/members/{user}`, **owner-only** via
   `_require_owner_of`; a `_count_owners` last-owner guard blocks demoting the sole owner — ownership
   transfer = promote another to owner, then step down), `leave_org` (`POST /orgs/{id}/leave`, self-removal,
-  same last-owner guard), `delete_org` (`DELETE /orgs/{id}`, owner-only, cascades every org-scoped row).
+  same last-owner guard), `delete_org` (`DELETE /orgs/{id}`, owner-only, cascades every org-scoped row —
+  including any pending `AdConversion`, which `_ORG_SCOPED_MODELS` now lists: a queued conversion belongs
+  to the team it would be attributed to).
 - **Invites lifecycle:** one-time **and** time-bounded — `Invite.expires_at` (default `INVITE_TTL_DAYS`),
   `accept_invite` returns `410` past expiry. `list_invites` (`GET /orgs/{id}/invites`, admin+) and
   `revoke_invite` (`DELETE /orgs/{id}/invites/{invite}`, admin+); expired codes are garbage-collected by
@@ -205,8 +211,14 @@ connection-metadata columns (`provider`/`granted_scopes`/`resource_ref`/`resourc
 in-place uses `DEFAULT false`, never `DEFAULT 0` — Postgres rejects an integer default on a `BOOLEAN`
 column (SQLite accepts both, so the test suite alone cannot catch it); `pendingoauth.long_lived_exchange`
 is spelled `BOOLEAN NOT NULL DEFAULT false`, and the legacy `INSERT INTO org (…)` backfill names
-`public_demo` explicitly with a `false` literal. **(A21) PROJECTS** follows the same shape: the `project`
-table itself needs no ALTER (a brand-new table is created by `create_all`), so the step only adds the three
+`public_demo` explicitly with a `false` literal. **(A35) OAuth grant authority** backfills the new
+`oauthgrant` table from each refresh family's oldest row with a portable, idempotent
+`INSERT … SELECT … WHERE NOT EXISTS`; future team moves update that family row and leave historical
+token `org_id` values untouched. Because a rolling deploy can run an old binary after A35 and create
+only `OAuthRefresh`, request-time `_ensure_grant` repeats that oldest-row reconstruction with a
+concurrency-safe upsert before refresh, grant listing, or a team move. **(A21) PROJECTS** follows the
+same shape: the `project` table itself needs no ALTER (a brand-new table is created by `create_all`),
+so the step only adds the three
 columns that hang off it — `tool.project_id` (INTEGER, nullable) plus `project_access` (JSON, nullable) on
 **both** `membership` and `invite`. Every one is nullable and NULL means *org-wide / unrestricted*, so an
 existing deployment behaves exactly as before until someone creates a project; and because none of them is a
@@ -218,3 +230,29 @@ step at all for the same new-table reason.
 
 > Health (`run_all`) takes an `org_id` filter so `/health/run` never leaks other orgs' credentials, and
 > alerts resolve the owner's per-org membership webhook. See [auth-secrets](auth-secrets.md).
+
+## Caller tags are a label, not a tenancy boundary
+
+A builder reselling treg tags each call with their own ids (`X-Treg-Meta: customer=cust_8123,
+workspace=ws_9`) so they can attribute, budget and invoice their users. Those tags drive real money
+decisions — see [money](money.md) — but they change nothing about isolation.
+
+**The org remains the only hard boundary.** A tag is caller-asserted: anyone holding the token can
+send any value, exactly like `X-Treg-Client`. That is acceptable because every budget and every report
+a tag touches belongs to the team that sent it, so the only party who can mis-tag is the one who owns
+the consequences. It is *not* acceptable as a wall between mutually distrusting parties, and nothing
+in the codebase treats it as one.
+
+The rule to give builders: **tag for counting, token for control.** Start everyone on tags; mint a
+scoped agent token for the few who need real separation — different tool access, or a credential that
+runs on the end user's own machine. A pinned token (`Membership.pinned_tags`) is the one case where a
+tag stops being caller-asserted: the pin beats the header and a mismatch is a 403, because a token
+handed to one user must not be able to bill another.
+
+Two consequences worth stating plainly:
+
+- **`TagBudget` never grows a balance column.** One org, one balance. Budgets are ceilings on a shared
+  pot, not sub-accounts; per-user balances would be a second money authority and are out of scope.
+- **`TagSpend` and `TagBudget` are org-scoped** and registered in `api._ORG_SCOPED_MODELS`, `TagSpend`
+  ahead of `LedgerEntry`/`Hold` because it references them. `tests/test_orgs.py` walks the models and
+  fails if a new `org_id` table is missed.

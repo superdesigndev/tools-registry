@@ -1,0 +1,702 @@
+provider: predictleads
+source:
+  docs: https://docs.predictleads.com/v3/api_endpoints
+  openapi: https://docs.predictleads.com/schemas/open_api_schema.json # OpenAPI 3.1.0; every path/param below was read from it
+  curated: '2026-08-20'
+# Company *signals*, not contacts. PredictLeads watches ~120M company websites and turns the changes
+# into point-in-time datasets: job postings, technology detections, news events, financing rounds,
+# products, partner/investor connections, GitHub repos, SEC filings and website subpage evolution.
+# There are NO people endpoints here — no emails, no phones, no person records — so it contributes
+# nothing to the people.* capabilities. What it adds that the Enrichment shelf lacks is the TIMELINE:
+# most providers answer "what is this company", PredictLeads answers "what did this company just do".
+#
+# Two request shapes, and they price differently (both documented on the pricing page):
+#   - company-scoped GETs and single-object GETs — 1 credit per REQUEST, regardless of how many
+#     records come back (up to limit=1000). Raising `limit` is free; paging is not (each page is a
+#     new request = 1 credit).
+#   - /discover/* endpoints and /companies/{id}/similar_companies — 1 credit per RETURNED COMPANY.
+#     `limit` IS the price dial on these. /technologies is 3 credits per returned record.
+# GET /api_subscription is free and reports monthly_credits_quota / monthly_credits_used; verified
+# free live on 2026-08-20 (three consecutive calls left monthly_credits_used unchanged at 36).
+#
+# Auth needs TWO secrets: X-Api-Key AND X-Api-Token. Either alone returns 401 — see notes.md.
+# Rate/quota: no per-second limit published; the monthly credit quota is the limit and exhausting it
+# returns HTTP 402 rather than 429.
+limits: "no published per-second rate limit; a monthly credit quota enforced with HTTP 402 once exhausted"
+pricing_url: https://predictleads.com/pricing
+
+proposed_capabilities:
+  companies.similar: "Find companies similar to a given company"
+  companies.funding: "A company's funding rounds & financing events"
+  companies.funding.feed: "Browse the latest funding rounds across all companies"
+  companies.news.detail: "Get one company news event by ID"
+  companies.news.feed: "Browse the latest company news events across all companies"
+  companies.jobs.search: "Search job postings across all companies by role, seniority or location"
+  companies.jobs.detail: "Get one job posting by ID"
+  companies.tech_stack: "Technologies detected on a company's website and job posts"
+  companies.tech_stack.users: "Find companies that use a given technology"
+  companies.tech_stack.detection: "Get the full evidence for one technology detection"
+  companies.technologies.list: "Browse the catalog of tracked technologies"
+  companies.technologies.detail: "Get one tracked technology by ID or name"
+  companies.sec_filings: "A company's SEC filings"
+  companies.sec_filings.detail: "Get one SEC filing by ID"
+  companies.connections: "Partners, customers, vendors and investors a company is linked to"
+  companies.investors.portfolio: "Browse portfolio companies listed by VCs, accelerators and incubators"
+  companies.website_evolution: "Pages appearing on and disappearing from a company's website"
+  companies.repositories: "Public code repositories a company publishes"
+  companies.products: "Products and services a company sells"
+  companies.products.detail: "Get one company product by ID"
+  companies.products.feed: "Browse the latest products across all companies"
+  companies.launch_posts: "Latest startup-platform launch and hiring posts"
+
+endpoints:
+  - id: predictleads.companies.enrich
+    domain: companies
+    capability: companies.enrich
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /companies/{id_or_domain}
+    name: "Enrich a company by domain"
+    summary: "Returns Company."
+    input:
+      pathParams:
+        id_or_domain: {type: string, required: true, note: "company domain (no protocol/www) or a PredictLeads company UUID", example: "stripe.com"}
+      note: "the record carries firmographics plus PredictLeads' own fields — ticker, meta title/description, long and short LLM descriptions, structured location_data, extraction states and subsidiary domains"
+    test_request:
+      pathParams: {id_or_domain: "stripe.com"}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, source: docs, source_url: "https://predictleads.com/pricing", checked: '2026-08-20', confidence: documented, note: "docs label this endpoint '1 Credit / Response'"}
+    verified: '2026-08-20'
+    example_response: examples/predictleads.companies.enrich.json
+    docs_url: https://docs.predictleads.com/v3/api_endpoints/companies_dataset/retrieve_company
+
+  - id: predictleads.companies.discover
+    domain: companies
+    capability: companies.search
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /discover/companies
+    name: "Discover companies by location, size, industry or revenue"
+    summary: "Returns a list of companies filtered by their location and size, ordered by last updated date."
+    input:
+      queryParams:
+        location: {type: string, required: false, note: "country name, or US state name/abbreviation", example: "United States"}
+        sizes: {type: "array[string]", required: false, note: "comma-separated company size buckets, or repeated sizes[]=", example: "11-50"}
+        naics_codes: {type: "array[string]", required: false, note: "comma-separated NAICS codes"}
+        industry: {type: string, required: false, note: "free-text industry", example: "Retail"}
+        revenue_range_low: {type: integer, required: false, note: "minimum annual revenue in USD", example: 1000000}
+        revenue_range_high: {type: integer, required: false, note: "maximum annual revenue in USD", example: 100000000}
+        page: {type: integer, required: false, note: "1-based; omitting it drops meta.count for performance"}
+        limit: {type: integer, required: false, note: "default 30, max 1000 — THIS IS THE PRICE DIAL: 1 credit per company returned", example: 1}
+      note: "returns an ESTIMATED count, not an exact one. Always set an explicit small `limit` first — the default of 30 bills 30 credits"
+    test_request:
+      queryParams: {limit: 1}
+    cost: {type: per_result, value: 1, currency: credit, per: 1, unit: record, source: docs, source_url: "https://predictleads.com/pricing", checked: '2026-08-20', confidence: documented, note: "docs label this endpoint '1 Credit / Record'; the pricing FAQ confirms discovery endpoints bill per returned company, not per request"}
+    verified: '2026-08-20'
+    example_response: examples/predictleads.companies.discover.json
+    docs_url: https://docs.predictleads.com/v3/api_endpoints/companies_dataset/retrieve_companies
+
+  - id: predictleads.companies.similar
+    domain: companies
+    capability: companies.similar
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /companies/{company_id_or_domain}/similar_companies
+    name: "Lookalike companies for a domain, with reasons"
+    summary: "Returns a list of a company's Similar Companies and, for the top 20, provides a reason why they are considered similar."
+    input:
+      pathParams:
+        company_id_or_domain: {type: string, required: true, note: "company domain or PredictLeads company UUID", example: "stripe.com"}
+      queryParams:
+        page: {type: integer, required: false}
+        limit: {type: integer, required: false, note: "default 20, max 50 — PRICE DIAL: 1 credit per company returned", example: 1}
+      note: "each result carries a similarity `score`, a `position` rank and, in the top 20, a plain-English `reason`"
+    test_request:
+      pathParams: {company_id_or_domain: "stripe.com"}
+      queryParams: {limit: 1}
+    cost: {type: per_result, value: 1, currency: credit, per: 1, unit: record, source: docs, source_url: "https://predictleads.com/pricing", checked: '2026-08-20', confidence: documented, note: "docs label this endpoint '1 Credit / Record'; the pricing FAQ calls out Similar Companies by name as priced per returned company"}
+    verified: '2026-08-20'
+    example_response: examples/predictleads.companies.similar.json
+    docs_url: https://docs.predictleads.com/v3/api_endpoints/similar_companies_dataset/retrieve_company_s_similar_companies
+
+  - id: predictleads.companies.job_openings
+    domain: companies
+    capability: companies.jobs
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /companies/{company_id_or_domain}/job_openings
+    name: "A company's job postings by domain — hiring signal"
+    summary: "Returns a list of company's Job Openings."
+    input:
+      pathParams:
+        company_id_or_domain: {type: string, required: true, note: "company domain or PredictLeads company UUID", example: "stripe.com"}
+      queryParams:
+        active_only: {type: boolean, required: false, note: "not closed, last seen within 5 days, found within the last year"}
+        not_closed: {type: boolean, required: false, note: "like active_only but ignoring last_seen_at"}
+        location: {type: string, required: false, note: "country name or US state name/abbreviation", example: "United States"}
+        first_seen_at_from: {type: string, required: false, note: "ISO 8601 date", example: "2026-01-01"}
+        first_seen_at_until: {type: string, required: false, note: "ISO 8601 date"}
+        last_seen_at_from: {type: string, required: false, note: "ISO 8601 date"}
+        last_seen_at_until: {type: string, required: false, note: "ISO 8601 date"}
+        with_description_only: {type: boolean, required: false}
+        with_location_only: {type: boolean, required: false}
+        categories: {type: "array[string]", required: false, note: "comma-separated job categories, e.g. sales,engineering"}
+        page: {type: integer, required: false}
+        limit: {type: integer, required: false, note: "default 100, max 1000 — raising it does NOT cost more; one request is 1 credit however many records return", example: 1}
+      note: "postings are scraped from the company's own careers site, so they carry the canonical apply URL, O*NET occupation code, contract types and first/last seen timestamps"
+    test_request:
+      pathParams: {company_id_or_domain: "stripe.com"}
+      queryParams: {limit: 1}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, source: docs, source_url: "https://predictleads.com/pricing", checked: '2026-08-20', confidence: documented, note: "docs label this endpoint '1 Credit / Response' — up to 1,000 records for one credit"}
+    verified: '2026-08-20'
+    example_response: examples/predictleads.companies.job_openings.json
+    docs_url: https://docs.predictleads.com/v3/api_endpoints/job_openings_dataset/retrieve_company_s_job_openings
+
+  - id: predictleads.jobs.detail
+    domain: companies
+    capability: companies.jobs.detail
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /job_openings/{id}
+    name: "Get a job posting by id"
+    summary: "Returns a single Job Opening."
+    input:
+      pathParams:
+        id: {type: string, required: true, note: "JobOpening UUID, from any job_openings listing", example: "284eb966-142d-47ac-8430-83ef870ff77f"}
+    test_request:
+      pathParams: {id: "284eb966-142d-47ac-8430-83ef870ff77f"}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, source: docs, source_url: "https://predictleads.com/pricing", checked: '2026-08-20', confidence: documented, note: "docs label this endpoint '1 Credit / Response'"}
+    verified: '2026-08-20'
+    example_response: examples/predictleads.jobs.detail.json
+    docs_url: https://docs.predictleads.com/v3/api_endpoints/job_openings_dataset/retrieve_a_single_job_opening_by_id
+
+  - id: predictleads.jobs.discover
+    domain: companies
+    capability: companies.jobs.search
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /discover/job_openings
+    name: "Search job postings by occupation code and location"
+    summary: "Returns a list of Job Openings filtered by a given profession using O*NET occupation codes and/or location of the company."
+    input:
+      queryParams:
+        onet_codes: {type: "array[string]", required: false, note: "comma-separated O*NET occupation codes — see onetonline.org", example: "41-3091.00"}
+        location: {type: string, required: false, note: "country name or US state name/abbreviation", example: "United States"}
+        active_only: {type: boolean, required: false}
+        found_at_from: {type: string, required: false, note: "ISO 8601 date", example: "2026-08-01"}
+        seniority: {type: string, required: false, note: "one of not_set, founder, c_level, partner, president, vice_president, head, director, manager, mid_senior, junior", example: "director"}
+        title: {type: string, required: false, note: "matches postings whose title contains ALL the given words", example: "product manager"}
+        page: {type: integer, required: false}
+        limit: {type: integer, required: false, note: "default 30, max 1000 — PRICE DIAL on this discovery route", example: 1}
+      note: "only returns postings found within the last year — this is the hiring-signal prospecting route ('who is hiring sales engineers in Texas right now')"
+    test_request:
+      queryParams: {limit: 1}
+    cost: {type: per_result, value: 1, currency: credit, per: 1, unit: record, source: docs, source_url: "https://predictleads.com/pricing", checked: '2026-08-20', confidence: documented, note: "docs label this endpoint '1 Credit / Record'"}
+    verified: '2026-08-20'
+    example_response: examples/predictleads.jobs.discover.json
+    docs_url: https://docs.predictleads.com/v3/api_endpoints/job_openings_dataset/retrieve_a_list_of_job_openings
+
+  - id: predictleads.companies.technology_detections
+    domain: companies
+    capability: companies.tech_stack
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /companies/{company_id_or_domain}/technology_detections
+    name: "A company's tech stack by domain, with evidence"
+    summary: "Returns Technologies used by a specific Company as a list of Technology Detections."
+    input:
+      pathParams:
+        company_id_or_domain: {type: string, required: true, note: "company domain or PredictLeads company UUID", example: "stripe.com"}
+      queryParams:
+        first_seen_at_from: {type: string, required: false, note: "ISO 8601 date — use it to get only NEWLY adopted technologies", example: "2026-08-01"}
+        first_seen_at_until: {type: string, required: false, note: "ISO 8601 date"}
+        last_seen_at_from: {type: string, required: false, note: "ISO 8601 date"}
+        last_seen_at_until: {type: string, required: false, note: "ISO 8601 date"}
+        page: {type: integer, required: false}
+        limit: {type: integer, required: false, note: "default 100, max 1000 — raising it costs nothing extra", example: 1}
+      note: "each detection names WHERE the evidence was found: relationships list seen_on_subpages, seen_on_job_openings, seen_on_dns_records, seen_on_reviews and competitive_technology_detections"
+    test_request:
+      pathParams: {company_id_or_domain: "stripe.com"}
+      queryParams: {limit: 1}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, source: docs, source_url: "https://predictleads.com/pricing", checked: '2026-08-20', confidence: documented, note: "docs label this endpoint '1 Credit / Response'"}
+    verified: '2026-08-20'
+    example_response: examples/predictleads.companies.technology_detections.json
+    docs_url: https://docs.predictleads.com/v3/api_endpoints/technology_detections_dataset/retrieve_technologies_used_by_specific_company
+
+  - id: predictleads.technologies.users
+    domain: companies
+    capability: companies.tech_stack.users
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /discover/technologies/{technology_id_or_fuzzy_name}/technology_detections
+    name: "Companies using a given technology — reverse tech lookup"
+    summary: "Returns Companies using a specific Technology as a list of Technology Detections, ordered by first_seen_at descending."
+    input:
+      pathParams:
+        technology_id_or_fuzzy_name: {type: string, required: true, note: "a Technology UUID from /technologies, or a fuzzy name like 'hubspot'", example: "hubspot"}
+      queryParams:
+        first_seen_at_from: {type: string, required: false, note: "ISO 8601 date — the competitive-displacement dial: only companies that adopted it since this date", example: "2026-08-01"}
+        first_seen_at_until: {type: string, required: false}
+        last_seen_at_from: {type: string, required: false}
+        last_seen_at_until: {type: string, required: false}
+        page: {type: integer, required: false}
+        limit: {type: integer, required: false, note: "default 30, max 1000 — PRICE DIAL on this discovery route", example: 1}
+      note: "the reverse tech-stack lookup across ~54,000 tracked technologies; a fuzzy name works, which saves a /technologies lookup"
+    test_request:
+      pathParams: {technology_id_or_fuzzy_name: "hubspot"}
+      queryParams: {limit: 1}
+    cost: {type: per_result, value: 1, currency: credit, per: 1, unit: record, source: docs, source_url: "https://predictleads.com/pricing", checked: '2026-08-20', confidence: documented, note: "docs label this endpoint '1 Credit / Record'"}
+    verified: '2026-08-20'
+    example_response: examples/predictleads.technologies.users.json
+    docs_url: https://docs.predictleads.com/v3/api_endpoints/technology_detections_dataset/retrieve_companies_using_specific_technology_id_or_fuzzy_name
+
+  - id: predictleads.technologies.list
+    domain: companies
+    capability: companies.technologies.list
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /technologies
+    name: "Browse the ~54,000 tracked technologies"
+    summary: "Returns a list of all tracked Technologies."
+    input:
+      queryParams:
+        fuzzy_name: {type: string, required: false, note: "filter by fuzzy technology name", example: "hubspot"}
+        order_by: {type: string, required: false, note: "one of created_at_asc (default), created_at_desc, fuzzy_score_desc"}
+        page: {type: integer, required: false}
+        limit: {type: integer, required: false, note: "default 100, max 1000 — PRICE DIAL: this route is 3 credits PER RECORD, the most expensive in the file", example: 1}
+      note: "the ~54,000-row technology dictionary behind the detection endpoints. Expensive per record — resolve one name with /technologies/{id_or_fuzzy_name} (1 credit flat) instead of listing when you can"
+    test_request:
+      queryParams: {limit: 1}
+    cost: {type: per_result, value: 3, currency: credit, per: 1, unit: record, source: docs, source_url: "https://predictleads.com/pricing", checked: '2026-08-20', confidence: documented, note: "docs label this endpoint '3 Credits / Record' — the only non-1-credit data route"}
+    verified: '2026-08-20'
+    example_response: examples/predictleads.technologies.list.json
+    docs_url: https://docs.predictleads.com/v3/api_endpoints/technologies_dataset/retrieve_all_tracked_technologies
+
+  - id: predictleads.technologies.detail
+    domain: companies
+    capability: companies.technologies.detail
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /technologies/{id_or_fuzzy_name}
+    name: "Get a technology by ID or name"
+    summary: "Returns a single Technology."
+    input:
+      pathParams:
+        id_or_fuzzy_name: {type: string, required: true, note: "Technology UUID or fuzzy name", example: "996ad860-2a9a-504f-8861-aeafd0b2ae29"}
+      note: "1 credit flat — the cheap way to resolve a technology name to its UUID before calling the reverse lookup"
+    test_request:
+      pathParams: {id_or_fuzzy_name: "996ad860-2a9a-504f-8861-aeafd0b2ae29"}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, source: docs, source_url: "https://predictleads.com/pricing", checked: '2026-08-20', confidence: documented, note: "docs label this endpoint '1 Credit / Response'"}
+    verified: '2026-08-20'
+    example_response: examples/predictleads.technologies.detail.json
+    docs_url: https://docs.predictleads.com/v3/api_endpoints/technologies_dataset/retrieve_a_single_technology_by_id_or_fuzzy_name
+
+  - id: predictleads.technologies.detection_detail
+    domain: companies
+    capability: companies.tech_stack.detection
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /extended_technology_detections/{id}
+    name: "Get an extended technology detection by ID"
+    summary: "Returns a single Extended Technology Detection."
+    input:
+      pathParams:
+        id: {type: string, required: true, note: "ExtendedTechnologyDetection UUID, taken from a technology_detection object's relationships"}
+      note: "NOT VERIFIED — Extended Technology Detections are a separately licensed dataset. On the free/trial plan used for curation, technology_detection responses carried no extended_technology_detection relationship, so no valid ID was obtainable and the route could not be exercised. Path and parameter read from the OpenAPI schema"
+    test_request:
+      pathParams: {id: "<ExtendedTechnologyDetection UUID>"}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, source: docs, source_url: "https://predictleads.com/pricing", checked: '2026-08-20', confidence: documented, note: "docs label this endpoint '1 Credit / Response'"}
+    docs_url: https://docs.predictleads.com/v3/api_endpoints/extended_technology_detections_dataset/retrieve_a_single_extended_technology_detection_by_id
+
+  - id: predictleads.companies.news_events
+    domain: companies
+    capability: companies.news
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /companies/{company_id_or_domain}/news_events
+    name: "A company's classified news events by domain"
+    summary: "Returns a list of company's News Events."
+    input:
+      pathParams:
+        company_id_or_domain: {type: string, required: true, note: "company domain or PredictLeads company UUID", example: "stripe.com"}
+      queryParams:
+        location: {type: string, required: false, note: "country name or US state name/abbreviation"}
+        found_at_from: {type: string, required: false, note: "ISO 8601 date — the polling dial for 'what changed since my last run'", example: "2026-08-01"}
+        found_at_until: {type: string, required: false, note: "ISO 8601 date"}
+        categories: {type: "array[string]", required: false, note: "comma-separated event categories, e.g. partners_with,hires,opens_new_location,receives_financing"}
+        page: {type: integer, required: false}
+        limit: {type: integer, required: false, note: "default 100, max 1000 — raising it costs nothing extra", example: 1}
+      note: "these are CLASSIFIED events, not headlines: each carries a category, a confidence score, the triggering article sentence, and typed slots (amount, headcount, job_title, location, award, division) filled when the category implies them"
+    test_request:
+      pathParams: {company_id_or_domain: "stripe.com"}
+      queryParams: {limit: 1}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, source: docs, source_url: "https://predictleads.com/pricing", checked: '2026-08-20', confidence: documented, note: "docs label this endpoint '1 Credit / Response'"}
+    verified: '2026-08-20'
+    example_response: examples/predictleads.companies.news_events.json
+    docs_url: https://docs.predictleads.com/v3/api_endpoints/news_events_dataset/retrieve_company_s_news_events
+
+  - id: predictleads.news.detail
+    domain: companies
+    capability: companies.news.detail
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /news_events/{id}
+    name: "Get a news event by ID"
+    summary: "Returns specific News Event."
+    input:
+      pathParams:
+        id: {type: string, required: true, note: "NewsEvent UUID from any news_events listing", example: "d378cf5a-01b4-4f81-8f9d-64c38df3ca03"}
+    test_request:
+      pathParams: {id: "d378cf5a-01b4-4f81-8f9d-64c38df3ca03"}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, source: docs, source_url: "https://predictleads.com/pricing", checked: '2026-08-20', confidence: documented, note: "docs label this endpoint '1 Credit / Response'"}
+    verified: '2026-08-20'
+    example_response: examples/predictleads.news.detail.json
+    docs_url: https://docs.predictleads.com/v3/api_endpoints/news_events_dataset/retrieve_a_single_news_event_by_id
+
+  - id: predictleads.news.discover
+    domain: companies
+    capability: companies.news.feed
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /discover/news_events
+    name: "Browse news events across all companies"
+    summary: "Returns a list of News Events, optionally filtered by categories and company's location, company's size, ordered by found_at descending."
+    input:
+      queryParams:
+        categories: {type: "array[string]", required: false, note: "comma-separated event categories, e.g. receives_financing,opens_new_location,partners_with", example: "partners_with"}
+        company_location: {type: string, required: false, note: "country name or US state name/abbreviation", example: "United States"}
+        company_sizes: {type: "array[string]", required: false, note: "comma-separated company size buckets"}
+        page: {type: integer, required: false}
+        limit: {type: integer, required: false, note: "default 30, max 1000 — PRICE DIAL on this discovery route", example: 1}
+      note: "the market-wide signal feed: 'every company that opened a new location this week'. Ordered newest-first, so found_at on the first record is the watermark for the next poll"
+    test_request:
+      queryParams: {limit: 1}
+    cost: {type: per_result, value: 1, currency: credit, per: 1, unit: record, source: docs, source_url: "https://predictleads.com/pricing", checked: '2026-08-20', confidence: documented, note: "docs label this endpoint '1 Credit / Record'"}
+    verified: '2026-08-20'
+    example_response: examples/predictleads.news.discover.json
+    docs_url: https://docs.predictleads.com/v3/api_endpoints/news_events_dataset/retrieve_news_events
+
+  - id: predictleads.companies.financing_events
+    domain: companies
+    capability: companies.funding
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /companies/{company_id_or_domain}/financing_events
+    name: "A company's funding rounds by domain"
+    summary: "Returns a list of company's Financing Events."
+    input:
+      pathParams:
+        company_id_or_domain: {type: string, required: true, note: "company domain or PredictLeads company UUID", example: "stripe.com"}
+      queryParams:
+        first_seen_at_from: {type: string, required: false, note: "ISO 8601 date"}
+        first_seen_at_until: {type: string, required: false, note: "ISO 8601 date"}
+        page: {type: integer, required: false}
+        limit: {type: integer, required: false, note: "default 100, max 1000 — raising it costs nothing extra", example: 1}
+      note: "each round carries effective_date, categories, financing_type plus a normalized form, amount and the source article"
+    test_request:
+      pathParams: {company_id_or_domain: "stripe.com"}
+      queryParams: {limit: 1}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, source: docs, source_url: "https://predictleads.com/pricing", checked: '2026-08-20', confidence: documented, note: "docs label this endpoint '1 Credit / Response'"}
+    verified: '2026-08-20'
+    example_response: examples/predictleads.companies.financing_events.json
+    docs_url: https://docs.predictleads.com/v3/api_endpoints/financing_events_dataset/retrieve_company_s_financing_events
+
+  - id: predictleads.financing.discover
+    domain: companies
+    capability: companies.funding.feed
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /discover/financing_events
+    name: "Browse funding rounds — the who-just-raised feed"
+    summary: "Returns a list of Financing Events, optionally filtered by normalized financing type and company's location, ordered by updated date."
+    input:
+      queryParams:
+        financing_types_normalized: {type: "array[string]", required: false, note: "comma-separated normalized financing types, e.g. series_a,seed,venture", example: "series_a"}
+        company_location: {type: string, required: false, note: "country name or US state name/abbreviation", example: "United States"}
+        page: {type: integer, required: false}
+        limit: {type: integer, required: false, note: "default 30, max 1000 — PRICE DIAL on this discovery route", example: 1}
+      note: "the 'who just raised' feed — the standard trigger list for outbound to newly funded companies"
+    test_request:
+      queryParams: {limit: 1}
+    cost: {type: per_result, value: 1, currency: credit, per: 1, unit: record, source: docs, source_url: "https://predictleads.com/pricing", checked: '2026-08-20', confidence: documented, note: "docs label this endpoint '1 Credit / Record'"}
+    verified: '2026-08-20'
+    example_response: examples/predictleads.financing.discover.json
+    docs_url: https://docs.predictleads.com/v3/api_endpoints/financing_events_dataset/retrieve_financing_events
+
+  - id: predictleads.companies.sec_filings
+    domain: companies
+    capability: companies.sec_filings
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /companies/{company_id_or_domain}/sec_filings
+    name: "A company's SEC filings by domain, with full text"
+    summary: "Returns a list of company's SEC Filings, ordered by filed_at descending."
+    input:
+      pathParams:
+        company_id_or_domain: {type: string, required: true, note: "company domain or PredictLeads company UUID — only US-listed issuers have filings", example: "microsoft.com"}
+      queryParams:
+        form_types: {type: "array[string]", required: false, note: "comma-separated SEC form types, e.g. 10-K,10-Q,8-K", example: "10-K"}
+        filed_at_from: {type: string, required: false, note: "ISO 8601 date"}
+        filed_at_until: {type: string, required: false, note: "ISO 8601 date"}
+        page: {type: integer, required: false}
+        limit: {type: integer, required: false, note: "default 10, max 50 — raising it costs nothing extra", example: 1}
+      note: "responses include the FULL extracted document text, so a single record can be megabytes. A private company returns an empty data array (still 1 credit) with a helpful message listing subsidiary domains to try"
+    test_request:
+      pathParams: {company_id_or_domain: "microsoft.com"}
+      queryParams: {limit: 1}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, source: docs, source_url: "https://predictleads.com/pricing", checked: '2026-08-20', confidence: documented, note: "docs label this endpoint '1 Credit / Response'"}
+    verified: '2026-08-20'
+    example_response: examples/predictleads.companies.sec_filings.json
+    docs_url: https://docs.predictleads.com/v3/api_endpoints/sec_filings_dataset/retrieve_company_s_sec_filings
+
+  - id: predictleads.sec_filings.detail
+    domain: companies
+    capability: companies.sec_filings.detail
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /sec_filings/{id}
+    name: "Get an SEC filing by ID"
+    summary: "Returns a single SEC Filing."
+    input:
+      pathParams:
+        id: {type: string, required: true, note: "SecFiling UUID from any sec_filings listing", example: "019fea12-bfd4-77ca-b958-3706a5afcb56"}
+    test_request:
+      pathParams: {id: "019fea12-bfd4-77ca-b958-3706a5afcb56"}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, source: docs, source_url: "https://predictleads.com/pricing", checked: '2026-08-20', confidence: documented, note: "docs label this endpoint '1 Credit / Response'"}
+    verified: '2026-08-20'
+    example_response: examples/predictleads.sec_filings.detail.json
+    docs_url: https://docs.predictleads.com/v3/api_endpoints/sec_filings_dataset/retrieve_a_single_sec_filing_by_id
+
+  - id: predictleads.companies.connections
+    domain: companies
+    capability: companies.connections
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /companies/{company_id_or_domain}/connections
+    name: "A company's partners, customers and investors by domain"
+    summary: "Returns a list of company's Connections."
+    input:
+      pathParams:
+        company_id_or_domain: {type: string, required: true, note: "company domain or PredictLeads company UUID", example: "stripe.com"}
+      queryParams:
+        first_seen_at_from: {type: string, required: false, note: "ISO 8601 date"}
+        first_seen_at_until: {type: string, required: false, note: "ISO 8601 date"}
+        categories: {type: "array[string]", required: false, note: "comma-separated connection categories, e.g. investor,customer,partner,vendor", example: "investor"}
+        page: {type: integer, required: false}
+        limit: {type: integer, required: false, note: "default 100, max 1000 — raising it costs nothing extra", example: 1}
+      note: "relationships mined from the two companies' own websites (logo walls, case studies, portfolio pages), each with the source_url that evidences it — this is the 'who does this company work with' graph"
+    test_request:
+      pathParams: {company_id_or_domain: "stripe.com"}
+      queryParams: {limit: 1}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, source: docs, source_url: "https://predictleads.com/pricing", checked: '2026-08-20', confidence: documented, note: "docs label this endpoint '1 Credit / Response'"}
+    verified: '2026-08-20'
+    example_response: examples/predictleads.companies.connections.json
+    docs_url: https://docs.predictleads.com/v3/api_endpoints/connections_dataset/retrieve_company_s_connections
+
+  - id: predictleads.portfolio_companies
+    domain: companies
+    capability: companies.investors.portfolio
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /discover/portfolio_companies/connections
+    name: "Browse VC and accelerator portfolio companies"
+    summary: "Returns the Portfolio Companies found on the portfolio pages of thousands of VCs, accelerators, and incubators, as a list of Connections categorized as investor, ordered by first_seen_at descending."
+    input:
+      queryParams:
+        first_seen_at_from: {type: string, required: false, note: "ISO 8601 date — newly added portfolio companies since this date", example: "2026-08-01"}
+        first_seen_at_until: {type: string, required: false}
+        last_seen_at_from: {type: string, required: false}
+        last_seen_at_until: {type: string, required: false}
+        page: {type: integer, required: false}
+        limit: {type: integer, required: false, note: "default 30, max 1000 — PRICE DIAL on this discovery route", example: 1}
+      note: "a portfolio page addition often lands before the funding is announced anywhere else, which is why this is a separate feed from financing events"
+    test_request:
+      queryParams: {limit: 1}
+    cost: {type: per_result, value: 1, currency: credit, per: 1, unit: record, source: docs, source_url: "https://predictleads.com/pricing", checked: '2026-08-20', confidence: documented, note: "docs label this endpoint '1 Credit / Record'"}
+    verified: '2026-08-20'
+    example_response: examples/predictleads.portfolio_companies.json
+    docs_url: https://docs.predictleads.com/v3/api_endpoints/connections_dataset/retrieve_portfolio_companies
+
+  - id: predictleads.companies.website_evolution
+    domain: companies
+    capability: companies.website_evolution
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /companies/{company_id_or_domain}/website_evolution
+    name: "How a company's website changed"
+    summary: "Returns a list of company's Website Evolution."
+    input:
+      pathParams:
+        company_id_or_domain: {type: string, required: true, note: "company domain or PredictLeads company UUID", example: "stripe.com"}
+      queryParams:
+        first_seen_at_from: {type: string, required: false, note: "ISO 8601 date — subpages that APPEARED after this date", example: "2026-08-01"}
+        first_seen_at_until: {type: string, required: false, note: "ISO 8601 date"}
+        page: {type: integer, required: false}
+        limit: {type: integer, required: false, note: "default 100, max 1000 — raising it costs nothing extra", example: 1}
+      note: "returns Subpage records with a classified `category` (leadership, pricing, careers, security…) plus first/last seen dates — a new /security page or a disappearing /pricing page is the signal"
+    test_request:
+      pathParams: {company_id_or_domain: "stripe.com"}
+      queryParams: {limit: 1}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, source: docs, source_url: "https://predictleads.com/pricing", checked: '2026-08-20', confidence: documented, note: "docs label this endpoint '1 Credit / Response'"}
+    verified: '2026-08-20'
+    example_response: examples/predictleads.companies.website_evolution.json
+    docs_url: https://docs.predictleads.com/v3/api_endpoints/website_evolution_dataset/retrieve_company_s_website_evolution
+
+  - id: predictleads.companies.github_repositories
+    domain: companies
+    capability: companies.repositories
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /companies/{company_id_or_domain}/github_repositories
+    name: "A company's public GitHub repositories by domain"
+    summary: "Returns a list of company's Github Repositories."
+    input:
+      pathParams:
+        company_id_or_domain: {type: string, required: true, note: "company domain or PredictLeads company UUID", example: "stripe.com"}
+      queryParams:
+        first_seen_at_from: {type: string, required: false, note: "ISO 8601 date — repos first seen after this date", example: "2026-08-01"}
+        first_seen_at_until: {type: string, required: false, note: "ISO 8601 date"}
+        page: {type: integer, required: false}
+        limit: {type: integer, required: false, note: "default 100, max 1000 — raising it costs nothing extra", example: 1}
+      note: "the company→GitHub-org resolution is the value here; a newly published SDK repo is an early signal of a product direction"
+    test_request:
+      pathParams: {company_id_or_domain: "stripe.com"}
+      queryParams: {limit: 1}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, source: docs, source_url: "https://predictleads.com/pricing", checked: '2026-08-20', confidence: documented, note: "docs label this endpoint '1 Credit / Response'"}
+    verified: '2026-08-20'
+    example_response: examples/predictleads.companies.github_repositories.json
+    docs_url: https://docs.predictleads.com/v3/api_endpoints/github_repositories_dataset/retrieve_company_s_github_repositories
+
+  - id: predictleads.companies.products
+    domain: companies
+    capability: companies.products
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /companies/{company_id_or_domain}/products
+    name: "A company's products and services by domain"
+    summary: "Returns a list of company's Products."
+    input:
+      pathParams:
+        company_id_or_domain: {type: string, required: true, note: "company domain or PredictLeads company UUID", example: "stripe.com"}
+      queryParams:
+        first_seen_at_from: {type: string, required: false, note: "ISO 8601 date — products first seen after this date, i.e. new launches", example: "2026-08-01"}
+        first_seen_at_until: {type: string, required: false, note: "ISO 8601 date"}
+        categories: {type: "array[string]", required: false, note: "comma-separated product categories, e.g. service,software", example: "service"}
+        subcategories: {type: "array[string]", required: false, note: "comma-separated product subcategories"}
+        page: {type: integer, required: false}
+        limit: {type: integer, required: false, note: "default 100, max 1000 — raising it costs nothing extra", example: 1}
+      note: "extracted from the company's own product pages, with a normalized name, category/subcategory and description"
+    test_request:
+      pathParams: {company_id_or_domain: "stripe.com"}
+      queryParams: {limit: 1}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, source: docs, source_url: "https://predictleads.com/pricing", checked: '2026-08-20', confidence: documented, note: "docs label this endpoint '1 Credit / Response'"}
+    verified: '2026-08-20'
+    example_response: examples/predictleads.companies.products.json
+    docs_url: https://docs.predictleads.com/v3/api_endpoints/products_dataset/retrieve_company_s_products
+
+  - id: predictleads.products.detail
+    domain: companies
+    capability: companies.products.detail
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /products/{id}
+    name: "Get a product by ID"
+    summary: "Returns a single Product."
+    input:
+      pathParams:
+        id: {type: string, required: true, note: "Product UUID from any products listing", example: "db60bc8e-d43b-4551-ae0b-e64fd5e945e2"}
+    test_request:
+      pathParams: {id: "db60bc8e-d43b-4551-ae0b-e64fd5e945e2"}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, source: docs, source_url: "https://predictleads.com/pricing", checked: '2026-08-20', confidence: documented, note: "docs label this endpoint '1 Credit / Response'"}
+    verified: '2026-08-20'
+    example_response: examples/predictleads.products.detail.json
+    docs_url: https://docs.predictleads.com/v3/api_endpoints/products_dataset/retrieve_a_single_product_by_id
+
+  - id: predictleads.products.discover
+    domain: companies
+    capability: companies.products.feed
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /discover/products
+    name: "Browse products across all companies"
+    summary: "Returns a list of Products, optionally filtered by categories and subcategories, ordered by last seen date."
+    input:
+      queryParams:
+        categories: {type: "array[string]", required: false, note: "comma-separated product categories, e.g. service,solution", example: "solution"}
+        subcategories: {type: "array[string]", required: false, note: "comma-separated product subcategories"}
+        page: {type: integer, required: false}
+        limit: {type: integer, required: false, note: "default 30, max 1000 — PRICE DIAL on this discovery route", example: 1}
+      note: "the path is /discover/products; there is no /discover/products/latest route"
+    test_request:
+      queryParams: {limit: 1}
+    cost: {type: per_result, value: 1, currency: credit, per: 1, unit: record, source: docs, source_url: "https://predictleads.com/pricing", checked: '2026-08-20', confidence: documented, note: "docs label this endpoint '1 Credit / Record'"}
+    verified: '2026-08-20'
+    example_response: examples/predictleads.products.discover.json
+    docs_url: https://docs.predictleads.com/v3/api_endpoints/products_dataset/retrieve_a_list_of_products
+
+  - id: predictleads.startup_platform_posts
+    domain: companies
+    capability: companies.launch_posts
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /discover/startup_platform_posts
+    name: "Latest startup launch posts, resolved to company domains"
+    summary: "Returns a list of latest posts on popular startup platforms by companies that are hiring or launching new products."
+    input:
+      queryParams:
+        published_at_from: {type: string, required: false, note: "ISO 8601 date", example: "2026-08-01"}
+        published_at_until: {type: string, required: false, note: "ISO 8601 date"}
+        post_types: {type: "array[string]", required: false, note: "comma-separated post types, e.g. show_hn,who_is_hiring", example: "show_hn"}
+        page: {type: integer, required: false}
+        limit: {type: integer, required: false, note: "default 30, max 1000 — PRICE DIAL on this discovery route", example: 1}
+      note: "each post is already resolved to a company_domain and company_name, with a fuzzy_match flag when the resolution is uncertain — that resolution is the point, versus scraping the platforms yourself"
+    test_request:
+      queryParams: {limit: 1}
+    cost: {type: per_result, value: 1, currency: credit, per: 1, unit: record, source: docs, source_url: "https://predictleads.com/pricing", checked: '2026-08-20', confidence: documented, note: "docs label this endpoint '1 Credit / Record'"}
+    verified: '2026-08-20'
+    example_response: examples/predictleads.startup_platform_posts.json
+    docs_url: https://docs.predictleads.com/v3/api_endpoints/startup_platform_posts_dataset/retrieve_latest_posts
+
+  - id: predictleads.account.subscription
+    kind: account
+    domain: other
+    capability: account.usage
+    platform: account
+    scope: own_account
+    method: GET
+    path: /api_subscription
+    name: "Check your subscription and credit usage"
+    summary: "Returns the current subscription status along with monthly credit limits and usage details."
+    input:
+      note: "no parameters. Returns status (active | disabled | disabled_due_to_error), monthly_credits_quota and monthly_credits_used — call it before and after a discovery request to measure what that request actually cost"
+    test_request:
+      queryParams: {}
+    cost: {type: free, value: 0, currency: USD, unit: call}
+    verified: '2026-08-20'
+    example_response: examples/predictleads.account.subscription.json
+    docs_url: https://docs.predictleads.com/v3/api_endpoints/api_subscription/retrieve_api_subscription_information

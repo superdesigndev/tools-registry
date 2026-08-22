@@ -1,0 +1,201 @@
+{
+  "output": {
+    "found": true,
+    "profile": {
+      "articles": null,
+      "certifications": null,
+      "connection_count": 8,
+      "courses": null,
+      "dob": null,
+      "education": [
+        {
+          "school_id": "1646",
+          "school_name": "Harvard University",
+          "field_of_study_id": null,
+          "field_of_study_name": null,
+          "degree": null,
+          "grade": null,
+          "start_date": "1973-01-01T00:00:00.000Z",
+          "end_date": "1975-12-31T00:00:00.000Z",
+          "activities": null,
+          "notes": null
+        },
+        {
+          "school_id": "30288",
+          "school_name": "Lakeside School",
+          "field_of_study_id": null,
+          "field_of_study_name": null,
+          "degree": null,
+          "grade": null,
+          "start_date": null,
+          "end_date": null,
+          "activities": null,
+          "notes": null
+        }
+      ],
+      "experiences": [
+        {
+          "linkedin_company_id": "19141006",
+          "is_current": true,
+          "company_name": "Breakthrough Energy ",
+          "locality": null,
+          "start_date": "2015-01-01T00:00:00.000Z",
+          "end_date": null,
+          "summary": null,
+          "title": "Founder",
+          "seniority": "Executive",
+          "job_function": [
+            "Management"
+          ],
+          "employment_type": null,
+          "academic_qualification": null,
+          "company_start_date": "2015-01-01T00:00:00.000Z",
+          "company_end_date": null
+        },
+        {
+          "linkedin_company_id": "8736",
+          "is_current": true,
+          "company_name": "Gates Foundation",
+          "locality": null,
+          "start_date": "2000-01-01T00:00:00.000Z",
+          "end_date": null,
+          "summary": null,
+          "title": "Co-chair",
+          "seniority": "Executive",
+          "job_function": [
+            "Management"
+          ],
+          "employment_type": null,
+          "academic_qualification": null,
+          "company_start_date": "2000-01-01T00:00:00.000Z",
+          "company_end_date": null
+        },
+        "… 1 more item(s) truncated"
+      ],
+      "first_name": "Bill",
+      "follower_count": 40584259,
+      "headline": "Chair, Gates Foundation and Founder, Breakthrough Energy",
+      "industry_name": "Philanthropy",
+      "inferred_location": {
+        "street_address": null,
+        "neighborhood": null,
+        "city": "Seattle",
+        "state_name": "Washington",
+        "state_code": "US-WA",
+        "county": "King County",
+        "postal_code": null,
+        "country_code": "USA",
+        "country_name": "United States",
+        "coordinates": {
+          "lat": 47.603245,
+          "lon": -122.330284
+        },
+        "timezone": "America/Los_Angeles",
+        "full_address": "Seattle, Washington, United States",
+        "formatted_address": "Seattle"
+      },
+      "interests": null,
+      "last_name": "Gates",
+      "locality": "Seattle, Washington, United States",
+      "name": "Bill Gates",
+      "patents": null,
+      "profile_pic": null,
+      "projects": null,
+      "publications": null,
+      "skills": null,
+      "primary_slug": "williamhgates",
+      "slugs": [
+        "williamhgates"
+      ],
+      "summary": "Chair of the Gates Foundation. Founder of Breakthrough Energy. Co-founder of Microsoft. Voracious reader. Avid traveler. Active blogger.",
+      "url": "https://www.linkedin.com/in/williamhgates",
+      "user_id": "251749025",
+      "volunteering": null,
+      "tenures": [
+        {
+          "linkedin_company_id": "8736",
+          "company_name": "Gates Foundation",
+          "date_range": {
+            "gte": "2000-01-01T00:00:00.000Z",
+            "lte": null
+          },
+          "range_length_days": null,
+          "titles": [
+            "Co-chair"
+          ],
+          "localities": []
+        },
+        {
+          "linkedin_company_id": "19141006",
+          "company_name": "Breakthrough Energy ",
+          "date_range": {
+            "gte": "2015-01-01T00:00:00.000Z",
+            "lte": null
+          },
+          "range_length_days": null,
+          "titles": [
+            "Founder"
+          ],
+          "localities": []
+        },
+        "… 1 more item(s) truncated"
+      ],
+      "career_began_at": "1975-01-01T00:00:00.000Z",
+      "tags": [
+        "second-time-founder",
+        "major-tech-company-experience",
+        "… 5 more item(s) truncated"
+      ],
+      "entity_urn": "ACoAAA8BYqEBCGLg_vT_ca6mMEqkpp9nVffJ3hc",
+      "open_to_work": false,
+      "premium": true,
+      "influencer": true,
+      "organizations": null,
+      "entity_urns": [
+        "ACoAAA8BYqEBCGLg_vT_ca6mMEqkpp9nVffJ3hc"
+      ],
+      "is_hiring": false,
+      "websites": [
+        "https://gatesnot.es/sourcecode-li",
+        "https://linkedin.com/newsletters/gates-notes-6651495472181637121"
+      ],
+      "is_verified": true,
+      "verifications": {
+        "is_verified": true,
+        "joined_date": null,
+        "verification_types": null
+      },
+      "is_top_voice": false,
+      "current_job": {
+        "linkedin_company_id": "19141006",
+        "company_name": "Breakthrough Energy ",
+        "locality": null,
+        "start_date": "2015-01-01T00:00:00.000Z",
+        "summary": null,
+        "title": "Founder"
+      },
+      "custom_data": null,
+      "relevance_score": null,
+      "last_sort_key": null,
+      "last_updated_at": "2026-08-20T03:40:20.404Z",
+      "languages": null,
+      "detailed_education": null,
+      "detailed_work_experiences": null
+    },
+    "isCached404": false
+  },
+  "chargeInfo": {
+    "method": "charged-now",
+    "creditsCharged": 2,
+    "lowCreditAlert": {
+      "getMoreCreditsUrl": "https://www.fiber.ai/app/subscription",
+      "message": "Your credits are running low. Consider topping up to avoid service interruption.",
+      "availableCredits": 489
+    }
+  },
+  "advice": [
+    "Profile enriched with real-time LinkedIn data. Use contact reveal to get their verified work email and phone number.",
+    "For bulk enrichment, use batch live enrich — up to 10,000 profiles in a single request.",
+    "… 2 more item(s) truncated"
+  ]
+}

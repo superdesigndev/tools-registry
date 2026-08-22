@@ -1,0 +1,51 @@
+{
+  "data": [
+    {
+      "id": "e12bf027-650f-425c-9708-9a38ebc78d2b",
+      "type": "connection",
+      "attributes": {
+        "category": "investor",
+        "source_category": "investor_inverse_section",
+        "source_url": "https://www.nsave.com",
+        "individual_source_url": null,
+        "context": null,
+        "first_seen_at": "2026-08-17T14:29:36Z",
+        "last_seen_at": "2026-08-17T14:29:36Z",
+        "confidence": null
+      },
+      "relationships": {
+        "company1": {
+          "data": {
+            "id": "3ed7b627-a55e-5d31-8dbc-5d44abd12010",
+            "type": "company"
+          }
+        },
+        "company2": {
+          "data": {
+            "id": "83358792-c2df-5d7b-92bb-86925920e16c",
+            "type": "company"
+          }
+        },
+        "technology": {
+          "data": null
+        }
+      }
+    }
+  ],
+  "included": [
+    {
+      "id": "3ed7b627-a55e-5d31-8dbc-5d44abd12010",
+      "type": "company",
+      "attributes": {
+        "domain": "basisset.com",
+        "company_name": "Basis Set",
+        "ticker": null
+      }
+    },
+    "… 1 more items omitted"
+  ],
+  "meta": {
+    "schema_version": "3.2",
+    "record_state": "active"
+  }
+}

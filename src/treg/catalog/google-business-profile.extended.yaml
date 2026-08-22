@@ -42,7 +42,7 @@ endpoints:
   platform: google-business
   method: POST
   path: /v1/accounts
-  name: "Create a business account"
+  name: "Create a Business Profile account"
   summary: accounts.create — Creates an account with the specified name and type under the given parent. - Personal accounts and Organizations cannot be created. - User Groups cannot be created with a Personal account as primary owner. - Location Groups cannot be created with a primary owner of a Personal account if the Personal account is in an Organization. - Location Groups cannot own Location Groups.
   scope: own_account
   cost: &id001
@@ -64,7 +64,7 @@ endpoints:
   platform: google-business
   method: GET
   path: /v1/accounts/{accountsId}
-  name: "Get account details"
+  name: "Business Profile account details by account id"
   summary: accounts.get — Gets the specified account. Returns `NOT_FOUND` if the account does not exist or if the caller does not have access rights to it.
   scope: own_account
   cost: *id001
@@ -82,7 +82,7 @@ endpoints:
   platform: google-business
   method: PATCH
   path: /v1/accounts/{accountsId}
-  name: "Update account details"
+  name: "Update a Business Profile account"
   summary: accounts.patch — Updates the specified business account. Personal accounts cannot be updated using this method.
   scope: own_account
   cost: *id001
@@ -113,7 +113,7 @@ endpoints:
   platform: google-business
   method: GET
   path: /v1/accounts/{accountsId}/admins
-  name: "List account admins"
+  name: "List admins of your Business Profile account"
   summary: admins.list — Lists the admins for the specified account.
   scope: own_account
   cost: *id001
@@ -130,7 +130,7 @@ endpoints:
   platform: google-business
   method: POST
   path: /v1/accounts/{accountsId}/admins
-  name: "Invite an account admin"
+  name: "Invite an admin to your Business Profile account"
   summary: admins.create — Invites the specified user to become an administrator for the specified account. The invitee must accept the invitation in order to be granted access to the account. See AcceptInvitation to programmatically accept an invitation.
   scope: own_account
   cost: *id001
@@ -152,7 +152,7 @@ endpoints:
   platform: google-business
   method: DELETE
   path: /v1/accounts/{accountsId}/admins/{adminsId}
-  name: "Remove an account admin"
+  name: "Remove an admin from your Business Profile account"
   summary: admins.delete — Removes the specified admin from the specified account.
   scope: own_account
   cost: *id001
@@ -169,7 +169,7 @@ endpoints:
   platform: google-business
   method: PATCH
   path: /v1/accounts/{accountsId}/admins/{adminsId}
-  name: "Update an account admin's role"
+  name: "Change an admin's role on your Business Profile account"
   summary: admins.patch — Updates the Admin for the specified Account Admin.
   scope: own_account
   cost: *id001
@@ -196,7 +196,7 @@ endpoints:
   platform: google-business
   method: GET
   path: /v1/accounts/{accountsId}/invitations
-  name: "List pending account invitations"
+  name: "List pending invitations to your Business Profile"
   summary: invitations.list — Lists pending invitations for the specified account.
   scope: own_account
   cost: *id001
@@ -218,7 +218,7 @@ endpoints:
   platform: google-business
   method: POST
   path: /v1/accounts/{accountsId}/invitations/{invitationsId}:accept
-  name: "Accept an account invitation"
+  name: "Accept a Business Profile admin invitation"
   summary: invitations.accept — Accepts the specified invitation.
   scope: own_account
   cost: *id001
@@ -240,7 +240,7 @@ endpoints:
   platform: google-business
   method: POST
   path: /v1/accounts/{accountsId}/invitations/{invitationsId}:decline
-  name: "Decline an account invitation"
+  name: "Decline a Business Profile admin invitation"
   summary: invitations.decline — Declines the specified invitation.
   scope: own_account
   cost: *id001
@@ -262,7 +262,7 @@ endpoints:
   platform: google-business
   method: POST
   path: /v1/accounts/{accountsId}/locations
-  name: "Create a business location"
+  name: "Create a business listing on your Business Profile"
   summary: locations.create — Creates a new Location that will be owned by the logged in user.
   scope: own_account
   host: mybusinessbusinessinformation.googleapis.com
@@ -294,7 +294,7 @@ endpoints:
   platform: google-business
   method: GET
   path: /v1/accounts/{accountsId}/notificationSetting
-  name: "Get account notification settings"
+  name: "Your Business Profile pubsub notification settings"
   summary: accounts.getNotificationSetting — Returns the pubsub notification settings for the account.
   scope: own_account
   host: mybusinessnotifications.googleapis.com
@@ -312,7 +312,7 @@ endpoints:
   platform: google-business
   method: PATCH
   path: /v1/accounts/{accountsId}/notificationSetting
-  name: "Update account notification settings"
+  name: "Update your Business Profile pubsub notifications"
   summary: accounts.updateNotificationSetting — Sets the pubsub notification setting for the account informing Google which topic to send pubsub notifications for. Use the notification_types field within notification_setting to manipulate the events an account wants to subscribe to. An account will only have one notification setting resource, and only one pubsub topic can be set. To delete the setting, updat
   scope: own_account
   host: mybusinessnotifications.googleapis.com
@@ -340,7 +340,7 @@ endpoints:
   platform: google-business
   method: GET
   path: /v1/attributes
-  name: "List available attributes for a category"
+  name: "Available listing attributes by category and country"
   summary: attributes.list — Returns the list of attributes that would be available for a location with the given primary category and country.
   scope: own_account
   host: mybusinessbusinessinformation.googleapis.com
@@ -383,7 +383,7 @@ endpoints:
   platform: google-business
   method: GET
   path: /v1/categories
-  name: "Search business categories"
+  name: "Search Business Profile categories by name"
   summary: categories.list — Returns a list of business categories. Search will match the category name but not the category ID. Search only matches the front of a category name (that is, 'food' may return 'Food Court' but not 'Fast Food Restaurant').
   scope: own_account
   host: mybusinessbusinessinformation.googleapis.com
@@ -426,7 +426,7 @@ endpoints:
   platform: google-business
   method: GET
   path: /v1/categories:batchGet
-  name: "Get business categories by ID (batch)"
+  name: "Business Profile categories by GConcept ids"
   summary: categories.batchGet — Returns a list of business categories for the provided language and GConcept ids.
   scope: own_account
   host: mybusinessbusinessinformation.googleapis.com
@@ -460,7 +460,7 @@ endpoints:
   platform: google-business
   method: GET
   path: /v1/chains/{chainsId}
-  name: "Get chain details"
+  name: "Business chain details by chain id"
   summary: chains.get — Gets the specified chain. Returns `NOT_FOUND` if the chain does not exist.
   scope: own_account
   host: mybusinessbusinessinformation.googleapis.com
@@ -478,7 +478,7 @@ endpoints:
   platform: google-business
   method: GET
   path: /v1/chains:search
-  name: "Search business chains"
+  name: "Search business chains by name"
   summary: chains.search — Searches the chain based on chain name.
   scope: own_account
   host: mybusinessbusinessinformation.googleapis.com
@@ -500,7 +500,7 @@ endpoints:
   platform: google-business
   method: POST
   path: /v1/googleLocations:search
-  name: "Search for matching Google locations"
+  name: "Match your business to Google location records"
   summary: googleLocations.search — Search all of the possible locations that are a match to the specified request.
   scope: own_account
   host: mybusinessbusinessinformation.googleapis.com
@@ -519,7 +519,7 @@ endpoints:
   platform: google-business
   method: DELETE
   path: /v1/locations/{locationsId}
-  name: "Delete a business location"
+  name: "Delete a listing from your Business Profile"
   summary: locations.delete — Deletes a location. If this location cannot be deleted using the API and it is marked so in the `google.mybusiness.businessinformation.v1.LocationState`, use the [Google Business Profile](https://business.google.com/manage/) website.
   scope: own_account
   host: mybusinessbusinessinformation.googleapis.com
@@ -536,7 +536,7 @@ endpoints:
   platform: google-business
   method: GET
   path: /v1/locations/{locationsId}
-  name: "Get location details"
+  name: "Your business listing as last set by the merchant"
   summary: locations.get — Returns the specified location as last set by the merchant. It may not reflect updates from Google or user-generated content that are live on Google Maps.
   scope: own_account
   host: mybusinessbusinessinformation.googleapis.com
@@ -560,7 +560,7 @@ endpoints:
   platform: google-business
   method: PATCH
   path: /v1/locations/{locationsId}
-  name: "Update a business location"
+  name: "Update your business listing details"
   summary: locations.patch — Updates the specified location.
   scope: own_account
   host: mybusinessbusinessinformation.googleapis.com
@@ -591,7 +591,7 @@ endpoints:
   platform: google-business
   method: GET
   path: /v1/locations/{locationsId}/VoiceOfMerchantState
-  name: "Get voice of merchant verification state"
+  name: "Voice of Merchant state of your business listing"
   summary: locations.getVoiceOfMerchantState — Gets the VoiceOfMerchant state.
   scope: own_account
   host: mybusinessverifications.googleapis.com
@@ -610,7 +610,7 @@ endpoints:
   platform: google-business
   method: GET
   path: /v1/locations/{locationsId}/admins
-  name: "List location admins"
+  name: "List admins of your business listing"
   summary: admins.list — Lists all of the admins for the specified location.
   scope: own_account
   cost: *id001
@@ -627,7 +627,7 @@ endpoints:
   platform: google-business
   method: POST
   path: /v1/locations/{locationsId}/admins
-  name: "Invite a location admin"
+  name: "Invite an admin to your business listing"
   summary: admins.create — Invites the specified user to become an administrator for the specified location. The invitee must accept the invitation in order to be granted access to the location. See AcceptInvitation to programmatically accept an invitation.
   scope: own_account
   cost: *id001
@@ -649,7 +649,7 @@ endpoints:
   platform: google-business
   method: DELETE
   path: /v1/locations/{locationsId}/admins/{adminsId}
-  name: "Remove a location admin"
+  name: "Remove an admin from your business listing"
   summary: admins.delete — Removes the specified admin as a manager of the specified location.
   scope: own_account
   cost: *id001
@@ -666,7 +666,7 @@ endpoints:
   platform: google-business
   method: PATCH
   path: /v1/locations/{locationsId}/admins/{adminsId}
-  name: "Update a location admin's role"
+  name: "Change an admin's role on your business listing"
   summary: admins.patch — Updates the Admin for the specified location. Only the AdminRole of the Admin can be updated.
   scope: own_account
   cost: *id001
@@ -692,7 +692,7 @@ endpoints:
   platform: google-business
   method: GET
   path: /v1/locations/{locationsId}/attributes
-  name: "Get location attributes"
+  name: "Attributes set on your business listing"
   summary: locations.getAttributes — Retrieves attributes for a location as last set by the merchant. It may not reflect updates from Google or user-generated content that are live on Google Maps.
   scope: own_account
   host: mybusinessbusinessinformation.googleapis.com
@@ -711,7 +711,7 @@ endpoints:
   platform: google-business
   method: PATCH
   path: /v1/locations/{locationsId}/attributes
-  name: "Update location attributes"
+  name: "Update attributes on your business listing"
   summary: locations.updateAttributes — Update attributes for a given location.
   scope: own_account
   host: mybusinessbusinessinformation.googleapis.com
@@ -738,7 +738,7 @@ endpoints:
   platform: google-business
   method: GET
   path: /v1/locations/{locationsId}/attributes:getGoogleUpdated
-  name: "Get Google-updated location attributes"
+  name: "Google-updated attributes of your business listing"
   summary: attributes.getGoogleUpdated — Retrieves attributes for a location as they appear live on Google Maps and Search. This consumer-facing view may have been updated by Google or user-generated content and may differ from the merchant's version.
   scope: own_account
   host: mybusinessbusinessinformation.googleapis.com
@@ -755,7 +755,7 @@ endpoints:
   platform: google-business
   method: GET
   path: /v1/locations/{locationsId}/placeActionLinks
-  name: "List place action links for a location"
+  name: "List place action links on your business listing"
   summary: placeActionLinks.list — Lists the place action links for the specified location.
   scope: own_account
   host: mybusinessplaceactions.googleapis.com
@@ -787,7 +787,7 @@ endpoints:
   platform: google-business
   method: POST
   path: /v1/locations/{locationsId}/placeActionLinks
-  name: "Create a place action link"
+  name: "Create a place action link on your business listing"
   summary: placeActionLinks.create — Creates a place action link associated with the specified location, and returns it. The request is considered duplicate if the `parent`, `place_action_link.uri` and `place_action_link.place_action_type` are the same as a previous request.
   scope: own_account
   host: mybusinessplaceactions.googleapis.com
@@ -810,7 +810,7 @@ endpoints:
   platform: google-business
   method: DELETE
   path: /v1/locations/{locationsId}/placeActionLinks/{placeActionLinksId}
-  name: "Delete a place action link"
+  name: "Delete a place action link from your business listing"
   summary: placeActionLinks.delete — Deletes a place action link from the specified location.
   scope: own_account
   host: mybusinessplaceactions.googleapis.com
@@ -827,7 +827,7 @@ endpoints:
   platform: google-business
   method: GET
   path: /v1/locations/{locationsId}/placeActionLinks/{placeActionLinksId}
-  name: "Get a place action link"
+  name: "Place action link details by link id"
   summary: placeActionLinks.get — Gets the specified place action link.
   scope: own_account
   host: mybusinessplaceactions.googleapis.com
@@ -845,7 +845,7 @@ endpoints:
   platform: google-business
   method: PATCH
   path: /v1/locations/{locationsId}/placeActionLinks/{placeActionLinksId}
-  name: "Update a place action link"
+  name: "Update a place action link on your business listing"
   summary: placeActionLinks.patch — Updates the specified place action link and returns it.
   scope: own_account
   host: mybusinessplaceactions.googleapis.com
@@ -872,7 +872,7 @@ endpoints:
   platform: google-business
   method: GET
   path: /v1/locations/{locationsId}/questions
-  name: "List questions for a location"
+  name: "List customer questions on your business listing"
   summary: questions.list — Returns the paginated list of questions and some of its answers for a specified location. This operation is only valid if the specified location is verified.
   scope: own_account
   host: mybusinessqanda.googleapis.com
@@ -912,7 +912,7 @@ endpoints:
   platform: google-business
   method: POST
   path: /v1/locations/{locationsId}/questions
-  name: "Post a question for a location"
+  name: "Post a question on a business listing"
   summary: questions.create — Adds a question for the specified location.
   scope: own_account
   host: mybusinessqanda.googleapis.com
@@ -935,7 +935,7 @@ endpoints:
   platform: google-business
   method: DELETE
   path: /v1/locations/{locationsId}/questions/{questionsId}
-  name: "Delete a question"
+  name: "Delete your question on a business listing"
   summary: questions.delete — Deletes a specific question written by the current user.
   scope: own_account
   host: mybusinessqanda.googleapis.com
@@ -953,7 +953,7 @@ endpoints:
   platform: google-business
   method: PATCH
   path: /v1/locations/{locationsId}/questions/{questionsId}
-  name: "Update a question"
+  name: "Edit your question on a business listing"
   summary: questions.patch — Updates a specific question written by the current user.
   scope: own_account
   host: mybusinessqanda.googleapis.com
@@ -980,7 +980,7 @@ endpoints:
   platform: google-business
   method: GET
   path: /v1/locations/{locationsId}/questions/{questionsId}/answers
-  name: "List answers to a question"
+  name: "List answers to a business listing question"
   summary: answers.list — Returns the paginated list of answers for a specified question.
   scope: own_account
   host: mybusinessqanda.googleapis.com
@@ -1011,7 +1011,7 @@ endpoints:
   platform: google-business
   method: DELETE
   path: /v1/locations/{locationsId}/questions/{questionsId}/answers:delete
-  name: "Delete an answer to a question"
+  name: "Delete your answer to a business listing question"
   summary: answers.delete — Deletes the answer written by the current user to a question.
   scope: own_account
   host: mybusinessqanda.googleapis.com
@@ -1029,7 +1029,7 @@ endpoints:
   platform: google-business
   method: POST
   path: /v1/locations/{locationsId}/questions/{questionsId}/answers:upsert
-  name: "Create or update an answer"
+  name: "Post or update your answer to a listing question"
   summary: answers.upsert — Creates an answer or updates the existing answer written by the user for the specified question. A user can only create one answer per question.
   scope: own_account
   host: mybusinessqanda.googleapis.com
@@ -1052,7 +1052,7 @@ endpoints:
   platform: google-business
   method: GET
   path: /v1/locations/{locationsId}/searchkeywords/impressions/monthly
-  name: "Get monthly search keyword impressions"
+  name: "Monthly search keywords, impressions for your listing"
   summary: 'monthly.list — Returns the search keywords used to find a business in search or maps. Each search keyword is accompanied by impressions which are aggregated on a monthly basis. Example request: `GET https://businessprofileperformance.googleapis.com/v1/locations/12345/searchkeywords/impressions/monthly?monthly_range.start_month.year=2022&monthly_range.start_month.month=1&monthly_range.end_month.yea'
   scope: own_account
   host: businessprofileperformance.googleapis.com
@@ -1103,7 +1103,7 @@ endpoints:
   platform: google-business
   method: GET
   path: /v1/locations/{locationsId}/verifications
-  name: "List location verifications"
+  name: "List verification attempts for your business listing"
   summary: verifications.list — List verifications of a location, ordered by create time.
   scope: own_account
   host: mybusinessverifications.googleapis.com
@@ -1130,7 +1130,7 @@ endpoints:
   platform: google-business
   method: POST
   path: /v1/locations/{locationsId}/verifications/{verificationsId}:complete
-  name: "Complete a pending verification"
+  name: "Complete a pending business listing verification"
   summary: verifications.complete — Completes a `PENDING` verification. It is only necessary for non `AUTO` verification methods. `AUTO` verification request is instantly `VERIFIED` upon creation.
   scope: own_account
   host: mybusinessverifications.googleapis.com
@@ -1152,7 +1152,7 @@ endpoints:
   platform: google-business
   method: GET
   path: /v1/locations/{locationsId}:fetchMultiDailyMetricsTimeSeries
-  name: "Get multiple daily metrics time series"
+  name: "Daily metrics time series for your business listing"
   summary: 'locations.fetchMultiDailyMetricsTimeSeries — Returns the values for each date from a given time range that are associated with the specific daily metrics. Note: Only daily data is available. Hourly metrics are not supported. Example request: `GET https://businessprofileperformance.googleapis.com/v1/locations/12345:fetchMultiDailyMetricsTimeSeries?dailyMetrics=WEBSITE_CLICKS&dailyMetrics=CALL_CLICK'
   scope: own_account
   host: businessprofileperformance.googleapis.com
@@ -1212,7 +1212,7 @@ endpoints:
   platform: google-business
   method: POST
   path: /v1/locations/{locationsId}:fetchVerificationOptions
-  name: "Get eligible verification options"
+  name: "Eligible verification options for your listing"
   summary: locations.fetchVerificationOptions — Reports all eligible verification options for a location in a specific language.
   scope: own_account
   host: mybusinessverifications.googleapis.com
@@ -1234,7 +1234,7 @@ endpoints:
   platform: google-business
   method: GET
   path: /v1/locations/{locationsId}:getDailyMetricsTimeSeries
-  name: "Get a daily performance metric time series"
+  name: "Daily time series of one metric for your listing"
   summary: 'locations.getDailyMetricsTimeSeries — Returns the values for each date from a given time range that are associated with the specific daily metric. Note: Only daily data is available. Hourly metrics are not supported. Example request: `GET https://businessprofileperformance.googleapis.com/v1/locations/12345:getDailyMetricsTimeSeries?dailyMetric=WEBSITE_CLICKS&daily_range.start_date.year=2022&daily_'
   scope: own_account
   host: businessprofileperformance.googleapis.com
@@ -1323,7 +1323,7 @@ endpoints:
   platform: google-business
   method: GET
   path: /v1/locations/{locationsId}:getGoogleUpdated
-  name: "Get the live Google-updated location"
+  name: "Your business listing as it appears live on Google"
   summary: locations.getGoogleUpdated — Returns the specified location as it appears live on Google Maps and Search. This consumer-facing view may have been updated by Google or user-generated content and may differ from the merchant's version. The returned GoogleUpdatedLocation contains masks that indicate which fields differ from the merchant's information.
   scope: own_account
   host: mybusinessbusinessinformation.googleapis.com
@@ -1347,7 +1347,7 @@ endpoints:
   platform: google-business
   method: POST
   path: /v1/locations/{locationsId}:transfer
-  name: "Transfer a location to another account"
+  name: "Transfer a business listing to another account"
   summary: locations.transfer — Moves a location from an account that the user owns to another account that the same user administers. The user must be an owner of the account the location is currently associated with and must also be at least a manager of the destination account.
   scope: own_account
   cost: *id001
@@ -1369,7 +1369,7 @@ endpoints:
   platform: google-business
   method: POST
   path: /v1/locations/{locationsId}:verify
-  name: "Start location verification"
+  name: "Start verification of your business listing"
   summary: locations.verify — Starts the verification process for a location.
   scope: own_account
   host: mybusinessverifications.googleapis.com
@@ -1422,7 +1422,7 @@ endpoints:
   platform: google-business
   method: POST
   path: /v1/verificationTokens:generate
-  name: "Generate a location verification token"
+  name: "Generate a verification token for your listing"
   summary: verificationTokens.generate — Generate a token for the provided location data to verify the location.
   scope: own_account
   host: mybusinessverifications.googleapis.com
@@ -1439,7 +1439,7 @@ endpoints:
   platform: google-business
   method: GET
   path: /v4/accounts/{account_id}/locations/{location_id}/localPosts
-  name: "List local posts for a listing"
+  name: "List local posts on your business listing"
   summary: localPosts.list — List the local posts (offers, updates, events) on one of your listings
   scope: own_account
   host: mybusiness.googleapis.com
@@ -1452,7 +1452,7 @@ endpoints:
   platform: google-business
   method: POST
   path: /v4/accounts/{account_id}/locations/{location_id}/localPosts
-  name: "Publish a local post"
+  name: "Publish a local post on your business listing"
   summary: localPosts.create — Publish a local post (offer, update or event) to one of your listings
   scope: own_account
   host: mybusiness.googleapis.com
@@ -1464,7 +1464,7 @@ endpoints:
   platform: google-business
   method: GET
   path: /v4/accounts/{account_id}/locations/{location_id}/media
-  name: "List photos and videos for a listing"
+  name: "List photos and videos on your business listing"
   summary: media.list — List the photos and videos on one of your listings
   scope: own_account
   host: mybusiness.googleapis.com
@@ -1477,7 +1477,7 @@ endpoints:
   platform: google-business
   method: POST
   path: /v4/accounts/{account_id}/locations/{location_id}/media
-  name: "Add a photo or video"
+  name: "Add a photo or video to your business listing"
   summary: media.create — Add a photo or video to one of your listings
   scope: own_account
   host: mybusiness.googleapis.com
@@ -1489,7 +1489,7 @@ endpoints:
   platform: google-business
   method: GET
   path: /v4/accounts/{account_id}/locations/{location_id}/reviews/{review_id}
-  name: "Get a single review"
+  name: "Read one customer review by review id"
   summary: reviews.get — Read a single review left on one of your listings
   scope: own_account
   host: mybusiness.googleapis.com
@@ -1502,7 +1502,7 @@ endpoints:
   platform: google-business
   method: DELETE
   path: /v4/accounts/{account_id}/locations/{location_id}/reviews/{review_id}/reply
-  name: "Delete a reply to a review"
+  name: "Delete your public reply to a customer review"
   summary: reviews.deleteReply — Delete the business's public reply to a review
   scope: own_account
   host: mybusiness.googleapis.com
@@ -1513,7 +1513,7 @@ endpoints:
   platform: google-business
   method: GET
   path: /v4/accounts/{account_id}/locations:batchGetReviews
-  name: "Get reviews across multiple listings"
+  name: "Customer reviews across several of your listings"
   summary: reviews.batchGetReviews — Read reviews across several of your listings in one call
   scope: own_account
   host: mybusiness.googleapis.com

@@ -1,0 +1,23 @@
+{
+  "output": {
+    "data": [],
+    "rejection": {
+      "reason": "role_based_mailbox",
+      "message": "The email address uses a role-based or system mailbox (e.g. support@, noreply@) and cannot be resolved to a real person."
+    }
+  },
+  "chargeInfo": {
+    "method": "charged-now",
+    "creditsCharged": 0,
+    "lowCreditAlert": {
+      "getMoreCreditsUrl": "https://www.fiber.ai/app/subscription",
+      "message": "Your credits are running low. Consider topping up to avoid service interruption.",
+      "availableCredits": 485
+    }
+  },
+  "advice": [
+    "Reverse email lookup finds the LinkedIn profile behind any email address.",
+    "Only charges when a LinkedIn profile is successfully found — no charge for misses.",
+    "… 2 more item(s) truncated"
+  ]
+}

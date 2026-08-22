@@ -34,6 +34,16 @@ endpoints are unaffected (they use `require_superadmin`).
   call volume + success rate, `growth` counts — computed in-process over small result sets),
   `admin_orgs` (every org + member/role/tool/secret/bundle counts), `admin_org_detail`,
   `admin_users` (+ their memberships), `admin_tools`, `admin_calls`, `admin_health` (non-`ok` secrets).
+- **Failure evidence:** `admin_errors` (`?days=7&limit=100&provider=&status=&tier=`) — failed calls at
+  every credential tier, including plain own tools (`tier: null`), with `CallRecord.error_request` /
+  `error_response`, the redacted capture of what the caller sent and what the provider answered (see
+  [data-model](data-model.md)). `tier` filters an exact marketplace tier; an empty value selects plain
+  own tools. Superadmin and not org-admin
+  because the rows hold customers' request content; `GET /calls` deliberately does **not** expose
+  these columns, and it defers them so they are not even fetched. This route also performs the
+  14-day retention pass (`_purge_expired_error_evidence`, blanking to `'<expired>'` on its own
+  committed session) — ageing lives here because there is no scheduler and the request path cannot
+  hold a lazy marker, `get_session` never committing one.
 - **Reconciliation (Phase 5):** `admin_reconcile_drift|spend|repeats` (`?since_days=30`) — cross-org
   aggregates over platform-tier spend, so super-admin and not org-admin: price drift per endpoint,
   settled spend per provider (the invoice comparison), and the repeat-query rate. Query-time reports

@@ -7,6 +7,7 @@ sources:
 related:
   - architecture/data-model.md
   - architecture/auth-secrets.md
+  - architecture/ads-conversions.md
   - foundation/charter.md
 ---
 
@@ -26,6 +27,18 @@ incl. duplicates, headers, cookies, body bytes):
    treg's own cookies (`treg_session`, `treg_oauth_state`) from the Cookie header — the dashboard's
    `credentials:'include'` Try-it would otherwise leak our session token — while keeping other cookies.
 3. **the injected credential(s)** — each binding overwrites only its target header/param.
+
+> **What treg keeps from a call.** Successes retain no content: the relay forwards bytes and the audit
+> row records status, size and timing. A **failed relayed call** — platform, own-key, or plain own-tool
+> — is the exception: `CallRecord.error_request` / `error_response` retain a redacted, truncated copy
+> of what the caller sent and what the provider (or treg-side 502) answered. Without it a failure is a
+> bare status code: `path` holds the catalog URL rather than the caller's parameters and `params_hash`
+> is one-way. Metered responses are already buffered by `_buffer_response`; `_peek_stream_head` reads
+> only the first 8 KiB of a failed unmetered response and replays every consumed byte before the rest
+> of the original iterator, preserving status, raw headers, streaming, and the upstream-close task.
+> Caller bodies on unmetered paths are cached only when `Content-Length` is declared and at most 64
+> KiB; large/chunked uploads stay streaming and retain only their query-param half. See
+> [data-model](data-model.md) for the redaction order, admin-only access, and retention.
 
 Faithfulness mechanics inside `relay()`:
 - request headers rebuilt from `request.headers.raw` into an `httpx.Headers` multidict (preserves
@@ -54,6 +67,11 @@ can't read it or extract it through a local run; a missing setting is a clean `5
 (`this server has no <setting> configured`). Used by the OAuth-marketplace auto-provisioner for a provider
 that needs a second credential treg holds centrally (see [api](../interface/api.md)).
 
+A separate case that looks similar but is NOT a platform binding: the Google Ads **conversion**
+uploader (`adsconv.py`) also spends treg's own platform connection, but it is not a caller-issued
+`/call/` request at all, so it never reaches `relay()` or `injectors.py` — it reads the platform org's
+stored OAuth secret directly and builds its own headers. See [ads-conversions](ads-conversions.md).
+
 **Accept-Encoding is normalized to `identity`** when the caller sent none. `relay()` streams the upstream
 body raw (`aiter_raw`), so if the caller doesn't ask for compression httpx would otherwise add its own
 `Accept-Encoding: gzip` and hand a plain HTTP client / agent compressed bytes it never requested. Asking
@@ -73,6 +91,46 @@ same-org secrets. After resolution `call_tool` runs `_enforce_daily_cap` (the pe
 - **Named:** `rest = "<tool>/<path>"` (`rest.partition("/")`), looked up by `Tool.name`; upstream URL =
   `base_url + path`. **No path → the base URL itself, without a trailing slash** — a tool pinned to a
   full resource (`.../v1/charges`) must relay as-is, since Stripe `404`s `/v1/charges/`.
+
+Named misses also inspect the org's caller-usable own tools on the error path. When a dotted operation
+name shares its provider/first segment with one (for example `google-analytics.report` beside the
+connected `google-analytics` tool), the 404 carries `hint` plus `did_you_mean` and points at
+`/call/google-analytics/<path>`. If that dotted name is a real catalog endpoint, the hint follows the
+catalog fall-through and is attached only if the marketplace credential ladder also dead-ends. Catalog
+near-id matching remains provider-local and takes precedence for genuine misspellings.
+
+If both shapes miss with 404, a dotted target gets one final lookup in the endpoint catalog. A live
+row enters `_resolve_marketplace_call` and its credential ladder. `_marketplace_upstream` fills catalog
+path placeholders by percent-encoding raw values, but preserves a value containing a valid `%HH` escape;
+this prevents an already encoded Search Console property id such as `sc-domain%3Aexample.com` becoming
+double-encoded as `%253A`. Literal/invalid percent signs remain encoded. A `retired`/`broken` tombstone is
+instead refused with 410, its `status_note`, and its optional `superseded_by`, before credentials are
+selected or the relay can run; the refusal is audited as `refused_by=retired`. This ordering is
+deliberate: an org's own tool named exactly like the old catalog id already resolved above and is not
+shadowed, while URL passthrough has no catalog-id shape to catch accidentally.
+
+**A dead end names its capability siblings.** Both refusals that end the ladder — the `410` tombstone
+with no `superseded_by`, and the tier-3 `404` when no credential can be found — append
+`_capability_alternatives(ep)`: the other providers catalogued for the same `capability`, cheapest
+first, each marked *callable now on treg's key* (both halves of `_platform_offer`'s tier-4 test hold)
+or *needs your own `<provider>` credential*. It is derived from `cat.endpoints`, which `_parse` has
+already stripped of marked rows, so a retirement stops being suggested the moment it is marked and no
+list is maintained by hand.
+
+Two facts motivate it. 41 of the 50 TikHub retirements have no same-provider successor, so
+`superseded_by` is structurally silent for them and a cross-provider sibling is the only migration
+path left. And on 2026-08-19 one org spent 268 calls on `meta-ad-library.meta-ads.library.search`,
+which treg holds no key for, while `scrapecreators.x.v1-facebook-adlibrary-search-ads` — the same
+capability string, on a key treg already had — answered 192 of 208 calls for fourteen other teams.
+The refusal knew the capability the whole time.
+
+This **compares, it does not route**: treg never fails over on the caller's behalf, so the refusal
+stands, nothing is substituted, and the choice stays with the caller. The helper is deliberately
+synchronous and I/O-free — observed success would need `endpoint_stats.observed` and a database
+round-trip on an error path, which is how a 404 becomes a 500, and `catalog get` already ranks the
+same siblings by observed success when the caller follows the pointer. It can only see curated
+`capability` values: an endpoint with a blank capability is invisible as an alternative, which is an
+argument for filling those in rather than for fuzzy id matching.
 
 **ACL-filtered candidates.** `_resolve_call` takes the **caller** and filters passthrough candidates by
 `_tool_usable` (project scope AND the per-tool list) **before** the longest-prefix tiebreak. A same-host
@@ -123,7 +181,8 @@ credential; the longest-prefix tiebreak compares rstripped lengths (a trailing-s
 **prefers the registry-provider-backed tool** (one whose binding points at a `Secret` with a `provider`)
 over a hand-registered one that often holds a stale credential — a `409` there would break exactly the
 agent-facing URL-passthrough callers who never typed a tool name; only a genuine ambiguity (neither or
-both provider-owned) still `409`s. Binding validity is checked at **registration** (`_validate_bindings` rejects
+both provider-owned) still `409`s. That 409 names every caller-usable colliding tool and directs the
+caller to the unambiguous `/call/<name>/<path>` form. Binding validity is checked at **registration** (`_validate_bindings` rejects
 an unknown `injector` and a cross-org/dangling `secret_id`; `register_skill` runs the same gate), and
 `call_tool` translates a call-time injector `ValueError` and an upstream `httpx.RequestError` into a
 `502` instead of an unhandled 500 (and audits the failed attempt, not just successes). A binding
@@ -150,3 +209,17 @@ also rejects numeric IP encodings — decimal/hex/octal/short forms like `213070
 (A narrow resolve-vs-connect race remains; pinning the resolved IP would need a custom transport.)
 
 > Why relay instead of modeling the upstream: [foundation/charter.md](../foundation/charter.md).
+
+## treg's own headers never reach the upstream — by PREFIX, not by name
+
+`proxy._DROP_REQUEST` used to enumerate our control headers, and the enumeration had already failed:
+`x-treg-client` was never in it, so every provider we relay to had been receiving the caller's runtime
+name. Adding `x-treg-meta` (which carries a reselling builder's customer ids) to that list would have
+repeated the defect one header later.
+
+So the rule is structural: **any request header whose lowercased name starts with `x-treg-` is
+dropped** before relay (`proxy._is_dropped_request_header`). `_CONTROL` remains for the non-prefixed
+infra names — `ngrok-…`, `x-forwarded-*`, `via` — which have no shared prefix to key on.
+
+The test asserts an *invented* header (`X-Treg-Future`) is dropped too, so the guarantee is about the
+prefix rather than about today's list.

@@ -1,0 +1,16 @@
+{
+  "pagination": {"page": 1, "per_page": 2, "total_entries": 858, "total_pages": 429},
+  "news_articles": [
+    {
+      "id": "6a856d0e113a7b001ccd40f0",
+      "url": "https://toscale.io/news-aggregator/krakens-krak-app-rolls-out-cry43201a017fd-964f-7498-8bf4-9a87197c84b5",
+      "domain": "toscale.io",
+      "title": "Kraken's Krak app rolls out crypto debit card in the U.S. with Stripe.",
+      "snippet": "By partnering with Stripe, a major player in online payment processing, Kraken leverages established infrastructure to ensure reliability and broad acceptance.",
+      "organization_ids": ["54a11e1a69702da753c06201", "5d0a0fbff6512580bf33a120"],
+      "published_at": "2026-08-19T01:45:12.000+00:00",
+      "event_categories": ["partners_with"]
+    }
+  ],
+  "_scrubbed": true
+}

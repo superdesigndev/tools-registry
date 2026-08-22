@@ -1,0 +1,15 @@
+{
+  "jobID": "98c9b6f1-1991-42dd-a061-4c6456eabdb0",
+  "channel": "phone",
+  "status": "in_progress",
+  "total": 1,
+  "processed": 0,
+  "succeeded": 0,
+  "failed": 0,
+  "reservedCredits": 0,
+  "createdAt": "2026-08-20T00:47:21.004103Z",
+  "updatedAt": "2026-08-20T00:47:21.004103Z",
+  "clientRequestID": "treg-verify-3",
+  "statusURL": "/public/v1/enrichment/jobs/98c9b6f1-1991-42dd-a061-4c6456eabdb0",
+  "resultsURL": "/public/v1/enrichment/jobs/98c9b6f1-1991-42dd-a061-4c6456eabdb0/results"
+}

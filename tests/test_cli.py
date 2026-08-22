@@ -647,7 +647,7 @@ def test_catalog_search_says_what_to_try_when_nothing_matches(monkeypatch, capsy
         {"query": "zzz", "count": 0, "total": 0, "results": [], "hints": []})})
     cli.cmd_catalog(cli.build_parser().parse_args(["catalog", "search", "zzz"]), {"base_url": "http://x"})
     out = capsys.readouterr().out
-    assert "nothing matches" in out and "every word has to match" in out
+    assert "nothing matches" in out and "different task words" in out
 
 
 def test_catalog_get_renders_params_siblings_and_the_command(monkeypatch, capsys):

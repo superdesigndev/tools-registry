@@ -1,0 +1,29 @@
+{
+  "symbol": "AAPL",
+  "name": "Apple Inc.",
+  "exchange": "NASDAQ",
+  "mic_code": "XNGS",
+  "currency": "USD",
+  "datetime": "2026-08-14",
+  "timestamp": 1786714200,
+  "last_quote_at": 1786737540,
+  "open": "306",
+  "high": "307.48999",
+  "low": "304.29999",
+  "close": "305.92999",
+  "volume": "28186700",
+  "previous_close": "305.26001",
+  "change": "0.66998291",
+  "percent_change": "0.21947942",
+  "average_volume": "46555190",
+  "is_market_open": false,
+  "fifty_two_week": {
+    "low": "223.78000",
+    "high": "344.57001",
+    "low_change": "82.14999",
+    "high_change": "-38.64001",
+    "low_change_percent": "36.71016",
+    "high_change_percent": "-11.21398",
+    "range": "223.779999 - 344.570007"
+  }
+}

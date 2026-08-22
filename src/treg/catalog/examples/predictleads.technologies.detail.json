@@ -1,0 +1,56 @@
+{
+  "data": [
+    {
+      "id": "996ad860-2a9a-504f-8861-aeafd0b2ae29",
+      "type": "technology",
+      "attributes": {
+        "name": "1C-Bitrix",
+        "description": "1C-Bitrix is a versatile CMS and web development platform for creating websites, online stores, and corporate portals. It offers tools like templates, modules, and e-commerce solutions, focusing on security, scalability, and user-friendliness. Additionally, it includes SEO optimization, analytics, a …[truncated]",
+        "categories": [
+          "content_management_system",
+          "… 1 more items omitted"
+        ],
+        "parent_categories": [
+          "web_tools_and_plugins",
+          "… 1 more items omitted"
+        ],
+        "domain": "1c-bitrix.ru",
+        "url": "http://www.1c-bitrix.ru",
+        "pricing_data": {
+          "min_usd": 470.0,
+          "max_usd": 25000.0,
+          "average_spend": 2000.0,
+          "interval": "yearly",
+          "tags": [
+            "onetime",
+            "… 7 more items omitted"
+          ]
+        },
+        "created_at": "2015-11-02T14:28:53Z"
+      },
+      "relationships": {
+        "company": {
+          "data": {
+            "id": "bb5b4fa5-eb0d-5d41-b66f-1848ac0b1645",
+            "type": "company"
+          }
+        }
+      }
+    }
+  ],
+  "included": [
+    {
+      "id": "bb5b4fa5-eb0d-5d41-b66f-1848ac0b1645",
+      "type": "company",
+      "attributes": {
+        "domain": "1c-bitrix.ru",
+        "company_name": "1c Bitrix",
+        "ticker": null
+      }
+    }
+  ],
+  "meta": {
+    "schema_version": "3.1",
+    "record_state": "active"
+  }
+}

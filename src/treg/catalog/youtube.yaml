@@ -32,7 +32,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /youtube/v3/channels
-    name: "Get your channel's profile and stats"
+    name: "Your YouTube channel profile — subscribers, views"
     summary: "Get your YouTube channel's profile and lifetime stats (subscribers, views, video count)"
     input:
       queryParams:
@@ -54,7 +54,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /youtube/v3/search
-    name: "List your channel's videos, newest first"
+    name: "List your YouTube videos, private and unlisted included"
     summary: "List your own channel's videos, newest first (includes private and unlisted ones)"
     # forMine is the only search filter that reaches a creator's non-public uploads, which is the
     # whole reason to use the OAuth route over a scraper. It costs 100 units — a hundredth of the
@@ -83,7 +83,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /youtube/v3/playlistItems
-    name: "List channel uploads via playlist (low cost)"
+    name: "List a channel's videos via its uploads playlist id"
     summary: "List a channel's uploaded videos cheaply, via its uploads playlist"
     input:
       queryParams:
@@ -107,7 +107,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /youtube/v3/videos
-    name: "Get a video's details and stats"
+    name: "YouTube video stats by video id — views, likes, duration"
     summary: "Get a YouTube video's metadata and stats (views, likes, comments, duration)"
     input:
       queryParams:
@@ -127,7 +127,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /youtube/v3/commentThreads
-    name: "List comments on a video"
+    name: "List comments on a YouTube video by video id"
     summary: "List the comments on a YouTube video (any public video, not just your own)"
     input:
       queryParams:
@@ -151,7 +151,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /youtube/v3/search
-    name: "Search videos by keyword"
+    name: "Search YouTube videos by keyword"
     summary: "Search YouTube videos by keyword"
     input:
       queryParams:
@@ -188,7 +188,7 @@ endpoints:
     scope: own_account
     method: POST
     path: /upload/youtube/v3/videos
-    name: "Upload a video"
+    name: "Upload a video to your YouTube channel"
     summary: "Upload a video to your own YouTube channel"
     input:
       queryParams:
@@ -211,7 +211,7 @@ endpoints:
     scope: own_account
     method: POST
     path: /upload/youtube/v3/thumbnails/set
-    name: "Set video thumbnail"
+    name: "Set a custom thumbnail on your YouTube video"
     summary: "Set the custom thumbnail on one of your YouTube videos"
     input:
       queryParams:

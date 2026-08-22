@@ -1,0 +1,27 @@
+{
+  "pagination": {
+    "limit": 100,
+    "offset": 0,
+    "count": 1,
+    "total": 1
+  },
+  "data": [
+    {
+      "open": 306.0,
+      "high": 307.49,
+      "low": 304.3,
+      "close": 305.93,
+      "volume": 28186700.0,
+      "adj_high": 307.49,
+      "adj_low": 304.3,
+      "adj_close": 305.93,
+      "adj_open": 306.0,
+      "adj_volume": 28229375.0,
+      "split_factor": 1.0,
+      "dividend": 0.0,
+      "symbol": "AAPL",
+      "exchange": "XNAS",
+      "date": "2026-08-14T00:00:00+0000"
+    }
+  ]
+}

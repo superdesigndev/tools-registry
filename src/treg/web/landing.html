@@ -4,9 +4,24 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>treg — turn your coding agent into an SEO expert, a media buyer, an SDR</title>
-<meta name="description" content="Give your agent the tool catalog for the job. 2,617 endpoints across 42 providers — premium SEO, social, enrichment and ads data, pay as you go. Plus your own keys &amp; skills, and an identity per agent."/>
-<link rel="canonical" href="https://treg.to/"/>
+<meta name="description" content="Give your agent the tool catalog for the job. 2,630 endpoints across 47 providers — premium SEO, social, enrichment and ads data, pay as you go. Plus your own keys &amp; skills, and an identity per agent."/>
+<!-- {BASE}, not a hardcoded treg.to: this file is also served by every self-hosted registry, and a
+     canonical pointing at someone else's domain tells a crawler the real page is not here. -->
+<link rel="canonical" href="{BASE}/"/>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
+<meta property="og:type" content="website"/>
+<meta property="og:site_name" content="treg"/>
+<meta property="og:url" content="{BASE}/"/>
+<meta property="og:title" content="treg — the tool catalog for your agent"/>
+<meta property="og:description" content="2,630 endpoints across 47 providers — SEO, social, enrichment and ads data your agent can call with one key, priced per call. Plus your own keys &amp; skills."/>
+<meta property="og:image" content="{BASE}/media/og.png"/>
+<meta property="og:image:width" content="1200"/>
+<meta property="og:image:height" content="630"/>
+<meta property="og:image:alt" content="treg — one unified key for 2,600+ agent tools, priced per call, open source"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="treg — the tool catalog for your agent"/>
+<meta name="twitter:description" content="2,630 endpoints across 47 providers, callable with one key and priced per call. No provider signup."/>
+<meta name="twitter:image" content="{BASE}/media/og.png"/>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist+Pixel&family=Inter:wght@400;450;500;600;650;700&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -44,6 +59,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
 a{color:var(--teal);text-decoration:none}
 .wrap{max-width:1160px;margin:0 auto;padding:0 28px}
 :focus-visible{outline:0;box-shadow:0 0 0 2px var(--bg),0 0 0 3.5px var(--ink)}
+
 
 /* ---------- floating pill nav ---------- */
 .navwrap{position:fixed;top:14px;left:0;right:0;z-index:50;padding:0 20px}
@@ -488,8 +504,54 @@ footer{margin-top:150px;border-top:1px solid var(--line);position:relative;overf
 }
 
 </style>
+
+<!-- Structured data. Every figure below is also visible on the page — the free credit in benefit 03,
+     the 0% markup in the zeroband, the counts in the kicker and trustline. Schema that claims
+     something the page does not say is a structured-data error, not a shortcut. -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "treg",
+  "url": "{BASE}/",
+  "applicationCategory": "DeveloperApplication",
+  "applicationSubCategory": "API gateway for AI agents",
+  "operatingSystem": "Any (HTTP API, CLI, MCP)",
+  "description": "The tool catalog for your agent: 2,630 API endpoints across 47 providers — SEO, social, enrichment, ads and scraping data — callable with one key and priced per call, with no provider signup. Bring your own API keys and skills alongside them.",
+  "image": "{BASE}/media/og.png",
+  "license": "https://www.gnu.org/licenses/agpl-3.0.html",
+  "isAccessibleForFree": true,
+  "featureList": [
+    "2,630 curated API endpoints across 47 providers",
+    "Credentials injected server-side — the caller never holds a key",
+    "Per-call pricing shown before the call, with no markup",
+    "Your own API keys and SKILL.md files as callable tools",
+    "CLI, HTTP proxy and MCP interfaces"
+  ],
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD",
+    "description": "$1.00 of free credit on every new team, then pay per call at the provider's own rate — treg adds 0% on top. No subscription.",
+    "availability": "https://schema.org/InStock",
+    "url": "{BASE}/"
+  }
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "treg",
+  "url": "{BASE}/",
+  "logo": "{BASE}/media/og.png",
+  "description": "The tool catalog for AI agents — one key for 2,630 API endpoints, plus your own keys and skills.",
+  "sameAs": ["https://github.com/superdesigndev/treg"]
+}
+</script>
 </head>
 <body>
+
 
 <!-- floating pill nav -->
 <div class="navwrap">
@@ -498,6 +560,7 @@ footer{margin-top:150px;border-top:1px solid var(--line);position:relative;overf
     <div class="links">
       <a href="https://github.com/superdesigndev/treg" class="hidem navico" target="_blank" rel="noopener"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>Repo</a>
       <a href="https://discord.gg/6mQYYfFMAn" class="hidem navico" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M20.32 4.37a19.8 19.8 0 0 0-4.89-1.52.07.07 0 0 0-.08.04c-.21.38-.44.87-.6 1.25a18.3 18.3 0 0 0-5.49 0 12.6 12.6 0 0 0-.61-1.25.08.08 0 0 0-.08-.04 19.7 19.7 0 0 0-4.88 1.52.07.07 0 0 0-.03.03C.53 9.05-.32 13.58.1 18.06c0 .02.01.04.03.05a19.9 19.9 0 0 0 6 3.03.08.08 0 0 0 .08-.03c.46-.63.87-1.3 1.22-2a.08.08 0 0 0-.04-.11 13.1 13.1 0 0 1-1.87-.89.08.08 0 0 1-.01-.13c.13-.09.25-.19.37-.29a.07.07 0 0 1 .08-.01c3.93 1.79 8.18 1.79 12.06 0a.07.07 0 0 1 .08.01c.12.1.24.2.37.29a.08.08 0 0 1-.01.13c-.6.35-1.22.64-1.87.89a.08.08 0 0 0-.04.11c.36.7.77 1.36 1.22 2a.08.08 0 0 0 .08.03 19.8 19.8 0 0 0 6.02-3.03.08.08 0 0 0 .03-.05c.5-5.18-.84-9.67-3.55-13.66a.06.06 0 0 0-.03-.03zM8.02 15.33c-1.18 0-2.16-1.08-2.16-2.42s.96-2.42 2.16-2.42c1.21 0 2.18 1.1 2.16 2.42 0 1.34-.96 2.42-2.16 2.42zm7.97 0c-1.18 0-2.16-1.08-2.16-2.42s.96-2.42 2.16-2.42c1.21 0 2.18 1.1 2.16 2.42 0 1.34-.95 2.42-2.16 2.42z"/></svg>Community</a>
+      <a href="/catalog">Catalog</a>
       <a onclick="openSignin()">Sign in</a>
       <button class="candy sm" onclick="openSignin()">Start free</button>
     </div>
@@ -507,7 +570,7 @@ footer{margin-top:150px;border-top:1px solid var(--line);position:relative;overf
 <!-- ================= HERO ================= -->
 <section class="hero">
   <div class="wrap">
-    <span class="kicker rv">2,617 endpoints · 42 providers · <a href="https://github.com/superdesigndev/treg" target="_blank" rel="noopener">open source ↗</a></span>
+    <span class="kicker rv"><a href="/catalog">2,630 endpoints · 47 providers</a> · <a href="https://github.com/superdesigndev/treg" target="_blank" rel="noopener">open source ↗</a></span>
 
     <h1 class="hero-h1 rv">
       <span class="grad">OpenRouter for agent tools</span><br>
@@ -559,7 +622,7 @@ footer{margin-top:150px;border-top:1px solid var(--line);position:relative;overf
 <!-- ================= THE CATALOG — sub-sections only ================= -->
 <section class="roles" id="catalog">
   <div class="wrap">
-    <div class="seclab rv">the catalog · 2,617 endpoints · one key</div>
+    <div class="seclab rv">the catalog · 2,630 endpoints · one key</div>
     <div class="catwrap">
           <div class="pcat rv">Keyword &amp; rank tracking</div>
           <div class="pgrid">
@@ -662,7 +725,7 @@ footer{margin-top:150px;border-top:1px solid var(--line);position:relative;overf
             </div>
           </div>
           <div class="moreline rv">+2,500 more expert tools in the catalog<br>
-            <button class="ghostbtn sm" onclick="openSignin()">Browse all 2,617 tools</button></div>
+            <button class="ghostbtn sm" onclick="openSignin()">Browse all 2,630 tools</button></div>
     </div>
   </div>
 </section>
@@ -677,7 +740,7 @@ footer{margin-top:150px;border-top:1px solid var(--line);position:relative;overf
         <div class="bennum">01</div>
         <h3>One <i>unified key.</i></h3>
         <p>Forty-two providers, <b>one credential</b>. No per-provider signups, no key files scattered across machines — your agent holds a single treg token and every tool in the catalog answers to it.</p>
-        <div class="benmeta"><span>one signup, 42 providers</span><span>revoke it in one place</span><span>works in any agent</span></div>
+        <div class="benmeta"><span>one signup, 47 providers</span><span>revoke it in one place</span><span>works in any agent</span></div>
       </div>
       <div class="keywall">
         <div class="kw-key"><span class="kg">▚</span><code>trg_live_</code><span class="kdots">••••••••••••••••</span></div>
@@ -739,7 +802,10 @@ footer{margin-top:150px;border-top:1px solid var(--line);position:relative;overf
     <!-- 04 — 0% additional fee -->
     <div class="zeroband rv" id="zeroband">
       <h3>0% <i>additional fee.</i></h3>
-      <div class="zeq"><span class="ps">$</span><code id="zeqtxt"></code><span class="zcaret"></span></div>
+      <!-- The equation is spelled out here, not only in the typing animation below: this is the one
+           line that states the pricing model, and a crawler (or a reader with JS off) saw an empty
+           <code>. The script clears it on load and types it back in. -->
+      <div class="zeq"><span class="ps">$</span><code id="zeqtxt">provider rate <b>+ $0.000 markup</b> = your price</code><span class="zcaret"></span></div>
       <div class="zsub">we earn on volume pricing with vendors — not on you</div>
     </div>
 
@@ -795,7 +861,7 @@ footer{margin-top:150px;border-top:1px solid var(--line);position:relative;overf
     </div>
     <div class="trustline rv">
       <span><b>100% open source</b> · AGPL</span>
-      <span><b>2,617 endpoints</b> priced up front</span>
+      <span><b>2,630 endpoints</b> priced up front</span>
       <span>credentials injected server-side, <b>never on a machine</b></span>
     </div>
   </div>
@@ -806,7 +872,7 @@ footer{margin-top:150px;border-top:1px solid var(--line);position:relative;overf
     <div class="brand"><span class="glyph">▚</span> treg</div>
     <span style="font-family:var(--mono);font-size:12px">— 100% open source</span>
     <span class="sp"></span>
-    <a href="/tutorial">docs</a><a href="/llms.txt">llms.txt</a><a href="https://github.com/superdesigndev/treg" target="_blank" rel="noopener">github ↗</a><a href="/docs">api</a><a href="/terms">terms</a><a href="/privacy">privacy</a>
+    <a href="/catalog">catalog</a><a href="/resources">resources</a><a href="/tutorial">docs</a><a href="/llms.txt">llms.txt</a><a href="https://github.com/superdesigndev/treg" target="_blank" rel="noopener">github ↗</a><a href="/docs">api</a><a href="/terms">terms</a><a href="/privacy">privacy</a>
   </div>
   <div class="watermark">treg</div>
 </footer>
@@ -1114,6 +1180,9 @@ function stopRotation(){ userTouched=true; clearInterval(roleTimer); }
     el.innerHTML=h;
   }
   if(REDUCED){ render(total); return; }
+  render(0);   // the markup ships with the equation already written out (so it survives with JS
+               // off); clear it here, on load, so the type-in below starts from empty rather than
+               // snapping from the full line back to one character when the band scrolls in.
   const io=new IntersectionObserver(es=>es.forEach(e=>{
     if(!e.isIntersecting) return;
     io.disconnect();
@@ -1210,5 +1279,6 @@ async function emailVerify(){
   }).catch(function(){});
 })();
 </script>
+<script src="/adtrack.js"></script>
 </body>
 </html>

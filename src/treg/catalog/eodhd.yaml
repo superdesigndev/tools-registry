@@ -1,0 +1,68 @@
+provider: eodhd
+source:
+  docs: https://eodhd.com/financial-apis/
+  openapi: null # paths transcribed and live-verified 2026-08-15 (free tier, 20 req/day)
+  curated: 2026-08-15
+# OWN-KEY-ONLY: treg holds the free key (20 calls/DAY — a quota that could never carry shared
+# traffic, which is why eodhd sits out of even the trial-pool idea). All self-serve plans are
+# personal-use; the commercial license is a custom-quoted sales conversation (research doc,
+# licensing table). No fx rate -> usd null -> platform_eligible FALSE. Deliberately only three
+# endpoints: curated against a 20/day verification budget.
+pricing_url: https://eodhd.com/pricing
+endpoints:
+  - id: eodhd.eod
+    domain: stocks
+    capability: stocks.eod.history
+    platform: stocks
+    scope: any_account
+    method: GET
+    path: /eod/{symbol}
+    name: "End-of-day stock prices by ticker — OHLCV, 70+ exchanges"
+    summary: "Daily OHLCV for a symbol across 70+ global exchanges — symbol carries the exchange suffix (AAPL.US, BMW.XETRA)"
+    input:
+      queryParams:
+        symbol: {type: string, required: true, note: "path parameter — TICKER.EXCHANGE", example: "AAPL.US"}
+        fmt: {type: string, required: true, note: "json — the API defaults to CSV without it", example: "json"}
+        from: {type: string, required: false, note: "YYYY-MM-DD"}
+        to: {type: string, required: false}
+        period: {type: string, required: false, note: "d | w | m"}
+    test_request: {queryParams: {symbol: "AAPL.US", fmt: "json", from: "2026-08-10"}}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, checked: "2026-08-15", note: "included in the subscriber's own plan (flat subscription or free tier, no per-call price); treg publishes no rate, so this serves own-key only"}
+    verified: 2026-08-15
+    example_response: examples/eodhd.eod.json
+    docs_url: https://eodhd.com/financial-apis/api-for-historical-data-and-volumes
+  - id: eodhd.real-time
+    domain: stocks
+    capability: stocks.quote.live
+    platform: stocks
+    scope: any_account
+    method: GET
+    path: /real-time/{symbol}
+    name: "Delayed stock quote by ticker — price, day change"
+    summary: "The current (15-20min delayed) quote for a symbol, with day change"
+    input:
+      queryParams:
+        symbol: {type: string, required: true, note: "path parameter — TICKER.EXCHANGE", example: "AAPL.US"}
+        fmt: {type: string, required: true, example: "json"}
+    test_request: {queryParams: {symbol: "AAPL.US", fmt: "json"}}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, checked: "2026-08-15", note: "included in the subscriber's own plan (flat subscription or free tier, no per-call price); treg publishes no rate, so this serves own-key only"}
+    verified: 2026-08-15
+    example_response: examples/eodhd.real-time.json
+    docs_url: https://eodhd.com/financial-apis/live-realtime-stocks-api
+  - id: eodhd.exchanges
+    domain: stocks
+    capability: stocks.exchanges.list
+    platform: stocks
+    scope: any_account
+    method: GET
+    path: /exchanges-list/
+    name: "Stock exchange directory — codes, countries, currencies"
+    summary: "Every exchange EODHD covers, with code, country and currency — the suffix directory for the symbol format"
+    input:
+      queryParams:
+        fmt: {type: string, required: true, example: "json"}
+    test_request: {queryParams: {fmt: "json"}}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, checked: "2026-08-15", note: "included in the subscriber's own plan (flat subscription or free tier, no per-call price); treg publishes no rate, so this serves own-key only"}
+    verified: 2026-08-15
+    example_response: examples/eodhd.exchanges.json
+    docs_url: https://eodhd.com/financial-apis/exchanges-api-list-of-tickers-and-trading-hours

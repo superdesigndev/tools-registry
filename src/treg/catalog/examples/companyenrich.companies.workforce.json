@@ -1,0 +1,48 @@
+{
+  "company_id": "0192577c-1d7a-715c-a5b7-1b9b530445e0",
+  "domain": "stripe.com",
+  "observed_employee_count": 9923,
+  "employee_count_range": "5K-10K",
+  "department_headcount": {
+    "c_suite": 39,
+    "product_management": 363,
+    "engineering_technical": 4068,
+    "design": 194,
+    "education": 4,
+    "finance": 934,
+    "human_resources": 454,
+    "information_technology": 246,
+    "legal": 401,
+    "marketing": 618,
+    "medical_health": 1,
+    "operations": 747,
+    "sales": 1544,
+    "consulting": 88
+  },
+  "unclassified_headcount": 313,
+  "history": [
+    {
+      "date": "2026-07-01",
+      "observed_employee_count": 9923,
+      "employee_count_range": "5K-10K",
+      "department_headcount": {
+        "c_suite": 39,
+        "product_management": 363,
+        "engineering_technical": 4068,
+        "design": 194,
+        "education": 4,
+        "finance": 934,
+        "human_resources": 454,
+        "information_technology": 246,
+        "legal": 401,
+        "marketing": 618,
+        "medical_health": 1,
+        "operations": 747,
+        "sales": 1544,
+        "consulting": 88
+      },
+      "unclassified_headcount": 313
+    },
+    "... 58 more items truncated"
+  ]
+}

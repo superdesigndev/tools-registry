@@ -1,0 +1,25 @@
+{
+  "name": "treg",
+  "displayName": "treg",
+  "version": "0.12.0",
+  "description": "Give your agent 2,600+ external API endpoints across ~40 providers — SEO and SERP data, keyword volume, backlinks and site authority, AI visibility, social profiles and trends, people and company enrichment, ad libraries and campaign management, web data — plus Google Analytics, Search Console and Business Profile through accounts your team connects. Search by the task you want done, read the endpoint's parameters and price, then call it. Credentials are injected server-side, so the agent never holds a key.",
+  "author": {
+    "name": "Superdesign",
+    "email": "jason@superdesign.dev",
+    "url": "https://treg.to"
+  },
+  "homepage": "https://treg.to",
+  "repository": "https://github.com/superdesigndev/treg",
+  "license": "Apache-2.0",
+  "keywords": [
+    "api",
+    "tools",
+    "seo",
+    "serp",
+    "backlinks",
+    "enrichment",
+    "web-data",
+    "oauth"
+  ],
+  "logo": "assets/logo.svg"
+}

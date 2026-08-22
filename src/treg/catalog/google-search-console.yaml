@@ -29,11 +29,11 @@ endpoints:
     scope: own_account
     method: POST
     path: /webmasters/v3/sites/{siteUrl}/searchAnalytics/query
-    name: "Get search performance metrics"
+    name: "Search performance of your site — clicks, impressions, CTR"
     summary: "Get your site's Google Search performance — clicks, impressions, CTR and top queries"
     input:
       pathParams:
-        siteUrl: {type: string, required: true, note: "URL-ENCODED property id: 'sc-domain:example.com' for a domain property, or 'https://example.com/' (with trailing slash) for a URL-prefix one. treg's connection picker lists both forms", example: "sc-domain:example.com"}
+        siteUrl: {type: string, required: true, note: "Raw property id accepted — treg encodes it: 'sc-domain:example.com' for a domain property, or 'https://example.com/' (with trailing slash) for a URL-prefix one. treg's connection picker lists both forms", example: "sc-domain:example.com"}
       body:
         startDate: {type: string, required: true, note: "YYYY-MM-DD; data lags ~2 days, so 'today' is always empty", example: "2026-06-01"}
         endDate: {type: string, required: true, example: "2026-06-28"}
@@ -47,7 +47,7 @@ endpoints:
       note: "request shape previously live-verified via the registry entry's examples. Query data is retained 16 months"
     cost: {type: free, value: 0, currency: USD, unit: call, note: 'included with the connected account; Search Console quotas apply (per-site and per-project QPS/QPD limits), no per-call charge'}
     test_request:
-      pathParams: {siteUrl: "sc-domain%3Aexample.com"}
+      pathParams: {siteUrl: "sc-domain:example.com"}
       body: {startDate: "2026-07-01", endDate: "2026-07-21", rowLimit: 2}
     verified: 2026-07-28
     example_response: examples/google-search-console.performance.json
@@ -59,7 +59,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /webmasters/v3/sites
-    name: "List sites"
+    name: "List your Search Console sites"
     summary: "List the sites and domains you have access to in Search Console"
     input:
       note: "no parameters. Returns {siteEntry: [{siteUrl, permissionLevel}]}; permissionLevel siteUnverifiedUser means the property is listed but not readable. This is also the connection's health probe and resource picker"
@@ -75,7 +75,7 @@ endpoints:
     scope: own_account
     method: POST
     path: /v1/urlInspection/index:inspect
-    name: "Inspect a URL's index status"
+    name: "Inspect a URL's Google index status"
     summary: "Check whether a page of your site is indexed by Google, and why it is or isn't"
     input:
       body:
@@ -97,18 +97,17 @@ endpoints:
     scope: own_account
     method: GET
     path: /webmasters/v3/sites/{siteUrl}/sitemaps
-    name: "List submitted sitemaps"
+    name: "List submitted sitemaps for your site"
     summary: "List the sitemaps submitted for your site and how many URLs Google took from each"
     input:
       pathParams:
-        siteUrl: {type: string, required: true, note: "URL-encoded property id", example: "sc-domain:example.com"}
+        siteUrl: {type: string, required: true, note: "Raw property id accepted; treg encodes it", example: "sc-domain:example.com"}
       queryParams:
         sitemapIndex: {type: string, required: false, note: "full URL of a sitemap index — returns only the sitemaps it contains"}
       note: "per sitemap: lastSubmitted, lastDownloaded, isPending, warnings, errors, and contents[] with submitted vs indexed counts. Submitting a new one is PUT /webmasters/v3/sites/{siteUrl}/sitemaps/{feedpath} and needs the `write` capability"
     cost: {type: free, value: 0, currency: USD, unit: call, note: included with the connected account / platform quotas apply}
     test_request:
-      pathParams: {siteUrl: "sc-domain%3Aexample.com"}
+      pathParams: {siteUrl: "sc-domain:example.com"}
     verified: 2026-07-28
     example_response: examples/google-search-console.sitemaps.json
     docs_url: https://developers.google.com/webmaster-tools/v1/sitemaps/list
-

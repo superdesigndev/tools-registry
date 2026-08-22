@@ -1,0 +1,93 @@
+{
+  "result": {
+    "instagram": {
+      "userid": "528817151",
+      "engagement_percent": 0.276,
+      "uses_link_in_bio": false,
+      "profile_picture": "https://pictures.influencersclub.workers.dev/img/0I-oohfcow7W--2_8g34qzjVw8SEJJ8FjypHb1bjerVQigAMo-c0WYOWTPyeOkMA9oIGwQ8kUGWlp1NGQ-UI-9m2hiR__Su9jyYXhkKcyerMa0s",
+      "full_name": "NASA",
+      "follower_count": 104398568,
+      "biography": "Making the seemingly impossible, possible. ✨",
+      "is_verified": true,
+      "username": "nasa",
+      "exists": true,
+      "account_type": 2,
+      "is_private": false,
+      "is_business_account": true,
+      "media_count": 4887,
+      "following_count": 92,
+      "video_content_creator": true,
+      "most_recent_post_date": "2026-08-20",
+      "avg_likes": 538528.83,
+      "avg_comments": 1994.25,
+      "has_profile_pic": true,
+      "streamer": false,
+      "profile_picture_hd": "https://pictures.influencersclub.workers.dev/img/WBwKEvOZQ21X_EqfIGIPwgRJR7pTIcmJdcdH2oymD2jYrKcMLAZxRzjtU-3ZD54X-Nx9lzbjp5Z8MYo61FilBvT3D2E0F2CJPgkJ10xdPw5tgbQ",
+      "niche_class": [
+        "Technology & Science"
+      ],
+      "links_in_bio": [
+        "https://www.nasa.gov"
+      ],
+      "language_code": [
+        "en"
+      ]
+    },
+    "twitch": {
+      "profileImageURL": "https://pictures.influencersclub.workers.dev/img/D16Tm1t2Il_mOFIIjsEuiA9Fd9c3KM4cdTGU6t_bmMWx4190fRCBPSs4EhJJKGMRWF6N-CXnHiaOOzE2WM_ZSLlQSfDQMUg8em1pvGRMcvpwTkGgDg",
+      "total_followers": 1760360,
+      "user_id": "151920918",
+      "username": "nasa"
+    },
+    "twitter": {
+      "userid": "11348282",
+      "username": "nasa",
+      "full_name": "NASA",
+      "follower_count": 90767256,
+      "profile_picture": "https://pictures.influencersclub.workers.dev/img/SxMdC28pSX0nw2qaGZ2dRRnO9FTdiGqDXcGWTnkaYzJJRQVBV93wD6TFCMW6B_0zqLOVl8XgUffcwIfFe-qGpkF70lnmTSem40ibHhoxvCwygKLeMw",
+      "is_verified": false,
+      "engagement_percent": 0.05000000074505806
+    },
+    "youtube": {
+      "id": "UCLA_DiR1FfKNvjuUpBHmylQ",
+      "custom_url": "@nasa",
+      "profile_picture": "https://pictures.influencersclub.workers.dev/img/G0upITR6-0bKbYFedIn6VzGx_w2RSG1AUiXCm4cV7ZpYKFlYF490pmdu8vHmTG0p0-1sdUyY9jbYm0xBGT13LkZsrctqcO9ODGSqVx-gIWa-kFKppxhgoG-eCTzBo0qlGU8sGqs",
+      "is_verified": false,
+      "engagement_percent": 3.569999933242798,
+      "first_name": "@nasa",
+      "subscriber_count": 15000000
+    },
+    "has_link_in_bio": false,
+    "speaking_language": "en",
+    "twitter_link": "https://www.twitter.com/nasa",
+    "has_brand_deals": true,
+    "youtube_link": "https://www.youtube.com/channel/UCLA_DiR1FfKNvjuUpBHmylQ",
+    "instagram_link": "https://www.instagram.com/nasa",
+    "first_name": "@nasa",
+    "email": "public-inquiries@hq.nasa.gov",
+    "is_business": true,
+    "email_type": "role_based_email",
+    "twitch_link": "https://twitch.tv/nasa",
+    "is_creator": false,
+    "location": "United States",
+    "gender": "female",
+    "creator_has": {
+      "twitter": true,
+      "youtube": true,
+      "instagram": true,
+      "twitch": true
+    },
+    "other_links": [
+      "https://www.youtube.com/watch?v=nmBbcNTUkOg",
+      "https://twitter.com/NASA/status/1936518799378813077/photo/1",
+      "… 490 more item(s) truncated"
+    ],
+    "links_in_bio": [
+      "https://x.com/nasa",
+      "https://www.reddit.com/user/nasa",
+      "… 7 more item(s) truncated"
+    ]
+  },
+  "credits_cost": 0.2,
+  "trial_searches_left": 11
+}

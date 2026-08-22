@@ -1,0 +1,58 @@
+{
+  "data": [
+    {
+      "id": "67418e6c-1167-471c-a04a-c53d086f78b8",
+      "type": "technology_detection",
+      "attributes": {
+        "first_seen_at": "2026-08-19T14:48:28Z",
+        "last_seen_at": "2026-08-19T14:48:28Z",
+        "behind_firewall": false,
+        "score": 0.5,
+        "source_count": 1
+      },
+      "relationships": {
+        "technology": {
+          "data": {
+            "id": "996ad860-2a9a-504f-8861-aeafd0b2ae29",
+            "type": "technology"
+          }
+        },
+        "company": {
+          "data": {
+            "id": "6545af4b-0c63-5976-991a-887b1912e057",
+            "type": "company"
+          }
+        },
+        "seen_on_subpages": {
+          "data": [
+            {
+              "id": "037e7078-32d3-4e31-9485-2ce4bdc031e3",
+              "type": "detection_on_subpage"
+            }
+          ]
+        },
+        "seen_on_job_openings": {
+          "data": []
+        },
+        "seen_on_dns_records": {
+          "data": []
+        },
+        "_truncated": "remaining fields omitted for brevity"
+      }
+    }
+  ],
+  "included": [
+    {
+      "id": "996ad860-2a9a-504f-8861-aeafd0b2ae29",
+      "type": "technology",
+      "attributes": {
+        "name": "1C-Bitrix"
+      }
+    },
+    "… 2 more items omitted"
+  ],
+  "meta": {
+    "schema_version": "3.3",
+    "record_state": "active"
+  }
+}

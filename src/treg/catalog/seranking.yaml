@@ -69,7 +69,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /v1/account/subscription
-    name: "Check account plan and credit balance"
+    name: "Account usage — plan status and credits remaining"
     summary: "Check the calling account's plan status, credit allowance and credits remaining"
     input:
       queryParams:
@@ -93,7 +93,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /v1/keywords/export
-    name: "Get Google keyword volume and metrics in bulk"
+    name: "Bulk Google search volume, CPC and difficulty by keyword"
     summary: "Google volume, CPC, difficulty, competition and intent for up to 5,000 keywords"
     input:
       bodyType: json
@@ -130,7 +130,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v1/keywords/related
-    name: "List related keyword ideas for a seed"
+    name: "Related keyword ideas by seed keyword — search volume, CPC"
     summary: "Keywords related to a seed, each with volume, CPC, difficulty and relevance"
     input:
       queryParams:
@@ -172,7 +172,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v1/domain/overview/db
-    name: "Get a domain's Google search overview"
+    name: "Google overview by domain — keywords, traffic cost"
     summary: "A domain's Google presence in one country — keyword counts, traffic and traffic cost"
     input:
       queryParams:
@@ -204,7 +204,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v1/domain/keywords
-    name: "List keywords a domain ranks for"
+    name: "Google keywords a domain ranks for — search volume, traffic"
     summary: "Google keywords a domain ranks for, with position, volume, traffic and ranking URL"
     input:
       queryParams:
@@ -244,7 +244,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v1/domain/competitors
-    name: "List a domain's Google search competitors"
+    name: "Google search competitors by domain — shared keywords"
     summary: "Find the domains competing with a target in Google search, ranked by shared keywords"
     input:
       queryParams:
@@ -279,7 +279,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v1/backlinks/summary
-    name: "Get a domain's backlink profile summary"
+    name: "Backlinks summary by domain or URL — referring domains"
     summary: "Aggregate backlink profile — backlinks, referring domains, IPs, subnets, follow split"
     input:
       queryParams:
@@ -309,7 +309,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v1/backlinks/all
-    name: "List individual backlinks to a target"
+    name: "Backlinks by domain or URL — source page, anchor texts"
     summary: "Individual backlinks to a domain or URL, with source page, anchor and follow status"
     input:
       queryParams:
@@ -341,7 +341,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v1/backlinks/refdomains
-    name: "List domains linking to a target"
+    name: "Referring domains by domain or URL — authority, link counts"
     summary: "Referring domains linking to a target, with each source's link count and authority"
     input:
       queryParams:
@@ -373,7 +373,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v1/backlinks/anchors
-    name: "List anchor texts in a target's backlinks"
+    name: "Anchor texts in backlinks by domain or URL"
     summary: "Anchor texts across a target's backlink profile, with link and domain counts"
     input:
       queryParams:
@@ -405,7 +405,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v1/backlinks/authority
-    name: "Get page and domain authority scores"
+    name: "Page and domain authority scores by domain or URL"
     summary: "Get SE Ranking's page and domain authority scores for a URL or domain"
     input:
       queryParams:

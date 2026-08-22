@@ -41,7 +41,7 @@ endpoints:
   scope: any_account
   method: POST
   path: /datasets/v3/scrape
-  name: Post Detail
+  name: "Instagram post details by URL"
   summary: Instagram - Posts
   input:
     queryParams:
@@ -91,7 +91,7 @@ endpoints:
   scope: any_account
   method: POST
   path: /datasets/v3/scrape
-  name: Post Comments
+  name: "Instagram post comments by post URL"
   summary: Instagram - Comments
   input:
     queryParams:
@@ -132,7 +132,7 @@ endpoints:
   scope: any_account
   method: POST
   path: /datasets/v3/scrape
-  name: Reel Detail
+  name: "Instagram reel details by URL"
   summary: Instagram - Reels
   input:
     queryParams:
@@ -173,7 +173,7 @@ endpoints:
   scope: any_account
   method: POST
   path: /datasets/v3/scrape
-  name: Hashtag Info
+  name: "Instagram hashtag details by hashtag page URL"
   summary: Instagram hashtag information
   input:
     queryParams:
@@ -215,7 +215,7 @@ endpoints:
   scope: any_account
   method: POST
   path: /datasets/v3/scrape
-  name: Profile
+  name: "TikTok profile by URL"
   summary: TikTok - Profiles
   input:
     queryParams:
@@ -265,7 +265,7 @@ endpoints:
   scope: any_account
   method: POST
   path: /datasets/v3/scrape
-  name: Video Detail
+  name: "TikTok video details by URL"
   summary: TikTok - Posts
   input:
     queryParams:
@@ -307,7 +307,7 @@ endpoints:
   scope: any_account
   method: POST
   path: /datasets/v3/scrape
-  name: Video Comments
+  name: "TikTok video comments by video URL"
   summary: TikTok - Comments
   input:
     queryParams:
@@ -348,7 +348,7 @@ endpoints:
   scope: any_account
   method: POST
   path: /datasets/v3/scrape
-  name: Shop Product Detail
+  name: "TikTok Shop product details by URL"
   summary: TikTok Shop
   input:
     queryParams:
@@ -390,7 +390,7 @@ endpoints:
   scope: any_account
   method: POST
   path: /datasets/v3/scrape
-  name: Company Profile
+  name: "LinkedIn company profile by company page URL"
   summary: LinkedIn company information
   input:
     queryParams:
@@ -432,7 +432,7 @@ endpoints:
   scope: any_account
   method: POST
   path: /datasets/v3/scrape
-  name: Post Detail
+  name: "LinkedIn post details by URL"
   summary: LinkedIn posts
   input:
     queryParams:
@@ -474,7 +474,7 @@ endpoints:
   scope: any_account
   method: POST
   path: /datasets/v3/scrape
-  name: Job Listing Detail
+  name: "LinkedIn job posting details by listing URL"
   summary: Linkedin job listings information
   input:
     queryParams:
@@ -515,7 +515,7 @@ endpoints:
   scope: any_account
   method: POST
   path: /datasets/v3/scrape
-  name: Profile
+  name: "Facebook profile or Page by URL"
   summary: Facebook - Profiles
   input:
     queryParams:
@@ -566,7 +566,7 @@ endpoints:
   scope: any_account
   method: POST
   path: /datasets/v3/scrape
-  name: Page Posts
+  name: "Facebook Page posts by Page URL"
   summary: Facebook - Pages Posts by Profile URL
   input:
     queryParams:
@@ -607,7 +607,7 @@ endpoints:
   scope: any_account
   method: POST
   path: /datasets/v3/scrape
-  name: Post Detail
+  name: "Facebook post details by post URL"
   summary: Facebook - Posts by post URL
   input:
     queryParams:
@@ -650,7 +650,7 @@ endpoints:
   scope: any_account
   method: POST
   path: /datasets/v3/scrape
-  name: Post Comments
+  name: "Facebook post comments by post URL"
   summary: Facebook - Comments
   input:
     queryParams:
@@ -691,7 +691,7 @@ endpoints:
   scope: any_account
   method: POST
   path: /datasets/v3/scrape
-  name: Marketplace Listing
+  name: "Facebook Marketplace listing by URL"
   summary: Facebook Marketplace
   input:
     queryParams:
@@ -734,7 +734,7 @@ endpoints:
   scope: any_account
   method: POST
   path: /datasets/v3/scrape
-  name: Product Detail
+  name: "Amazon product details by product URL"
   summary: Amazon products
   input:
     queryParams:
@@ -783,7 +783,7 @@ endpoints:
   scope: any_account
   method: POST
   path: /datasets/v3/scrape
-  name: Product Reviews
+  name: "Amazon product reviews by product URL"
   summary: Amazon Reviews
   input:
     queryParams:
@@ -825,7 +825,7 @@ endpoints:
   scope: any_account
   method: POST
   path: /datasets/v3/scrape
-  name: Best Sellers List
+  name: "Amazon best-seller products by category URL"
   summary: Amazon best seller products
   input:
     queryParams:
@@ -866,7 +866,7 @@ endpoints:
   scope: any_account
   method: POST
   path: /datasets/v3/scrape
-  name: Seller Profile
+  name: "Amazon seller profile by storefront URL"
   summary: Amazon sellers info
   input:
     queryParams:
@@ -908,7 +908,7 @@ endpoints:
   scope: any_account
   method: POST
   path: /datasets/v3/scrape
-  name: Profile
+  name: "X (Twitter) profile by URL"
   summary: X (formerly Twitter) - Profiles
   input:
     queryParams:
@@ -958,7 +958,7 @@ endpoints:
   scope: any_account
   method: POST
   path: /datasets/v3/scrape
-  name: Post Detail
+  name: "X (Twitter) post details by URL"
   summary: X (formerly Twitter) - Posts
   input:
     queryParams:
@@ -1000,7 +1000,7 @@ endpoints:
   scope: any_account
   method: POST
   path: /datasets/v3/scrape
-  name: Channel Profile
+  name: "YouTube channel profile by URL"
   summary: YouTube - Channels
   input:
     queryParams:
@@ -1050,7 +1050,7 @@ endpoints:
   scope: any_account
   method: POST
   path: /datasets/v3/scrape
-  name: Video Detail
+  name: "YouTube video details by URL"
   summary: Youtube - Videos posts
   input:
     queryParams:
@@ -1092,7 +1092,7 @@ endpoints:
   scope: any_account
   method: POST
   path: /datasets/v3/scrape
-  name: Video Comments
+  name: "YouTube video comments by video URL"
   summary: Youtube - Comments
   input:
     queryParams:
@@ -1134,7 +1134,7 @@ endpoints:
   scope: any_account
   method: POST
   path: /datasets/v3/scrape
-  name: Post Detail
+  name: "Reddit post details by thread URL"
   summary: Reddit - Posts
   input:
     queryParams:
@@ -1176,7 +1176,7 @@ endpoints:
   scope: any_account
   method: POST
   path: /datasets/v3/scrape
-  name: Post Comments
+  name: "Reddit post comments by post URL"
   summary: Reddit - Comments
   input:
     queryParams:
@@ -1217,7 +1217,7 @@ endpoints:
   scope: any_account
   method: POST
   path: /datasets/v3/scrape
-  name: Product Detail
+  name: "Walmart product details by product URL"
   summary: Walmart - products
   input:
     queryParams:
@@ -1259,7 +1259,7 @@ endpoints:
   scope: any_account
   method: POST
   path: /datasets/v3/scrape
-  name: Product Reviews
+  name: "Walmart product reviews by product URL"
   summary: Walmart Reviews
   input:
     queryParams:
@@ -1301,7 +1301,7 @@ endpoints:
   scope: any_account
   method: POST
   path: /datasets/v3/scrape
-  name: Listing Detail
+  name: "eBay listing details by URL"
   summary: eBay
   input:
     queryParams:
@@ -1343,7 +1343,7 @@ endpoints:
   scope: any_account
   method: POST
   path: /datasets/v3/scrape
-  name: Business Profile
+  name: "Yelp business profile by page URL"
   summary: Yelp businesses overview
   input:
     queryParams:
@@ -1385,7 +1385,7 @@ endpoints:
   scope: any_account
   method: POST
   path: /datasets/v3/scrape
-  name: Business Reviews
+  name: "Yelp business reviews by page URL"
   summary: Yelp businesses reviews
   input:
     queryParams:
@@ -1427,7 +1427,7 @@ endpoints:
   scope: any_account
   method: POST
   path: /datasets/v3/scrape
-  name: Hotel Detail
+  name: "Tripadvisor hotel listing by URL"
   summary: Tripadvisor Hotel Listings
   input:
     queryParams:
@@ -1469,7 +1469,7 @@ endpoints:
   scope: any_account
   method: POST
   path: /datasets/v3/scrape
-  name: Business Reviews
+  name: "Trustpilot business reviews by profile URL"
   summary: Trustpilot business reviews
   input:
     queryParams:
@@ -1511,7 +1511,7 @@ endpoints:
   scope: any_account
   method: POST
   path: /datasets/v3/scrape
-  name: App Detail
+  name: "Google Play app listing by URL"
   summary: Google Play Store
   input:
     queryParams:
@@ -1560,7 +1560,7 @@ endpoints:
   scope: any_account
   method: POST
   path: /datasets/v3/scrape
-  name: App Reviews
+  name: "Google Play app reviews by listing URL"
   summary: Google Play Store reviews
   input:
     queryParams:
@@ -1601,7 +1601,7 @@ endpoints:
   scope: any_account
   method: POST
   path: /datasets/v3/scrape
-  name: App Detail
+  name: "Apple App Store app listing by URL"
   summary: Apple App Store
   input:
     queryParams:
@@ -1642,7 +1642,7 @@ endpoints:
   scope: any_account
   method: POST
   path: /datasets/v3/scrape
-  name: App Reviews
+  name: "Apple App Store app reviews by listing URL"
   summary: Apple App Store reviews
   input:
     queryParams:
@@ -1684,7 +1684,7 @@ endpoints:
   scope: any_account
   method: POST
   path: /datasets/v3/scrape
-  name: Title Detail
+  name: "IMDb title details by URL"
   summary: IMDB media
   input:
     queryParams:
@@ -1726,7 +1726,7 @@ endpoints:
   scope: any_account
   method: POST
   path: /datasets/v3/scrape
-  name: Note Detail
+  name: "Xiaohongshu post details by URL"
   summary: Xiaohongshu - posts
   input:
     queryParams:
@@ -1768,7 +1768,7 @@ endpoints:
   scope: any_account
   method: POST
   path: /datasets/v3/scrape
-  name: Profile
+  name: "Threads profile by URL"
   summary: Threads - Profiles
   input:
     queryParams:
@@ -1810,7 +1810,7 @@ endpoints:
   scope: any_account
   method: POST
   path: /datasets/v3/scrape
-  name: Channel Info
+  name: "Telegram channel details by URL"
   summary: Telegram
   input:
     queryParams:
@@ -1853,7 +1853,7 @@ endpoints:
   scope: any_account
   method: POST
   path: /datasets/v3/scrape
-  name: Company Profile
+  name: "Crunchbase company profile by page URL"
   summary: Crunchbase companies information
   input:
     queryParams:
@@ -1895,7 +1895,7 @@ endpoints:
   scope: any_account
   method: POST
   path: /datasets/v3/scrape
-  name: Company Profile
+  name: "Glassdoor company profile by page URL"
   summary: Glassdoor companies information (Public web data)
   input:
     queryParams:
@@ -1938,7 +1938,7 @@ endpoints:
   scope: any_account
   method: POST
   path: /datasets/v3/scrape
-  name: Company Reviews
+  name: "Glassdoor company reviews by page URL"
   summary: Glassdoor companies reviews
   input:
     queryParams:

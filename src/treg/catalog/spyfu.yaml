@@ -47,7 +47,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /apis/domain_stats_api/v2/getLatestDomainStats
-    name: "Get domain's Google performance overview"
+    name: "Google overview by domain — keywords, clicks, ad budget"
     summary: "A domain's recent Google performance — keyword counts, clicks and monthly ad budget"
     input:
       queryParams:
@@ -79,7 +79,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /apis/keyword_api/v2/ppc/getMostSuccessful
-    name: "List a domain's top paid keywords"
+    name: "Top Google Ads keywords by domain — search volume, CPC"
     summary: "A domain's best-performing Google Ads keywords, with volume, CPC and monthly cost"
     input:
       queryParams:
@@ -115,7 +115,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /apis/cloud_ad_history_api/v2/domain/getDomainAdHistory
-    name: "Get a domain's Google Ads history"
+    name: "Google Ads history by domain — ad copy and keywords"
     summary: "Google Ads a domain has run over time, with ad copy and the keywords it ran against"
     input:
       queryParams:
@@ -151,7 +151,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /apis/serp_api/v2/seo/getMostValuableKeywords
-    name: "List a domain's top organic keywords"
+    name: "Google keywords a domain ranks for — clicks, search volume"
     summary: "Google organic keywords driving the most clicks to a domain, with rank and volume"
     input:
       queryParams:
@@ -195,7 +195,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /apis/competitors_api/v2/seo/getTopCompetitors
-    name: "List a domain's organic search competitors"
+    name: "Google organic competitors by domain — shared keywords"
     summary: "Domains competing with a target in Google organic, ranked by shared keywords"
     input:
       queryParams:
@@ -225,7 +225,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /apis/competitors_api/v2/ppc/getTopCompetitors
-    name: "List a domain's PPC ad competitors"
+    name: "Google Ads competitors by domain — shared paid keywords"
     summary: "Find the domains bidding against a target on the same Google Ads keywords"
     input:
       queryParams:

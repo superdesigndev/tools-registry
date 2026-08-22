@@ -38,7 +38,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /conversations.list
-    name: "List workspace channels"
+    name: "List your Slack workspace channels, public and private"
     summary: "List the channels in your Slack workspace, public and private"
     input:
       queryParams:
@@ -59,7 +59,7 @@ endpoints:
     scope: own_account
     method: POST
     path: /chat.postMessage
-    name: "Post message"
+    name: "Send a Slack message to a channel or thread"
     summary: "Post a message to a Slack channel, or reply in a thread"
     input:
       body:
@@ -82,7 +82,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /conversations.history
-    name: "Read channel history"
+    name: "Read recent messages from a Slack channel"
     summary: "Read recent messages from a Slack channel"
     input:
       queryParams:
@@ -103,7 +103,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /conversations.replies
-    name: "Read thread replies"
+    name: "Read the replies in a Slack message thread"
     summary: "Read the replies in a Slack message thread"
     input:
       queryParams:
@@ -125,7 +125,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /conversations.info
-    name: "Get channel details"
+    name: "Slack channel details by id — topic, member count"
     summary: "Get a Slack channel's details — topic, purpose, member count and archived state"
     input:
       queryParams:
@@ -143,7 +143,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /users.list
-    name: "List workspace members"
+    name: "List the members of your Slack workspace"
     summary: "List the members of your Slack workspace"
     input:
       queryParams:
@@ -162,7 +162,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /users.info
-    name: "Get user profile"
+    name: "Slack member profile by user id"
     summary: "Get a Slack workspace member's profile by user ID"
     input:
       queryParams:
@@ -180,7 +180,7 @@ endpoints:
     scope: own_account
     method: POST
     path: /reactions.add
-    name: "Add emoji reaction"
+    name: "Add an emoji reaction to a Slack message"
     summary: "Add an emoji reaction to a Slack message"
     input:
       body:
@@ -200,7 +200,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /auth.test
-    name: "Get connected workspace and bot identity"
+    name: "Check the connected Slack workspace and bot identity"
     summary: "Check which Slack workspace and bot identity the token belongs to"
     input:
       note: "takes no parameters. Returns team, team_id, user, user_id and url — this is what treg's connection label is built from, and the cheapest way to tell a live token from a revoked one"

@@ -111,6 +111,28 @@ class Settings(BaseSettings):
     call_timeout_s: int = 180
     hold_grace_s: int = 60
 
+    # ---- referral program (referrals.py) --------------------------------------------------------
+    # Flat bounties, not a percentage of top-ups. At 0% platform margin a percentage would be a
+    # permanent share of pass-through GMV, and — unlike a flat figure — it rewards farming in
+    # proportion to effort. Nobody builds a fake-account farm for $10; plenty would for 15% of an
+    # uncapped balance. All figures are micro-USD (1e-6 USD), like every other amount in the system.
+    # Symmetric on purpose: both sides get the same, so the offer is one sentence to explain and
+    # neither party can feel like the other got the better end of it.
+    referral_referrer_micro: int = 5_000_000    # $5 to the person who shared the link
+    referral_referred_micro: int = 5_000_000    # $5 to the friend who signed up
+    # The friend's first top-up must clear this for anything to be owed. Deliberately well above the
+    # bounties themselves: below it, buying the bonus with your own card is profitable.
+    referral_min_topup_micro: int = 10_000_000  # $10
+    # Days between qualifying and the credit landing. This is the ONLY clawback window that exists:
+    # referral credit is promotional, burns first (ledger._KIND_ORDER) and is typically spent within
+    # days, so once granted it cannot be recovered. Short on purpose — a referral program that pays
+    # in 60 days does not feel like a reward, and the exposure at these amounts is tiny.
+    referral_hold_days: int = 7
+    # Lifetime paid referrals per person. Anyone who wants more is an influencer, and that is a
+    # conversation with a contract and a bank transfer — not a self-serve link. The refusal IS the
+    # commercial conversation, the same posture as raising a daily cap.
+    referral_cap: int = 20
+
     # ---- tier-4 platform keys (api.py credential ladder) ---------------------------------------
     # treg's OWN provider keys, spent on a caller's behalf and metered against their prepaid balance.
     # Read by `proxy.relay` through a `platform_setting` binding (never copied into an org's secrets,
@@ -138,14 +160,47 @@ class Settings(BaseSettings):
     platform_key_coresignal: str = ""
     platform_key_thecompaniesapi: str = ""  # raw token — injected as "Basic {secret}" un-encoded
     platform_key_apollo: str = ""   # raw key (X-Api-Key); billed at the Basic-plan $/credit rate in fx.yaml
+    # ---- Market data (2026-08-15). Two PAID plans billed per call, three FREE-tier keys serving
+    # capped trial pools at $0 (fx.yaml kind: treg_trial — api._enforce_trial_allowance is the brake).
+    platform_key_coingecko: str = ""    # PRO key (x-cg-pro-api-key); Basic $29/mo, $0.00029/credit
+    platform_key_marketstack: str = ""  # access_key; Basic $9.99/mo, $0.000999/call vs the 10k/mo cap
+    platform_key_finnhub: str = ""      # FREE-tier key — trial pool, 50 calls/team/day
+    platform_key_twelvedata: str = ""   # FREE Basic key (800/day TOTAL) — trial pool, 20 calls/team/day
+    platform_key_tiingo: str = ""       # FREE Starter key (1,000/day total) — trial pool, 20 calls/team/day
+    # ---- Enrichment expansion (2026-08-20). Slots only — fund the accounts and set the keys before
+    # naming any of these in TREG_PLATFORM_PROVIDERS.
+    platform_key_companyenrich: str = ""  # Bearer key
+    platform_key_oceanio: str = ""        # X-Api-Token; fx.yaml usd is null so tier 4 stays refused until priced
+    platform_key_predictleads: str = ""   # base64 of "api_key:api_token" (HTTP Basic, like dataforseo)
+    platform_key_findymail: str = ""      # Bearer key
+    platform_key_branddev: str = ""       # Bearer key
+    platform_key_icypeas: str = ""        # raw key (Authorization, no Bearer)
+    platform_key_leadsforge: str = ""     # Bearer key
+    platform_key_fiber_ai: str = ""       # Fiber AI key (x-api-key header, sk_live_…)
+    platform_key_tomba: str = ""          # the API key (ta_…); X-Tomba-Key header
+    platform_key_tomba_secret: str = ""   # the API secret (ts_…); X-Tomba-Secret — BOTH must be set
+    # (tomba's data routes need the header pair; TOMBA.platform_extra_setting names this second slot)
+    platform_key_influencersclub: str = ""  # Bearer key (dashboard JWT); creator discovery + enrichment, fx.yaml $0.598/credit (our $299/500 plan)
     # The KILL SWITCH, and the reason a key alone isn't enough: a provider serves tier 4 only if it is
     # named here AND its key is set. Empty (the default) = tier 4 is entirely off, so a deploy that
     # happens to hold a key can't start spending it by accident. `TREG_PLATFORM_PROVIDERS=""` in the
     # Render dashboard turns the whole feature off without a redeploy.
     platform_providers: str = ""
-    # Per-org, per-UTC-day ceiling on tier-4 spend. Enforced FAIL-CLOSED (unlike the soft per-user call
-    # cap): a query error refuses the call rather than letting an unbounded amount of our money out.
-    platform_daily_cap_usd: float = 5.0
+    # Per-org, per-UTC-day ceiling on tier-4 spend, and the CEILING a team may raise its own
+    # `Org.daily_cap_micro` to. Enforced FAIL-CLOSED (unlike the soft per-user call cap): a query
+    # error refuses the call rather than letting an unbounded amount of our money out. It is a
+    # blast-radius limit on a runaway agent or a mispriced catalog entry, not a billing control —
+    # the balance is what a team actually spends against.
+    platform_daily_cap_usd: float = 100.0
+    # OAuth providers whose UPSTREAM bill lands on treg's developer app rather than the connected
+    # user (X moved to pay-per-use in Feb 2026: the app owner is billed per resource read / per post
+    # written, whoever's token made the call). Calls through a registry connect of a provider named
+    # here are metered against the org's balance — the same reserve→settle path as tier 4. Same
+    # kill-switch shape as `platform_providers`: empty (the default) = those calls stay free, so a
+    # deploy must OPT IN to charging (`TREG_OAUTH_BILLED_PROVIDERS=x`). BYO-app connections
+    # (/oauth/start with the caller's own client_id) are never metered — their upstream bill is
+    # already theirs.
+    oauth_billed_providers: str = ""
 
     # ---- Stripe top-ups (billing.py) -----------------------------------------------------------
     # OUR billing account's keys. Deliberately NOT the `demo_stripe_*` pair above: that one belongs to
@@ -228,6 +283,23 @@ class Settings(BaseSettings):
     # can't work without this) rather than silently reusing the wrong client.
     google_ads_client_id: str = ""
     google_ads_client_secret: str = ""
+    # Google Ads conversion upload. This customer id and the refresh token below are both required;
+    # if either is empty the whole feature is OFF (tests stay inert and self-hosters send nothing) —
+    # the same gate shape analytics.py uses for posthog_key.
+    google_ads_customer_id: str = ""
+    # Manager (MCC) account used to access google_ads_customer_id. Optional for direct client auth;
+    # when present this is sent as login-customer-id. It cannot be inferred from Secret.resource_ref,
+    # which is the TARGET client account selected in discovery, not its manager.
+    google_ads_login_customer_id: str = ""
+    # treg's OWN long-lived refresh token for the Data Manager conversion uploader — a PLATFORM
+    # credential, obtained once, out of band, by an operator via the OAuth playground with scope
+    # https://www.googleapis.com/auth/datamanager. It is exchanged against `google_ads_client_id`/
+    # `_secret` above (the refresh token is issued against that client, so it must be redeemed with
+    # it), never against a customer's own OAuth connection: the uploader ships treg's OWN marketing
+    # conversions to treg's OWN ad account, a different purpose from a customer connecting Ads to
+    # read their campaign data, and the two must not share a credential or a consent screen. Empty
+    # = the whole feature is OFF. See docs/context/architecture/ads-conversions.md.
+    ads_conv_refresh_token: str = ""
 
     linkedin_client_id: str = ""
     linkedin_client_secret: str = ""
@@ -307,6 +379,12 @@ class Settings(BaseSettings):
     @property
     def platform_daily_cap_micro(self) -> int:
         return int(round(self.platform_daily_cap_usd * 1_000_000))
+
+    @property
+    def oauth_billed_set(self) -> frozenset[str]:
+        """OAuth providers whose registry-connect calls are metered (comma-separated
+        `TREG_OAUTH_BILLED_PROVIDERS`). Empty = the current free behavior."""
+        return frozenset(p.strip().lower() for p in self.oauth_billed_providers.split(",") if p.strip())
 
     @property
     def expose_dev_code(self) -> bool:

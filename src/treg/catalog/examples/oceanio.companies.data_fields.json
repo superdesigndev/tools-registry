@@ -1,0 +1,18 @@
+{
+  "industries": [{"industryCategory": "Administrative Services", "industries": ["Call Center", "Collection Agency", "Courier Service", "Debt Collections"]}],
+  "linkedinIndustries": ["3D Printing", "ACID\u7279\u6027", "AML", "AMM"],
+  "technologies": [{"name": "GOV.UK Toolkit", "categories": ["UI frameworks"]}, {"name": "YooMoney", "categories": ["Payment processors"]}],
+  "regions": {
+    "cn": [
+      {"code": "cn-AH", "englishName": "Anhui", "localName": "\u5b89\u5fbd\u7701"},
+      {"code": "cn-BJ", "englishName": "Beijing", "localName": "\u5317\u4eac\u5e02"},
+      {"code": "cn-CQ", "englishName": "Chongqing", "localName": "\u91cd\u5e86\u5e02"},
+      {"code": "cn-FJ", "englishName": "Fujian", "localName": "\u798f\u5efa\u7701"},
+      {"code": "cn-GD", "englishName": "Guangdong Province", "localName": "\u5e7f\u4e1c\u7701"},
+      {"code": "cn-GS", "englishName": "Gansu", "localName": "\u7518\u8083\u7701"}
+    ]
+  },
+  "seniorities": ["Board Member", "C-Level", "Director", "Founder", "Head", "Manager"],
+  "departments": ["Accounting and Finance", "Board", "Business Support", "Customer Relations"],
+  "_truncated": "every list shortened; the full response enumerates all industry categories, LinkedIn industries, technologies, regions, seniorities and departments that the search filters accept"
+}

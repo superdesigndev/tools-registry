@@ -74,6 +74,9 @@ async def test_ambiguous_host_409(clients: AsyncClient):
     await _register(clients, "g2", "https://api.same.com")  # identical base -> tie
     r = await clients.get("/call/https://api.same.com/echo")
     assert r.status_code == 409
+    detail = r.json()["detail"]
+    assert "'g1'" in detail and "'g2'" in detail
+    assert "/call/<name>/<path>" in detail
 
 
 async def test_unknown_upstream_404(clients: AsyncClient):

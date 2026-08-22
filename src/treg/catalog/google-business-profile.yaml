@@ -30,7 +30,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /v1/accounts
-    name: "Accounts"
+    name: "List your Business Profile accounts"
     summary: "List the Google Business Profile accounts you manage"
     input:
       queryParams:
@@ -47,7 +47,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /v1/accounts/{account_id}/locations
-    name: "List business locations"
+    name: "List your business listings — address, hours, category"
     summary: "List your business's listings with their addresses, hours and categories"
     input:
       pathParams:
@@ -67,7 +67,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /v4/accounts/{account_id}/locations/{location_id}/reviews
-    name: "Get customer reviews for a location"
+    name: "List customer reviews on your business listing"
     summary: "Read the reviews customers left on your Google Business Profile listing"
     input:
       pathParams:
@@ -88,7 +88,7 @@ endpoints:
     scope: own_account
     method: PUT
     path: /v4/accounts/{account_id}/locations/{location_id}/reviews/{review_id}/reply
-    name: "Reply to a review"
+    name: "Reply to a customer review as the business"
     summary: "Reply publicly to a customer review as the business"
     input:
       pathParams:

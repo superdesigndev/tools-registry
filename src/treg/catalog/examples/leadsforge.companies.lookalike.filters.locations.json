@@ -1,0 +1,12 @@
+{
+  "locations": [
+    {
+      "id": "Africa",
+      "type": "region"
+    },
+    {
+      "id": "Africa/Eastern Africa",
+      "type": "region"
+    }
+  ]
+}

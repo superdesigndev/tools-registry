@@ -1,0 +1,743 @@
+provider: oceanio
+source:
+  docs: https://app.ocean.io/docs/
+  openapi: https://api.ocean.io/openapi.json  # live spec, v2.0.0; every path below was read from it
+  curated: '2026-08-20'
+limits: "60 requests/minute and 1,000 requests/day for self-serve plans (enterprise limits are per contract). Over the limit you get 429 with Retry-After and X-RateLimit-Limit headers; the live daily counter comes back as `dailyLimitRateLeft` from GET /v2/credits/balance"
+pricing_url: https://www.ocean.io/pricing
+# Live-verified 2026-08-20 against api.ocean.io with a real key. Every cost below was measured, not
+# transcribed: the JSON responses carry their own `creditsUsed`, and GET /v2/credits/balance was read
+# before and after each call, so the credit numbers here are observed billing. They then matched the
+# provider's PUBLISHED per-endpoint rate card (https://app.ocean.io/docs/getting-started/credits)
+# line for line — observed and documented agree on all thirteen priced routes.
+#
+# Auth: the key rides as `X-Api-Token: <key>` (HTTP header names are case-insensitive; the spec spells
+# it `x-api-token`, the docs `X-Api-Token`). A query form `?apiToken=<key>` also works but keeps the
+# key in the URL, so the header is the one to use — and sending BOTH forms at once is a documented 400
+# ("Conflicting API tokens provided in query parameters and headers").
+# `Authorization: Bearer <key>` is rejected with 403.
+#
+# What makes this provider distinct in the enrichment shelf: the company record carries WEB TRAFFIC
+# (visits, page views, pages per visit, bounce rate), the site's TECHNOLOGY STACK, and HEADCOUNT
+# GROWTH over 3/6/12 months per company and per department — signals most B2B enrichment APIs do not
+# return. The other distinct capability is LOOKALIKE search: give /v3/search/companies a set of
+# `lookalikeDomains` and it returns semantically similar companies ranked A/B/C by relevance.
+#
+# ONE credit pool covers every endpoint — search, enrich, lookup, reveal and autocomplete all draw
+# from the same balance (the balance route splits it into `oneTime` and `recurrent` grants, not into
+# per-feature pools). What differs wildly is the RATE: a company enrich is 0.1 credit, a verified
+# email is 1 and a direct phone is 10 — 10x and 100x. Gate the reveal endpoints; a naive fan-out over
+# a search result is the way to burn a plan in one call. Running out returns 402 and charges nothing.
+#
+# Async pattern: /v2/enrich/companies, /v2/enrich/people, /v2/reveal/emails and /v2/reveal/phones all
+# answer `{"status": "in progress"}` immediately and POST the result to a `webhookUrl` you supply.
+# They are NOT pollable — there is no job-status route — so a caller with no public webhook endpoint
+# should use the synchronous singles (/v2/enrich/company, /v2/enrich/person) or the bulk lookups
+# (/v2/lookup/companies, /v2/lookup/people), which answer inline.
+#
+# Deliberately NOT listed (see notes.md): POST /v2/search/companies and POST /v2/search/people (the
+# spec marks both deprecated in favour of the v3 routes), and POST /v3/search/companies/preview and
+# POST /v3/search/people/preview (enterprise-only — both answered 403 "You are not allowed to access
+# this feature" on a funded standard key, which the published rate card confirms as "Preview
+# endpoints — not available on this plan").
+#
+# The four /v2/segmentation routes are in the live OpenAPI spec and work, but they do NOT appear in
+# the provider's own documentation site (which advertises "20 endpoints across 6 groups" and omits
+# them) and carry no published price. They are listed here because they answer a real job — turning a
+# customer list into ICP clusters — but treat them as less stable than the documented surface.
+
+proposed_capabilities:
+  companies.lookalike: "Find companies similar to a set of seed domains"
+  companies.coverage.check: "Check which domains the provider already has data for"
+  companies.search.fields: "List the industries, technologies and regions you can filter on"
+  companies.search.autocomplete: "Suggest valid company-search filter values as you type"
+  people.search.autocomplete: "Suggest valid people-search filter values as you type"
+  companies.segment.start: "Cluster a list of companies into ICP segments"
+  companies.segment.results: "Read a finished segmentation's segments"
+  companies.segment.feedback: "Mark companies as good or poor fit for a segmentation"
+  companies.segment.attribute: "Assign new companies to an existing segment"
+
+endpoints:
+  # ---------------------------------------------------------------- company enrichment ---------
+  - id: oceanio.companies.enrich
+    domain: companies
+    capability: companies.enrich
+    platform: companies
+    scope: any_account
+    method: POST
+    path: /v2/enrich/company
+    name: "Enrich a company — web traffic, tech stack, headcount"
+    summary: "Match a company with our database and enrich it with additional information"
+    input:
+      body:
+        company: {type: object, required: false, note: "the company to match. `domain` alone is enough and is by far the most reliable key; also accepts name, registrationNumber, email, phone, countryCode, state, city, streetAddress, postalCode, address, linkedin, twitter, facebook, instagram, xing, youtube", example: {domain: "stripe.com"}}
+        people: {type: "array[object]", required: false, note: "people to match the company through, when you have a contact but not a domain — each entry takes name/firstName/lastName/jobTitle/email/phone/linkedin"}
+        fields: {type: "array[string]", required: false, note: "which Company fields to return. Narrowing this cuts bandwidth and latency but NOT price. Omit for the full record", example: ["domain", "name", "webTraffic", "technologies", "headcountGrowth"]}
+      note: "the returned record is the wide one — web traffic (visits, pageViews, pagesPerVisit, bounceRate), the site's technology stack and technologyCategories, headcountGrowth at 3/6/12 months, departmentSizes, revenue band, funding round, locations and LinkedIn industry. The response reports its own price in `creditsUsed`"
+    test_request:
+      body: {company: {domain: "stripe.com"}}
+    cost:
+      type: per_success
+      value: 0.1
+      currency: credit
+      per: 1
+      unit: call
+      source: observed
+      source_url: https://app.ocean.io/docs/getting-started/credits
+      checked: '2026-08-20'
+      confidence: verified
+      note: 'OBSERVED live 2026-08-20: the response body reported creditsUsed 0.1 and the standard-credit balance fell by exactly 0.1 (30.0 -> 29.9). Bulk lookup via /v2/lookup/companies is half the price per company (0.05) — prefer it whenever you are enriching by domain. Matches the published rate card: "Enrich Company — 0.1 credits / result".'
+    docs_url: https://app.ocean.io/docs/enrichCompany
+    verified: '2026-08-20'
+    example_response: examples/oceanio.companies.enrich.json
+
+  - id: oceanio.companies.lookup_bulk
+    domain: companies
+    capability: companies.enrich
+    platform: companies
+    scope: any_account
+    method: POST
+    path: /v2/lookup/companies
+    name: "Enrich up to 1,000 companies by domain in one call"
+    summary: "Lookup and enrich multiple companies by domain (max 1000). This endpoint provides simple, per-result pricing"
+    input:
+      body:
+        domains: {type: "array[string]", required: true, note: "company domains, max 1000 per call. Domain redirections are resolved automatically", example: ["stripe.com", "anthropic.com"]}
+        fields: {type: "array[string]", required: false, note: "which Company fields to return; omit for the full record", example: ["domain", "name", "employeeCountOcean", "webTraffic"]}
+      note: "the cheapest way to enrich by domain — 0.05 credit per company found, half the price of /v2/enrich/company, and synchronous. Domains with no match come back as `company: null` and, per the response's own accounting, are not billed. `totalRequested`, `totalFound` and `creditsUsed` are returned alongside the records"
+    test_request:
+      body: {domains: ["stripe.com"]}
+    cost:
+      type: per_result
+      value: 0.05
+      currency: credit
+      per: 1
+      unit: record
+      source: observed
+      source_url: https://app.ocean.io/docs/getting-started/credits
+      checked: '2026-08-20'
+      confidence: verified
+      note: 'OBSERVED live 2026-08-20: one domain requested, one found, response creditsUsed 0.05 and balance fell 29.9 -> 29.85. The list length is the price dial. Matches the published rate card: "Lookup Companies — 0.05 credits / result".'
+    docs_url: https://app.ocean.io/docs/lookupCompanies
+    verified: '2026-08-20'
+    example_response: examples/oceanio.companies.lookup_bulk.json
+
+  - id: oceanio.companies.enrich_bulk
+    domain: companies
+    capability: companies.enrich
+    platform: companies
+    scope: any_account
+    method: POST
+    path: /v2/enrich/companies
+    name: "Enrich companies in bulk (async, webhook)"
+    summary: "Match companies with our database and enrich it with additional information"
+    input:
+      body:
+        companyDataMapping: {type: object, required: true, note: "a dict of YOUR id -> a single-company enrich body, i.e. {\"c1\": {\"company\": {\"domain\": \"anthropic.com\"}}}. 1 to 10,000 entries. Your ids come back in the webhook payload so you can join the results", example: {c1: {company: {domain: "anthropic.com"}}}}
+        webhookUrl: {type: string, required: true, note: "a PUBLIC https URL that receives the enriched companies when the job finishes. There is no status route to poll — without a reachable webhook you never see the results", example: "https://example.com/treg-webhook"}
+        fields: {type: "array[string]", required: false, note: "which Company fields the webhook payload should carry", example: ["domain", "name", "employeeCountOcean"]}
+      note: "ASYNC. The HTTP response is only {\"status\": \"in progress\"}; the data arrives at your webhook. For fewer than a thousand domains prefer /v2/lookup/companies, which is synchronous AND cheaper per company"
+    test_request:
+      body: {companyDataMapping: {c1: {company: {domain: "anthropic.com"}}}, webhookUrl: "https://example.com/treg-webhook", fields: ["domain", "name", "employeeCountOcean"]}
+    cost:
+      type: per_result
+      value: 0.1
+      currency: credit
+      per: 1
+      unit: record
+      source: observed
+      source_url: https://app.ocean.io/docs/getting-started/credits
+      checked: '2026-08-20'
+      confidence: verified
+      note: 'OBSERVED live 2026-08-20: a one-company job debited 0.1 standard credit at submission time — the same rate as the synchronous single enrich, twice the bulk-lookup rate. Matches the published rate card: "Enrich Companies (Batch) — 0.1 credits / result". Only the accept was observed; the webhook delivery itself was not (no public endpoint available at curation time).'
+    docs_url: https://app.ocean.io/docs/enrichCompanies
+    verified: '2026-08-20'
+    example_response: examples/oceanio.companies.enrich_bulk.json
+
+  - id: oceanio.companies.warmup
+    domain: companies
+    capability: companies.coverage.check
+    platform: companies
+    scope: any_account
+    method: POST
+    path: /v2/warmup/companies
+    name: "Check which domains are covered before enriching (free)"
+    summary: "Check available companies in Ocean's database and trigger process of data gathering for the missing ones"
+    input:
+      body:
+        domains: {type: "array[string]", required: true, note: "domains to check and, if missing, queue for collection", example: ["stripe.com", "anthropic.com"]}
+      note: "FREE, and the right first call before a big enrichment run: it returns `successfulDomains`, so you learn which domains are covered without paying to enrich them, and the misses start being crawled in the background. Re-run the enrich a while later for the ones that were missing"
+    test_request:
+      body: {domains: ["stripe.com", "anthropic.com"]}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: "listed as Free on the published rate card and stated as credit-free in the route description; OBSERVED live 2026-08-20 — the balance was unchanged across the call"}
+    docs_url: https://app.ocean.io/docs/warmupCompanies
+    verified: '2026-08-20'
+    example_response: examples/oceanio.companies.warmup.json
+
+  # ---------------------------------------------------------------- people enrichment ----------
+  - id: oceanio.people.enrich
+    domain: people
+    capability: people.enrich
+    platform: people
+    scope: any_account
+    method: POST
+    path: /v2/enrich/person
+    name: "Enrich a person — role, work history, skills, LinkedIn"
+    summary: "Match a person with our database and enrich it with additional information"
+    input:
+      body:
+        person: {type: object, required: true, note: "the person to match — id, name, firstName, lastName, jobTitle, email, phone, linkedin, twitter, facebook, country. A LinkedIn URL is the strongest key; name + company domain also resolves", example: {name: "Patrick Collison", linkedin: "https://www.linkedin.com/in/patrickcollison"}}
+        company: {type: object, required: false, note: "the person's company, to disambiguate a common name. `domain` is enough", example: {domain: "stripe.com"}}
+        revealEmails: {type: object, required: false, note: "{includeEmails: true, webhookUrl: '…'} — asks for verified email addresses too. THIS IS BILLED SEPARATELY at the reveal rate (about 1 credit per verified email) and delivered to the webhook, not inline"}
+        revealPhones: {type: object, required: false, note: "{includePhones: true, webhookUrl: '…'} — asks for direct phone numbers. VERY expensive (about 10 credits per verified phone) and delivered to the webhook"}
+      note: "the base call returns the profile — job title, seniorities, departments, full experience history with dates, skills, location, LinkedIn URL, connections and followers — for 0.1 credit. Leave revealEmails/revealPhones out unless you actually need contact details; they are 10x and 100x the price"
+    test_request:
+      body: {person: {name: "Patrick Collison", linkedin: "https://www.linkedin.com/in/patrickcollison"}, company: {domain: "stripe.com"}}
+    cost:
+      type: per_success
+      value: 0.1
+      currency: credit
+      per: 1
+      unit: call
+      source: observed
+      source_url: https://app.ocean.io/docs/getting-started/credits
+      checked: '2026-08-20'
+      confidence: verified
+      note: 'OBSERVED live 2026-08-20: response creditsUsed 0.1, balance fell by 0.1. Matches the published rate card: "Enrich Person — 0.1 credits / result". Excludes email/phone reveals, which draw from the same pool at 1 and 10 credits per verified value.'
+    docs_url: https://app.ocean.io/docs/enrichPerson
+    verified: '2026-08-20'
+    example_response: examples/oceanio.people.enrich.json
+
+  - id: oceanio.people.lookup_bulk
+    domain: people
+    capability: people.enrich
+    platform: people
+    scope: any_account
+    method: POST
+    path: /v2/lookup/people
+    name: "Enrich up to 1,000 people by LinkedIn handle in one call"
+    summary: "Lookup and enrich multiple people by LinkedIn handle or Ocean ID (max 1000). This endpoint provides simple, per-result pricing"
+    input:
+      body:
+        linkedinHandles: {type: "array[string]", required: false, note: "LinkedIn profile handles — the slug only, not the full URL (e.g. \"patrickcollison\")", example: ["patrickcollison"]}
+        oceanIds: {type: "array[string]", required: false, note: "person ids returned by any other endpoint's `id` field"}
+      note: "give either list or both; 1,000 entries across the two combined. Half the price of /v2/enrich/person per person and synchronous. Only matched people are returned, so compare `totalFound` against `totalRequested` to see the misses"
+    test_request:
+      body: {linkedinHandles: ["patrickcollison"]}
+    cost:
+      type: per_result
+      value: 0.05
+      currency: credit
+      per: 1
+      unit: record
+      source: observed
+      source_url: https://app.ocean.io/docs/getting-started/credits
+      checked: '2026-08-20'
+      confidence: verified
+      note: 'OBSERVED live 2026-08-20: one handle requested, one found, response creditsUsed 0.05. Matches the published rate card: "Lookup People — 0.05 credits / result".'
+    docs_url: https://app.ocean.io/docs/lookupPeople
+    verified: '2026-08-20'
+    example_response: examples/oceanio.people.lookup_bulk.json
+
+  - id: oceanio.people.enrich_bulk
+    domain: people
+    capability: people.enrich
+    platform: people
+    scope: any_account
+    method: POST
+    path: /v2/enrich/people
+    name: "Enrich people in bulk (async, webhook)"
+    summary: "Match people with our database and enrich it with additional information"
+    input:
+      body:
+        peopleDataMapping: {type: object, required: true, note: "a dict of YOUR id -> a single-person enrich body, i.e. {\"p1\": {\"person\": {\"linkedin\": \"…\"}, \"company\": {\"domain\": \"…\"}}}. 1 to 10,000 entries; your ids come back in the webhook payload", example: {p1: {person: {linkedin: "https://www.linkedin.com/in/patrickcollison"}}}}
+        webhookUrl: {type: string, required: true, note: "a PUBLIC https URL that receives the enriched people when the job finishes. There is no status route to poll", example: "https://example.com/treg-webhook"}
+      note: "ASYNC — the HTTP response is only {\"status\": \"in progress\"}. For fewer than a thousand people prefer /v2/lookup/people, which is synchronous and cheaper per person"
+    test_request:
+      body: {peopleDataMapping: {p1: {person: {linkedin: "https://www.linkedin.com/in/patrickcollison"}}}, webhookUrl: "https://example.com/treg-webhook"}
+    cost:
+      type: per_result
+      value: 0.1
+      currency: credit
+      per: 1
+      unit: record
+      source: observed
+      source_url: https://app.ocean.io/docs/getting-started/credits
+      checked: '2026-08-20'
+      confidence: verified
+      note: 'OBSERVED live 2026-08-20: a one-person job debited 0.1 credit at submission. Matches the published rate card: "Enrich People (Batch) — 0.1 credits / result". Only the accept was observed; the webhook delivery was not (no public endpoint available at curation time).'
+    docs_url: https://app.ocean.io/docs/enrichPeople
+    verified: '2026-08-20'
+    example_response: examples/oceanio.people.enrich_bulk.json
+
+  # ---------------------------------------------------------------- search / lookalike ---------
+  - id: oceanio.companies.search
+    domain: companies
+    capability: companies.search
+    platform: companies
+    scope: any_account
+    method: POST
+    path: /v3/search/companies
+    name: "Search companies by industry, technology or region"
+    summary: "Search companies using filters"
+    input:
+      body:
+        size: {type: integer, required: false, note: "how many companies to return, max 10,000. THIS IS THE PRICE DIAL — you are billed per company returned. Use `searchAfter` for more than 10,000", example: 2}
+        searchAfter: {type: string, required: false, note: "the cursor returned by the previous call; pass it back for the next page"}
+        companiesFilters: {type: object, required: false, note: "the company filter block. `lookalikeDomains` is the headline one — seed it with domains you already like and the result is companies semantically similar to them, each row tagged `relevance` A/B/C. The rest: includeDomains, excludeDomains, companySizes, employeeCountOcean, employeeCountLinkedin, revenues, yearFounded, fundingRound, industries, excludeIndustries, industryCategories, linkedinIndustries, primaryLocations, otherLocations, countriesCount, locationsCount, technologies, keywords, webTraffic, socialMedias, mobileApps, ecommerce, departmentSizes, headcountGrowth, departmentHeadcountGrowth, minRelevance, maxRelevance, updatedWithinMonths, fieldsExist, fieldsNotExist, companyMatchingMode", example: {lookalikeDomains: ["stripe.com"]}}
+        peopleFilters: {type: object, required: false, note: "narrows to companies that EMPLOY people matching these filters — seniorities, departments, jobTitleKeywords, skills, countries, cities, states and more"}
+        fields: {type: "array[string]", required: false, note: "which Company fields to return; omit for the full record", example: ["domain", "name", "webTraffic", "technologies", "headcountGrowth"]}
+      note: "the provider's distinctive endpoint. `total` reports the full match count while `size` controls how many you pay for, so run with a small size first to size a segment before buying it. Valid values for the industries/technologies/regions filters come from GET /v2/data-fields"
+    test_request:
+      body:
+        size: 2
+        companiesFilters: {lookalikeDomains: ["stripe.com"]}
+        fields: ["domain", "name", "description", "employeeCountOcean", "webTraffic", "technologies", "headcountGrowth", "primaryCountry", "industries"]
+    cost:
+      type: per_result
+      value: 0.2
+      currency: credit
+      per: 1
+      unit: record
+      source: observed
+      source_url: https://app.ocean.io/docs/getting-started/credits
+      checked: '2026-08-20'
+      confidence: verified
+      note: 'OBSERVED live 2026-08-20: size=2 returned creditsUsed 0.4 and the balance fell by 0.4 — 0.2 per company returned, four times the bulk-lookup rate. `size` is the whole price. Matches the published rate card: "Search Companies — 0.2 credits / result".'
+    docs_url: https://app.ocean.io/docs/searchCompaniesV3
+    verified: '2026-08-20'
+    example_response: examples/oceanio.companies.search.json
+
+  - id: oceanio.companies.lookalike
+    domain: companies
+    capability: companies.lookalike
+    platform: companies
+    scope: any_account
+    method: POST
+    path: /v3/search/companies
+    name: "Find lookalike companies from seed domains"
+    summary: "Search companies using filters — seeded with lookalikeDomains, this returns companies similar to your seeds"
+    input:
+      body:
+        companiesFilters: {type: object, required: true, note: "must carry `lookalikeDomains`: a list of seed domains (your best customers, a competitor's logo wall). Combine with the ordinary filters — primaryLocations, companySizes, industries — to constrain the neighbourhood", example: {lookalikeDomains: ["stripe.com", "adyen.com"], companySizes: ["201-500"]}}
+        size: {type: integer, required: false, note: "how many similar companies to return — the price dial, max 10,000", example: 2}
+        searchAfter: {type: string, required: false, note: "cursor from the previous page"}
+        fields: {type: "array[string]", required: false, note: "which Company fields to return"}
+      note: "the same route as oceanio.companies.search, listed separately because lookalike-by-seed-domain is a job of its own and few providers do it. Each row carries `relevance`: A / B / C. `minRelevance` and `maxRelevance` inside companiesFilters let you keep only the close matches"
+    test_request:
+      body:
+        size: 2
+        companiesFilters: {lookalikeDomains: ["stripe.com"]}
+        fields: ["domain", "name", "description", "employeeCountOcean", "webTraffic", "technologies", "headcountGrowth", "primaryCountry", "industries"]
+    cost:
+      type: per_result
+      value: 0.2
+      currency: credit
+      per: 1
+      unit: record
+      source: observed
+      source_url: https://app.ocean.io/docs/getting-started/credits
+      checked: '2026-08-20'
+      confidence: verified
+      note: 'OBSERVED live 2026-08-20 on the same call as oceanio.companies.search: size=2 with lookalikeDomains=["stripe.com"] returned 15,286 total matches and creditsUsed 0.4. Matches the published rate card: "Search Companies — 0.2 credits / result".'
+    docs_url: https://app.ocean.io/docs/searchCompaniesV3
+    verified: '2026-08-20'
+    example_response: examples/oceanio.companies.lookalike.json
+
+  - id: oceanio.people.search
+    domain: people
+    capability: people.search
+    platform: people
+    scope: any_account
+    method: POST
+    path: /v3/search/people
+    name: "Search people by job title, skills or company filters"
+    summary: "Search people using filters and/or people Ids"
+    input:
+      body:
+        size: {type: integer, required: false, note: "how many people to return, max 10,000. THIS IS THE PRICE DIAL — billed per person returned", example: 2}
+        peopleFilters: {type: object, required: false, note: "seniorities, departments, excludeDepartments, jobTitleKeywords, skills, names, countries, excludeCountries, regions, states, cities, currentJobDescription, allJobDescriptions, profileDescription, connections, followers, changedPositionAfter/Before (the job-change signal), includeLinkedinHandles, excludeLinkedinHandles, includePeopleIds, excludePeopleIds, lookalikeLinkedinHandles, updatedWithinMonths, fieldsExist, fieldsNotExist", example: {seniorities: ["C-Level"]}}
+        companiesFilters: {type: object, required: false, note: "restricts the search to people at companies matching this block — the same filters as the company search, including lookalikeDomains", example: {includeDomains: ["stripe.com"]}}
+        peoplePerCompany: {type: integer, required: false, note: "cap on people returned per company, so one big employer does not eat the whole page. Omit to take everyone"}
+        jobTitleThreshold: {type: number, required: false, note: "0-1 similarity floor for jobTitleKeywords matching; default 0.8"}
+        searchAfter: {type: string, required: false, note: "cursor from the previous page"}
+        fields: {type: "array[string]", required: false, note: "which Person fields to return; omit for the default set"}
+      note: "combine companiesFilters (who the account is) with peopleFilters (who the buyer is) to build a contact list in one call. Emails and phones are NOT included — reveal them separately, and expensively, via /v2/reveal/emails and /v2/reveal/phones using the `id` of each person returned here. `lookalikeLinkedinHandles` does the people equivalent of lookalike company search"
+    test_request:
+      body:
+        size: 2
+        companiesFilters: {includeDomains: ["stripe.com"]}
+        peopleFilters: {seniorities: ["C-Level"]}
+    cost:
+      type: per_result
+      value: 0.2
+      currency: credit
+      per: 1
+      unit: record
+      source: observed
+      source_url: https://app.ocean.io/docs/getting-started/credits
+      checked: '2026-08-20'
+      confidence: verified
+      note: 'OBSERVED live 2026-08-20: size=2 returned creditsUsed 0.4 and the balance fell 29.4 -> 29.0 — 0.2 per person returned. Matches the published rate card: "Search People — 0.2 credits / result".'
+    docs_url: https://app.ocean.io/docs/searchPeopleV3
+    verified: '2026-08-20'
+    example_response: examples/oceanio.people.search.json
+
+  # ---------------------------------------------------------------- contact reveal -------------
+  - id: oceanio.people.email.reveal
+    domain: people
+    capability: people.email.find
+    platform: people
+    scope: any_account
+    method: POST
+    path: /v2/reveal/emails
+    name: "Reveal verified work emails for person ids (async)"
+    summary: "Get emails and email statuses for people"
+    input:
+      body:
+        personIds: {type: "array[string]", required: true, note: "Ocean person ids — the `id` field of any person returned by enrich, lookup or search. One email credit is charged for every VERIFIED email found", example: ["8646fe23931d019b"]}
+        webhookUrl: {type: string, required: true, note: "a PUBLIC https URL that receives the addresses and their verification statuses. There is no status route to poll — the inline response is only {\"status\": \"in progress\"}", example: "https://example.com/treg-webhook"}
+      note: "EXPENSIVE relative to enrichment — about 10x an enrich per verified address — and asynchronous. Accounts on plans with a dedicated email-credit pool spend that pool; on the account we tested the charge came out of the standard balance. Nothing is charged for a person whose address cannot be verified"
+    test_request:
+      body: {personIds: ["8646fe23931d019b"], webhookUrl: "https://example.com/treg-webhook"}
+    cost:
+      type: per_result
+      value: 1
+      currency: credit
+      per: 1
+      unit: record
+      source: observed
+      source_url: https://app.ocean.io/docs/getting-started/credits
+      checked: '2026-08-20'
+      confidence: verified
+      note: 'OBSERVED live 2026-08-20: a single-person reveal debited exactly 1 credit at submission, matching the published rate card ("Reveal Emails — 1 credit / email found"; nothing is charged for an address that cannot be found). Only the accept was observed; the webhook payload was not (no public endpoint available at curation time).'
+    docs_url: https://app.ocean.io/docs/revealEmails
+    verified: '2026-08-20'
+    example_response: examples/oceanio.people.email.reveal.json
+
+  - id: oceanio.people.phone.reveal
+    domain: people
+    capability: people.phone.find
+    platform: people
+    scope: any_account
+    method: POST
+    path: /v2/reveal/phones
+    name: "Reveal direct phone numbers for person ids (async)"
+    summary: "Get phones and phone statuses for people"
+    input:
+      body:
+        personIds: {type: "array[string]", required: true, note: "Ocean person ids. One phone credit is charged for every VERIFIED phone found", example: ["8646fe23931d019b"]}
+        webhookUrl: {type: string, required: true, note: "a PUBLIC https URL that receives the numbers and their statuses; the inline response is only {\"status\": \"in progress\"}", example: "https://example.com/treg-webhook"}
+      note: "THE MOST EXPENSIVE ENDPOINT HERE — a single phone cost 10 credits in our test, 100x a company enrich. Never fan this out over a search result without capping the list first"
+    test_request:
+      body: {personIds: ["8646fe23931d019b"], webhookUrl: "https://example.com/treg-webhook"}
+    cost:
+      type: per_result
+      value: 10
+      currency: credit
+      per: 1
+      unit: record
+      source: observed
+      source_url: https://app.ocean.io/docs/getting-started/credits
+      checked: '2026-08-20'
+      confidence: verified
+      note: 'OBSERVED live 2026-08-20: a single-person phone reveal debited exactly 10 credits at submission (balance 28.4 -> 17.4 across one email reveal and one phone reveal), matching the published rate card ("Reveal Phones — 10 credits / phone found"). Only the accept was observed; the webhook payload was not.'
+    docs_url: https://app.ocean.io/docs/revealPhones
+    verified: '2026-08-20'
+    example_response: examples/oceanio.people.phone.reveal.json
+
+  # ---------------------------------------------------------------- ICP segmentation -----------
+  - id: oceanio.companies.segment.create
+    domain: companies
+    capability: companies.segment.start
+    platform: companies
+    scope: any_account
+    method: POST
+    path: /v2/segmentation
+    name: "Start an ICP segmentation from a list of domains"
+    summary: "Create a new segmentation from a list of company domains"
+    input:
+      body:
+        domains: {type: "array[string]", required: true, note: "the companies to group — typically your customer list or best-fit accounts", example: ["stripe.com", "adyen.com", "razorpay.com", "checkout.com", "mollie.com"]}
+        leadScoringFeatures: {type: "array[string]", required: false, note: "which company attributes to cluster on, e.g. industries, technologies, company_size. Omit for the default set"}
+        numberOfSegmentsMode: {type: integer, required: false, note: "bias toward fewer or more segments; omit to let the service choose"}
+        positiveDomains: {type: "array[string]", required: false, note: "good-fit companies — the segmentation leans toward companies like these"}
+        negativeDomains: {type: "array[string]", required: false, note: "poor-fit companies — the segmentation leans away from these"}
+      note: "ASYNC but POLLABLE, unlike the webhook endpoints: it returns `segmentationId` immediately, then you poll oceanio.companies.segment.get until `status` is SUCCESSFUL. Free in our test. A handful of domains lands everything in one 'Other' segment — feed it a real list (dozens to hundreds) for useful clusters"
+    test_request:
+      body: {domains: ["stripe.com", "adyen.com", "razorpay.com", "checkout.com", "mollie.com"]}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: "OBSERVED live 2026-08-20: a 5-domain segmentation left the balance unchanged. The provider does not publish a price for this route, so a very large domain list may behave differently"}
+    docs_url: https://app.ocean.io/docs/createSegmentation
+    verified: '2026-08-20'
+    example_response: examples/oceanio.companies.segment.create.json
+
+  - id: oceanio.companies.segment.get
+    domain: companies
+    capability: companies.segment.results
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /v2/segmentation/{segmentation_id}
+    name: "Get a segmentation's results"
+    summary: "Retrieve a segmentation by its id, including its segments, traits, and CRM metrics once status is SUCCESSFUL"
+    input:
+      pathParams:
+        segmentation_id: {type: integer, required: true, note: "the id returned by oceanio.companies.segment.create", example: 153746}
+      note: "the poll half of the segmentation pair — free, so poll it freely. `status` moves to SUCCESSFUL, then `segments` carries one entry per cluster with its name, domains and companyCount"
+    test_request:
+      pathParams: {segmentation_id: 153746}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: "OBSERVED live 2026-08-20: polled six times, balance unchanged"}
+    docs_url: https://app.ocean.io/docs/getSegmentation
+    verified: '2026-08-20'
+    example_response: examples/oceanio.companies.segment.get.json
+
+  - id: oceanio.companies.segment.mark_domains
+    domain: companies
+    capability: companies.segment.feedback
+    platform: companies
+    scope: any_account
+    method: POST
+    path: /v2/segmentation/{segmentation_id}/markDomains
+    name: "Mark companies good or poor fit"
+    summary: "Append domains to the positive or negative list of an existing segmentation"
+    input:
+      pathParams:
+        segmentation_id: {type: integer, required: true, note: "the segmentation to teach", example: 153746}
+      body:
+        domains: {type: "array[string]", required: true, note: "the domains to add to the list", example: ["adyen.com"]}
+        type: {type: string, required: true, note: "\"positive\" (good fit) or \"negative\" (poor fit) — REQUIRED; omitting it returns 422", example: "positive"}
+      note: "the feedback loop: closed-won accounts in as positive, churned or disqualified ones as negative, then re-run the segmentation. Returns {\"status\": \"updated\"}"
+    test_request:
+      pathParams: {segmentation_id: 153746}
+      body: {domains: ["adyen.com"], type: "positive"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: "OBSERVED live 2026-08-20: balance unchanged"}
+    docs_url: https://app.ocean.io/docs/addMarkedDomains
+    verified: '2026-08-20'
+    example_response: examples/oceanio.companies.segment.mark_domains.json
+
+  - id: oceanio.companies.segment.attribute
+    domain: companies
+    capability: companies.segment.attribute
+    platform: companies
+    scope: any_account
+    method: POST
+    path: /v2/segmentation/{segmentation_id}/attribute-domains
+    name: "Assign domains to the closest segment, with match score"
+    summary: "Assign each input domain to the closest segment in a segmentation, with a 0-1 match score"
+    input:
+      pathParams:
+        segmentation_id: {type: integer, required: true, note: "a segmentation whose status is SUCCESSFUL", example: 153746}
+      body:
+        domains: {type: "array[string]", required: true, note: "domains to place into the existing segments, max 1000", example: ["gocardless.com"]}
+      note: "the scoring half of segmentation — score inbound leads against an ICP you already built. NOT VERIFIED: on a freshly created segmentation the call returned HTTP 412 {\"detail\": \"Segmentation must be re-run to enable attribution.\"}, and re-running a segmentation is a dashboard action we did not want to trigger on the test account. Price also unconfirmed for the same reason"
+    test_request:
+      pathParams: {segmentation_id: 153746}
+      body: {domains: ["gocardless.com"]}
+    cost:
+      type: per_call
+      value: null
+      currency: credit
+      per: 1
+      unit: call
+      source: inferred
+      checked: '2026-08-20'
+      confidence: unknown
+      note: 'NOT VERIFIED — the call returned 412 (segmentation needs re-running) before any billing could be observed. The three sibling segmentation routes are all free, so free is the likely answer, but treat it as unknown until a live call succeeds.'
+    docs_url: https://app.ocean.io/docs/attributeSegmentationDomains
+
+  # ---------------------------------------------------------------- reference & autocomplete ---
+  - id: oceanio.companies.data_fields
+    domain: companies
+    capability: companies.search.fields
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /v2/data-fields
+    name: "List searchable industries, technologies and regions"
+    summary: "Provides a list of all industries and industry categories, technologies and regions searchable by Ocean.io"
+    input:
+      note: "no parameters. FREE, and the call to make before any search: the industries, industryCategories, linkedinIndustries, technologies, regions, seniorities and departments filters only accept values from this list, so guessing a label is how a search silently returns nothing. It is also the registry's key-health probe"
+    test_request:
+      queryParams: {}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: "listed as Free on the published rate card; OBSERVED live 2026-08-20 — balance unchanged"}
+    docs_url: https://app.ocean.io/docs/getDataFieldsPublic
+    verified: '2026-08-20'
+    example_response: examples/oceanio.companies.data_fields.json
+
+  - id: oceanio.companies.autocomplete
+    domain: companies
+    capability: companies.search.autocomplete
+    platform: companies
+    scope: any_account
+    method: POST
+    path: /v2/autocomplete/companies
+    name: "Autocomplete a company name to its domain"
+    summary: "Auto complete the name search"
+    input:
+      body:
+        name: {type: string, required: true, note: "the beginning of a company name, or a domain", example: "stripe"}
+        countryFilters: {type: "array[string]", required: false, note: "restrict suggestions to these countries"}
+        excludeDomains: {type: "array[string]", required: false, note: "domains to leave out of the suggestions"}
+        forLookalikeSearch: {type: boolean, required: false, note: "leave it at the default. Setting it false skips domain validation, and those results are NOT safe to feed into a lookalike search"}
+      note: "the name-to-domain resolver — turn 'Stripe' into stripe.com before calling an enrich or seeding lookalikeDomains. Returns name, domain and logo per suggestion"
+    test_request:
+      body: {name: "stripe"}
+    cost:
+      type: per_call
+      value: 0.1
+      currency: credit
+      per: 1
+      unit: call
+      source: observed
+      source_url: https://app.ocean.io/docs/getting-started/credits
+      checked: '2026-08-20'
+      confidence: verified
+      note: 'OBSERVED live 2026-08-20: not free despite carrying no creditsUsed field — five autocomplete calls moved the balance by exactly 0.5, and an isolated single call by 0.1. Matches the published rate card: "Autocomplete (all endpoints) — 0.1 credits / call".'
+    docs_url: https://app.ocean.io/docs/autoCompleteCompany
+    verified: '2026-08-20'
+    example_response: examples/oceanio.companies.autocomplete.json
+
+  - id: oceanio.companies.autocomplete.keywords
+    domain: companies
+    capability: companies.search.autocomplete
+    platform: companies
+    scope: any_account
+    method: POST
+    path: /v2/autocomplete/keywords
+    name: "Autocomplete a search keyword"
+    summary: "Auto complete the keyword search"
+    input:
+      body:
+        query: {type: string, required: true, note: "the beginning of a keyword", example: "payment"}
+        limit: {type: integer, required: false, note: "how many suggestions, default 5, max 15", example: 5}
+      note: "keywords are the free-text filter on the company search (`companiesFilters.keywords`) and they must match indexed phrases — this route tells you which phrases exist"
+    test_request:
+      body: {query: "payment", limit: 5}
+    cost:
+      type: per_call
+      value: 0.1
+      currency: credit
+      per: 1
+      unit: call
+      source: observed
+      source_url: https://app.ocean.io/docs/getting-started/credits
+      checked: '2026-08-20'
+      confidence: verified
+      note: 'OBSERVED live 2026-08-20: an isolated single call moved the balance by exactly 0.1 (28.5 -> 28.4). Matches the published rate card: "Autocomplete (all endpoints) — 0.1 credits / call".'
+    docs_url: https://app.ocean.io/docs/autoCompleteKeywords
+    verified: '2026-08-20'
+    example_response: examples/oceanio.companies.autocomplete.keywords.json
+
+  - id: oceanio.people.autocomplete.job_titles
+    domain: people
+    capability: people.search.autocomplete
+    platform: people
+    scope: any_account
+    method: POST
+    path: /v2/autocomplete/job-titles
+    name: "Autocomplete a job title"
+    summary: "Auto complete the job title search"
+    input:
+      body:
+        query: {type: string, required: true, note: "the beginning of a job title", example: "head of grow"}
+        limit: {type: integer, required: false, note: "how many suggestions, default 5, max 15", example: 5}
+      note: "feeds `peopleFilters.jobTitleKeywords` on the people search — resolve the loose title you have into the titles the index actually holds"
+    test_request:
+      body: {query: "head of grow", limit: 5}
+    cost:
+      type: per_call
+      value: 0.1
+      currency: credit
+      per: 1
+      unit: call
+      source: observed
+      source_url: https://app.ocean.io/docs/getting-started/credits
+      checked: '2026-08-20'
+      confidence: verified
+      note: 'OBSERVED live 2026-08-20: charged at the same 0.1 credit as the other autocomplete routes (measured across a batch of five, then isolated on one), which is also the published rate card figure for every autocomplete route.'
+    docs_url: https://app.ocean.io/docs/autoCompleteJobTitles
+    verified: '2026-08-20'
+    example_response: examples/oceanio.people.autocomplete.job_titles.json
+
+  - id: oceanio.people.autocomplete.locations
+    domain: people
+    capability: people.search.autocomplete
+    platform: people
+    scope: any_account
+    method: POST
+    path: /v2/autocomplete/locations
+    name: "Autocomplete a location"
+    summary: "Auto complete the location search"
+    input:
+      body:
+        query: {type: string, required: true, note: "the beginning of a place name", example: "San Fra"}
+        limit: {type: integer, required: false, note: "how many suggestions, default 5, max 15", example: 5}
+        locationType: {type: string, required: false, note: "narrow to one level of the hierarchy (country / state / city …)"}
+      note: "returns filterCode alongside the name — filterCode is the value the search filters want, not the display name. Place names are ambiguous (San Francisco exists in the US, Nicaragua, Panama and Argentina), so resolving through here is what stops a search silently targeting the wrong country"
+    test_request:
+      body: {query: "San Fra", limit: 5}
+    cost:
+      type: per_call
+      value: 0.1
+      currency: credit
+      per: 1
+      unit: call
+      source: observed
+      source_url: https://app.ocean.io/docs/getting-started/credits
+      checked: '2026-08-20'
+      confidence: verified
+      note: 'OBSERVED live 2026-08-20: charged at the same 0.1 credit as the other autocomplete routes, which is also the published rate card figure.'
+    docs_url: https://app.ocean.io/docs/autoCompleteLocations
+    verified: '2026-08-20'
+    example_response: examples/oceanio.people.autocomplete.locations.json
+
+  - id: oceanio.people.autocomplete.skills
+    domain: people
+    capability: people.search.autocomplete
+    platform: people
+    scope: any_account
+    method: POST
+    path: /v2/autocomplete/skills
+    name: "Autocomplete a skill"
+    summary: "Auto complete the skill search"
+    input:
+      body:
+        query: {type: string, required: true, note: "the beginning of a skill name", example: "kuber"}
+        limit: {type: integer, required: false, note: "how many suggestions, default 5, max 15", example: 5}
+      note: "feeds `peopleFilters.skills`. Suggestions come back in the language the profiles use, so a broad query returns localised variants of the same skill"
+    test_request:
+      body: {query: "kuber", limit: 5}
+    cost:
+      type: per_call
+      value: 0.1
+      currency: credit
+      per: 1
+      unit: call
+      source: observed
+      source_url: https://app.ocean.io/docs/getting-started/credits
+      checked: '2026-08-20'
+      confidence: verified
+      note: 'OBSERVED live 2026-08-20: charged at the same 0.1 credit as the other autocomplete routes, which is also the published rate card figure.'
+    docs_url: https://app.ocean.io/docs/autoCompleteSkills
+    verified: '2026-08-20'
+    example_response: examples/oceanio.people.autocomplete.skills.json
+
+  # ---------------------------------------------------------------- account --------------------
+  - id: oceanio.account.balance
+    kind: utility
+    domain: account
+    capability: account.usage
+    platform: account
+    scope: own_account
+    method: GET
+    path: /v2/credits/balance
+    name: "Check credit balance and daily limit"
+    summary: "Get credit balance"
+    input:
+      note: "no parameters. Free. Returns credits.oneTime and credits.recurrent (the two standard-credit pools), dailyLimitRateLeft (calls left today, 1,000 on the plan we tested) and dailyLimitRateSecondsToReset. Read it before and after a batch to see exactly what a workload cost"
+    test_request:
+      queryParams: {}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: "listed as Free on the published rate card; OBSERVED live 2026-08-20 — repeated calls left the balance unchanged. It DOES count against the 60/min and 1,000/day request limits"}
+    docs_url: https://app.ocean.io/docs/getCreditBalance
+    verified: '2026-08-20'
+    example_response: examples/oceanio.account.balance.json

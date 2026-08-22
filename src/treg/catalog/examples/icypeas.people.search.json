@@ -1,0 +1,29 @@
+{
+  "total": 3446,
+  "success": true,
+  "leads": [
+    {
+      "firstname": "Jane",
+      "lastname": "Doe",
+      "headline": "Recruitment Manager at Amazon",
+      "description": "I am passionate about helping people and I work for a company that does just that on a large scale. \n\nRecruiting leader who has successfully owned sourcing strategies and managed m… (truncated)",
+      "profileUrl": "https://www.linkedin.com/in/jane-doe",
+      "lastJobTitle": "Recruitment Engineer",
+      "lastJobDescription": "Strategic Execution: Driving comprehensive recruitment strategy and talent delivery within Stripe’s high-growth technical leadership environment.AI Agent Development: Spearheading … (truncated)",
+      "lastJobStartDate": "01-2026",
+      "address": "San Francisco, United States",
+      "lastCompanyName": "Stripe",
+      "lastCompanyUrn": "urn:li:fs_salesCompany:2135371",
+      "lastCompanyUrl": "https://www.linkedin.com/company/stripe/",
+      "lastCompanyWebsite": "https://stripe.com/jobs",
+      "lastCompanyDescription": "Stripe builds programmable financial services. Millions of companies—from the world’s largest enterprises to the most ambitious startups—use Stripe to accept payments, grow their r… (truncated)",
+      "lastCompanySize": 14127,
+      "lastCompanyIndustry": "Technology, Information and Internet",
+      "lastCompanyAddress": "354 Oyster Point Blvd, 94080, South San Francisco, California, United States of America"
+    }
+  ],
+  "pagination": {
+    "token": "eyJzYSI6W1sxOTQxNCw0MzE4OTQ1ODc4XSxbMTk0MTQsNDMxODk0NTg3OF1dLCJpZCI6ImdMdUtCRkF3YVdONWNHVmhjeTF6Ym5NdGNISnZaSFZqZEdsdmJpMXNhVzVyWldScGJpMXdjbTltYVd4bExUSXdNall3T0RFMUZuVlFWWHB5VjFw… (truncated)",
+    "size": 1
+  }
+}

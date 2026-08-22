@@ -1,0 +1,8 @@
+{
+  "credits": {
+    "oneTime": 30.0,
+    "recurrent": 300.0
+  },
+  "dailyLimitRateLeft": 1000,
+  "dailyLimitRateSecondsToReset": 83768
+}

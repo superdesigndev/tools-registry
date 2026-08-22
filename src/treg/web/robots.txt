@@ -1,0 +1,33 @@
+# treg — the tool catalog for your agent.
+# The catalog is meant to be found: /catalog and its per-platform shelves are open to every crawler.
+# What is disallowed below is either private, meaningless without a session, or costs money to call.
+
+User-agent: *
+Allow: /
+
+# The dashboard is an authenticated single-page app — every path under it needs a session, and its
+# views are hash routes a crawler cannot reach anyway.
+Disallow: /app
+Disallow: /login
+
+# Auth and OAuth flows carry one-shot state in the URL. A crawled authorization link is, at best,
+# a burnt nonce.
+Disallow: /auth/
+Disallow: /oauth/
+Disallow: /connect-demo
+
+# /call/ is the metered proxy: every request through it is a real upstream API call against a real
+# balance. Disallowed for cost, not for secrecy.
+Disallow: /call/
+Disallow: /mcp
+
+Disallow: /admin
+
+# The interactive API console. The same API is documented in server-rendered HTML at /docs, which
+# is the copy worth indexing.
+Disallow: /docs/api
+
+# An agent looking for machine-readable onboarding wants this, not the sitemap:
+# {BASE}/llms.txt
+
+Sitemap: {BASE}/sitemap.xml

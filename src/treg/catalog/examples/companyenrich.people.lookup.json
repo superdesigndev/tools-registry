@@ -1,0 +1,43 @@
+{
+  "id": 100000000,
+  "name": "Jane Doe",
+  "location": {
+    "country": {
+      "code": "US",
+      "name": "United States",
+      "latitude": 38,
+      "longitude": -97
+    },
+    "address": "Washington, United States"
+  },
+  "first_name": "Jane",
+  "last_name": "Doe",
+  "socials": {
+    "linkedin_url": "https://www.linkedin.com/in/jane-doe"
+  },
+  "experiences": [
+    {
+      "type": "company",
+      "company": {
+        "id": "0192577c-1d7a-715c-a5b7-1b9b530445e0",
+        "name": "Stripe",
+        "domain": "stripe.com",
+        "industry": null,
+        "logo_url": "https://api.companyenrich.com/companies/logo/0192577c-1d7a-715c-a5b7-1b9b530445e0"
+      },
+      "startDate": "2025-05-01",
+      "endDate": null,
+      "isCurrent": true,
+      "isMatched": true,
+      "position": "Senior Account Director - Enterprise",
+      "seniority": "senior",
+      "department": "sales"
+    },
+    "... 10 more items truncated"
+  ],
+  "position": "Senior Enterprise Account Executive | ex-Salesforce | ex-Microsoft",
+  "seniority": "senior",
+  "department": "sales",
+  "image_url": "https://api.companyenrich.com/people/image/100000000",
+  "updated_at": "2026-08-02T03:31:25.205851Z"
+}

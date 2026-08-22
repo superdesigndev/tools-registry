@@ -1,0 +1,25 @@
+{
+  "data": [
+    {
+      "name": "Stripe",
+      "domain": "stripe.com",
+      "email_count": 4964
+    },
+    {
+      "name": "STRIPE CLUB|ストライプクラブ",
+      "domain": "stripe-club.com",
+      "email_count": 3
+    },
+    {
+      "name": "Collect for Stripe",
+      "domain": "collectforstripe.com",
+      "email_count": 2
+    },
+    "…2 more items truncated for the catalog example"
+  ],
+  "meta": {
+    "query": "stripe",
+    "limit": 5
+  }
+}
+

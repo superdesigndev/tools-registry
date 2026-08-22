@@ -1,0 +1,65 @@
+{
+  "credits_cost": 1.0,
+  "credits_left": 4.21,
+  "status": true,
+  "success": true,
+  "basics": {
+    "total_followers": 121660438,
+    "total_unique_followers": 113670763
+  },
+  "details": [
+    {
+      "user": {
+        "user_id": "528817151",
+        "username": "nasa",
+        "followers": 104393021,
+        "fullname": "NASA",
+        "url": "https://www.instagram.com/nasa",
+        "is_verified": true,
+        "engagements": 239463,
+        "stats": [
+          {
+            "post_type": "all",
+            "engagements": 239463
+          },
+          {
+            "post_type": "reels",
+            "engagements": 86254
+          }
+        ]
+      },
+      "user_id": "528817151",
+      "username": "nasa",
+      "followers": 104393021,
+      "unique_percentage": 0.923465,
+      "overlapping_percentage": 0.076535
+    },
+    {
+      "user": {
+        "user_id": "20311520",
+        "username": "spacex",
+        "followers": 17267417,
+        "fullname": "SpaceX",
+        "url": "https://www.instagram.com/spacex",
+        "is_verified": true,
+        "engagements": 28681,
+        "stats": [
+          {
+            "post_type": "all",
+            "engagements": 28681
+          },
+          {
+            "post_type": "reels",
+            "engagements": 45918
+          }
+        ]
+      },
+      "user_id": "20311520",
+      "username": "spacex",
+      "followers": 17267417,
+      "unique_percentage": 0.537298,
+      "overlapping_percentage": 0.462702
+    }
+  ],
+  "trial_searches_left": 12
+}

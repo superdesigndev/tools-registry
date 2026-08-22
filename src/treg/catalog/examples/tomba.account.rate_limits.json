@@ -1,0 +1,49 @@
+{
+  "data": {
+    "author-finder": {
+      "limits": {
+        "rps": 1,
+        "rpm": 2,
+        "daily": 5
+      },
+      "usage": {
+        "rpm_used": 0,
+        "daily_used": 4
+      }
+    },
+    "domain-search": {
+      "limits": {
+        "rps": 1,
+        "rpm": 2,
+        "daily": 5
+      },
+      "usage": {
+        "rpm_used": 0,
+        "daily_used": 3
+      }
+    },
+    "domain-suggestions": {
+      "limits": {
+        "rps": 1,
+        "rpm": 5,
+        "daily": 20
+      },
+      "usage": {
+        "rpm_used": 0,
+        "daily_used": 3
+      }
+    },
+    "email-count": {
+      "limits": {
+        "rps": 1,
+        "rpm": 5,
+        "daily": 20
+      },
+      "usage": {
+        "rpm_used": 0,
+        "daily_used": 2
+      }
+    }
+  },
+  "_note": "truncated: 4 of the per-route limit entries shown"
+}

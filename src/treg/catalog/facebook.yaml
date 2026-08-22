@@ -30,7 +30,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /me/accounts
-    name: "List Pages you manage"
+    name: "Facebook Pages you manage, with their Page tokens"
     summary: "List the Facebook Pages you manage, with the page token each one needs"
     input:
       queryParams:
@@ -52,7 +52,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /{page_id}/posts
-    name: "List posts on your Page"
+    name: "Posts on your Facebook Page with engagement counts"
     summary: "List the posts published on your Facebook Page with their engagement counts"
     input:
       pathParams:
@@ -78,7 +78,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /{page_id}/insights
-    name: "Get Page performance metrics"
+    name: "Your Facebook Page reach and engagement metrics"
     summary: "Get reach, impressions and engagement metrics for your Facebook Page"
     input:
       pathParams:
@@ -104,7 +104,7 @@ endpoints:
     scope: own_account
     method: POST
     path: /{page_id}/feed
-    name: "Publish a Page post"
+    name: "Publish a post to your Facebook Page"
     summary: "Publish a post to your Facebook Page"
     input:
       pathParams:
@@ -132,7 +132,7 @@ endpoints:
     scope: own_account
     method: POST
     path: /{page_id}/photos
-    name: "Publish or stage a Page photo"
+    name: "Publish a photo to your Facebook Page, or stage one"
     summary: "Publish a photo to your Facebook Page, or stage one for a multi-photo post"
     input:
       pathParams:
@@ -155,7 +155,7 @@ endpoints:
     scope: own_account
     method: POST
     path: /{page_id}/videos
-    name: "Publish a Page video"
+    name: "Publish a video or Reel to your Facebook Page"
     summary: "Publish a video or Reel to your Facebook Page"
     input:
       pathParams:

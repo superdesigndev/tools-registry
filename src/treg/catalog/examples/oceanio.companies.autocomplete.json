@@ -1,0 +1,25 @@
+{
+  "companies": [
+    {
+      "domain": "stripe.com",
+      "logo": "https://cdn.ocean.io/logos/stripe.com/bc743000320fa743a12384b7ba496bb3b68216c4.png",
+      "name": "Stripe"
+    },
+    {
+      "domain": "stripe.cz",
+      "logo": "https://cdn.ocean.io/logos/stripe.cz/7fa2b8e9ea783a6f3fd01db5a02628e7e8f80917.png",
+      "name": "Stripe"
+    },
+    {
+      "domain": "stripe.name",
+      "logo": "https://cdn.ocean.io/logos/stripe.name/94f2d590ca9227ba6d6c77f9085eba5ae209af46.png",
+      "name": "Stripe"
+    },
+    {
+      "domain": "stripe.co.jp",
+      "logo": "",
+      "name": "Stripe"
+    }
+  ],
+  "_truncated": "first 4 suggestions"
+}

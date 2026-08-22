@@ -1,0 +1,16 @@
+{
+  "domain": "stripe.com",
+  "technologies": [
+    {"name": "Microsoft Excel", "category": "productivity-and-operations", "subcategory": "office-suites", "last_detected_at": "2026-08-18T03:17:06+00:00"},
+    {"name": "Python", "category": "programming-languages-and-frameworks", "subcategory": "languages", "last_detected_at": "2026-08-19T04:32:40+00:00"},
+    {"name": "JavaScript", "category": "programming-languages-and-frameworks", "subcategory": "languages", "last_detected_at": "2026-08-19T04:33:13+00:00"},
+    {"name": "Amazon Web Services", "category": "platform-and-storage", "subcategory": "infrastructure-as-a-service", "last_detected_at": "2026-08-19T04:32:02+00:00"},
+    {"name": "Microsoft Azure", "category": "platform-and-storage", "subcategory": "infrastructure-as-a-service", "last_detected_at": "2026-08-13T03:12:49+00:00"},
+    {"name": "Google Analytics", "category": "business-intelligence-and-analytics", "subcategory": "analytics", "last_detected_at": "2026-08-05T02:01:47+00:00"},
+    {"name": "Power BI", "category": "business-intelligence-and-analytics", "subcategory": "business-intelligence-bi", "last_detected_at": "2026-08-19T04:33:24+00:00"},
+    {"name": "React", "category": "programming-languages-and-frameworks", "subcategory": "javascript-mvc-framework", "last_detected_at": "2026-08-17T02:13:15+00:00"},
+    {"name": "Salesforce", "category": "sales", "subcategory": "crm-platforms", "last_detected_at": "2026-08-19T04:32:21+00:00"},
+    {"name": "Gmail", "category": "it-security", "subcategory": "email-security", "last_detected_at": "2026-07-19T02:26:30+00:00"}
+  ],
+  "_note": "truncated — the live stripe.com response listed 100+ technologies"
+}

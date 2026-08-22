@@ -1,0 +1,83 @@
+provider: tiingo
+source:
+  docs: https://www.tiingo.com/documentation/general/overview
+  openapi: null # paths transcribed and live-verified 2026-08-15 (free Starter, 1,000 req/day)
+  curated: 2026-08-15
+# TRIAL POOL + own-key: treg holds the free Starter key; Tiingo's individual plans are internal personal use
+# and even the $50/mo commercial tier is internal-only — redistribution is a sales bundle (research
+# doc, licensing table). No fx rate -> usd null -> platform_eligible FALSE.
+pricing_url: https://www.tiingo.com/about/pricing
+endpoints:
+  - id: tiingo.daily.meta
+    domain: stocks
+    capability: stocks.company.profile
+    platform: stocks
+    scope: any_account
+    method: GET
+    path: /tiingo/daily/{ticker}
+    name: "Ticker metadata by symbol — name, exchange, date range"
+    summary: "Name, description, exchange and the date range Tiingo has data for — 30+ years for many tickers"
+    input:
+      queryParams:
+        ticker: {type: string, required: true, note: "path parameter, lowercase", example: "aapl"}
+    test_request: {queryParams: {ticker: "aapl"}}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, source_url: "https://www.tiingo.com/about/pricing", checked: "2026-08-15", confidence: documented, note: "$0 on treg's key: a TRIAL POOL of 20 calls per team per day served on treg's free-tier tiingo key (fx.yaml kind: treg_trial). Past the allowance the call is refused with a connect-your-own-key hint. With your own key: unmetered, your plan's limits"}
+    verified: 2026-08-15
+    example_response: examples/tiingo.daily.meta.json
+    docs_url: https://www.tiingo.com/documentation/end-of-day
+  - id: tiingo.daily.prices
+    domain: stocks
+    capability: stocks.eod.history
+    platform: stocks
+    scope: any_account
+    method: GET
+    path: /tiingo/daily/{ticker}/prices
+    name: "End-of-day stock prices by ticker — adjusted, 30+ years"
+    summary: "Daily OHLCV with split/dividend-adjusted values, back 30+ years"
+    input:
+      queryParams:
+        ticker: {type: string, required: true, note: "path parameter, lowercase", example: "aapl"}
+        startDate: {type: string, required: false, note: "YYYY-MM-DD"}
+        endDate: {type: string, required: false}
+        resampleFreq: {type: string, required: false, note: "daily | weekly | monthly | annually"}
+    test_request: {queryParams: {ticker: "aapl", startDate: "2026-08-10"}}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, source_url: "https://www.tiingo.com/about/pricing", checked: "2026-08-15", confidence: documented, note: "$0 on treg's key: a TRIAL POOL of 20 calls per team per day served on treg's free-tier tiingo key (fx.yaml kind: treg_trial). Past the allowance the call is refused with a connect-your-own-key hint. With your own key: unmetered, your plan's limits"}
+    verified: 2026-08-15
+    example_response: examples/tiingo.daily.prices.json
+    docs_url: https://www.tiingo.com/documentation/end-of-day
+  - id: tiingo.iex.latest
+    domain: stocks
+    capability: stocks.quote.live
+    platform: stocks
+    scope: any_account
+    method: GET
+    path: /iex/{ticker}
+    name: "Latest stock quote by ticker from the IEX feed"
+    summary: "The latest top-of-book quote from the IEX feed for a ticker"
+    input:
+      queryParams:
+        ticker: {type: string, required: true, note: "path parameter", example: "aapl"}
+    test_request: {queryParams: {ticker: "aapl"}}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, source_url: "https://www.tiingo.com/about/pricing", checked: "2026-08-15", confidence: documented, note: "$0 on treg's key: a TRIAL POOL of 20 calls per team per day served on treg's free-tier tiingo key (fx.yaml kind: treg_trial). Past the allowance the call is refused with a connect-your-own-key hint. With your own key: unmetered, your plan's limits"}
+    verified: 2026-08-15
+    example_response: examples/tiingo.iex.latest.json
+    docs_url: https://www.tiingo.com/documentation/iex
+  - id: tiingo.crypto.prices
+    domain: crypto
+    capability: crypto.price.history
+    platform: crypto
+    scope: any_account
+    method: GET
+    path: /tiingo/crypto/prices
+    name: "Crypto OHLCV bars by currency pair — 1min to daily"
+    summary: "OHLCV bars for crypto pairs (btcusd, ethusd …) at any resample frequency"
+    input:
+      queryParams:
+        tickers: {type: string, required: true, note: "pair symbols, comma-separated", example: "btcusd"}
+        startDate: {type: string, required: false}
+        resampleFreq: {type: string, required: false, note: "1min | 5min | 1hour | 1day", example: "1day"}
+    test_request: {queryParams: {tickers: "btcusd", resampleFreq: "1day"}}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, source_url: "https://www.tiingo.com/about/pricing", checked: "2026-08-15", confidence: documented, note: "$0 on treg's key: a TRIAL POOL of 20 calls per team per day served on treg's free-tier tiingo key (fx.yaml kind: treg_trial). Past the allowance the call is refused with a connect-your-own-key hint. With your own key: unmetered, your plan's limits"}
+    verified: 2026-08-15
+    example_response: examples/tiingo.crypto.prices.json
+    docs_url: https://www.tiingo.com/documentation/crypto

@@ -1,0 +1,7 @@
+{
+ "domain": "stripe.com",
+ "codes": [{"code": "522320", "name": "Financial Transactions Processing", "confidence": "high"}],
+ "type": "naics",
+ "status": "ok",
+ "key_metadata": {"credits_consumed": 10, "credits_remaining": 224}
+}

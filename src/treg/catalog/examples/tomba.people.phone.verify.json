@@ -1,0 +1,20 @@
+{
+  "data": {
+    "valid": true,
+    "local_format": "(415) 555-0100",
+    "intl_format": "+1 415-555-0100",
+    "e164_format": "+14155550100",
+    "rfc3966_format": "tel:+1-415-555-0100",
+    "country_code": "US",
+    "line_type": "FIXED_LINE_OR_MOBILE",
+    "carrier": "",
+    "region": {
+      "name": "California",
+      "code": "CA"
+    },
+    "timezones": [
+      "America/Los_Angeles"
+    ]
+  }
+}
+

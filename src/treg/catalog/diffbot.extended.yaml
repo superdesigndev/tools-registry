@@ -89,7 +89,7 @@ endpoints:
     host: api.diffbot.com
     method: GET
     path: /v3/analyze
-    name: "Auto-detect and extract any page"
+    name: "Auto-detect a page type and extract it by URL"
     summary: "Automatically identifies the type of page being processed and routes it through the relevant Diffbot API"
     input:
       queryParams:
@@ -129,7 +129,7 @@ endpoints:
     host: api.diffbot.com
     method: GET
     path: /v3/article
-    name: "Extract an article page"
+    name: "Extract article text, author and date from a URL"
     summary: "Extracts clean article text, author, date, images, tags, sentiment and NLP facts from a news or blog page"
     input:
       queryParams:
@@ -173,7 +173,7 @@ endpoints:
     host: api.diffbot.com
     method: GET
     path: /v3/product
-    name: "Extract a product page"
+    name: "Extract product name, price and reviews from a URL"
     summary: "Extracts product name, price, SKU, images, specs and reviews from an e-commerce page"
     input:
       queryParams:
@@ -211,7 +211,7 @@ endpoints:
     host: api.diffbot.com
     method: GET
     path: /v3/image
-    name: "Extract images from a page"
+    name: "Extract a page's images by URL, with dimensions"
     summary: "Extracts the primary and secondary images from a page, with dimensions and metadata"
     input:
       queryParams:
@@ -248,7 +248,7 @@ endpoints:
     host: api.diffbot.com
     method: GET
     path: /v3/video
-    name: "Extract video page metadata"
+    name: "Extract video title, duration and embed URL from a page"
     summary: "Extracts title, embed/player URL, duration, thumbnail and metadata from a video page"
     input:
       queryParams:
@@ -285,7 +285,7 @@ endpoints:
     host: api.diffbot.com
     method: GET
     path: /v3/discussion
-    name: "Extract a forum or comment thread"
+    name: "Extract forum posts and comments from a thread URL"
     summary: "Extracts individual posts, authors, dates and sentiment from a forum thread or comment section"
     input:
       queryParams:
@@ -324,7 +324,7 @@ endpoints:
     host: api.diffbot.com
     method: GET
     path: /v3/job
-    name: "Extract a job listing page"
+    name: "Extract a job posting page by URL — title, salary"
     summary: "Extracts job title, employer, location, salary and description from a job posting page"
     input:
       queryParams:
@@ -361,7 +361,7 @@ endpoints:
     host: api.diffbot.com
     method: GET
     path: /v3/list
-    name: "Extract links from a list/index page"
+    name: "Extract linked items from an index page by URL"
     summary: "Extracts the list of linked items (with titles, dates, images) from an index or category page"
     input:
       queryParams:
@@ -398,7 +398,7 @@ endpoints:
     host: api.diffbot.com
     method: GET
     path: /v3/event
-    name: "Extract an event page"
+    name: "Extract event name, date and venue from a page URL"
     summary: "Extracts event name, date, venue, price and organizer from an event listing page"
     input:
       queryParams:
@@ -437,7 +437,7 @@ endpoints:
     host: api.diffbot.com
     method: POST
     path: /v3/crawl
-    name: "Start a crawl job"
+    name: "Start a site crawl job from seed URLs"
     summary: "Spiders a site for links and pages, running each discovered page through an Extract API and compiling results into a searchable collection"
     input:
       bodyType: form
@@ -500,7 +500,7 @@ endpoints:
     host: api.diffbot.com
     method: GET
     path: /v3/crawl/data
-    name: "Download crawl job results"
+    name: "Download a crawl job's results as JSON or CSV"
     summary: "Downloads the extracted results of a crawl job as JSON or CSV, or a diagnostic URL report"
     input:
       queryParams:
@@ -520,7 +520,7 @@ endpoints:
     host: api.diffbot.com
     method: POST
     path: /v3/bulk
-    name: "Start a bulk extract job"
+    name: "Start a bulk extract job from a list of URLs"
     summary: "Sends a large, explicit list of URLs through an Extract API asynchronously and compiles the results into one collection — unlike Crawl, it does not discover links"
     input:
       bodyType: form
@@ -555,7 +555,7 @@ endpoints:
     host: api.diffbot.com
     method: GET
     path: /v3/bulk/data
-    name: "Download bulk job results"
+    name: "Download a bulk extract job's results as JSON or CSV"
     summary: "Downloads the extracted results of a bulk job as JSON or CSV, or a diagnostic URL report"
     input:
       queryParams:
@@ -573,7 +573,7 @@ endpoints:
     host: llm.diffbot.com
     method: GET
     path: /api/v1/web_search/
-    name: "Web search for LLM context"
+    name: "Web search shaped for an LLM context window"
     summary: "Search the web and return results shaped for feeding into an LLM context window"
     input:
       queryParams:
@@ -593,7 +593,7 @@ endpoints:
     host: nl.diffbot.com
     method: POST
     path: /v1/
-    name: "Extract entities, sentiment & facts from text"
+    name: "Extract entities, sentiment and facts from text"
     summary: "Runs a pre-trained classifier, named-entity recognizer, sentence tokenizer and sentiment analyzer over submitted text or a URL"
     input:
       bodyType: json

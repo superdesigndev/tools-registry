@@ -1,0 +1,53 @@
+{
+  "data": [
+    {
+      "id": "d850226f-0a66-4c63-9d8d-07b09297ec97",
+      "type": "job_opening",
+      "attributes": {
+        "title": "PT - Supervisory Dentist/Faculty",
+        "normalized_title": "PT - Supervisory Dentist/Faculty",
+        "url": "https://jobs.com.edu/postings/4731",
+        "first_seen_at": "2026-08-20T00:44:13Z",
+        "last_seen_at": "2026-08-20T00:44:13Z",
+        "last_processed_at": "2026-08-20T00:44:13Z",
+        "categories": [
+          "healthcare_services"
+        ],
+        "onet_data": {
+          "code": "29-1021.00",
+          "family": "Healthcare Practitioners and Technical",
+          "occupation_name": "Dentists, General"
+        },
+        "recruiter_data": {
+          "name": null
+        },
+        "salary_data": {
+          "salary_low": null
+        },
+        "seniority": "manager"
+      },
+      "relationships": {
+        "company": {
+          "data": {
+            "id": "7780bedc-1dd3-561e-9cc7-e3937302d6ca",
+            "type": "company"
+          }
+        }
+      }
+    }
+  ],
+  "included": [
+    {
+      "id": "7780bedc-1dd3-561e-9cc7-e3937302d6ca",
+      "type": "company",
+      "attributes": {
+        "domain": "com.edu",
+        "company_name": "COM"
+      }
+    }
+  ],
+  "meta": {
+    "schema_version": "3.3",
+    "record_state": "active"
+  }
+}

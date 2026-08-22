@@ -16,7 +16,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /api/tiktok/get-user-detail/v1
-    name: "Get TikTok User Profile"
+    name: "TikTok user profile by username or user id"
     summary: "Public TikTok profile by username (uniqueId) or secUid"
     input:
       queryParams:
@@ -37,7 +37,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /api/tiktok/get-user-post/v1
-    name: "List posts from a TikTok user"
+    name: "TikTok user posts by user id"
     summary: "Posts published by a TikTok user, by secUid, cursor-paginated"
     input:
       queryParams:
@@ -58,7 +58,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /api/tiktok/get-post-detail/v1
-    name: "Get TikTok post details"
+    name: "TikTok post details by post id — metadata, stats"
     summary: "A single TikTok post's metadata and stats by post id"
     input:
       queryParams:
@@ -77,7 +77,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /api/tiktok/get-post-comment/v1
-    name: "List TikTok Post Comments"
+    name: "TikTok post comments by post id"
     summary: "Comments on a TikTok post, cursor-paginated"
     input:
       queryParams:
@@ -146,7 +146,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /api/xiaohongshu/get-note-detail/v1
-    name: "Get Xiaohongshu note details"
+    name: "Xiaohongshu note details by note id or URL"
     summary: "A single Xiaohongshu (RedNote) note by note id or explore URL"
     input:
       queryParams:
@@ -166,7 +166,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /api/xiaohongshu/get-user-note-list/v4
-    name: "List notes from a Xiaohongshu user"
+    name: "Xiaohongshu user notes by user id"
     summary: "Notes published by a Xiaohongshu (RedNote) user, cursor-paginated"
     input:
       queryParams:
@@ -186,7 +186,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /api/instagram/get-user-detail/v2
-    name: "Get Instagram User Profile"
+    name: "Instagram user profile by username"
     summary: "Public Instagram profile by username"
     input:
       queryParams:
@@ -205,7 +205,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /api/instagram/get-user-posts/v1
-    name: "List Instagram User Posts"
+    name: "Instagram user posts by username"
     summary: "Recent posts of an Instagram user, token-paginated"
     input:
       queryParams:
@@ -225,7 +225,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /api/youtube/get-video-detail/v1
-    name: "Get YouTube Video Detail"
+    name: "YouTube video metadata and stats by video id"
     summary: "Public metadata and stats for a YouTube video by video id"
     input:
       queryParams:
@@ -244,7 +244,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /api/weibo/get-user-detail/v3
-    name: "Get Weibo User Profile"
+    name: "Weibo user profile by user id"
     summary: "Public Weibo profile by numeric UID"
     input:
       queryParams:

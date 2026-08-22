@@ -1,0 +1,16 @@
+{
+  "data": [
+    {
+      "id": "3150da03-ae87-451b-b1ed-3c2b190a0c8a",
+      "type": "api_subscription",
+      "attributes": {
+        "status": "active",
+        "monthly_credits_quota": 100,
+        "monthly_credits_used": 34
+      }
+    }
+  ],
+  "meta": {
+    "schema_version": "3.0"
+  }
+}

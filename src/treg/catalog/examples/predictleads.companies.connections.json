@@ -1,0 +1,55 @@
+{
+  "data": [
+    {
+      "id": "855f7dab-bde5-4d1b-9e2c-dd090f67a5c5",
+      "type": "connection",
+      "attributes": {
+        "category": "other",
+        "source_category": "undefined",
+        "source_url": "https://ghirlnetwork.com",
+        "individual_source_url": null,
+        "context": null,
+        "first_seen_at": "2026-08-19T15:29:08Z",
+        "last_seen_at": "2026-08-19T15:29:08Z",
+        "confidence": null
+      },
+      "relationships": {
+        "company1": {
+          "data": {
+            "id": "fff0d071-4ff3-44ef-ac4b-fed86394831f",
+            "type": "company"
+          }
+        },
+        "company2": {
+          "data": {
+            "id": "a0383c53-8142-5e7c-8ca3-9980289a3ccc",
+            "type": "company"
+          }
+        },
+        "technology": {
+          "data": null
+        }
+      }
+    }
+  ],
+  "included": [
+    {
+      "id": "fff0d071-4ff3-44ef-ac4b-fed86394831f",
+      "type": "company",
+      "attributes": {
+        "domain": "ghirlnetwork.com",
+        "company_name": "Ghirl Network",
+        "ticker": null
+      }
+    },
+    "… 1 more items omitted"
+  ],
+  "meta": {
+    "schema_version": "3.2",
+    "record_state": "active",
+    "message_type": "ok",
+    "message": "You can try running the same query on any subsidiary company domain (bridge.xyz, chargeforstripe.com, chargestripe.com, financialnigeria.com, lemonsqueezy.com, metronome.com, ngx-stripe.dev, okayhq.com, openchannel.io, orum.io, ...). You can also try news_events, job_openings, technologies or websit …[truncated]",
+    "redirects_to_domain": null,
+    "parent_company_domain": null
+  }
+}

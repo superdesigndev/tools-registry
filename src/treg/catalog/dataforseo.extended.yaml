@@ -24,7 +24,7 @@ endpoints:
   platform: ai-search
   method: POST
   path: /ai_optimization/ai_keyword_data/keywords_search_volume/live
-  name: AI search volume for keywords
+  name: "AI search volume for keywords across AI tools"
   summary: This endpoint provides search volume data for your target keywords, reflecting their estimated usage in AI tools.
   input:
     bodyType: json
@@ -79,7 +79,7 @@ endpoints:
   platform: ai-search
   method: POST
   path: /ai_optimization/llm_mentions/historical/live
-  name: Monthly history of LLM mentions
+  name: "Monthly LLM mention history for a keyword or domain"
   summary: Live LLM Mentions Historical endpoint provides month-by-month historical metrics for mentions of the keywords or domains specified in the target array of the request.
   input:
     bodyType: json
@@ -154,7 +154,7 @@ endpoints:
   platform: ai-search
   method: POST
   path: /ai_optimization/llm_mentions/multi_target_metrics/live
-  name: LLM mention metrics by custom group
+  name: "LLM mention metrics for many keywords or domains, grouped"
   summary: Live LLM Mentions Multi-Target Metrics endpoint provides aggregated metrics grouped by custom keys for mentions of the keywords or domains specified in the target array of the request.
   input:
     bodyType: json
@@ -270,7 +270,7 @@ endpoints:
   platform: ai-search
   method: POST
   path: /ai_optimization/llm_mentions/search_mentions/live
-  name: Search mentions inside AI answers
+  name: "Search LLM mentions of a keyword or domain in AI answers"
   summary: Live LLM Mentions Search endpoint provides mention data and related metrics from AI searches.
   input:
     bodyType: json
@@ -373,7 +373,7 @@ endpoints:
   platform: ai-search
   method: POST
   path: /ai_optimization/llm_mentions/target_metrics/live
-  name: LLM mention metrics for a target
+  name: "LLM mention metrics for a keyword or domain"
   summary: Live LLM Mentions Target Metrics endpoint provides aggregated metrics for mentions of the keywords or domains specified in the target array of the request.
   input:
     bodyType: json
@@ -458,7 +458,7 @@ endpoints:
   platform: ai-search
   method: POST
   path: /ai_optimization/llm_mentions/target_metrics_lite/live
-  name: LLM mention metrics for a target (lite)
+  name: "LLM mention metrics for a keyword or domain, lite"
   summary: Live LLM Mentions Target Metrics Lite endpoint is the simplified version of the Target Metrics endpoint and provides a simplified view of aggregated LLM mentions for keywords and domains specified in the target array of the request.
   input:
     bodyType: json
@@ -551,7 +551,7 @@ endpoints:
   platform: ai-search
   method: POST
   path: /ai_optimization/llm_mentions/timeseries_delta/live
-  name: Change in LLM mentions between dates
+  name: "Change in LLM mentions between two dates for a target"
   summary: The Live LLM Mentions Timeseries Delta endpoint provides the difference in historical mentions and AI search volume data between two specified dates.
   input:
     bodyType: json
@@ -636,7 +636,7 @@ endpoints:
   platform: ai-search
   method: POST
   path: /ai_optimization/llm_mentions/timeseries_new_lost/live
-  name: New and lost LLM mentions
+  name: "New and lost LLM mentions for a keyword or domain"
   summary: This endpoint will provide you with the number of new and lost LLM mentions, as well as ai_search_volume for the domain or keyword specified in the target field.
   input:
     bodyType: json
@@ -721,7 +721,7 @@ endpoints:
   platform: ai-search
   method: POST
   path: /ai_optimization/llm_mentions/top_mentioned_brand_categories/live
-  name: Top mentioned brand categories
+  name: "Top brand categories in LLM mentions of a target"
   summary: Live LLM Mentions Top Mentioned Brand Categories endpoint provides aggregated LLM mentions metrics grouped by the most frequently mentioned brand categories for the specified target.
   input:
     bodyType: json
@@ -836,7 +836,7 @@ endpoints:
   platform: ai-search
   method: POST
   path: /ai_optimization/llm_mentions/top_mentioned_brand_categories_lite/live
-  name: Top mentioned brand categories (lite)
+  name: "Top brand categories in LLM mentions of a target, lite"
   summary: Live LLM Mentions Top Mentioned Brand Categories Lite endpoint is the simplified version of the Top Mentioned Brand Categories endpoint and provides a simplified view of aggregated LLM mentions metrics grouped by the most frequently mentioned brand categories for the specified target.
   input:
     bodyType: json
@@ -951,7 +951,7 @@ endpoints:
   platform: ai-search
   method: POST
   path: /ai_optimization/llm_mentions/top_mentioned_brands/live
-  name: Top mentioned brands
+  name: "Top brands in LLM mentions of a keyword or domain"
   summary: Live LLM Mentions Top Mentioned Brands endpoint provides aggregated LLM mentions metrics grouped by the most frequently mentioned brands for the specified target.
   input:
     bodyType: json
@@ -1066,7 +1066,7 @@ endpoints:
   platform: ai-search
   method: POST
   path: /ai_optimization/llm_mentions/top_mentioned_brands_lite/live
-  name: Top mentioned brands (lite)
+  name: "Top brands in LLM mentions of a keyword or domain, lite"
   summary: Live LLM Mentions Top Mentioned Brands Lite endpoint is the simplified version of the Top Mentioned Brands endpoint and provides a simplified view of aggregated LLM mentions metrics grouped by the most frequently mentioned brands for the specified target.
   input:
     bodyType: json
@@ -1181,7 +1181,7 @@ endpoints:
   platform: ai-search
   method: POST
   path: /ai_optimization/llm_mentions/top_mentioned_domains/live
-  name: Top mentioned domains
+  name: "Top domains in LLM mentions of a keyword or domain"
   summary: Live LLM Mentions Top Mentioned Domains endpoint provides aggregated LLM mentions metrics grouped by the most frequently mentioned domains for the specified target.
   input:
     bodyType: json
@@ -1302,7 +1302,7 @@ endpoints:
   platform: ai-search
   method: POST
   path: /ai_optimization/llm_mentions/top_mentioned_domains_lite/live
-  name: Top mentioned domains (lite)
+  name: "Top domains in LLM mentions of a keyword or domain, lite"
   summary: Live LLM Mentions Top Mentioned Domains Lite endpoint is the simplified version of the Top Mentioned Domains endpoint and provides a simplified view of aggregated LLM mentions metrics grouped by the most frequently mentioned domains for the specified target.
   input:
     bodyType: json
@@ -1423,7 +1423,7 @@ endpoints:
   platform: ai-search
   method: POST
   path: /ai_optimization/llm_mentions/top_mentioned_pages/live
-  name: Top mentioned pages
+  name: "Top pages in LLM mentions of a keyword or domain"
   summary: Live LLM Mentions Top Mentioned Pages endpoint provides aggregated LLM mentions metrics grouped by the most frequently mentioned pages for the specified target.
   input:
     bodyType: json
@@ -1544,7 +1544,7 @@ endpoints:
   platform: ai-search
   method: POST
   path: /ai_optimization/llm_mentions/top_mentioned_pages_lite/live
-  name: Top mentioned pages (lite)
+  name: "Top pages in LLM mentions of a keyword or domain, lite"
   summary: Live LLM Mentions Top Mentioned Pages Lite endpoint is a simplified version of the Top Mentioned Pages that provides a simplified view of aggregated LLM mentions metrics grouped by the most frequently mentioned pages for the specified target.
   input:
     bodyType: json
@@ -1665,7 +1665,7 @@ endpoints:
   platform: amazon
   method: POST
   path: /dataforseo_labs/amazon/bulk_search_volume/live
-  name: Bulk keyword search volume
+  name: "Amazon search volume for up to 1000 keywords"
   summary: This endpoint will provide you with search volume values for a maximum of 1,000 keywords in one API request.
   docs_url: https://docs.dataforseo.com/v3/dataforseo_labs/amazon/bulk_search_volume/live/
   input:
@@ -1723,7 +1723,7 @@ endpoints:
   platform: amazon
   method: POST
   path: /dataforseo_labs/amazon/product_competitors/live
-  name: Products competing with an ASIN
+  name: "Amazon products competing with an ASIN in search"
   summary: This endpoint will provide you with a list of products that intersect with a target asin in Amazon SERPs.
   docs_url: https://docs.dataforseo.com/v3/dataforseo_labs/amazon/product_competitors/live/
   input:
@@ -1790,7 +1790,7 @@ endpoints:
   platform: amazon
   method: POST
   path: /dataforseo_labs/amazon/product_keyword_intersections/live
-  name: Keywords two products both rank for
+  name: "Amazon keywords where several ASINs rank together"
   summary: This endpoint will provide you with a list of keywords for which the target products intersect in Amazon SERP.
   docs_url: https://docs.dataforseo.com/v3/dataforseo_labs/amazon/product_keyword_intersections/live/
   input:
@@ -1868,7 +1868,7 @@ endpoints:
   platform: amazon
   method: POST
   path: /dataforseo_labs/amazon/product_rank_overview/live
-  name: Organic and paid rank for products
+  name: "Amazon organic and paid rank for products by ASIN"
   summary: This endpoint will provide you with ranking data from organic and paid Amazon SERPs for the target products.
   docs_url: https://docs.dataforseo.com/v3/dataforseo_labs/amazon/product_rank_overview/live/
   input:
@@ -1924,7 +1924,7 @@ endpoints:
   platform: amazon
   method: POST
   path: /dataforseo_labs/amazon/ranked_keywords/live
-  name: Keywords a product ranks for
+  name: "Amazon keywords a product ranks for, by ASIN"
   summary: This endpoint will provide you with a list of keywords the target product ranks for on Amazon.
   docs_url: https://docs.dataforseo.com/v3/dataforseo_labs/amazon/ranked_keywords/live/
   input:
@@ -1995,7 +1995,7 @@ endpoints:
   platform: amazon
   method: POST
   path: /dataforseo_labs/amazon/related_keywords/live
-  name: Related searches for a keyword
+  name: "Amazon related-search keywords for a seed keyword"
   summary: The Related Keywords endpoint provides keywords appearing in the "Related Searches" section on Amazon.
   docs_url: https://docs.dataforseo.com/v3/dataforseo_labs/amazon/related_keywords/live/
   input:
@@ -2070,7 +2070,7 @@ endpoints:
   platform: amazon
   method: POST
   path: /merchant/amazon/asin/live/advanced
-  name: List ASINs for product variations
+  name: "Amazon ASINs for all variations of a product, live"
   summary: This endpoint will provide you with a full list of ASINs assigned to different modifications of a product.
   input:
     bodyType: json
@@ -2131,7 +2131,7 @@ endpoints:
   method: GET
   path: /merchant/amazon/locations/{country}
   cost: {type: free, value: 0, currency: USD, unit: call, source: observed, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
-  name: List supported locations
+  name: "Amazon location codes by country"
   summary: You will receive the list of supported Amazon locations by this API call.
   docs_url: https://docs.dataforseo.com/v3/merchant/amazon/locations/
   untestable: the OpenAPI spec ships no example request body for this route, so no test request could be generated
@@ -2140,7 +2140,7 @@ endpoints:
   platform: amazon
   method: POST
   path: /merchant/amazon/products/live/advanced
-  name: Search product listings by keyword
+  name: "Amazon product search results for a keyword, live"
   summary: This endpoint provides results from Amazon product listings according to the specified keyword (product name), location, and language parameters.
   input:
     bodyType: json
@@ -2231,7 +2231,7 @@ endpoints:
   platform: amazon
   method: POST
   path: /merchant/amazon/sellers/live/advanced
-  name: List sellers of a product
+  name: "Amazon sellers of a product by ASIN, live"
   summary: This endpoint provides a list of sellers of the specified product on Amazon.
   input:
     bodyType: json
@@ -2290,7 +2290,7 @@ endpoints:
   platform: app-store
   method: POST
   path: /app_data/apple/app_info/task_post
-  name: App listing details (async batch)
+  name: "App Store app details by app id (async task)"
   summary: This endpoint will provide you with information about the App Store application specified in the app_id field of the POST request.
   docs_url: https://docs.dataforseo.com/v3/app_data/apple/app_info/task_post/
   input:
@@ -2357,7 +2357,7 @@ endpoints:
   platform: app-store
   method: POST
   path: /app_data/apple/app_list/task_post
-  name: Top charts app list (async batch)
+  name: "App Store top chart apps by collection (async task)"
   summary: This endpoint will provide you with a list of mobile applications published in the top app charts on the App Store platform.
   docs_url: https://docs.dataforseo.com/v3/app_data/apple/app_list/task_post/
   input:
@@ -2436,7 +2436,7 @@ endpoints:
   platform: app-store
   method: POST
   path: /app_data/apple/app_listings/search/live
-  name: Search app listings
+  name: "Search App Store apps — rating, reviews count, price"
   summary: 'This endpoint will provide you with a list of apps published on App Store along with additional information: its ID, icon, reviews count, rating, price, and other data.'
   docs_url: https://docs.dataforseo.com/v3/app_data/apple/app_listings/search/live/
   input:
@@ -2515,7 +2515,7 @@ endpoints:
   platform: app-store
   method: POST
   path: /app_data/apple/app_reviews/task_post
-  name: Reviews for an app (async batch)
+  name: "App Store reviews for an app by app id (async task)"
   summary: This endpoint will provide you with reviews published on the App Store platform for the app specified in the app_id field.
   docs_url: https://docs.dataforseo.com/v3/app_data/apple/app_reviews/task_post/
   input:
@@ -2592,7 +2592,7 @@ endpoints:
   platform: app-store
   method: POST
   path: /app_data/apple/app_searches/task_post
-  name: Apps ranking for a keyword (async batch)
+  name: "App Store apps ranking for a keyword (async task)"
   summary: This endpoint will provide you with a list of apps ranking on the App Store for the specified keyword.
   docs_url: https://docs.dataforseo.com/v3/app_data/apple/app_searches/task_post/
   input:
@@ -2665,7 +2665,7 @@ endpoints:
   platform: app-store
   method: POST
   path: /dataforseo_labs/apple/app_competitors/live
-  name: Apps competing with a target app
+  name: "App Store apps competing with an app, by app id"
   summary: This endpoint will provide you with a list of mobile applications that intersect with the target app for its ranking keywords on App Store.
   docs_url: https://docs.dataforseo.com/v3/dataforseo_labs/apple/app_competitors/live/
   input:
@@ -2734,7 +2734,7 @@ endpoints:
   platform: app-store
   method: POST
   path: /dataforseo_labs/apple/app_intersection/live
-  name: Keywords several apps both rank for
+  name: "Keywords several App Store apps rank for together"
   summary: This endpoint will provide you with a list of keywords for which the mobile applications specified in the app_ids object rank within the same App Store SERP.
   docs_url: https://docs.dataforseo.com/v3/dataforseo_labs/apple/app_intersection/live/
   input:
@@ -2807,7 +2807,7 @@ endpoints:
   platform: app-store
   method: POST
   path: /dataforseo_labs/apple/bulk_app_metrics/live
-  name: Bulk ranking metrics for apps
+  name: "Ranking metrics for up to 1000 App Store apps"
   summary: This endpoint will provide you with ranking metrics for up to 1000 App Store applications.
   docs_url: https://docs.dataforseo.com/v3/dataforseo_labs/apple/bulk_app_metrics/live/
   input:
@@ -2862,7 +2862,7 @@ endpoints:
   platform: app-store
   method: POST
   path: /dataforseo_labs/apple/keywords_for_app/live
-  name: Keywords an app ranks for
+  name: "Keywords an App Store app ranks for, by app id"
   summary: This endpoint will provide you with a list of keywords for which the target app ranks on App Store.
   docs_url: https://docs.dataforseo.com/v3/dataforseo_labs/apple/keywords_for_app/live/
   input:
@@ -2933,7 +2933,7 @@ endpoints:
   method: GET
   path: /serp/baidu/locations/{country}
   cost: {type: free, value: 0, currency: USD, unit: call, source: observed, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
-  name: List supported locations
+  name: "Baidu location codes by country"
   summary: You will receive the list of locations by this API call.
   docs_url: https://docs.dataforseo.com/v3/serp/baidu/locations/
   untestable: the OpenAPI spec ships no example request body for this route, so no test request could be generated
@@ -2942,7 +2942,7 @@ endpoints:
   platform: baidu
   method: POST
   path: /serp/baidu/organic/task_post
-  name: Organic search results (async batch)
+  name: "Baidu organic search results for a keyword (async task)"
   summary: Baidu SERP API provides top 10 search engine results.
   docs_url: https://docs.dataforseo.com/v3/serp/baidu/organic/task_post/
   input:
@@ -3050,7 +3050,7 @@ endpoints:
   method: GET
   path: /keywords_data/bing/audience_estimation/industries
   cost: {type: free, value: 0, currency: USD, unit: call, source: observed, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
-  name: List targetable industries
+  name: "Bing Ads industries for audience targeting"
   summary: By calling this API you will receive the list of industries with industry_id supported by Bing Ads Audience Estimation endpoint.
   docs_url: https://docs.dataforseo.com/v3/keywords_data/bing/audience_estimation/industries/
   untestable: the OpenAPI spec ships no example request body for this route, so no test request could be generated
@@ -3061,7 +3061,7 @@ endpoints:
   method: GET
   path: /keywords_data/bing/audience_estimation/job_functions
   cost: {type: free, value: 0, currency: USD, unit: call, source: observed, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
-  name: List targetable job functions
+  name: "Bing Ads job functions for audience targeting"
   summary: By calling this API you will receive the list of job functions with job_function_id supported by Bing Ads Audience Estimation endpoint.
   docs_url: https://docs.dataforseo.com/v3/keywords_data/bing/audience_estimation/job_functions/
   untestable: the OpenAPI spec ships no example request body for this route, so no test request could be generated
@@ -3070,7 +3070,7 @@ endpoints:
   platform: bing
   method: POST
   path: /keywords_data/bing/audience_estimation/live
-  name: Estimate ad audience size
+  name: "Bing Ads audience size estimate for campaign targeting"
   summary: This endpoint provides estimated audience size for an ad campaign based on specified targeting criteria.
   docs_url: https://docs.dataforseo.com/v3/keywords_data/bing/audience_estimation/live/
   input:
@@ -3156,7 +3156,7 @@ endpoints:
   platform: bing
   method: POST
   path: /keywords_data/bing/keyword_performance/live
-  name: Keyword performance stats
+  name: "Bing keyword performance stats for a keyword list"
   summary: You can receive a set of keyword performance stats for a group of keywords depending on the specified match type, location and language parameters.
   docs_url: https://docs.dataforseo.com/v3/keywords_data/bing/keyword_performance/live/
   input:
@@ -3226,7 +3226,7 @@ endpoints:
   platform: bing
   method: POST
   path: /keywords_data/bing/keywords_for_keywords/live
-  name: Related keywords for seed keywords
+  name: "Bing keyword ideas from seed keywords"
   summary: This endpoint will select the relevant keywords for the specified ones.
   docs_url: https://docs.dataforseo.com/v3/keywords_data/bing/keywords_for_keywords/live/
   input:
@@ -3312,7 +3312,7 @@ endpoints:
   platform: bing
   method: POST
   path: /keywords_data/bing/keywords_for_site/live
-  name: Keywords relevant to a site
+  name: "Bing keywords for a site — volume, CPC, competition"
   summary: This endpoint will provide you with a list of keywords relevant to the specified URL along with their search volume for the last month, search volume trend for up to 24 past months (for estimating search volume dynamics), current cost-per-click and competition values for paid search.
   docs_url: https://docs.dataforseo.com/v3/keywords_data/bing/keywords_for_site/live/
   input:
@@ -3392,7 +3392,7 @@ endpoints:
   platform: bing
   method: POST
   path: /keywords_data/bing/search_volume/live
-  name: Keyword search volume and CPC
+  name: "Bing search volume, CPC and competition for keywords"
   summary: This endpoint will provide you with search volume data for the last month, search volume trend for up to 24 past months (that will let you estimate search volume dynamics), current cost-per-click and competition values for paid search.
   docs_url: https://docs.dataforseo.com/v3/keywords_data/bing/search_volume/live/
   input:
@@ -3474,7 +3474,7 @@ endpoints:
   platform: bing
   method: POST
   path: /keywords_data/bing/search_volume_history/live
-  name: Historical keyword search volume
+  name: "Bing historical search volume for up to 1000 keywords"
   summary: This endpoint will provide you with historical search volume data for up to 1000 keywords in one request.
   docs_url: https://docs.dataforseo.com/v3/keywords_data/bing/search_volume_history/live/
   input:
@@ -3550,7 +3550,7 @@ endpoints:
   method: GET
   path: /serp/bing/locations/{country}
   cost: {type: free, value: 0, currency: USD, unit: call, source: observed, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
-  name: List supported locations
+  name: "Bing location codes by country"
   summary: You will receive the list of locations by this API call.
   docs_url: https://docs.dataforseo.com/v3/serp/bing/locations/
   untestable: the OpenAPI spec ships no example request body for this route, so no test request could be generated
@@ -3559,7 +3559,7 @@ endpoints:
   platform: bing
   method: POST
   path: /serp/bing/organic/live/advanced
-  name: Organic search results (advanced)
+  name: "Bing organic results for a keyword — full SERP features"
   summary: Live SERP provides real-time data on top 100 search engine results for the specified keyword, search engine, and location.
   docs_url: https://docs.dataforseo.com/v3/serp/bing/organic/live/advanced/
   input:
@@ -3671,7 +3671,7 @@ endpoints:
   platform: bing
   method: POST
   path: /serp/bing/organic/live/regular
-  name: Organic search results (regular)
+  name: "Bing organic search results for a keyword, live"
   summary: Live SERP provides real-time data on search engine results for the specified keyword, search engine, and location.
   docs_url: https://docs.dataforseo.com/v3/serp/bing/organic/live/regular/
   input:
@@ -3767,7 +3767,7 @@ endpoints:
   platform: ai-search
   method: POST
   path: /ai_optimization/chat_gpt/llm_responses/live
-  name: "Get a ChatGPT answer"
+  name: "ChatGPT answer to a prompt, live"
   summary: Live ChatGPT LLM Responses endpoint allows you to retrieve structured responses from a specific ChatGPT AI model, based on the input parameters.
   input:
     bodyType: json
@@ -3864,7 +3864,7 @@ endpoints:
   platform: ai-search
   method: POST
   path: /ai_optimization/chat_gpt/llm_scraper/live/advanced
-  name: "Scrape ChatGPT search results"
+  name: "ChatGPT search results for a keyword, live"
   summary: Live ChatGPT LLM Scraper endpoint provides results from ChatGPT searches.
   input:
     bodyType: json
@@ -3921,7 +3921,7 @@ endpoints:
   method: GET
   path: /ai_optimization/chat_gpt/llm_scraper/locations/{country}
   cost: {type: free, value: 0, currency: USD, unit: call, source: observed, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
-  name: List supported locations
+  name: "ChatGPT search location codes by country"
   summary: You will receive the list of locations by this API call.
   untestable: the OpenAPI spec ships no example request body for this route, so no test request could be generated
 - id: dataforseo.x.ai-optimization-claude-llm-responses-live
@@ -3929,7 +3929,7 @@ endpoints:
   platform: ai-search
   method: POST
   path: /ai_optimization/claude/llm_responses/live
-  name: "Get a Claude answer"
+  name: "Claude answer to a prompt, live"
   summary: Live Claude LLM Responses endpoint allows you to retrieve structured responses from a specific Claude model, based on the input parameters.
   input:
     bodyType: json
@@ -4026,7 +4026,7 @@ endpoints:
   platform: ai-search
   method: POST
   path: /ai_optimization/gemini/llm_responses/live
-  name: "Get a Gemini answer"
+  name: "Gemini answer to a prompt, live"
   summary: Live Gemini LLM Responses endpoint allows you to retrieve structured responses from a specific Gemini AI model, based on the input parameters.
   input:
     bodyType: json
@@ -4111,7 +4111,7 @@ endpoints:
   platform: ai-search
   method: POST
   path: /ai_optimization/gemini/llm_scraper/live/advanced
-  name: "Scrape Gemini search results"
+  name: "Gemini search results for a keyword, live"
   summary: Live Gemini LLM Scraper endpoint provides structured results from Gemini.
   input:
     bodyType: json
@@ -4166,7 +4166,7 @@ endpoints:
   platform: google
   method: POST
   path: /business_data/google/extended_reviews/task_post
-  name: Reviews from Google and other sites (async batch)
+  name: "Business reviews from Google and other sites (async task)"
   summary: This endpoint provides results from the “Reviews” element of Google SERPs, including not only Google user reviews but also reviews from other reputable sources (e.g., TripAdvisor, Yelp, Trustpilot).
   input:
     bodyType: json
@@ -4244,7 +4244,7 @@ endpoints:
   platform: google
   method: POST
   path: /business_data/google/hotel_info/live/advanced
-  name: Hotel listing details
+  name: "Google Hotels details by hotel id — rating, prices"
   summary: 'Google Hotel Info will provide you with structured data available for a specific hotel entity on the Google Hotels platform: such as service description, location details, rating, amenities, reviews, images, prices, and more.'
   input:
     bodyType: json
@@ -4334,7 +4334,7 @@ endpoints:
   platform: google
   method: POST
   path: /business_data/google/hotel_searches/live
-  name: Search hotel listings
+  name: "Google Hotels search results for a keyword, live"
   summary: Hotel Searches API provides results containing information about different hotels listed on Google Hotels.
   docs_url: https://docs.dataforseo.com/v3/business_data/google/hotel_searches/live/
   input:
@@ -4467,7 +4467,7 @@ endpoints:
   method: GET
   path: /business_data/google/locations/{country}
   cost: {type: free, value: 0, currency: USD, unit: call, source: observed, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
-  name: List supported locations
+  name: "Google Business location codes by country"
   summary: You will receive the list of locations by this API call.
   docs_url: https://docs.dataforseo.com/v3/business_data/google/locations/
   untestable: the OpenAPI spec ships no example request body for this route, so no test request could be generated
@@ -4476,7 +4476,7 @@ endpoints:
   platform: google
   method: POST
   path: /business_data/google/my_business_info/live
-  name: Business profile details
+  name: "Google Business Profile details by business name, live"
   summary: Business Data API provides results containing information about specific business entity from Google.
   docs_url: https://docs.dataforseo.com/v3/business_data/google/my_business_info/live/
   input:
@@ -4531,7 +4531,7 @@ endpoints:
   platform: google
   method: POST
   path: /business_data/google/my_business_updates/task_post
-  name: Latest business profile posts (async batch)
+  name: "Google Business Profile posts for a business (async task)"
   summary: This endpoints provides the latest updates of a specific business entity from Google SERP.
   docs_url: https://docs.dataforseo.com/v3/business_data/google/my_business_updates/task_post/
   input:
@@ -4602,7 +4602,7 @@ endpoints:
   platform: google
   method: POST
   path: /business_data/google/questions_and_answers/live
-  name: Questions and answers on a business
+  name: "Questions and answers on a Google Business listing, live"
   summary: This endpoint will provide you with a detailed overview of questions and answers associated with a specific business entity listed on Google My Business.
   docs_url: https://docs.dataforseo.com/v3/business_data/google/questions_and_answers/live/
   input:
@@ -4661,7 +4661,7 @@ endpoints:
   platform: google
   method: POST
   path: /business_data/google/reviews/task_post
-  name: Business reviews (async batch)
+  name: "Google reviews for a business (async task)"
   summary: This endpoint provides results from the “Reviews” element of Google SERPs.
   docs_url: https://docs.dataforseo.com/v3/business_data/google/reviews/task_post/
   input:
@@ -4748,7 +4748,7 @@ endpoints:
   platform: google
   method: POST
   path: /dataforseo_labs/google/app_competitors/live
-  name: Apps competing with a target app
+  name: "Google Play apps competing with an app, by app id"
   summary: This endpoint will provide you with a list of mobile applications that intersect with the target app for its ranking keywords on Google Play.
   docs_url: https://docs.dataforseo.com/v3/dataforseo_labs/google/app_competitors/live/
   input:
@@ -4817,7 +4817,7 @@ endpoints:
   platform: google
   method: POST
   path: /dataforseo_labs/google/app_intersection/live
-  name: Keywords several apps both rank for
+  name: "Keywords several Google Play apps rank for together"
   summary: This endpoint will provide you with a list of keywords for which the mobile applications specified in the app_ids object rank within the same Google Play SERP.
   docs_url: https://docs.dataforseo.com/v3/dataforseo_labs/google/app_intersection/live/
   input:
@@ -4892,7 +4892,7 @@ endpoints:
   method: GET
   path: /dataforseo_labs/google/available_history
   cost: {type: free, value: 0, currency: USD, unit: call, source: observed, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
-  name: List available history dates
+  name: "Available dates for domain metrics history"
   summary: By calling this endpoint, you will find obtain a list of dates available for setting in the first_date and second_date fields of the Domain Metrics by Categories endpoint.
   docs_url: https://docs.dataforseo.com/v3/dataforseo_labs/google/available_history/live/
   untestable: the OpenAPI spec ships no example request body for this route, so no test request could be generated
@@ -4901,7 +4901,7 @@ endpoints:
   platform: google
   method: POST
   path: /dataforseo_labs/google/bulk_app_metrics/live
-  name: Bulk ranking metrics for apps
+  name: "Ranking metrics for up to 1000 Google Play apps"
   summary: This endpoint will provide you with ranking metrics for up to 1000 Google Play applications.
   docs_url: https://docs.dataforseo.com/v3/dataforseo_labs/google/bulk_app_metrics/live/
   input:
@@ -4956,7 +4956,7 @@ endpoints:
   platform: google
   method: POST
   path: /dataforseo_labs/google/bulk_keyword_difficulty/live
-  name: Bulk keyword difficulty scores
+  name: "Keyword difficulty scores for up to 1000 keywords"
   summary: This endpoint will provide you with the Keyword Difficulty metric for a maximum of 1,000 keywords in one API request.
   docs_url: https://docs.dataforseo.com/v3/dataforseo_labs/google/bulk_keyword_difficulty/live/
   input:
@@ -5013,7 +5013,7 @@ endpoints:
   platform: google
   method: POST
   path: /dataforseo_labs/google/bulk_traffic_estimation/live
-  name: Bulk traffic estimates for domains
+  name: "Monthly traffic estimates for up to 1000 domains"
   summary: This endpoint will provide you with estimated monthly traffic volumes for up to 1,000 domains, subdomains, or webpages.
   docs_url: https://docs.dataforseo.com/v3/dataforseo_labs/google/bulk_traffic_estimation/live/
   input:
@@ -5084,7 +5084,7 @@ endpoints:
   platform: google
   method: POST
   path: /dataforseo_labs/google/categories_for_domain/live
-  name: Product categories a domain ranks in
+  name: "Google product categories a domain ranks in"
   summary: This endpoint will provide you with Google product or service categories that include keywords the domain ranks for in search.
   docs_url: https://docs.dataforseo.com/v3/dataforseo_labs/google/categories_for_domain/live/
   input:
@@ -5179,7 +5179,7 @@ endpoints:
   platform: google
   method: POST
   path: /dataforseo_labs/google/categories_for_keywords/live
-  name: Product categories for keywords
+  name: "Google product categories for keywords"
   summary: This endpoint will provide you with Google product and service categories related for each specified keyword.
   docs_url: https://docs.dataforseo.com/v3/dataforseo_labs/google/categories_for_keywords/live/
   input:
@@ -5226,7 +5226,7 @@ endpoints:
   platform: google
   method: POST
   path: /dataforseo_labs/google/competitors_domain/live
-  name: Competing domains with traffic data
+  name: "Competitor domains of a domain — rank and traffic"
   summary: This endpoint will provide you with a full overview of ranking and traffic data of the competitor domains from organic and paid search.
   docs_url: https://docs.dataforseo.com/v3/dataforseo_labs/google/competitors_domain/live/
   input:
@@ -5331,7 +5331,7 @@ endpoints:
   platform: google
   method: POST
   path: /dataforseo_labs/google/domain_intersection/live
-  name: Keywords two domains both rank for
+  name: "Keywords two domains both rank for in Google"
   summary: This endpoint will provide you with the keywords for which both specified domains rank within the same SERP.
   docs_url: https://docs.dataforseo.com/v3/dataforseo_labs/google/domain_intersection/live/
   input:
@@ -5424,7 +5424,7 @@ endpoints:
   platform: google
   method: POST
   path: /dataforseo_labs/google/domain_metrics_by_categories/live
-  name: Domain metric trends by category
+  name: "Domain metric trends for product categories"
   summary: This endpoint will provide you with dynamics of change in metrics of domains relevant to the specified product and service categories.
   docs_url: https://docs.dataforseo.com/v3/dataforseo_labs/google/domain_metrics_by_categories/live/
   input:
@@ -5533,7 +5533,7 @@ endpoints:
   platform: google
   method: POST
   path: /dataforseo_labs/google/domain_rank_overview/live
-  name: Organic and paid rank overview
+  name: "Google rank and traffic overview for a domain"
   summary: This endpoint will provide you with ranking and traffic data from organic and paid search for the specified domain.
   docs_url: https://docs.dataforseo.com/v3/dataforseo_labs/google/domain_rank_overview/live/
   input:
@@ -5596,7 +5596,7 @@ endpoints:
   platform: google
   method: POST
   path: /dataforseo_labs/google/historical_bulk_traffic_estimation/live
-  name: Historical traffic estimates in bulk
+  name: "Historical monthly traffic for up to 1000 domains"
   summary: This endpoint will provide you with historical monthly traffic volumes for up to 1,000 domains collected within the specified time range through October 2020.
   docs_url: https://docs.dataforseo.com/v3/dataforseo_labs/google/historical_bulk_traffic_estimation/live/
   input:
@@ -5679,7 +5679,7 @@ endpoints:
   platform: google
   method: POST
   path: /dataforseo_labs/google/historical_keyword_data/live
-  name: Historical keyword metrics
+  name: "Google historical search volume and CPC for keywords"
   summary: This endpoint provides Google historical keyword data for specified keywords, including search volume, cost-per-click, competition values for paid search, monthly searches, and search volume trends.
   docs_url: https://docs.dataforseo.com/v3/dataforseo_labs/google/historical_keyword_data/live/
   input:
@@ -5732,7 +5732,7 @@ endpoints:
   platform: google
   method: POST
   path: /dataforseo_labs/google/historical_rank_overview/live
-  name: Historical rank and traffic overview
+  name: "Historical Google rank and traffic for a domain"
   summary: This endpoint will provide you with historical data on rankings and traffic of the specified domain, such as domain ranking distribution in SERPs and estimated monthly traffic volume for both organic and paid results.
   docs_url: https://docs.dataforseo.com/v3/dataforseo_labs/google/historical_rank_overview/live/
   input:
@@ -5807,7 +5807,7 @@ endpoints:
   platform: google
   method: POST
   path: /dataforseo_labs/google/historical_serps/live
-  name: Past search results for a keyword
+  name: "Past Google search results for a keyword, by date range"
   summary: This endpoint will provide you with Google SERPs collected within the specified time frame.
   docs_url: https://docs.dataforseo.com/v3/dataforseo_labs/google/historical_serps/live/
   input:
@@ -5870,7 +5870,7 @@ endpoints:
   platform: google
   method: POST
   path: /dataforseo_labs/google/keyword_ideas/live
-  name: Keyword ideas from related categories
+  name: "Google keyword ideas for seed keywords, by category"
   summary: The Keyword Ideas endpoint provides search terms that are relevant to the product or service categories of the specified keywords.
   docs_url: https://docs.dataforseo.com/v3/dataforseo_labs/google/keyword_ideas/live/
   input:
@@ -5965,7 +5965,7 @@ endpoints:
   platform: google
   method: POST
   path: /dataforseo_labs/google/keyword_overview/live
-  name: Keyword metrics overview
+  name: "Google keyword overview for a list of keywords"
   summary: This endpoint provides Google keyword data for specified keywords.
   docs_url: https://docs.dataforseo.com/v3/dataforseo_labs/google/keyword_overview/live/
   input:
@@ -6030,7 +6030,7 @@ endpoints:
   platform: google
   method: POST
   path: /dataforseo_labs/google/keyword_suggestions/live
-  name: Keyword suggestions from a seed
+  name: "Google keyword suggestions containing a seed keyword"
   summary: The Keyword Suggestions endpoint provides search queries that include the specified seed keyword.
   docs_url: https://docs.dataforseo.com/v3/dataforseo_labs/google/keyword_suggestions/live/
   input:
@@ -6127,7 +6127,7 @@ endpoints:
   platform: google
   method: POST
   path: /dataforseo_labs/google/keywords_for_app/live
-  name: Keywords an app ranks for
+  name: "Keywords a Google Play app ranks for, by app id"
   summary: This endpoint will provide you with a list of keywords for which the target app ranks on Google Play.
   docs_url: https://docs.dataforseo.com/v3/dataforseo_labs/google/keywords_for_app/live/
   input:
@@ -6196,7 +6196,7 @@ endpoints:
   platform: google
   method: POST
   path: /dataforseo_labs/google/keywords_for_categories/live
-  name: Keywords in product categories
+  name: "Keywords for Google product categories"
   summary: This endpoint will provide you with a list of keywords relevant to the specified product categories.
   docs_url: https://docs.dataforseo.com/v3/dataforseo_labs/google/keywords_for_categories/live/
   input:
@@ -6291,7 +6291,7 @@ endpoints:
   platform: google
   method: POST
   path: /dataforseo_labs/google/keywords_for_site/live
-  name: Keywords a site ranks for
+  name: "Keywords relevant to a domain in Google"
   summary: The Keywords For Site endpoint will provide you with a list of keywords relevant to the target domain.
   docs_url: https://docs.dataforseo.com/v3/dataforseo_labs/google/keywords_for_site/live/
   input:
@@ -6388,7 +6388,7 @@ endpoints:
   platform: google
   method: POST
   path: /dataforseo_labs/google/page_intersection/live
-  name: Keywords two pages both rank for
+  name: "Keywords several pages rank for together, by URL"
   summary: This endpoint will provide you with the keywords for which specified pages rank within the same SERP.
   docs_url: https://docs.dataforseo.com/v3/dataforseo_labs/google/page_intersection/live/
   input:
@@ -6491,7 +6491,7 @@ endpoints:
   platform: google
   method: POST
   path: /dataforseo_labs/google/relevant_pages/live
-  name: Top ranking pages of a domain
+  name: "Top ranking pages of a domain in Google"
   summary: GoogleRelevantPagesLive
   docs_url: https://docs.dataforseo.com/v3/dataforseo_labs/google/relevant_pages/live/
   input:
@@ -6592,7 +6592,7 @@ endpoints:
   platform: google
   method: POST
   path: /dataforseo_labs/google/search_intent/live
-  name: Search intent for keywords
+  name: "Search intent for up to 1000 keywords"
   summary: This endpoint will provide you with search intent data for up to 1,000 keywords.
   docs_url: https://docs.dataforseo.com/v3/dataforseo_labs/google/search_intent/live/
   input:
@@ -6641,7 +6641,7 @@ endpoints:
   platform: google
   method: POST
   path: /dataforseo_labs/google/serp_competitors/live
-  name: Domains ranking for your keywords
+  name: "Domains ranking in Google for your keywords"
   summary: This endpoint will provide you with a list of domains ranking for the keywords you specify.
   docs_url: https://docs.dataforseo.com/v3/dataforseo_labs/google/serp_competitors/live/
   input:
@@ -6724,7 +6724,7 @@ endpoints:
   platform: google
   method: POST
   path: /dataforseo_labs/google/subdomains/live
-  name: Subdomains with ranking distribution
+  name: "Subdomains of a domain with Google rank distribution"
   summary: This endpoint will provide you with a list of subdomains of the specified domain, along with the ranking distribution across organic and paid search.
   docs_url: https://docs.dataforseo.com/v3/dataforseo_labs/google/subdomains/live/
   input:
@@ -6823,7 +6823,7 @@ endpoints:
   platform: google
   method: POST
   path: /dataforseo_labs/google/top_searches/live
-  name: Browse the keyword database
+  name: "Top Google searches from the 7B keyword database"
   summary: The Top Searches endpoint of DataForSEO Labs API can provide you with over 7 billion keywords from the DataForSEO Keyword Database.
   docs_url: https://docs.dataforseo.com/v3/dataforseo_labs/google/top_searches/live/
   input:
@@ -6902,7 +6902,7 @@ endpoints:
   platform: google
   method: POST
   path: /keywords_data/google_ads/ad_traffic_by_keywords/live
-  name: Forecast ad traffic for keywords
+  name: "Google Ads traffic forecast for keywords and bid"
   summary: GoogleAdsAdTrafficByKeywordsLive
   docs_url: https://docs.dataforseo.com/v3/keywords_data/google_ads/ad_traffic_by_keywords/live/
   input:
@@ -6987,7 +6987,7 @@ endpoints:
   platform: google
   method: POST
   path: /keywords_data/google_ads/keywords_for_keywords/live
-  name: Related keywords with Ads metrics
+  name: "Google Ads keyword ideas from seed keywords"
   summary: Note that Google Ads Keywords Data API is based on the latest version of the Google Ads API that has replaced legacy Google AdWords API.
   docs_url: https://docs.dataforseo.com/v3/keywords_data/google_ads/keywords_for_keywords/live/
   input:
@@ -7064,7 +7064,7 @@ endpoints:
   platform: google
   method: POST
   path: /keywords_data/google_ads/keywords_for_site/live
-  name: Site keywords with Ads metrics
+  name: "Google Ads keyword ideas for a site, by domain"
   summary: Note that Google Ads Keywords Data API is based on the latest version of the Google Ads API that has replaced legacy Google AdWords API.
   docs_url: https://docs.dataforseo.com/v3/keywords_data/google_ads/keywords_for_site/live/
   input:
@@ -7143,7 +7143,7 @@ endpoints:
   method: GET
   path: /keywords_data/google_ads/locations/{country}
   cost: {type: free, value: 0, currency: USD, unit: call, source: observed, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
-  name: List Ads targeting locations
+  name: "Google Ads location codes by country"
   summary: We use Google Geographical Targeting.
   docs_url: https://docs.dataforseo.com/v3/keywords_data/google_ads/locations/
   untestable: the OpenAPI spec ships no example request body for this route, so no test request could be generated
@@ -7152,7 +7152,7 @@ endpoints:
   platform: google
   method: POST
   path: /keywords_data/google_trends/explore/live
-  name: Keyword popularity over time
+  name: "Google Trends keyword popularity over time"
   summary: This endpoint will provide you with the keyword popularity data from the ‘Explore’ feature of Google Trends.
   docs_url: https://docs.dataforseo.com/v3/keywords_data/google_trends/explore/live/
   input:
@@ -7239,7 +7239,7 @@ endpoints:
   method: GET
   path: /keywords_data/google_trends/locations/{country}
   cost: {type: free, value: 0, currency: USD, unit: call, source: observed, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
-  name: List Trends locations
+  name: "Google Trends location codes by country"
   summary: GoogleTrendsLocationsCountry
   docs_url: https://docs.dataforseo.com/v3/keywords_data/google_trends/locations/
   untestable: the OpenAPI spec ships no example request body for this route, so no test request could be generated
@@ -7250,7 +7250,7 @@ endpoints:
   method: GET
   path: /merchant/google/locations/{country}
   cost: {type: free, value: 0, currency: USD, unit: call, source: observed, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
-  name: List Shopping locations
+  name: "Google Shopping location codes by country"
   summary: MerchantGoogleLocationsCountry
   docs_url: https://docs.dataforseo.com/v3/merchant/google/locations/
   untestable: the OpenAPI spec ships no example request body for this route, so no test request could be generated
@@ -7259,7 +7259,7 @@ endpoints:
   platform: google
   method: POST
   path: /merchant/google/product_info/task_post
-  name: Shopping product details (async batch)
+  name: "Google Shopping product details by id (async task)"
   summary: This endpoint provides data on a product listed on Google Shopping, including product description, images, rating, variations, specifications and sellers.
   docs_url: https://docs.dataforseo.com/v3/merchant/google/product_info/task_post/
   input:
@@ -7342,7 +7342,7 @@ endpoints:
   platform: google
   method: POST
   path: /merchant/google/products/task_post
-  name: Search Shopping products (async batch)
+  name: "Google Shopping results for a keyword (async task)"
   summary: Google Shopping Products endpoint will provide you with the list of products found on Google Shopping for the specified query.
   docs_url: https://docs.dataforseo.com/v3/merchant/google/products/task_post/
   input:
@@ -7449,7 +7449,7 @@ endpoints:
   method: GET
   path: /merchant/google/sellers/ad_url/{shop_ad_aclk}
   cost: {type: per_call, value: 1e-06, currency: USD, per: 1, unit: call, source: rate_card_api, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', confidence: verified, note: 'read from our own account rate card'}
-  name: Resolve a Shopping ad's full URL
+  name: "Resolve a Google Shopping ad to its full URL"
   summary: Google Shopping Sellers Ad URL is designed to provide you with a full URL of the advertisement containing all additional parameters set by the seller.
   docs_url: https://docs.dataforseo.com/v3/merchant/google/sellers/ad_url/
   untestable: the OpenAPI spec ships no example request body for this route, so no test request could be generated
@@ -7458,7 +7458,7 @@ endpoints:
   platform: google
   method: POST
   path: /merchant/google/sellers/task_post
-  name: Top sellers for a product (async batch)
+  name: "Google Shopping sellers for a product (async task)"
   summary: Google Shopping Sellers endpoint will provide you with the list of top 10 sellers that listed the specified product on Google Shopping.
   docs_url: https://docs.dataforseo.com/v3/merchant/google/sellers/task_post/
   input:
@@ -7557,7 +7557,7 @@ endpoints:
   platform: google
   method: POST
   path: /serp/ai_summary
-  name: Summarize a search results page
+  name: "AI summary of a fetched SERP by task id and prompt"
   summary: The purpose of the Live SERP API AI Summary endpoint is to provide a summary of the content found on any SERP and generate a response based on the user’s specified prompt.
   docs_url: https://docs.dataforseo.com/v3/serp/ai_summary/
   input:
@@ -7606,7 +7606,7 @@ endpoints:
   platform: google
   method: POST
   path: /serp/google/ads_advertisers/task_post
-  name: Find advertisers in Ads Transparency (async batch)
+  name: "Google Ads Transparency advertisers by keyword (async task)"
   summary: Google Ads Advertisers provides information on advertisers that run campaigns on Google Ads based on the Ads Transparency platform.
   input:
     bodyType: json
@@ -7666,7 +7666,7 @@ endpoints:
   platform: google
   method: POST
   path: /serp/google/ads_search/task_post
-  name: Search ads in Ads Transparency (async batch)
+  name: "Google Ads Transparency ads by advertiser (async task)"
   summary: Google Ads Search provides information on ads that are run by advertisers on Google Ads.
   input:
     bodyType: json
@@ -7756,7 +7756,7 @@ endpoints:
   platform: google
   method: POST
   path: /serp/google/ai_mode/live/advanced
-  name: Search results from AI Mode
+  name: "Google AI Mode results for a keyword, live"
   summary: Google AI Mode SERP API provides search results from the AI Mode feature of Google Search.
   input:
     bodyType: json
@@ -7834,7 +7834,7 @@ endpoints:
   platform: google
   method: POST
   path: /serp/google/autocomplete/live/advanced
-  name: Autocomplete suggestions for a query
+  name: "Google autocomplete suggestions for a keyword, live"
   summary: Google Autocomplete is a feature within Google Search that improves the search experience by allowing users to complete searches they started to type.
   input:
     bodyType: json
@@ -7894,7 +7894,7 @@ endpoints:
   platform: google
   method: POST
   path: /serp/google/dataset_info/live/advanced
-  name: Details for a dataset listing
+  name: "Google Dataset details by dataset id, live"
   summary: Live Google Dataset Info provides real-time data on the dataset you specify in the request.
   input:
     bodyType: json
@@ -7940,7 +7940,7 @@ endpoints:
   platform: google
   method: POST
   path: /serp/google/dataset_search/live/advanced
-  name: Search dataset results
+  name: "Google Dataset search results for a keyword, live"
   summary: Live Google Dataset Search provides real-time data on the top 20 Google Dataset search engine results.
   input:
     bodyType: json
@@ -8028,7 +8028,7 @@ endpoints:
   platform: google
   method: POST
   path: /serp/google/events/live/advanced
-  name: Search local events
+  name: "Google Events results for a keyword and location, live"
   summary: Live Google Events SERP provides real-time data from Google Events Search for the specified keyword and location.
   input:
     bodyType: json
@@ -8102,7 +8102,7 @@ endpoints:
   platform: google
   method: POST
   path: /serp/google/finance_explore/live/advanced
-  name: Finance Explore tab results
+  name: "Google Finance Explore tab results, live"
   summary: Live Google Finance Explore provides real-time data from the ‘Explore’ tab of Google Finance.
   input:
     bodyType: json
@@ -8158,7 +8158,7 @@ endpoints:
   platform: google
   method: POST
   path: /serp/google/finance_markets/live/advanced
-  name: Finance Markets tab results
+  name: "Google Finance Markets tab results, live"
   summary: Live Google Finance Markets provides real-time data from the ‘Markets’ tab of Google Finance.
   input:
     bodyType: json
@@ -8214,7 +8214,7 @@ endpoints:
   platform: google
   method: POST
   path: /serp/google/finance_quote/live/advanced
-  name: Quote data for a ticker
+  name: "Google Finance quote for a ticker, live"
   summary: Live Google Finance Quote provides real-time data from the ‘Quote’ tab of Google Finance.
   input:
     bodyType: json
@@ -8276,7 +8276,7 @@ endpoints:
   platform: google
   method: POST
   path: /serp/google/finance_ticker_search/live/advanced
-  name: Search financial instruments
+  name: "Google Finance ticker search by company name, live"
   summary: Live Google Finance Ticker Search allows you to search for financial instruments available on Google Finance along with additional information.
   input:
     bodyType: json
@@ -8332,7 +8332,7 @@ endpoints:
   platform: google
   method: POST
   path: /serp/google/images/live/advanced
-  name: Image search results
+  name: "Google Images results for a keyword, live"
   summary: Live Google Images SERP provides real-time data on top 100 images results for the specified keyword, search engine, and location.
   input:
     bodyType: json
@@ -8410,7 +8410,7 @@ endpoints:
   platform: google
   method: POST
   path: /serp/google/jobs/task_post
-  name: Job search results (async batch)
+  name: "Google Jobs postings for a keyword (async task)"
   summary: This endpoint will provide you with SERP data from the Google Jobs search engine.
   input:
     bodyType: json
@@ -8488,7 +8488,7 @@ endpoints:
   platform: google
   method: POST
   path: /serp/google/local_finder/live/advanced
-  name: Local finder search results
+  name: "Google Local Finder results for a keyword, live"
   summary: Live Google Local_finder SERP provides real-time search engine results for the specified keyword and location.
   input:
     bodyType: json
@@ -8572,7 +8572,7 @@ endpoints:
   method: GET
   path: /serp/google/locations/{country}
   cost: {type: free, value: 0, currency: USD, unit: call, source: observed, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
-  name: List supported locations
+  name: "Google SERP location codes by country"
   summary: You will receive the list of locations by this API call.
   docs_url: https://docs.dataforseo.com/v3/serp/google/locations/
   untestable: the OpenAPI spec ships no example request body for this route, so no test request could be generated
@@ -8581,7 +8581,7 @@ endpoints:
   platform: google
   method: POST
   path: /serp/google/maps/live/advanced
-  name: Maps search results
+  name: "Google Maps results for a keyword and location, live"
   summary: Live Google Maps SERP provides real-time data on top 100 search engine results for the specified keyword, search engine, and location.
   input:
     bodyType: json
@@ -8667,7 +8667,7 @@ endpoints:
   platform: google
   method: POST
   path: /serp/google/news/live/advanced
-  name: News search results
+  name: "Google News results for a keyword, live"
   summary: Live Google News SERP provides real-time data on top search engine results for the specified keyword, search engine, and location.
   input:
     bodyType: json
@@ -8757,7 +8757,7 @@ endpoints:
   platform: google
   method: POST
   path: /serp/google/organic/live/advanced
-  name: Organic search results (advanced)
+  name: "Google organic results for a keyword — full SERP features"
   summary: Live SERP provides real-time data on top search engine results for the specified keyword, search engine, and location.
   input:
     bodyType: json
@@ -8901,7 +8901,7 @@ endpoints:
   platform: google
   method: POST
   path: /serp/google/search_by_image/task_post
-  name: Reverse image search (async batch)
+  name: "Google reverse image search by image URL (async task)"
   summary: Google Search By Image SERP API provides up to top 100 search engine results based on the image you specified.
   input:
     bodyType: json
@@ -8999,7 +8999,7 @@ endpoints:
   platform: google
   method: POST
   path: /serp/screenshot
-  name: Screenshot a search results page
+  name: "Screenshot of a fetched SERP by task id"
   summary: Using the Live Page Screenshot endpoint, you can capture a screenshot of any SERP page.
   docs_url: https://docs.dataforseo.com/v3/serp/screenshot/
   input:
@@ -9048,7 +9048,7 @@ endpoints:
   platform: google-play
   method: POST
   path: /app_data/google/app_info/task_post
-  name: App listing details (async batch)
+  name: "Google Play app details by app id (async task)"
   summary: This endpoint will provide you with information about the Google Play application specified in the app_id field of the POST request.
   docs_url: https://docs.dataforseo.com/v3/app_data/google/app_info/task_post/
   input:
@@ -9115,7 +9115,7 @@ endpoints:
   platform: google-play
   method: POST
   path: /app_data/google/app_list/task_post
-  name: Top charts app list (async batch)
+  name: "Google Play top chart apps by collection (async task)"
   summary: This endpoint will provide you with a list of mobile applications published in the top charts on the Google Play platform.
   docs_url: https://docs.dataforseo.com/v3/app_data/google/app_list/task_post/
   input:
@@ -9196,7 +9196,7 @@ endpoints:
   platform: google-play
   method: POST
   path: /app_data/google/app_listings/search/live
-  name: Search app listings
+  name: "Search Google Play apps — rating, reviews count, price"
   summary: 'This endpoint will provide you with a list of apps published on Google Play along with additional information: its ID, icon, reviews count, rating, price, and other data.'
   docs_url: https://docs.dataforseo.com/v3/app_data/google/app_listings/search/live/
   input:
@@ -9275,7 +9275,7 @@ endpoints:
   platform: google-play
   method: POST
   path: /app_data/google/app_reviews/task_post
-  name: Reviews for an app (async batch)
+  name: "Google Play reviews for an app by app id (async task)"
   summary: This endpoint will provide you with reviews published on the Google Play platform for the app specified in the app_id field.
   docs_url: https://docs.dataforseo.com/v3/app_data/google/app_reviews/task_post/
   input:
@@ -9356,7 +9356,7 @@ endpoints:
   platform: google-play
   method: POST
   path: /app_data/google/app_searches/task_post
-  name: Apps ranking for a keyword (async batch)
+  name: "Google Play apps ranking for a keyword (async task)"
   summary: This endpoint will provide you with a list of apps ranking on Google Play for the specified keyword.
   docs_url: https://docs.dataforseo.com/v3/app_data/google/app_searches/task_post/
   input:
@@ -9431,7 +9431,7 @@ endpoints:
   method: GET
   path: /app_data/google/locations/{country}
   cost: {type: free, value: 0, currency: USD, unit: call, source: observed, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
-  name: List supported locations
+  name: "Google Play location codes by country"
   summary: By calling this endpoint you will receive the list of Google locations supported in App Data API.
   docs_url: https://docs.dataforseo.com/v3/app_data/google/locations/
   untestable: the OpenAPI spec ships no example request body for this route, so no test request could be generated
@@ -9440,7 +9440,7 @@ endpoints:
   platform: naver
   method: POST
   path: /serp/naver/organic/task_post
-  name: Organic search results (async batch)
+  name: "Naver organic search results for a keyword (async task)"
   summary: Naver SERP API provides top 15 search engine results.
   docs_url: https://docs.dataforseo.com/v3/serp/naver/organic/task_post/
   input:
@@ -9536,7 +9536,7 @@ endpoints:
   platform: ai-search
   method: POST
   path: /ai_optimization/perplexity/llm_responses/live
-  name: "Get a Perplexity answer"
+  name: "Perplexity answer to a prompt, live"
   summary: Live Perplexity LLM Responses endpoint allows you to retrieve structured responses from a specific Perplexity AI model, based on the input parameters.
   input:
     bodyType: json
@@ -9619,7 +9619,7 @@ endpoints:
   method: GET
   path: /serp/seznam/locations/{country}
   cost: {type: free, value: 0, currency: USD, unit: call, source: observed, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
-  name: List supported locations
+  name: "Seznam location codes by country"
   summary: You will receive the list of locations by this API call.
   docs_url: https://docs.dataforseo.com/v3/serp/seznam/locations/
   untestable: the OpenAPI spec ships no example request body for this route, so no test request could be generated
@@ -9628,7 +9628,7 @@ endpoints:
   platform: seznam
   method: POST
   path: /serp/seznam/organic/task_post
-  name: Organic search results (async batch)
+  name: "Seznam organic search results for a keyword (async task)"
   summary: Seznam SERP API provides top 10 search engine results from one of the most popular search engines in the Czech Republic.
   docs_url: https://docs.dataforseo.com/v3/serp/seznam/organic/task_post/
   input:
@@ -9742,7 +9742,7 @@ endpoints:
   method: GET
   path: /business_data/tripadvisor/locations/{country}
   cost: {type: free, value: 0, currency: USD, unit: call, source: observed, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
-  name: List supported locations
+  name: "Tripadvisor location codes by country"
   summary: You will receive the list of locations by this API call.
   docs_url: https://docs.dataforseo.com/v3/business_data/tripadvisor/locations/
   untestable: the OpenAPI spec ships no example request body for this route, so no test request could be generated
@@ -9751,7 +9751,7 @@ endpoints:
   platform: tripadvisor
   method: POST
   path: /business_data/tripadvisor/reviews/task_post
-  name: Business reviews (async batch)
+  name: "Tripadvisor reviews for a business (async task)"
   summary: This endpoint provides results from the “Reviews” element on the Tripadvisor platform.
   docs_url: https://docs.dataforseo.com/v3/business_data/tripadvisor/reviews/task_post/
   input:
@@ -9849,7 +9849,7 @@ endpoints:
   platform: tripadvisor
   method: POST
   path: /business_data/tripadvisor/search/task_post
-  name: Search business profiles (async batch)
+  name: "Search Tripadvisor business profiles (async task)"
   summary: This endpoint provides a list of business profiles listed on the Tripadvisor platform.
   docs_url: https://docs.dataforseo.com/v3/business_data/tripadvisor/search/task_post/
   input:
@@ -9909,7 +9909,7 @@ endpoints:
   platform: trustpilot
   method: POST
   path: /business_data/trustpilot/reviews/task_post
-  name: Business reviews (async batch)
+  name: "Trustpilot reviews for a business by domain (async task)"
   summary: This endpoint provides reviews published on the Trustpilot platform for the local establishment specified in the domain field.
   docs_url: https://docs.dataforseo.com/v3/business_data/trustpilot/reviews/task_post/
   input:
@@ -9963,7 +9963,7 @@ endpoints:
   platform: trustpilot
   method: POST
   path: /business_data/trustpilot/search/task_post
-  name: Search business profiles (async batch)
+  name: "Search Trustpilot business profiles (async task)"
   summary: This endpoint provides a list of business profiles listed on the Trustpilot platform.
   docs_url: https://docs.dataforseo.com/v3/business_data/trustpilot/search/task_post/
   input:
@@ -10013,7 +10013,7 @@ endpoints:
   platform: web
   method: POST
   path: /backlinks/bulk_backlinks/live
-  name: Backlink counts for many targets
+  name: "Backlink counts for many domains or pages"
   summary: This endpoint will provide you with the number of backlinks pointing to domains, subdomains, and pages specified in the targets array.
   input:
     bodyType: json
@@ -10063,7 +10063,7 @@ endpoints:
   platform: web
   method: POST
   path: /backlinks/bulk_new_lost_backlinks/live
-  name: New and lost backlink counts in bulk
+  name: "New and lost backlink counts for many domains"
   summary: This endpoint will provide you with the number of new and lost backlinks for the domains, subdomains, and pages specified in the targets array.
   input:
     bodyType: json
@@ -10119,7 +10119,7 @@ endpoints:
   platform: web
   method: POST
   path: /backlinks/bulk_new_lost_referring_domains/live
-  name: New and lost referring domains in bulk
+  name: "New and lost referring domain counts for many domains"
   summary: This endpoint will provide you with the number of referring domains pointing to the domains, subdomains and pages specified in the targets array.
   input:
     bodyType: json
@@ -10175,7 +10175,7 @@ endpoints:
   platform: web
   method: POST
   path: /backlinks/bulk_pages_summary/live
-  name: Backlink summary for many pages
+  name: "Backlink summary for up to 1000 pages or domains"
   summary: This endpoint will provide you with a comprehensive overview of backlinks and related data for a bulk of up to 1000 pages, domains, or subdomains.
   input:
     bodyType: json
@@ -10217,7 +10217,7 @@ endpoints:
   platform: web
   method: POST
   path: /backlinks/bulk_referring_domains/live
-  name: Referring domain counts in bulk
+  name: "Referring domain counts for many domains or pages"
   summary: This endpoint will provide you with the number of referring domains pointing to domains, subdomains, and pages specified in the targets array.
   docs_url: https://docs.dataforseo.com/v3/backlinks/bulk_referring_domains/live/
   input:
@@ -10268,7 +10268,7 @@ endpoints:
   platform: web
   method: POST
   path: /backlinks/bulk_spam_score/live
-  name: Spam scores for many targets
+  name: "Spam scores for many domains or pages"
   summary: This endpoint will provide you with spam scores of the domains, subdomains, and pages you specified in the targets array.
   docs_url: https://docs.dataforseo.com/v3/backlinks/bulk_spam_score/live/
   input:
@@ -10319,7 +10319,7 @@ endpoints:
   platform: web
   method: POST
   path: /backlinks/domain_intersection/live
-  name: Domains linking to both targets
+  name: "Domains linking to several targets at once"
   summary: This endpoint will provide you with the list of domains pointing to the specified websites.
   input:
     bodyType: json
@@ -10419,7 +10419,7 @@ endpoints:
   platform: web
   method: POST
   path: /backlinks/domain_pages/live
-  name: Pages of a domain with backlink data
+  name: "Pages of a domain with backlinks per page"
   summary: This endpoint will provide you with a detailed overview of domain pages with backlink data for each page.
   docs_url: https://docs.dataforseo.com/v3/backlinks/domain_pages/live/
   input:
@@ -10508,7 +10508,7 @@ endpoints:
   platform: web
   method: POST
   path: /backlinks/domain_pages_summary/live
-  name: Backlink summary per page of a domain
+  name: "Backlink summary for every page of a domain"
   summary: This endpoint will provide you with detailed summary data on all backlinks and related metrics for each page of the target domain or subdomain you specify.
   docs_url: https://docs.dataforseo.com/v3/backlinks/domain_pages_summary/live/
   input:
@@ -10589,7 +10589,7 @@ endpoints:
   platform: web
   method: POST
   path: /backlinks/history/live
-  name: Backlink history since 2019
+  name: "Backlink history for a domain back to 2019"
   summary: This endpoint will provide you with historical backlinks data back to the beginning of 2019.
   input:
     bodyType: json
@@ -10637,7 +10637,7 @@ endpoints:
   method: GET
   path: /backlinks/index
   cost: {type: free, value: 0, currency: USD, unit: call, source: observed, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
-  name: Size of the backlink index
+  name: "Backlink index totals — backlinks, domains, pages"
   summary: This endpoint will provide you with the total number of backlinks, domains, and pages our database contains for the moment when you make a request.
   untestable: the OpenAPI spec ships no example request body for this route, so no test request could be generated
 - id: dataforseo.x.backlinks-page-intersection-live
@@ -10645,7 +10645,7 @@ endpoints:
   platform: web
   method: POST
   path: /backlinks/page_intersection/live
-  name: Pages linking to all given targets
+  name: "Pages linking to several targets at once"
   summary: This endpoint will provide you with the list of referring pages pointing to the specified targets.
   docs_url: https://docs.dataforseo.com/v3/backlinks/page_intersection/live/
   input:
@@ -10754,7 +10754,7 @@ endpoints:
   platform: web
   method: POST
   path: /backlinks/referring_networks/live
-  name: Referring IPs and subnets
+  name: "Referring IPs and subnets for a domain or page"
   summary: This endpoint will provide you with a detailed overview of referring IPs and subnets pointing to the target you specify.
   docs_url: https://docs.dataforseo.com/v3/backlinks/referring_networks/live/
   input:
@@ -10859,7 +10859,7 @@ endpoints:
   platform: web
   method: POST
   path: /backlinks/timeseries_new_lost_summary/live
-  name: New and lost backlinks over time
+  name: "New and lost backlinks over time for a domain"
   summary: This endpoint will provide you with the number of new and lost backlinks and referring domains for the domain specified in the target field.
   docs_url: https://docs.dataforseo.com/v3/backlinks/timeseries_new_lost_summary/live/
   input:
@@ -10912,7 +10912,7 @@ endpoints:
   platform: web
   method: POST
   path: /backlinks/timeseries_summary/live
-  name: Backlink metrics between two dates
+  name: "Backlink totals over time for a domain, by date range"
   summary: This endpoint will provide you with an overview of backlink data for the target domain available during a period between the two indicated dates.
   docs_url: https://docs.dataforseo.com/v3/backlinks/timeseries_summary/live/
   input:
@@ -10969,7 +10969,7 @@ endpoints:
   platform: web
   method: POST
   path: /business_data/business_listings/categories_aggregation/live
-  name: Count businesses by related category
+  name: "Business listing counts by related category"
   summary: Business Listings Categories Aggregation endpoint provides results containing information about groups of related categories along with the number of entities in each category.
   input:
     bodyType: json
@@ -11051,7 +11051,7 @@ endpoints:
   platform: web
   method: POST
   path: /business_data/business_listings/search/live
-  name: Search businesses on Maps by category
+  name: "Search Google Maps businesses by category and location"
   summary: Business Listings Search API provides results containing information about business entities listed on Google Maps in the specified categories.
   input:
     bodyType: json
@@ -11141,7 +11141,7 @@ endpoints:
   platform: pinterest
   method: POST
   path: /business_data/social_media/pinterest/live
-  name: Pin counts for URLs
+  name: "Pinterest pins made from a list of URLs"
   summary: Social Media Pinterest API will provide you with data on pins made from the specified URLs.
   docs_url: https://docs.dataforseo.com/v3/business_data/social_media/pinterest/live/
   input:
@@ -11180,7 +11180,7 @@ endpoints:
   platform: web
   method: POST
   path: /content_analysis/category_trends/live
-  name: Citation trends for a category
+  name: "Citation trends for a category over a date range"
   summary: This endpoint will provide you with data on all citations in the target category for the indicated date range.
   docs_url: https://docs.dataforseo.com/v3/content_analysis/category_trends/live/
   input:
@@ -11249,7 +11249,7 @@ endpoints:
   platform: web
   method: POST
   path: /content_analysis/phrase_trends/live
-  name: Citation trends for a keyword
+  name: "Citation trends for a keyword over a date range"
   summary: This endpoint will provide you with data on all citations of the target keyword for the indicated date range.
   docs_url: https://docs.dataforseo.com/v3/content_analysis/phrase_trends/live/
   input:
@@ -11322,7 +11322,7 @@ endpoints:
   platform: web
   method: POST
   path: /content_analysis/rating_distribution/live
-  name: Rating distribution for a keyword
+  name: "Rating distribution of citations for a keyword"
   summary: This endpoint will provide you with rating distribution data for the keyword and other parameters specified in the request.
   docs_url: https://docs.dataforseo.com/v3/content_analysis/rating_distribution/live/
   input:
@@ -11389,7 +11389,7 @@ endpoints:
   platform: web
   method: POST
   path: /content_analysis/search/live
-  name: Search citations of a keyword
+  name: "Search citations of a keyword"
   summary: This endpoint will provide you with detailed citation data available for the target keyword.
   docs_url: https://docs.dataforseo.com/v3/content_analysis/search/live/
   input:
@@ -11488,7 +11488,7 @@ endpoints:
   platform: web
   method: POST
   path: /content_analysis/sentiment_analysis/live
-  name: Sentiment of citations for a keyword
+  name: "Sentiment of citations for a keyword"
   summary: This endpoint will provide you with sentiment analysis data for the citations available for the target keyword.
   docs_url: https://docs.dataforseo.com/v3/content_analysis/sentiment_analysis/live/
   input:
@@ -11549,7 +11549,7 @@ endpoints:
   platform: web
   method: POST
   path: /content_analysis/summary/live
-  name: Citation overview for a keyword
+  name: "Citation overview for a keyword"
   summary: This endpoint will provide you with an overview of citation data available for the target keyword.
   docs_url: https://docs.dataforseo.com/v3/content_analysis/summary/live/
   input:
@@ -11624,7 +11624,7 @@ endpoints:
   platform: web
   method: POST
   path: /domain_analytics/technologies/aggregation_technologies/live
-  name: Technologies used alongside yours
+  name: "Technologies used alongside a given technology"
   summary: The Aggregation Technologies endpoint will provide you with a list of the most popular technologies websites use alongside the technologies you specify.
   docs_url: https://docs.dataforseo.com/v3/domain_analytics/technologies/aggregation_technologies/live/
   input:
@@ -11729,7 +11729,7 @@ endpoints:
   platform: web
   method: POST
   path: /domain_analytics/technologies/domain_technologies/live
-  name: Technologies a domain uses
+  name: "Technologies a website uses, by domain"
   summary: Using this endpoint you will get a list of technologies used in a particular domain.
   docs_url: https://docs.dataforseo.com/v3/domain_analytics/technologies/domain_technologies/live/
   input:
@@ -11756,7 +11756,7 @@ endpoints:
   platform: web
   method: POST
   path: /domain_analytics/technologies/domains_by_html_terms/live
-  name: Find domains by homepage HTML terms
+  name: "Find domains by HTML terms on their homepage"
   summary: This endpoint provides domains based on the HTML terms they use on their homepage.
   docs_url: https://docs.dataforseo.com/v3/domain_analytics/technologies/domains_by_html_terms/live/
   input:
@@ -11821,7 +11821,7 @@ endpoints:
   platform: web
   method: POST
   path: /domain_analytics/technologies/domains_by_technology/live
-  name: Find domains by technology used
+  name: "Find domains using a given technology"
   summary: This endpoint provides domains based on the technology they use.
   docs_url: https://docs.dataforseo.com/v3/domain_analytics/technologies/domains_by_technology/live/
   input:
@@ -11914,7 +11914,7 @@ endpoints:
   method: GET
   path: /domain_analytics/technologies/technologies
   cost: {type: free, value: 0, currency: USD, unit: call, source: observed, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
-  name: List all known technologies
+  name: "Full list of technologies by group and category"
   summary: This endpoint will provide you with the full list of available technologies structured by technology groups and categories each particular technology belongs to.
   docs_url: https://docs.dataforseo.com/v3/domain_analytics/technologies/technologies/
   untestable: the OpenAPI spec ships no example request body for this route, so no test request could be generated
@@ -11923,7 +11923,7 @@ endpoints:
   platform: web
   method: POST
   path: /domain_analytics/technologies/technologies_summary/live
-  name: Domain counts per technology
+  name: "Domain counts for a technology, by country and language"
   summary: The Technologies Summary endpoint will provide you with the number of domains across different countries and languages that use the specified technology names, technology groups, or technology categories.
   docs_url: https://docs.dataforseo.com/v3/domain_analytics/technologies/technologies_summary/live/
   input:
@@ -12006,7 +12006,7 @@ endpoints:
   platform: web
   method: POST
   path: /domain_analytics/technologies/technology_stats/live
-  name: Technology adoption over time
+  name: "Domain counts for a technology over time"
   summary: The Technology Stats endpoint will provide you with historical data on the number of domains across different countries and languages that use the specified technology.
   docs_url: https://docs.dataforseo.com/v3/domain_analytics/technologies/technology_stats/live/
   input:
@@ -12049,7 +12049,7 @@ endpoints:
   platform: web
   method: POST
   path: /domain_analytics/whois/overview/live
-  name: Whois with traffic and backlink stats
+  name: "Whois records with backlink and traffic stats, filtered"
   summary: This endpoint will provide you with Whois data enriched with backlink stats, and ranking and traffic info from organic and paid search results.
   input:
     bodyType: json
@@ -12105,7 +12105,7 @@ endpoints:
   platform: web
   method: POST
   path: /keywords_data/clickstream_data/bulk_search_volume/live
-  name: Bulk clickstream search volume
+  name: "Clickstream search volume for up to 1000 keywords"
   summary: The Bulk Clickstream Search Volume endpoint of DataForSEO Keywords Data API is designed to provide clickstream-based search volume data for up to 1000 keywords in a single Live request.
   docs_url: https://docs.dataforseo.com/v3/keywords_data/clickstream_data/bulk_search_volume/live/
   input:
@@ -12154,7 +12154,7 @@ endpoints:
   platform: web
   method: POST
   path: /keywords_data/clickstream_data/dataforseo_search_volume/live
-  name: Clickstream search volume for keywords
+  name: "Search volume for keywords, clickstream optional"
   summary: ClickstreamDataDataforseoSearchVolumeLive
   docs_url: https://docs.dataforseo.com/v3/keywords_data/clickstream_data/dataforseo_search_volume/live/
   input:
@@ -12217,7 +12217,7 @@ endpoints:
   platform: web
   method: POST
   path: /keywords_data/clickstream_data/global_search_volume/live
-  name: Global clickstream search volume
+  name: "Global clickstream search volume for up to 1000 keywords"
   summary: The Clickstream Global Search Volume endpoint of DataForSEO Keywords Data API is designed to provide clickstream-based search volume data for up to 1000 keywords in a single Live request.
   docs_url: https://docs.dataforseo.com/v3/keywords_data/clickstream_data/global_search_volume/live/
   input:
@@ -12256,7 +12256,7 @@ endpoints:
   platform: web
   method: POST
   path: /keywords_data/dataforseo_trends/demography/live
-  name: Keyword popularity by age and gender
+  name: "Keyword popularity by age and gender, DataForSEO Trends"
   summary: This endpoint will provide you with the demographic breakdown (by age and gender) of keyword popularity per each specified term based on DataForSEO Trends data.
   docs_url: https://docs.dataforseo.com/v3/keywords_data/dataforseo_trends/demography/live/
   input:
@@ -12323,7 +12323,7 @@ endpoints:
   platform: web
   method: POST
   path: /keywords_data/dataforseo_trends/explore/live
-  name: Keyword popularity over time
+  name: "DataForSEO Trends keyword popularity over time"
   summary: This endpoint will provide you with the keyword popularity data from DataForSEO Trends.
   docs_url: https://docs.dataforseo.com/v3/keywords_data/dataforseo_trends/explore/live/
   input:
@@ -12386,7 +12386,7 @@ endpoints:
   method: GET
   path: /keywords_data/dataforseo_trends/locations/{country}
   cost: {type: free, value: 0, currency: USD, unit: call, source: observed, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
-  name: List Trends locations
+  name: "DataForSEO Trends location codes by country"
   summary: You will receive the list of DataForSEO Trends locations by calling this API.
   docs_url: https://docs.dataforseo.com/v3/keywords_data/dataforseo_trends/locations/
   untestable: the OpenAPI spec ships no example request body for this route, so no test request could be generated
@@ -12395,7 +12395,7 @@ endpoints:
   platform: web
   method: POST
   path: /keywords_data/dataforseo_trends/merged_data/live
-  name: Keyword popularity across sources
+  name: "Keyword popularity merged across trend sources"
   summary: This endpoint will provide you with the keyword popularity data from DataForSEO Trends.
   docs_url: https://docs.dataforseo.com/v3/keywords_data/dataforseo_trends/merged_data/live/
   input:
@@ -12462,7 +12462,7 @@ endpoints:
   platform: web
   method: POST
   path: /keywords_data/dataforseo_trends/subregion_interests/live
-  name: Keyword popularity by subregion
+  name: "Keyword popularity by subregion, DataForSEO Trends"
   summary: This endpoint will provide you with location-specific keyword popularity data from DataForSEO Trends.
   docs_url: https://docs.dataforseo.com/v3/keywords_data/dataforseo_trends/subregion_interests/live/
   input:
@@ -12529,7 +12529,7 @@ endpoints:
   platform: web
   method: POST
   path: /on_page/content_parsing
-  name: Parse page content (async batch)
+  name: "Parsed page content from a crawl, by task id and URL"
   summary: This endpoint allows parsing the content on any page you specify and will return the structured content of the target page, including link URLs, anchors, headings, and textual content.
   docs_url: https://docs.dataforseo.com/v3/on_page/content_parsing/
   input:
@@ -12566,7 +12566,7 @@ endpoints:
   platform: web
   method: POST
   path: /on_page/content_parsing/live
-  name: Parse page content
+  name: "Parse a page into links, headings and text, live"
   summary: This endpoint allows parsing the content on any page you specify and will return the structured content of the target page, including link URLs, anchors, headings, and textual content.
   docs_url: https://docs.dataforseo.com/v3/on_page/content_parsing/live/
   input:
@@ -12641,7 +12641,7 @@ endpoints:
   method: POST
   path: /on_page/duplicate_content
   cost: {type: free, value: 0, currency: USD, unit: call, source: rate_card_api, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
-  name: Pages with duplicate content
+  name: "Pages with duplicate content in a crawl, by URL"
   summary: This endpoint returns a list of pages that have content similar to the page specified in the request.
   docs_url: https://docs.dataforseo.com/v3/on_page/duplicate_content/
   input:
@@ -12681,7 +12681,7 @@ endpoints:
   method: POST
   path: /on_page/duplicate_tags
   cost: {type: free, value: 0, currency: USD, unit: call, source: rate_card_api, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
-  name: Pages with duplicate titles or tags
+  name: "Pages with duplicate title or meta tags in a crawl"
   summary: This endpoint returns a list of pages that contain duplicate title or description tags.
   docs_url: https://docs.dataforseo.com/v3/on_page/duplicate_tags/
   input:
@@ -12722,7 +12722,7 @@ endpoints:
   method: POST
   path: /on_page/keyword_density
   cost: {type: free, value: 0, currency: USD, unit: call, source: rate_card_api, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
-  name: Keyword density on a page or site
+  name: "Keyword density on a crawled site or page"
   summary: This endpoint will provide you with keyword density and keyword frequency data for terms appearing on the specified website or web page.
   docs_url: https://docs.dataforseo.com/v3/on_page/keyword_density/
   input:
@@ -12772,7 +12772,7 @@ endpoints:
   method: GET
   path: /on_page/lighthouse/audits
   cost: {type: free, value: 0, currency: USD, unit: call, source: observed, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
-  name: List Lighthouse audit checks
+  name: "Available Lighthouse audit checks"
   summary: The OnPage Lighthouse API is based on Google’s open-source Lighthouse project and provides data on the quality of web pages.
   docs_url: https://docs.dataforseo.com/v3/on_page/lighthouse/audits/
   untestable: the OpenAPI spec ships no example request body for this route, so no test request could be generated
@@ -12781,7 +12781,7 @@ endpoints:
   platform: web
   method: POST
   path: /on_page/lighthouse/live/json
-  name: Run a Lighthouse audit
+  name: "Lighthouse audit for a URL, live"
   summary: The OnPage Lighthouse API is based on Google’s open-source Lighthouse project for measuring the quality of web pages and web apps.
   input:
     bodyType: json
@@ -12857,7 +12857,7 @@ endpoints:
   method: POST
   path: /on_page/links
   cost: {type: free, value: 0, currency: USD, unit: call, source: rate_card_api, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
-  name: Internal and external links found
+  name: "Internal and external links from a site crawl"
   summary: This endpoint will provide you with a list of internal and external links detected on a target website.
   docs_url: https://docs.dataforseo.com/v3/on_page/links/
   input:
@@ -12913,7 +12913,7 @@ endpoints:
   platform: web
   method: POST
   path: /on_page/microdata
-  name: Validate JSON-LD and Microdata
+  name: "Validate JSON-LD and microdata on a crawled page"
   summary: This endpoint is designed to validate structured JSON-LD data and Microdata.
   docs_url: https://docs.dataforseo.com/v3/on_page/microdata/
   input:
@@ -12941,7 +12941,7 @@ endpoints:
   method: POST
   path: /on_page/non_indexable
   cost: {type: free, value: 0, currency: USD, unit: call, source: rate_card_api, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
-  name: Pages blocked from indexing
+  name: "Non-indexable pages found in a site crawl"
   summary: This endpoint returns a list of pages that are blocked from being indexed by Google and other search engines through robots.txt, HTTP headers, or meta tags settings.
   docs_url: https://docs.dataforseo.com/v3/on_page/non_indexable/
   input:
@@ -12981,7 +12981,7 @@ endpoints:
   method: POST
   path: /on_page/page_screenshot
   cost: {type: per_result, value: 0.0048, currency: USD, per: 1, unit: call, source: rate_card_api, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', confidence: verified, note: 'read from our own account rate card'}
-  name: Screenshot a webpage
+  name: "Full-page screenshot of any URL"
   summary: Using this endpoint, you can capture a full high-quality screenshot of any webpage.
   docs_url: https://docs.dataforseo.com/v3/on_page/page_screenshot/
   input:
@@ -13040,7 +13040,7 @@ endpoints:
   method: POST
   path: /on_page/pages
   cost: {type: free, value: 0, currency: USD, unit: call, source: rate_card_api, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
-  name: Crawled pages with on-page checks
+  name: "Crawled pages with on-page checks, by task id"
   summary: This endpoint returns a list of crawled pages with on-page check-ups and other metrics related to the page performance.
   docs_url: https://docs.dataforseo.com/v3/on_page/pages/
   input:
@@ -13094,7 +13094,7 @@ endpoints:
   method: POST
   path: /on_page/pages_by_resource
   cost: {type: free, value: 0, currency: USD, unit: call, source: rate_card_api, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
-  name: Pages using a given resource
+  name: "Pages using a given resource, from a site crawl"
   summary: This endpoint will return the list of pages where a specific resource is located.
   docs_url: https://docs.dataforseo.com/v3/on_page/page_by_resource/
   input:
@@ -13138,7 +13138,7 @@ endpoints:
   method: POST
   path: /on_page/raw_html
   cost: {type: free, value: 0, currency: USD, unit: call, source: rate_card_api, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
-  name: Raw HTML of a page
+  name: "Raw HTML of a crawled page, by task id and URL"
   summary: This endpoint returns the HTML of a page you indicate in the request.
   docs_url: https://docs.dataforseo.com/v3/on_page/raw_html/
   input:
@@ -13162,7 +13162,7 @@ endpoints:
   method: POST
   path: /on_page/redirect_chains
   cost: {type: free, value: 0, currency: USD, unit: call, source: rate_card_api, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
-  name: Redirect chains found on a site
+  name: "Redirect chains found in a site crawl"
   summary: Redirect chains occur when there are at least two redirects between the initial URL and the destination URL.
   docs_url: https://docs.dataforseo.com/v3/on_page/redirect_chains/
   input:
@@ -13202,7 +13202,7 @@ endpoints:
   method: POST
   path: /on_page/resources
   cost: {type: free, value: 0, currency: USD, unit: call, source: rate_card_api, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
-  name: Images, scripts and other resources
+  name: "Site resources from a crawl — images, scripts, broken"
   summary: This endpoint will provide you with a list of resources, including images, scripts, stylesheets, and broken elements.
   docs_url: https://docs.dataforseo.com/v3/on_page/resources/
   input:
@@ -13264,7 +13264,7 @@ endpoints:
   method: GET
   path: /on_page/summary/{id}
   cost: {type: free, value: 0, currency: USD, unit: call, source: rate_card_api, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
-  name: Crawl summary for a site
+  name: "Site crawl summary and issues, by task id"
   summary: Using this function, you can get the overall information on a website as well as drill down into exact on-page issues of a website that has been scanned.
   docs_url: https://docs.dataforseo.com/v3/on_page/summary/
   untestable: the OpenAPI spec ships no example request body for this route, so no test request could be generated
@@ -13273,7 +13273,7 @@ endpoints:
   platform: web
   method: POST
   path: /on_page/task_post
-  name: Start a site crawl
+  name: "Start a site crawl for on-page audit, by domain"
   summary: OnPage API checks websites for 60+ customizable on-page parameters defines and displays all found flaws and opportunities for optimization so that you can easily fix them.
   docs_url: https://docs.dataforseo.com/v3/on_page/task_post/
   input:
@@ -13481,7 +13481,7 @@ endpoints:
   method: POST
   path: /on_page/uncrawlable_resources
   cost: {type: free, value: 0, currency: USD, unit: call, source: rate_card_api, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
-  name: Resources that could not be crawled
+  name: "Uncrawlable resources found in a site crawl"
   summary: This endpoint returns a list of resources detected on the target website that could not be crawled due to a content type inconsistency.
   input:
     bodyType: json
@@ -13524,7 +13524,7 @@ endpoints:
   method: POST
   path: /on_page/waterfall
   cost: {type: free, value: 0, currency: USD, unit: call, source: rate_card_api, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
-  name: Page load timing waterfall
+  name: "Page load waterfall timings for a crawled page"
   summary: This endpoint is designed to provide you with the page speed insights.
   docs_url: https://docs.dataforseo.com/v3/on_page/waterfall/
   input:
@@ -13553,7 +13553,7 @@ endpoints:
   method: GET
   path: /serp/yahoo/locations/{country}
   cost: {type: free, value: 0, currency: USD, unit: call, source: observed, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
-  name: List supported locations
+  name: "Yahoo location codes by country"
   summary: You will receive the list of locations by this API call.
   docs_url: https://docs.dataforseo.com/v3/serp/yahoo/locations/
   untestable: the OpenAPI spec ships no example request body for this route, so no test request could be generated
@@ -13562,7 +13562,7 @@ endpoints:
   platform: yahoo
   method: POST
   path: /serp/yahoo/organic/live/advanced
-  name: Organic search results (advanced)
+  name: "Yahoo organic results for a keyword — full SERP features"
   summary: Live SERP provides real-time data on top search engine results.
   docs_url: https://docs.dataforseo.com/v3/serp/yahoo/organic/live/advanced/
   input:
@@ -13662,7 +13662,7 @@ endpoints:
   platform: yahoo
   method: POST
   path: /serp/yahoo/organic/live/regular
-  name: Organic search results (regular)
+  name: "Yahoo organic search results for a keyword, live"
   summary: Live Yahoo SERP provides real-time data on search engine results for the specified keyword, search engine, and location.
   docs_url: https://docs.dataforseo.com/v3/serp/yahoo/organic/live/regular/
   input:
@@ -13764,7 +13764,7 @@ endpoints:
   method: GET
   path: /serp/youtube/locations/{country}
   cost: {type: free, value: 0, currency: USD, unit: call, source: observed, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
-  name: List supported locations
+  name: "YouTube location codes by country"
   summary: You will receive the list of locations by this API call.
   docs_url: https://docs.dataforseo.com/v3/serp/youtube/locations/
   untestable: the OpenAPI spec ships no example request body for this route, so no test request could be generated
@@ -13773,7 +13773,7 @@ endpoints:
   platform: youtube
   method: POST
   path: /serp/youtube/organic/live/advanced
-  name: Video search results
+  name: "YouTube search results for a keyword, live"
   summary: Live SERP provides real-time data on the top 20 blocks of YouTube search engine results.
   docs_url: https://docs.dataforseo.com/v3/serp/youtube/organic/live/advanced/
   input:
@@ -13840,7 +13840,7 @@ endpoints:
   platform: youtube
   method: POST
   path: /serp/youtube/video_comments/live/advanced
-  name: Comments on a video
+  name: "YouTube comments for a video by video id, live"
   summary: Live YouTube Comments provides real-time data on comments on the video you specify in the request.
   docs_url: https://docs.dataforseo.com/v3/serp/youtube/video_comments/live/advanced/
   input:
@@ -13903,7 +13903,7 @@ endpoints:
   platform: youtube
   method: POST
   path: /serp/youtube/video_info/live/advanced
-  name: Video details and stats
+  name: "YouTube video details by video id, live"
   summary: Live YouTube Video Info provides real-time data on the video you specify in the request.
   docs_url: https://docs.dataforseo.com/v3/serp/youtube/video_info/live/advanced/
   input:
@@ -13962,7 +13962,7 @@ endpoints:
   platform: youtube
   method: POST
   path: /serp/youtube/video_subtitles/live/advanced
-  name: Subtitles for a video
+  name: "YouTube subtitles for a video by video id, live"
   summary: Live YouTube Subtitles provides real-time data on subtitles in the video you specify in the request.
   docs_url: https://docs.dataforseo.com/v3/serp/youtube/video_subtitles/live/advanced/
   input:

@@ -45,7 +45,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /email-finder
-    name: "Find a person's work email"
+    name: "Find a person's work email by name and company domain"
     summary: "Find someone's work email address from their name and their company's domain"
     input:
       queryParams:
@@ -81,7 +81,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /email-verifier
-    name: "Verify an email address"
+    name: "Verify an email address is deliverable"
     summary: "Check an email is real, deliverable and not a catch-all or disposable inbox"
     input:
       queryParams:
@@ -111,7 +111,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /domain-search
-    name: "Find email addresses at a company"
+    name: "Find email addresses at a company domain, with roles"
     summary: "People and email addresses Hunter knows at a company, with roles and confidence"
     input:
       queryParams:
@@ -153,7 +153,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /people/find
-    name: "Enrich a person by email"
+    name: "Enrich a person by email — name, role, social profiles"
     summary: "Enrich a person from their email — name, role, seniority, location, social profiles"
     input:
       queryParams:
@@ -185,7 +185,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /companies/find
-    name: "Enrich a company by domain"
+    name: "Enrich a company by domain — headcount, revenue, tech"
     summary: "Enrich a company from its domain — industry, headcount, revenue, location, tech stack"
     input:
       queryParams:

@@ -15,7 +15,13 @@ related:
 
 # Landing sandbox studio
 
-The logged-out `/` is no longer a login box — it's a **landing page with a live, no-login sandbox
+> **Where this lives now.** `/` serves `landing.html`, not the SPA — `landing()` in `api.py` only
+> falls through to `index.html` when the request carries a query string (invite links, OAuth
+> returns, tour deep-links). The sandbox studio described below is that fall-through branch of
+> `index.html`, so it is reached from the SPA rather than from the front page. See
+> `interface/seo.md` for what `/` serves and why it is `{BASE}`-templated.
+
+The logged-out SPA is not a login box — it's a **landing page with a live, no-login sandbox
 studio** (the `v-if="!authed"` branch of `index.html`, `.lp` container). A visitor builds a real
 mini-registry in the browser and keeps using it from their terminal, all without an account. The
 engine is `src/treg/sandbox.py` + a handful of `api.py` endpoints; the front-end drives it with `sbx*`

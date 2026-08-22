@@ -12,9 +12,10 @@ from __future__ import annotations
 from httpx import ASGITransport, AsyncClient
 from sqlmodel import select
 
+from treg import audit
 from treg.api import TOOLREQ_RATE_MAX, app
 from treg.db import session_maker
-from treg.models import ToolRequest
+from treg.models import SearchMiss, ToolRequest
 
 
 async def _fetch_rows() -> list[ToolRequest]:
@@ -87,3 +88,34 @@ async def test_the_empty_search_names_the_way_to_file_one(clients: AsyncClient):
     body = r.json()
     assert body["results"] == []
     assert any("tool-requests" in h for h in body["hints"]), body["hints"]
+
+
+async def _fetch_misses() -> list[SearchMiss]:
+    async with session_maker() as s:
+        return list((await s.execute(select(SearchMiss))).scalars())
+
+
+async def test_the_empty_search_is_logged_as_a_miss(clients: AsyncClient):
+    """The other half of discovery: most agents that miss never file, so the miss itself is the
+    record (models.SearchMiss). Written fire-and-forget — drain() flushes it for the assert."""
+    r = await clients.get("/catalog/search", params={"q": "zzzz-no-such-capability"})
+    assert r.status_code == 200 and r.json()["results"] == []
+    await audit.drain()
+    (row,) = await _fetch_misses()
+    assert row.query == "zzzz-no-such-capability"
+    assert row.source == "api"
+
+
+async def test_a_search_that_matches_logs_no_miss(clients: AsyncClient):
+    r = await clients.get("/catalog/search", params={"q": "backlinks"})
+    assert r.status_code == 200 and r.json()["results"]
+    await audit.drain()
+    assert await _fetch_misses() == []
+
+
+async def test_a_blank_search_logs_no_miss(clients: AsyncClient):
+    """No q is a browse, not a failed ask — logging it would drown the signal in noise."""
+    r = await clients.get("/catalog/search")
+    assert r.status_code == 200
+    await audit.drain()
+    assert await _fetch_misses() == []

@@ -140,6 +140,39 @@ async def test_usage_columns_added_in_place_to_pre_feature_tables(tmp_path):
         await engine.dispose()
 
 
+async def test_existing_refresh_families_gain_a_separate_authority_record(tmp_path):
+    """The grant-family table landed after refresh tokens existed in production. Its authority and
+    consent time must come from the oldest token row, and rerunning startup must not duplicate it."""
+    engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path/'pregrant.db'}")
+    try:
+        async with engine.begin() as conn:
+            await conn.execute(text(
+                "CREATE TABLE oauthrefresh (id INTEGER PRIMARY KEY, token_hash VARCHAR NOT NULL, "
+                "family_id VARCHAR NOT NULL, client_id VARCHAR NOT NULL, user_id INTEGER NOT NULL, "
+                "org_id INTEGER NOT NULL, resource VARCHAR NOT NULL DEFAULT '', "
+                "scope VARCHAR NOT NULL DEFAULT '', expires_at TIMESTAMP NOT NULL, "
+                "created_at TIMESTAMP NOT NULL, retired_at TIMESTAMP, "
+                "retired_reason VARCHAR NOT NULL DEFAULT '')"))
+            await conn.execute(text(
+                "INSERT INTO oauthrefresh (id, token_hash, family_id, client_id, user_id, org_id, "
+                "expires_at, created_at, retired_at, retired_reason) VALUES "
+                "(1, 'old', 'family', 'client', 7, 11, '2026-09-01', '2026-07-01', "
+                "'2026-07-02', 'rotated'), "
+                "(2, 'new', 'family', 'client', 7, 12, '2026-09-02', '2026-07-02', NULL, '')"))
+            await conn.run_sync(SQLModel.metadata.create_all)
+            await conn.run_sync(_migrate_to_orgs)
+            await conn.run_sync(_migrate_to_orgs)
+
+        async with engine.connect() as conn:
+            rows = (await conn.execute(text(
+                "SELECT family_id, current_org_id, granted_at FROM oauthgrant"))).all()
+            assert len(rows) == 1
+            assert rows[0].family_id == "family" and rows[0].current_org_id == 11
+            assert str(rows[0].granted_at).startswith("2026-07-01")
+    finally:
+        await engine.dispose()
+
+
 async def test_invite_email_token_column_added_in_place(tmp_path):
     """invite.email_token_hash (the inbox-only sign-in secret, A12) is added in-place to a DB whose
     invite table predates the split-secret feature; existing invites get NULL (no link sign-in —

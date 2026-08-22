@@ -1,0 +1,39 @@
+{
+  "companies": [
+    {
+      "domain": "venmo.com",
+      "name": "Venmo",
+      "website": "https://venmo.com",
+      "industry": "Finance",
+      "keywords": [
+        "peer-to-peer payments",
+        "mobile payments",
+        "digital wallets",
+        "money transfers",
+        "bill splitting",
+        "consumer payments",
+        "…"
+      ],
+      "description": "Venmo is a digital payments service that enables users to send and receive money, split bills, pay friends, shop with businesses, and check out online. Its offerings include peer-to-peer payments, business profiles, debit and credit cards, direct deposit, rewards, gift cards, and cryptocurrency tran…",
+      "logo": "https://api.leadsforge.ai/images/EAS-EfruT1ZEhZDe5HodyrQnYrvGFF1OwX_ThelR5jGOxBd-W7tTESjzb6e-uHtAAOcasuBi6qJ3MsrNBXOirpv5FKteWUP1kaCttr_HNf8WQKRXaqV-mhEIvE8F0R5hm-xsCXqy2ondEkUKCg"
+    },
+    {
+      "domain": "truelayer.com",
+      "name": "TrueLayer",
+      "website": "https://truelayer.com",
+      "industry": "Finance",
+      "keywords": [
+        "open banking payments",
+        "pay by bank",
+        "payment infrastructure",
+        "payment network",
+        "account-to-account payments",
+        "instant payouts",
+        "…"
+      ],
+      "description": "TrueLayer provides open banking payment infrastructure for businesses across Europe. Its network enables Pay by Bank checkout payments, instant payouts, linked bank account payments, customer verification, and payment data services. The company serves ecommerce, iGaming, financial services, travel, …",
+      "logo": "https://api.leadsforge.ai/images/owdLP_NfLgAgaAhpH4i5JNuM29tb4P4_U4wQiQovQ2ghS6FiE_41XsFGlJB2zNMTEX0s3e5mSdV3SP32OxklkkJIRsn6x2UMfZZKgYvlzNyJaPe-vL7lC537MQdsMwzVbHxHgrv4LWiZIASNqA"
+    }
+  ],
+  "totalCount": 879
+}

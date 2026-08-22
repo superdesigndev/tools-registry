@@ -23,14 +23,15 @@ from datetime import datetime, timedelta, timezone
 import pytest
 import stripe
 from httpx import ASGITransport, AsyncClient
+from sqlmodel import select
 
 from conftest import make_upstream
 
-from treg import billing, ledger
+from treg import adsconv, billing, ledger
 from treg.api import app
 from treg.config import get_settings
 from treg.db import reset_db, session_maker
-from treg.models import Org
+from treg.models import AdConversion, Org
 
 WHSEC = "whsec_test_secret_for_the_suite"
 
@@ -872,3 +873,146 @@ async def test_no_posthog_key_means_no_events(c: AsyncClient, monkeypatch):
     analytics._queue.clear()  # default settings: no key
     assert (await _deliver(c, _pi_event(org_id, pi="pi_no_key", cents=500))).status_code == 200
     assert analytics._queue == []
+
+
+# ---- Google Ads conversion tracking: first top-up ------------------------------------------------
+async def test_first_topup_queues_exactly_one_ad_conversion(c, monkeypatch):
+    """Stripe delivers at least once; a redelivery must not double-count the conversion."""
+    monkeypatch.setattr(adsconv, "enabled", lambda: True)
+    org_id, owner = await _org(c)
+    monkeypatch.setattr(billing, "_sdk", _no_sdk)
+    async with session_maker() as db:
+        org = await db.get(Org, org_id)
+        org.ad_gclid = "CLICK_PAID"
+        db.add(org)
+        await db.commit()
+
+    event = _pi_event(org_id, pi="pi_ads_once", cents=2000)   # US$20.00
+    assert (await _deliver(c, event)).status_code == 200
+    assert (await _deliver(c, event)).status_code == 200      # the redelivery
+
+    async with session_maker() as db:
+        rows = (await db.execute(select(AdConversion).where(
+            AdConversion.org_id == org_id,
+            AdConversion.action == adsconv.ACTION_PAID))).scalars().all()
+        assert len(rows) == 1
+        assert rows[0].value_usd_micro == 20_000_000
+        assert rows[0].dedupe_key == "pi_ads_once"
+
+
+async def test_a_second_topup_queues_nothing_further(c, monkeypatch):
+    """We measure becoming a payer, not revenue — a second, different payment adds no conversion."""
+    monkeypatch.setattr(adsconv, "enabled", lambda: True)
+    org_id, owner = await _org(c)
+    monkeypatch.setattr(billing, "_sdk", _no_sdk)
+    async with session_maker() as db:
+        org = await db.get(Org, org_id)
+        org.ad_gclid = "CLICK_PAID"
+        db.add(org)
+        await db.commit()
+
+    assert (await _deliver(c, _pi_event(org_id, pi="pi_first", cents=2000))).status_code == 200
+    assert (await _deliver(c, _pi_event(org_id, pi="pi_second", cents=5000))).status_code == 200
+
+    async with session_maker() as db:
+        rows = (await db.execute(select(AdConversion).where(
+            AdConversion.org_id == org_id,
+            AdConversion.action == adsconv.ACTION_PAID))).scalars().all()
+        assert len(rows) == 1
+        assert rows[0].dedupe_key == "pi_first"   # the FIRST payment is the one recorded
+
+
+async def test_adsconv_commit_failure_cannot_500_or_break_the_webhook(c, monkeypatch):
+    """A CRITICAL regression: if the ad-conversion `db.commit()` inside `_credit`'s try block fails
+    for a reason unrelated to `adsconv.queue`'s own IntegrityError savepoint (a serialization
+    failure, a connection blip — plausible under concurrent webhook redelivery), the session is left
+    by SQLAlchemy in "pending rollback" state. `_on_payment_succeeded` immediately reuses the same
+    `db` for `_set_default_pm`'s `db.get(Org, ...)`; without a rollback in the except block, that
+    raises PendingRollbackError, which 500s the webhook and makes Stripe retry a payment
+    `ledger.topup()` had ALREADY durably credited. The webhook must still return 200, the credit
+    must still stand, and the rest of the request (saving the default payment method) must still
+    complete."""
+    from sqlalchemy.ext.asyncio import AsyncSession as SAAsyncSession
+
+    monkeypatch.setattr(adsconv, "enabled", lambda: True)
+    org_id, owner = await _org(c)
+    monkeypatch.setattr(billing, "_sdk", _no_sdk)
+    async with session_maker() as db:
+        org = await db.get(Org, org_id)
+        org.ad_gclid = "CLICK_PAID"  # gives adsconv.queue something to write, so its commit matters
+        db.add(org)
+        await db.commit()
+
+    real_commit = SAAsyncSession.commit
+    calls = {"n": 0}
+
+    async def flaky_commit(self):
+        calls["n"] += 1
+        if calls["n"] == 2:  # the ad-conversion commit inside _credit's try block, not the topup one
+            raise RuntimeError("simulated serialization failure")
+        return await real_commit(self)
+
+    monkeypatch.setattr(SAAsyncSession, "commit", flaky_commit)
+
+    event = _pi_event(org_id, pi="pi_adsconv_commit_blip", cents=1000)
+    r = await _deliver(c, event)
+    assert r.status_code == 200, r.text  # NOT a 500 — Stripe must not be told to retry this
+    assert r.json()["credited"] is True
+    assert calls["n"] >= 3, "the flaky commit was never reached, or the request stopped early"
+
+    body = (await c.get(f"/orgs/{org_id}/balance", headers=_h(owner))).json()
+    # The payment is credited regardless of the ad-conversion commit's fate.
+    assert body["balance_micro"] == get_settings().promo_grant_micro + 10_000_000
+
+    async with session_maker() as db:
+        # The default payment method save runs AFTER the failed ads-conversion commit; it only
+        # succeeds if the session was rolled back and made usable again.
+        fresh_org = await db.get(Org, org_id)
+        assert fresh_org.stripe_default_pm == "pm_card_visa"
+
+
+# ---- the SDK-boundary shape --------------------------------------------------------------------
+# stripe-python's objects stopped subclassing dict, so `.get()` on one raises "'get' is a dict
+# method, but a PaymentIntent is not a dict". Every consumer of `_sdk` reads dict-style, and the
+# fakes in this suite return plain dicts through the same funnel — which is exactly how production
+# 500'd on every `checkout.session.completed` while the suite stayed green. These tests run the
+# REAL `_sdk`, feeding it genuine `StripeObject`s, to pin the conversion at the boundary.
+
+async def test_sdk_converts_stripe_objects_to_plain_dicts(monkeypatch):
+    monkeypatch.setattr(get_settings(), "stripe_secret_key", "sk_test_suite", raising=False)
+
+    def fake_retrieve(api_key=None, **kw):
+        return stripe.PaymentIntent.construct_from(
+            {"id": "pi_shape", "payment_method": {"id": "pm_shape", "card": {"fingerprint": "fp_shape"}}},
+            api_key)
+
+    out = await billing._sdk(fake_retrieve)
+    assert type(out) is dict
+    # Deep, not shallow: the nested object and its nested object are both plain dicts too.
+    assert out.get("payment_method", {}).get("card", {}).get("fingerprint") == "fp_shape"
+
+    def fake_list(api_key=None, **kw):
+        return stripe.ListObject.construct_from(
+            {"object": "list", "has_more": False,
+             "data": [{"id": "ch_shape", "invoice": {"id": "in_shape"}}]},
+            api_key)
+
+    charges = await billing._sdk(fake_list)
+    assert type(charges) is dict
+    assert type(charges.get("data")[0]) is dict
+    assert charges["data"][0].get("invoice", {}).get("id") == "in_shape"
+
+
+async def test_pm_and_fingerprint_survives_sdk_objects(monkeypatch):
+    """The exact production crash: `_pm_and_fingerprint` on the checkout-completed path, with the
+    SDK function itself (not `_sdk`) faked, so the real funnel handles the real object shape."""
+    monkeypatch.setattr(get_settings(), "stripe_secret_key", "sk_test_suite", raising=False)
+
+    def fake_retrieve(api_key=None, id=None, expand=None):
+        return stripe.PaymentIntent.construct_from(
+            {"id": id, "payment_method": {"id": "pm_real", "card": {"fingerprint": "fp_real"}}},
+            api_key)
+
+    monkeypatch.setattr(stripe.PaymentIntent, "retrieve", staticmethod(fake_retrieve))
+    pm_id, fingerprint = await billing._pm_and_fingerprint("pi_real")
+    assert (pm_id, fingerprint) == ("pm_real", "fp_real")

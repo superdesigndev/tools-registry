@@ -29,7 +29,7 @@ endpoints:
     platform: people
     method: GET
     path: /person/enrich/preview
-    name: "Preview person enrich"
+    name: "Preview a person enrichment by email, name or phone"
     summary: "Enrich a person record on a variety of fields and receive a preview record in return"
     input:
       queryParams:
@@ -68,7 +68,7 @@ endpoints:
     platform: people
     method: GET
     path: /person/identify
-    name: "Recover all related profiles for an identity"
+    name: "Recover all profiles for one identity by email or name"
     summary: "Recover all related profiles for an identity"
     input:
       queryParams:
@@ -109,7 +109,7 @@ endpoints:
     platform: people
     method: GET
     path: /person/retrieve/{person_id}
-    name: "Retrieve a person by PDL ID"
+    name: "A person record by PDL id"
     summary: "Retrieves a person based on a PDL ID."
     input:
       pathParams:
@@ -129,7 +129,7 @@ endpoints:
     platform: people
     method: POST
     path: /person/retrieve/bulk
-    name: "Retrieve up to 100 people by PDL ID"
+    name: "Up to 100 person records by PDL id in one call"
     summary: "Retrieves up to 100 person records based on a PDL ID."
     input:
       queryParams:
@@ -222,7 +222,7 @@ endpoints:
     platform: web
     method: GET
     path: /ip/enrich
-    name: "Enrich an IP address"
+    name: "Enrich an IP address — location, company behind it"
     summary: "Enrich data on an IP by performing a one-to-one match of this IP with the nearly 2 Billion IPs hosted in our dataset, returning location, company, and metadata"
     input:
       queryParams:

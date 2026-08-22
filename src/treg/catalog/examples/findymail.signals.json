@@ -1,0 +1,12 @@
+{
+  "data": [],
+  "meta": {
+    "current_page": 1,
+    "per_page": 2,
+    "total": 0,
+    "last_page": 1,
+    "from": null,
+    "to": null
+  },
+  "_note": "the verification account had no signal monitors configured, so data is empty"
+}

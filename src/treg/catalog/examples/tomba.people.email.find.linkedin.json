@@ -1,0 +1,51 @@
+{
+  "data": {
+    "email": "patrick@stripe.com",
+    "first_name": "Patrick",
+    "last_name": "Collison",
+    "full_name": "Patrick Collison",
+    "website_url": "stripe.com",
+    "company": "Stripe",
+    "pattern": "{first}",
+    "department": "marketing",
+    "type": "personal",
+    "position": "social media marketing manager",
+    "country": "US",
+    "gender": "male",
+    "twitter": "https://twitter.com/patrickc",
+    "linkedin": "https://www.linkedin.com/in/patrickcollison",
+    "score": 100,
+    "accept_all": true,
+    "phone_number": true,
+    "verification": {
+      "date": "2026-08-20T00:00:00+02:00",
+      "status": "valid"
+    },
+    "sources": [
+      {
+        "uri": "https://hunter.io/api",
+        "website_url": "hunter.io",
+        "extracted_on": "2021-01-19T21:21:07+01:00",
+        "last_seen_on": "2021-01-19T21:21:07+01:00",
+        "still_on_page": true
+      },
+      {
+        "uri": "https://hunter.io/api/email-verifier",
+        "website_url": "hunter.io",
+        "extracted_on": "2021-01-19T21:21:08+01:00",
+        "last_seen_on": "2021-01-19T21:21:08+01:00",
+        "still_on_page": true
+      },
+      {
+        "uri": "https://hunter.io/api-documentation/v2",
+        "website_url": "hunter.io",
+        "extracted_on": "2021-01-19T21:21:09+01:00",
+        "last_seen_on": "2021-01-19T21:21:09+01:00",
+        "still_on_page": true
+      },
+      "…17 more items truncated for the catalog example"
+    ],
+    "phone_data": []
+  }
+}
+

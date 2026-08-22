@@ -28,7 +28,7 @@ from dataclasses import dataclass, field
 # `auth` is the provider's DEFAULT shape; a per-variable form (CLIENT_ID/SECRET → oauth2) can override
 # it. Served at GET /providers.json so the CLI can refresh centrally (bundled copy = offline fallback);
 # bump CATALOG_VERSION whenever entries change so a cache can tell it's stale.
-CATALOG_VERSION = 9
+CATALOG_VERSION = 10  # v10 2026-08-15: the Market data eight (auth shapes live-verified that day)
 # `skills` (optional) matches a SKILL FOLDER name for file-credential skills that have no env var to
 # key on (OAuth token files etc.) — see `match_skill`. Such providers carry `tokens: []` so the env
 # scanner never mis-detects them as a simple bearer key (their real auth is OAuth + extra headers).
@@ -159,6 +159,16 @@ CATALOG: list[dict] = [
     {"provider": "Brave Search","tokens": ["BRAVE"],               "base_url": "https://api.search.brave.com/res/v1",             "auth": {"shape": "api_key_header", "header": "X-Subscription-Token"}},
     {"provider": "ScrapingBee", "tokens": ["SCRAPINGBEE"],         "base_url": "https://app.scrapingbee.com/api/v1",              "auth": {"shape": "query", "param": "api_key"}},
     {"provider": "NewsAPI",     "tokens": ["NEWSAPI"],             "base_url": "https://newsapi.org/v2",                          "auth": {"shape": "api_key_header", "header": "X-Api-Key"}},
+    # --- market data (auth shapes LIVE-VERIFIED 2026-08-15 against each real API; see
+    #     src/treg/catalog/<service>.yaml and docs/MARKET-DATA-CATEGORY-RESEARCH.md) ---
+    {"provider": "CoinGecko",   "tokens": ["COINGECKO"],           "base_url": "https://pro-api.coingecko.com/api/v3",            "auth": {"shape": "api_key_header", "header": "x-cg-pro-api-key"}},
+    {"provider": "Polygon.io",  "tokens": ["POLYGON", "MASSIVE"],  "base_url": "https://api.polygon.io",                          "auth": {"shape": "bearer"}},
+    {"provider": "Finnhub",     "tokens": ["FINNHUB"],             "base_url": "https://finnhub.io/api/v1",                       "auth": {"shape": "api_key_header", "header": "X-Finnhub-Token"}},
+    {"provider": "Twelve Data", "tokens": ["TWELVEDATA", "TWELVE"],"base_url": "https://api.twelvedata.com",                      "auth": {"shape": "query", "param": "apikey"}},
+    {"provider": "Financial Modeling Prep", "tokens": ["FMP", "FINANCIALMODELINGPREP"], "base_url": "https://financialmodelingprep.com/api/v3", "auth": {"shape": "query", "param": "apikey"}},
+    {"provider": "EODHD",       "tokens": ["EODHD"],               "base_url": "https://eodhd.com/api",                           "auth": {"shape": "query", "param": "api_token"}},
+    {"provider": "Marketstack", "tokens": ["MARKETSTACK"],         "base_url": "https://api.marketstack.com/v1",                  "auth": {"shape": "query", "param": "access_key"}},
+    {"provider": "Tiingo",      "tokens": ["TIINGO"],              "base_url": "https://api.tiingo.com",                          "auth": {"shape": "api_key_header", "header": "Authorization", "format": "Token {secret}"}},
     # --- dev / infra / cloud ---
     {"provider": "DigitalOcean","tokens": ["DIGITALOCEAN"],        "base_url": "https://api.digitalocean.com/v2",                 "auth": {"shape": "bearer"},
      "skills": ["doctl", "digitalocean"],

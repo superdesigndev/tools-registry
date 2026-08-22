@@ -61,7 +61,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /
-    name: "Get Google domain visibility overview"
+    name: "Google overview for up to 10 domains — visibility, traffic"
     summary: "Google summary for up to 10 domains at once — visibility, keywords, traffic, ad keywords"
     input:
       bodyType: json
@@ -92,7 +92,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /
-    name: "List keywords a domain ranks for"
+    name: "Google keywords a domain ranks for — search volume, CPC"
     summary: "Google keywords a domain ranks for, with position, volume, CPC and difficulty"
     input:
       bodyType: json
@@ -131,7 +131,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /
-    name: "List Google organic competitors"
+    name: "Google organic competitors by domain — keyword overlap"
     summary: "Domains competing with a target in Google organic, ranked by keyword overlap"
     input:
       bodyType: json
@@ -164,7 +164,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /
-    name: "Get search volume for keywords"
+    name: "Bulk Google search volume, CPC and difficulty by keyword"
     summary: "Google volume, CPC, competition and difficulty for up to 1,000 keywords per call"
     input:
       bodyType: json
@@ -197,7 +197,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /
-    name: "List related keyword ideas"
+    name: "Related keyword ideas by seed keyword — search volume, CPC"
     summary: "Keywords semantically related to a seed, with volume, CPC, difficulty and weight"
     input:
       bodyType: json
@@ -235,7 +235,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /
-    name: "List organic search results for a keyword"
+    name: "Google organic results by keyword — ranking URLs, titles"
     summary: "URLs ranking in Google's top results for a keyword, with position, title and snippet"
     input:
       bodyType: json
@@ -276,7 +276,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /
-    name: "Get backlink profile summary"
+    name: "Backlinks summary by domain — referring domains, authority"
     summary: "Aggregate backlink profile — external links, referring domains, IPs, domain authority"
     input:
       bodyType: json
@@ -306,7 +306,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /
-    name: "List active backlinks"
+    name: "Active backlinks by domain or URL — anchor texts"
     summary: "Currently active backlinks to a domain or URL, with source page, anchor and link type"
     input:
       bodyType: json
@@ -345,7 +345,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /
-    name: "List referring domains to a target"
+    name: "Referring domains by domain — authority, link counts"
     summary: "Referring domains linking to a target, with each source's link count and authority"
     input:
       bodyType: json
@@ -380,7 +380,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /
-    name: "List anchor texts linking to a target"
+    name: "Anchor texts in backlinks by domain or URL"
     summary: "Anchor texts pointing at a target, with referring-domain and link counts per phrase"
     input:
       bodyType: json
@@ -417,7 +417,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /
-    name: "List a site's top linked pages"
+    name: "Most-linked pages by domain — backlinks, referring domains"
     summary: "List a site's most-linked-to pages, ranked by backlinks and referring domains"
     input:
       bodyType: json
@@ -454,7 +454,7 @@ endpoints:
     scope: own_account
     method: POST
     path: /
-    name: "Get API credit balance"
+    name: "Account usage — credit limits and credits remaining"
     summary: "Check the calling account's API credit limits and how many credits are left"
     input:
       bodyType: json

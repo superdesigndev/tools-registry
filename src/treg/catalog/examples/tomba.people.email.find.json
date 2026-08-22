@@ -1,0 +1,35 @@
+{
+  "data": {
+    "email": "patrick@stripe.com",
+    "first_name": "Patrick",
+    "last_name": "Collison",
+    "full_name": "Patrick Collison",
+    "website_url": "stripe.com",
+    "company": "Stripe",
+    "pattern": null,
+    "department": null,
+    "type": null,
+    "position": "",
+    "country": null,
+    "gender": null,
+    "twitter": null,
+    "linkedin": "",
+    "score": 99,
+    "accept_all": true,
+    "phone_number": false,
+    "verification": {
+      "date": "2026-08-20T02:46:32.093942727+02:00",
+      "status": "valid"
+    },
+    "sources": [
+      {
+        "uri": "https://app.tomba.io/verify/patrick@stripe.com",
+        "website_url": "tomba.io",
+        "extracted_on": "2026-08-20T02:46:32.101699359+02:00",
+        "last_seen_on": "2026-08-20T02:46:32.101699419+02:00",
+        "still_on_page": true
+      }
+    ]
+  }
+}
+

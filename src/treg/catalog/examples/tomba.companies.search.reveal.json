@@ -1,0 +1,37 @@
+{
+  "success": true,
+  "data": {
+    "companies": [
+      {
+        "name": "Google",
+        "description": "google is the world's leading search engine and technology company, offering web search, cloud computing, advertising technologies, and software development.",
+        "country": "US",
+        "state": "California",
+        "street_address": "1600 amphitheatre parkway",
+        "postal_code": "94043",
+        "industry": "Information Technology and Services",
+        "company_size": "10K-50K",
+        "type": "",
+        "founded": "1998",
+        "city": "Mountain View",
+        "website_url": "google.com",
+        "total_emails": 111704,
+        "revenue": "$1B-$10B",
+        "phone_number": false,
+        "linkedin_url": "https://linkedin.com/company/google",
+        "facebook_url": "https://facebook.com/google",
+        "twitter_url": "https://x.com/google",
+        "total_similar": 5
+      },
+      "…3 more items truncated for the catalog example"
+    ]
+  },
+  "meta": {
+    "total": 37536621,
+    "page": 1,
+    "limit": 50,
+    "pages": 750733,
+    "filters": {}
+  }
+}
+

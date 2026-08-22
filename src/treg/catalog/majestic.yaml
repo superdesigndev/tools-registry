@@ -42,7 +42,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /api/json
-    name: "Get Trust Flow and Citation Flow for URLs"
+    name: "Trust Flow and Citation Flow by domain or URL"
     summary: "Trust Flow, Citation Flow and link counts for up to 100 URLs or domains per call"
     input:
       queryParams:
@@ -73,7 +73,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /api/json
-    name: "Get backlink summary for a domain"
+    name: "Backlinks summary by domain — referring domains, .edu/.gov"
     summary: "Aggregate backlink profile of a domain — external links, referring domains, .edu/.gov"
     input:
       queryParams:
@@ -106,7 +106,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /api/json
-    name: "List backlinks to a URL"
+    name: "Backlinks by domain or URL — anchor texts, Trust Flow"
     summary: "Individual backlinks to a URL or domain, with anchor text and both ends' Trust Flow"
     input:
       queryParams:
@@ -145,7 +145,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /api/json
-    name: "List referring domains linking to a target"
+    name: "Referring domains by domain — Trust Flow, country, IP"
     summary: "Referring domains linking to a target, with Trust Flow, country, IP and link count"
     input:
       queryParams:
@@ -178,7 +178,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /api/json
-    name: "List anchor texts linking to a target"
+    name: "Anchor texts in backlinks by domain or URL"
     summary: "Anchor texts pointing at a target, with referring-domain and link counts per phrase"
     input:
       queryParams:
@@ -213,7 +213,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /api/json
-    name: "List a site's most-linked pages"
+    name: "Most-linked pages by domain — backlinks, Trust Flow"
     summary: "A site's most-linked pages, with Trust Flow, Citation Flow and backlink counts"
     input:
       queryParams:
@@ -244,7 +244,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /api/json
-    name: "Get account usage and index status"
+    name: "Account usage — remaining units and index status"
     summary: "Remaining Analysis, Retrieval and Index Item units, plan dates and current index build"
     input:
       queryParams:

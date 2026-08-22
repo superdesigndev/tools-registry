@@ -1,0 +1,71 @@
+{
+  "count": 11,
+  "result": [
+    {
+      "description": "Apple Inc",
+      "displaySymbol": "AAPL",
+      "symbol": "AAPL",
+      "type": "Common Stock"
+    },
+    {
+      "description": "Apple Hospitality REIT Inc",
+      "displaySymbol": "APLE",
+      "symbol": "APLE",
+      "type": "Common Stock"
+    },
+    {
+      "description": "Apple Flavor & Fragrance Group Co Ltd",
+      "displaySymbol": "603020.SS",
+      "symbol": "603020.SS",
+      "type": "Common Stock"
+    },
+    {
+      "description": "Maui Land & Pineapple Company Inc",
+      "displaySymbol": "MLP",
+      "symbol": "MLP",
+      "type": "Common Stock"
+    },
+    {
+      "description": "Apple International Co Ltd",
+      "displaySymbol": "2788.T",
+      "symbol": "2788.T",
+      "type": "Common Stock"
+    },
+    {
+      "description": "Pineapple Financial Inc",
+      "displaySymbol": "PAPL",
+      "symbol": "PAPL",
+      "type": "Common Stock"
+    },
+    {
+      "description": "Applepark Co Ltd",
+      "displaySymbol": "164A.T",
+      "symbol": "164A.T",
+      "type": "Common Stock"
+    },
+    {
+      "description": "Apple iSports Group Inc",
+      "displaySymbol": "AAPI",
+      "symbol": "AAPI",
+      "type": "Common Stock"
+    },
+    {
+      "description": "Pineapple Resources Bhd",
+      "displaySymbol": "PINEAPP.KL",
+      "symbol": "PINEAPP.KL",
+      "type": "Common Stock"
+    },
+    {
+      "description": "Pineapple Energy Inc",
+      "displaySymbol": "SUNE",
+      "symbol": "SUNE",
+      "type": "Common Stock"
+    },
+    {
+      "description": "Pineapple Power Corporation PLC",
+      "displaySymbol": "PNPL.L",
+      "symbol": "PNPL.L",
+      "type": "Common Stock"
+    }
+  ]
+}

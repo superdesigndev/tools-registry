@@ -1,0 +1,526 @@
+provider: findymail
+source:
+  docs: https://app.findymail.com/docs/
+  openapi: null # Findymail renders its reference at app.findymail.com/docs/; no fetchable spec document is published
+  curated: '2026-08-20'
+# Curated + live-tested 2026-08-20 against a real trial key (25 finder credits + 10 verifier credits).
+#
+# WHAT IT IS: a B2B contact provider whose distinguishing claim is "only pay for verified results" —
+# a find that returns nothing costs nothing, so a miss is free. That makes it unusually safe for an
+# agent to try speculatively, and it is why almost every cost block below is `per_success`.
+#
+# TWO SEPARATE CREDIT POOLS, and they do not convert into each other:
+#   - FINDER credits — every /search/*, /technologies and /lookalike route. Priced (fx.yaml:
+#     Starter $99/mo / 5,000 finder credits = $0.0198/credit).
+#   - VERIFIER credits — /verify only. The plan grants 5,000 of them as a BONUS on top of the finder
+#     allowance, with no separately published price, so /verify is costed in a `verifier_credit`
+#     meter whose USD rate is null. It displays natively ("1 verifier credit") and is NOT
+#     platform-eligible until Findymail publishes a standalone verifier price.
+#   GET /credits returns both counters (`credits` = finder, `verifier_credits` = verifier) and is the
+#   money meter to budget against. Measured live: one /search/name + one /technologies moved `credits`
+#   25 -> 23; one /verify moved `verifier_credits` 10 -> 9. Exactly as documented.
+#
+# AUTH / TRANSPORT TRAP worth knowing before you call anything: the API is Laravel, and it only
+# answers JSON when you ASK for it. With `Accept: application/json` a bad key returns a clean
+# 401 {"message":"Unauthenticated."}; WITHOUT that header the same request 302-redirects to the HTML
+# login page. Always send `Accept: application/json` (and `Content-Type: application/json` on the
+# POSTs, which is every data route here — the whole surface is POST except the lookups).
+#
+# ASYNC: /intellimatch/search is a start+poll job — it returns a `hash`, and /intellimatch/status
+# and /intellimatch/data (both free) are separate endpoints here, modelled honestly. Several finder
+# routes also accept a `webhook_url` and will POST the result to it instead of making you wait.
+limits: "300 concurrent requests by default; GET /technologies/search is rate-limited to 10/min"
+pricing_url: https://www.findymail.com/pricing
+endpoints:
+  - id: findymail.search.name
+    domain: contacts
+    capability: people.email.find
+    platform: people
+    scope: any_account
+    method: POST
+    path: /search/name
+    name: "Find a work email from a name and company domain"
+    summary: "Find someone's verified professional email from their full name and their company's domain"
+    input:
+      body:
+        name: {type: string, required: true, note: "the person's full name", example: "Patrick Collison"}
+        domain: {type: string, required: true, note: "the company domain, no protocol or www", example: "stripe.com"}
+        webhook_url: {type: string, required: false, note: "if set, the result is POSTed here instead of being awaited inline"}
+      note: "returns {contact: {...}} on a hit and a null/empty contact on a miss; a miss is NOT charged. The contact object always carries company, job_title, linkedin_url and city/region/country keys, but they come back empty or null when Findymail has no profile data for the person — only `email`, `name` and `domain` are dependable. Note the returned `domain` can be an alias of the one you asked for (stripe.com -> stri.pe)"
+    test_request:
+      body: {name: "Patrick Collison", domain: "stripe.com"}
+    cost:
+      type: per_success
+      value: 1
+      currency: credit
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://www.findymail.com/pricing
+      checked: '2026-08-20'
+      confidence: documented
+      note: "1 finder credit, charged only when a deliverable email is returned. Confirmed live 2026-08-20 (finder counter fell by exactly 1)."
+    verified: '2026-08-20'
+    example_response: examples/findymail.search.name.json
+    docs_url: https://app.findymail.com/docs/
+
+  - id: findymail.search.business-profile
+    domain: contacts
+    capability: people.email.find
+    platform: people
+    scope: any_account
+    method: POST
+    path: /search/business-profile
+    name: "Find a work email from a LinkedIn profile URL"
+    summary: "Find someone's verified professional email from their public professional-network profile URL"
+    input:
+      body:
+        linkedin_url: {type: string, required: true, note: "the person's public professional profile URL", example: "https://www.linkedin.com/in/patrickcollison"}
+        webhook_url: {type: string, required: false, note: "if set, the result is POSTed here instead of being awaited inline"}
+      note: "same {contact: {...}} response shape as /search/name; a miss is free"
+    test_request:
+      body: {linkedin_url: "https://www.linkedin.com/in/patrickcollison"}
+    cost:
+      type: per_success
+      value: 1
+      currency: credit
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://www.findymail.com/pricing
+      checked: '2026-08-20'
+      confidence: documented
+      note: "1 finder credit on a hit; nothing on a miss"
+    note: "not live-tested to preserve trial credits — the finder allowance on the verification account was 25 credits and was reserved for /search/name and /technologies"
+    docs_url: https://app.findymail.com/docs/
+
+  - id: findymail.search.domain
+    domain: contacts
+    capability: people.email.find
+    platform: people
+    scope: any_account
+    method: POST
+    path: /search/domain
+    name: "Find contacts at a domain by role (deprecated)"
+    summary: "Find verified emails for people holding given roles at a company domain"
+    input:
+      body:
+        domain: {type: string, required: true, note: "the company domain, no protocol or www", example: "stripe.com"}
+        roles: {type: "array[string]", required: true, note: "roles to look for, e.g. ceo, cto, marketing", example: ["ceo"]}
+        webhook_url: {type: string, required: false, note: "if set, the result is POSTed here instead of being awaited inline"}
+      note: "returns {contacts: [...]}. DEPRECATED in Findymail's own docs in favour of /search/employees, which takes explicit job titles and a result count — prefer that one for new work"
+    test_request:
+      body: {domain: "stripe.com", roles: ["ceo"]}
+    cost:
+      type: per_result
+      value: 1
+      currency: credit
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://www.findymail.com/pricing
+      checked: '2026-08-20'
+      confidence: documented
+      note: "1 finder credit per verified email returned — the number of roles is the price dial"
+    note: "not live-tested to preserve trial credits; also marked deprecated upstream, so /search/employees is the route to verify first when credits allow"
+    docs_url: https://app.findymail.com/docs/
+
+  - id: findymail.search.employees
+    domain: contacts
+    capability: people.search
+    platform: people
+    scope: any_account
+    method: POST
+    path: /search/employees
+    name: "Find employees at a company by job title"
+    summary: "Find people working at a company website who hold the job titles you name"
+    input:
+      body:
+        website: {type: string, required: true, note: "the company website or domain", example: "stripe.com"}
+        job_titles: {type: "array[string]", required: true, note: "job titles to match", example: ["Head of Engineering"]}
+        count: {type: integer, required: false, note: "how many contacts to return, max 5 — THIS IS THE PRICE DIAL (1 finder credit per contact returned)", example: 1}
+      note: "returns an array of {name, linkedinUrl, companyWebsite, companyName, jobTitle}. Always set an explicit small `count`"
+    test_request:
+      body: {website: "stripe.com", job_titles: ["Head of Engineering"], count: 1}
+    cost:
+      type: per_result
+      value: 1
+      currency: credit
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://www.findymail.com/pricing
+      checked: '2026-08-20'
+      confidence: documented
+      note: "1 finder credit per contact found; `count` caps the spend"
+    note: "not live-tested to preserve trial credits"
+    docs_url: https://app.findymail.com/docs/
+
+  - id: findymail.search.company
+    domain: companies
+    capability: companies.enrich
+    platform: companies
+    scope: any_account
+    method: POST
+    path: /search/company
+    name: "Enrich a company by domain, name or LinkedIn URL — size"
+    summary: "Firmographics for a company from its domain, name or professional-network URL — size, industry, description"
+    input:
+      body:
+        domain: {type: string, required: false, note: "company domain, no protocol or www", example: "stripe.com"}
+        name: {type: string, required: false, note: "company name, if you have no domain"}
+        linkedin_url: {type: string, required: false, note: "the company's public professional-network page URL"}
+      note: "supply at least one of domain / name / linkedin_url. Returns {name, domain, company_size, industry, linkedin_url, description}"
+    test_request:
+      body: {domain: "stripe.com"}
+    cost:
+      type: per_success
+      value: 1
+      currency: credit
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://www.findymail.com/pricing
+      checked: '2026-08-20'
+      confidence: documented
+      note: "1 finder credit when a company record is returned; nothing on a miss"
+    note: "not live-tested to preserve trial credits"
+    docs_url: https://app.findymail.com/docs/
+
+  - id: findymail.search.phone
+    domain: contacts
+    capability: people.phone.find
+    platform: people
+    scope: any_account
+    method: POST
+    path: /search/phone
+    name: "Find a mobile phone number by LinkedIn URL"
+    summary: "Find a person's direct phone number from their public professional profile URL"
+    input:
+      body:
+        linkedin_url: {type: string, required: true, note: "the person's public professional profile URL", example: "https://www.linkedin.com/in/patrickcollison"}
+      note: "returns {phone, line_type}. EU-resident contacts are excluded for GDPR reasons, so European targets will miss by policy rather than by coverage"
+    test_request:
+      body: {linkedin_url: "https://www.linkedin.com/in/patrickcollison"}
+    cost:
+      type: per_success
+      value: 10
+      currency: credit
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://www.findymail.com/pricing
+      checked: '2026-08-20'
+      confidence: documented
+      note: "TEN finder credits per phone found — the most expensive route here by an order of magnitude. Nothing is charged on a miss."
+    note: "not live-tested: at 10 credits it would have consumed 40% of the verification account's entire finder allowance"
+    docs_url: https://app.findymail.com/docs/
+
+  - id: findymail.search.reverse-email
+    domain: contacts
+    capability: people.identity.resolve
+    platform: people
+    scope: any_account
+    method: POST
+    path: /search/reverse-email
+    name: "Reverse email lookup — the person's LinkedIn profile"
+    summary: "Resolve an email address back to the person's professional profile, optionally with the full profile"
+    input:
+      body:
+        email: {type: string, required: true, note: "the email address to resolve", example: "patrick@stripe.com"}
+        with_profile: {type: boolean, required: false, note: "true returns the enriched profile instead of just the profile URL — and DOUBLES the price to 2 credits", example: false}
+      note: "returns {linkedin_url} by default, or an extended profile object when with_profile is true"
+    test_request:
+      body: {email: "patrick@stripe.com"}
+    cost:
+      type: per_success
+      value: 1
+      currency: credit
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://app.findymail.com/docs/
+      checked: '2026-08-20'
+      confidence: documented
+      note: "1 finder credit for the profile URL, 2 when with_profile=true. Nothing on a miss. The 1-vs-2 split is stated in the API docs, not on the pricing page (which only publishes the flat 1 credit = 1 verified email rate)."
+    note: "not live-tested to preserve trial credits"
+    docs_url: https://app.findymail.com/docs/
+
+  - id: findymail.verify
+    domain: contacts
+    capability: people.email.verify
+    platform: people
+    scope: any_account
+    method: POST
+    path: /verify
+    name: "Verify an email address is deliverable"
+    summary: "Check whether an email address is deliverable, and which mail provider hosts it"
+    input:
+      body:
+        email: {type: string, required: true, note: "the address to verify", example: "support@stripe.com"}
+      note: "returns {email, verified, provider} — `provider` names the mailbox host (e.g. Google, Microsoft), which is useful for deliverability routing"
+    test_request:
+      body: {email: "support@stripe.com"}
+    cost:
+      type: per_call
+      value: 1
+      currency: unit
+      per: 1
+      unit: verifier_credit
+      source: docs
+      source_url: https://www.findymail.com/pricing
+      checked: '2026-08-20'
+      confidence: documented
+      note: "spends the SEPARATE verifier pool, not finder credits — confirmed live 2026-08-20 (verifier counter 10 -> 9, finder counter unmoved). Verifier credits are granted as a plan bonus with no standalone published price, so this route has no USD rate."
+    verified: '2026-08-20'
+    example_response: examples/findymail.verify.json
+    docs_url: https://app.findymail.com/docs/
+
+  - id: findymail.technologies
+    domain: companies
+    capability: companies.tech_stack
+    platform: companies
+    scope: any_account
+    method: POST
+    path: /technologies
+    name: "Detect a company's tech stack by domain"
+    summary: "The technologies detected on a company's domain, each with category and a last-detected timestamp"
+    input:
+      body:
+        domain: {type: string, required: true, note: "company domain, no protocol or www", example: "stripe.com"}
+        technologies: {type: "array[string]", required: false, note: "restrict the answer to these technology names — use /technologies/search (free) to get exact names first", example: ["Salesforce"]}
+      note: "returns {domain, technologies: [{name, category, subcategory, last_detected_at}]}. The live stripe.com call returned 100+ rows, so filtering with `technologies` is worth it when you only care about a few"
+    test_request:
+      body: {domain: "stripe.com"}
+    cost:
+      type: per_success
+      value: 1
+      currency: credit
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://www.findymail.com/pricing
+      checked: '2026-08-20'
+      confidence: documented
+      note: "1 finder credit when technologies are returned; nothing when the domain is unknown. Confirmed live 2026-08-20."
+    verified: '2026-08-20'
+    example_response: examples/findymail.technologies.json
+    docs_url: https://app.findymail.com/docs/
+
+  - id: findymail.technologies.search
+    domain: companies
+    capability: companies.tech_stack.taxonomy
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /technologies/search
+    name: "Look up technology names (free)"
+    summary: "Search Findymail's technology taxonomy to get exact technology names, categories and subcategories"
+    input:
+      queryParams:
+        q: {type: string, required: true, note: "search term, minimum 2 characters", example: "shopify"}
+      note: "free and rate-limited to 10 requests/minute. Use it to resolve a fuzzy product name into the exact string the paid /technologies filter expects"
+    test_request:
+      queryParams: {q: "shopify"}
+    cost: {type: free, value: 0, currency: USD, unit: call}
+    verified: '2026-08-20'
+    example_response: examples/findymail.technologies.search.json
+    docs_url: https://app.findymail.com/docs/
+
+  - id: findymail.lookalike.search
+    domain: companies
+    capability: companies.lookalike
+    platform: companies
+    scope: any_account
+    method: POST
+    path: /lookalike/search
+    name: "Find lookalike companies from a seed domain"
+    summary: "Build a list of companies that look like a seed company, optionally constrained to the same country or size"
+    input:
+      body:
+        seed: {type: string, required: true, note: "the seed company's domain", example: "stripe.com"}
+        same_country: {type: boolean, required: false, note: "restrict results to the seed's country"}
+        same_size: {type: boolean, required: false, note: "restrict results to the seed's headcount band"}
+        limit: {type: integer, required: false, note: "max companies to return, up to 10000 — THIS IS THE PRICE DIAL", example: 10}
+        exclusion_list_ids: {type: "array[integer]", required: false, note: "ids of saved exclusion lists whose domains should be dropped from the results"}
+      note: "returns {companies: [{domain, name, linkedin_url, company_size, country}], total, credits_used} — `credits_used` reports the actual charge back to you"
+    test_request:
+      body: {seed: "stripe.com", limit: 10}
+    cost:
+      type: per_result
+      value: 1
+      currency: credit
+      per: 10
+      unit: call
+      source: docs
+      source_url: https://app.findymail.com/docs/
+      checked: '2026-08-20'
+      confidence: documented
+      note: "1 finder credit per 10 results, rounded up — so the minimum useful call is 1 credit. The response echoes `credits_used`."
+    note: "not live-tested to preserve trial credits"
+    docs_url: https://app.findymail.com/docs/
+
+  - id: findymail.intellimatch.search
+    domain: companies
+    capability: companies.search
+    platform: companies
+    scope: any_account
+    method: POST
+    path: /intellimatch/search
+    name: "Start a natural-language company/contact search (async)"
+    summary: "Describe the companies or contacts you want in plain language and start a background job that builds the list"
+    input:
+      body:
+        query: {type: string, required: true, note: "plain-language description of the target list", example: "Series A fintech startups in the US using Stripe"}
+        limit: {type: integer, required: false, note: "max records, up to 5000 — the price dial", example: 10}
+        config: {type: object, required: false, note: "search configuration; enrichment options here change what is charged"}
+      note: "ASYNC — returns {hash}. Poll findymail.intellimatch.status with that hash, then read findymail.intellimatch.data. Both of those are free; the whole cost is incurred here"
+    test_request:
+      body: {query: "Series A fintech startups in the US using Stripe", limit: 10}
+    cost:
+      type: per_result
+      value: null
+      currency: credit
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://app.findymail.com/docs/
+      checked: '2026-08-20'
+      confidence: unknown
+      note: "Findymail documents the cost as varying with `limit` and `config` (enrichment level) and publishes no single rate, so no value is asserted. Budget by reading GET /credits before and after."
+    note: "not live-tested to preserve trial credits — an unknown-cost async job was the wrong thing to point at a 25-credit account"
+    docs_url: https://app.findymail.com/docs/
+
+  - id: findymail.intellimatch.status
+    domain: companies
+    capability: companies.search.status
+    platform: companies
+    scope: own_account
+    method: GET
+    path: /intellimatch/status
+    name: "Check an async search job's progress"
+    summary: "Progress of a natural-language search job — status plus processed, pending and failed job counts"
+    input:
+      queryParams:
+        hash: {type: string, required: true, note: "the hash returned by findymail.intellimatch.search", example: "doesnotexist"}
+      note: "returns {status, progress, total_jobs, processed_jobs, pending_jobs, failed_jobs}. An unknown hash answers HTTP 200 with {\"status\":\"not_found\"} rather than a 404 — check the field, not the status code"
+    test_request:
+      queryParams: {hash: "doesnotexist"}
+    cost: {type: free, value: 0, currency: USD, unit: call}
+    verified: '2026-08-20'
+    example_response: examples/findymail.intellimatch.status.json
+    docs_url: https://app.findymail.com/docs/
+
+  - id: findymail.intellimatch.data
+    domain: companies
+    capability: companies.search.results
+    platform: companies
+    scope: own_account
+    method: GET
+    path: /intellimatch/data
+    name: "Read an async search job's results"
+    summary: "Paginated records produced by a completed natural-language search job"
+    input:
+      queryParams:
+        hash: {type: string, required: true, note: "the hash returned by findymail.intellimatch.search", example: "abc123"}
+        page: {type: integer, required: false, note: "1-based page number", example: 1}
+        per_page: {type: integer, required: false, note: "records per page, max 500", example: 10}
+      note: "returns {data: [...], meta: {...}}. Free — the job was paid for at search time"
+    test_request:
+      queryParams: {hash: "abc123", per_page: 10}
+    cost: {type: free, value: 0, currency: USD, unit: call}
+    note: "not live-tested: there is no completed job hash to read, because the paid search that produces one was skipped to preserve trial credits"
+    docs_url: https://app.findymail.com/docs/
+
+  - id: findymail.signals
+    domain: companies
+    capability: companies.signals
+    platform: companies
+    scope: own_account
+    method: GET
+    path: /signals
+    name: "Buying signals from your monitors — hiring, job postings"
+    summary: "Signals your monitors have detected — job posts, hiring and other intent events, with the company and contact attached"
+    input:
+      queryParams:
+        signal_type: {type: string, required: false, note: "restrict to one signal type"}
+        monitor_id: {type: integer, required: false, note: "restrict to one monitor"}
+        date_from: {type: string, required: false, note: "ISO date lower bound"}
+        date_to: {type: string, required: false, note: "ISO date upper bound"}
+        relevance_scores: {type: string, required: false, note: "comma-separated relevance scores to keep"}
+        page: {type: integer, required: false, example: 1}
+        per_page: {type: integer, required: false, note: "max 100", example: 2}
+      note: "only returns rows for monitors YOU created (POST /signals/monitors, free, not listed here); an account with no monitors gets an empty data array, which is what the live test saw"
+    test_request:
+      queryParams: {per_page: 2}
+    cost: {type: free, value: 0, currency: USD, unit: call}
+    verified: '2026-08-20'
+    example_response: examples/findymail.signals.json
+    docs_url: https://app.findymail.com/docs/
+
+  - id: findymail.lists
+    kind: utility
+    domain: account
+    capability: account.lists
+    platform: account
+    scope: own_account
+    method: GET
+    path: /lists
+    name: "List your saved contact lists"
+    summary: "The contact lists in your own Findymail account, with sharing and ownership flags"
+    input:
+      note: "no parameters. Returns {lists: [{id, name, created_at, updated_at, shared_with_team, is_owner}]}"
+    test_request: {queryParams: {}}
+    cost: {type: free, value: 0, currency: USD, unit: call}
+    verified: '2026-08-20'
+    example_response: examples/findymail.lists.json
+    docs_url: https://app.findymail.com/docs/
+
+  - id: findymail.contacts.get
+    kind: utility
+    domain: account
+    capability: account.contacts
+    platform: account
+    scope: own_account
+    method: GET
+    path: /contacts/get/{id}
+    name: "Read contacts saved in your account"
+    summary: "The contacts your searches have saved, optionally scoped to one list"
+    input:
+      pathParams:
+        id: {type: integer, required: true, note: "the list id to read, or 0 for every contact in the account", example: 0}
+      note: "returns a DataTables-shaped payload: {draw, recordsTotal, recordsFiltered, data: [{id, name, email, linkedin_url, company, job_title}]}. Every contact a paid search returned lands here, so this is how you re-read past results without paying again"
+    test_request:
+      pathParams: {id: 0}
+    cost: {type: free, value: 0, currency: USD, unit: call}
+    verified: '2026-08-20'
+    example_response: examples/findymail.contacts.get.json
+    docs_url: https://app.findymail.com/docs/
+
+  - id: findymail.credits
+    kind: account
+    domain: account
+    capability: account.usage
+    platform: account
+    scope: own_account
+    method: GET
+    path: /credits
+    name: "Check your credit balance"
+    summary: "Remaining finder credits and verifier credits on the account behind the key"
+    input:
+      note: "no parameters. Returns {credits, verifier_credits, email, id, pricing}. `credits` is the finder pool, `verifier_credits` the verification pool — they are separate and do not convert"
+    test_request: {queryParams: {}}
+    cost: {type: free, value: 0, currency: USD, unit: call}
+    verified: '2026-08-20'
+    example_response: examples/findymail.credits.json
+    docs_url: https://app.findymail.com/docs/
+
+proposed_capabilities:
+  companies.tech_stack: "Detect the technologies a company's website runs on"
+  companies.tech_stack.taxonomy: "Look up exact technology names in a provider's tech-detection taxonomy"
+  companies.lookalike: "Find companies similar to a seed company"
+  companies.search.status: "Check the progress of an async company-search job"
+  companies.search.results: "Read the results of a completed async company-search job"
+  companies.signals: "Buying and intent signals detected for companies"
+  account.lists: "List the saved lists in your own account"
+  account.contacts: "Read the contacts saved in your own account"

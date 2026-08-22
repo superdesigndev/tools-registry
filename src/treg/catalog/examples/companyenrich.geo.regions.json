@@ -1,0 +1,25 @@
+{
+  "items": [
+    {
+      "id": "Africa",
+      "parentId": null,
+      "name": "Africa",
+      "countries": [
+        "AO",
+        "BF",
+        "... 58 more items truncated"
+      ]
+    },
+    {
+      "id": "Africa/Eastern Africa",
+      "parentId": "Africa",
+      "name": "Eastern Africa",
+      "countries": [
+        "BI",
+        "DJ",
+        "... 17 more items truncated"
+      ]
+    },
+    "... 26 more items truncated"
+  ]
+}

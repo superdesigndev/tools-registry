@@ -1,0 +1,48 @@
+{
+  "success": true,
+  "data": [
+    {
+      "result": {
+        "name": "Anthropic",
+        "lid": "anthropicresearch",
+        "urn": "urn:li:fs_salesCompany:74126343",
+        "url": "https://www.linkedin.com/company/anthropicresearch/",
+        "pictureUrl": "https://icypeas-li-profile-pictures-production.s3.sbg.io.cloud.ovh.net/anthropicresearch-c2d00057c0db4b4b8ebbe51adea032da8b165b9c71c3422fa3762f91db3dc504",
+        "description": "We're an AI research company that builds reliable, interpretable, and steerable AI systems. Our first product is Claude, an AI assistant for tasks at any scale.\n\nOur research inter… (truncated)",
+        "address": {
+          "streetAddress": "",
+          "addressLocality": "",
+          "addressRegion": "",
+          "postalCode": "",
+          "addressCountry": "",
+          "addressCountryCode": "UNK"
+        },
+        "numberOfEmployees": 4226,
+        "headcountRange": "501-1000",
+        "industry": "Research Services",
+        "foundedYear": -1,
+        "type": "Privately Held",
+        "website": "https://www.anthropic.com/",
+        "slogan": "Anthropic is an AI safety and research company working to build reliable, interpretable, and steerable AI systems.",
+        "specialties": [],
+        "estimatedRevenuRange": {
+          "estimatedMinRevenue": {
+            "amount": 10,
+            "unit": "MILLION",
+            "currency": "USD"
+          },
+          "estimatedMaxRevenue": {
+            "amount": 20,
+            "unit": "MILLION",
+            "currency": "USD"
+          }
+        },
+        "employeeGrowth": [],
+        "deleted": false,
+        "phone": ""
+      },
+      "status": "FOUND",
+      "searchId": "bXmiHKAB9iupLhv9JW9B"
+    }
+  ]
+}

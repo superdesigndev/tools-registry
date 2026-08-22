@@ -1,0 +1,288 @@
+/* ================================================================
+   Shared skin for the /use-cases/* outcome pages.
+
+   Tokens lifted VERBATIM from landing.html's light skin so a visitor
+   arriving from an ad lands on something that is recognisably the same
+   product as treg.to itself. Rules of that system, kept here:
+     - no brand accent; emphasis is ink, colour is reserved for status
+     - sans everywhere, mono only for identifiers, commands and counts
+     - Geist Pixel on the h1 only
+     - cards are surfaces (shadow, not border); layered shadows, quick eases
+
+   Source of truth for the CONTENT of these pages is
+   marketing/landing/*.md — do not edit the generated HTML by hand.
+   ================================================================ */
+:root{
+  --bg:#f4f4f1; --surface:#fff; --panel:#fafaf9; --panel2:#f0f0ee;
+  /* --muted/--muted2 are darkened from the landing page's #7c7c7c/#989898: at body size those
+     measured 3.79:1 and 2.62:1 on --bg, under the 4.5:1 WCAG AA floor. These carry the running
+     copy, so the fix is contrast, not decoration. --teal likewise moved from #1a7da6 (4.21:1). */
+  --ink:#1a1a1a; --muted:#5f5f5f; --muted2:#6e6e6e;
+  --line:#2626231a; --line2:#25252233;
+  --teal:#136485;
+  --green:#118453; --amber:#ba6603; --red:#c0362f;
+  --inverse:#1a1a1a; --inverse-ink:#f8f8f7;
+  --shadow-sm:0 1px 2px #00000014;
+  --shadow-md:0 1px 2px -1px #0000000a,0 4px 6px -1px #0000000f;
+  --shadow-lg:0 1px 2px -1px #0000000a,0 4px 6px -1px #0000000f,0 8px 16px #0000000a;
+  --ease:cubic-bezier(.2,.72,.25,1); --ease-out:cubic-bezier(.22,1,.36,1);
+  --r:15px; --rb:10px;
+  --display:"Geist Pixel",Georgia,serif;
+  --sans:"Suisse Intl","Inter","Segoe UI",system-ui,sans-serif;
+  --mono:"DM Mono",ui-monospace,"SF Mono",Menlo,monospace;
+}
+*{box-sizing:border-box;min-width:0}
+html,body{overflow-x:clip}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+  font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+a{color:var(--teal);text-decoration:none}
+a:hover{text-decoration:underline}
+.wrap{max-width:860px;margin:0 auto;padding:0 28px}
+:focus-visible{outline:0;box-shadow:0 0 0 2px var(--bg),0 0 0 3.5px var(--ink)}
+code{font-family:var(--mono);font-size:.9em;background:var(--panel2);
+  border-radius:5px;padding:1px 6px}
+
+/* ---------- floating pill nav (same component as the landing) ---------- */
+.navwrap{position:fixed;top:14px;left:0;right:0;z-index:50;padding:0 20px}
+.nav{max-width:1160px;margin:0 auto;display:flex;align-items:center;gap:22px;
+  background:rgba(255,255,255,.86);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border:1px solid var(--line);border-radius:14px;padding:10px 12px 10px 22px;
+  box-shadow:var(--shadow-md)}
+.brand{display:flex;align-items:center;gap:9px;font-family:var(--mono);font-weight:600;
+  font-size:15px;color:var(--ink)}
+.brand:hover{text-decoration:none}
+.brand .glyph{display:grid;place-items:center;width:28px;height:28px;border-radius:8px;
+  background:var(--inverse);color:var(--inverse-ink);font-size:14px}
+.nav .links{margin-left:auto;display:flex;align-items:center;gap:22px}
+.nav .links a{font-size:13.5px;font-weight:500;color:var(--muted)}
+.nav .links a:hover{color:var(--ink);text-decoration:none}
+@media(max-width:640px){.nav .links a.hidem{display:none}}
+
+/* ---------- buttons ---------- */
+.candy{display:inline-block;font-family:var(--sans);font-weight:550;letter-spacing:.01em;
+  color:var(--inverse-ink);background:var(--inverse);
+  border:0;border-radius:999px;padding:13px 28px;font-size:14.5px;cursor:pointer;
+  box-shadow:var(--shadow-sm);
+  transition:box-shadow .24s var(--ease),transform .12s var(--ease-out)}
+.candy:hover{box-shadow:var(--shadow-lg);transform:translateY(-1px);text-decoration:none}
+.candy.sm{padding:8px 18px;font-size:12.5px}
+.ghostbtn{display:inline-flex;align-items:center;gap:8px;font-family:var(--sans);font-size:14.5px;
+  font-weight:500;color:var(--ink);background:var(--surface);border:1px solid var(--line2);
+  border-radius:999px;padding:13px 26px;cursor:pointer;
+  transition:border-color .12s var(--ease),box-shadow .24s var(--ease)}
+.ghostbtn:hover{border-color:var(--muted);box-shadow:var(--shadow-sm);text-decoration:none}
+
+/* ---------- hero ---------- */
+.hero{padding:150px 0 0;text-align:center}
+.kicker{display:inline-block;font-family:var(--mono);font-size:12px;letter-spacing:.08em;
+  color:var(--muted);border:1px solid var(--line2);border-radius:999px;padding:5px 15px;
+  background:var(--surface)}
+h1{font-family:var(--display);font-weight:400;letter-spacing:0;margin:26px 0 0;
+  font-size:clamp(28px,4.2vw,50px);line-height:1.16}
+.hero .lede{font-size:16px;line-height:1.65;color:var(--muted);max-width:620px;margin:22px auto 0}
+.ctas{margin:32px 0 0;display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.trust{margin:20px 0 0;font-family:var(--mono);font-size:12px;color:var(--muted2)}
+.subline{margin:14px auto 0;max-width:640px;font-size:13.5px;color:var(--muted)}
+
+/* ---------- provider marks ----------
+   Brand marks are drawn for white, so they sit on a near-white tile rather than the page ground —
+   the same rule the landing page's catalog cards use. */
+.provstrip{margin:34px 0 0;display:flex;flex-direction:column;align-items:center;gap:12px}
+.provstrip .pl{font-family:var(--mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--muted2)}
+.provstrip .ptiles{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
+.ptile{display:grid;place-items:center;width:38px;height:38px;border-radius:11px;
+  background:#fbfaf7;border:1px solid rgba(0,0,0,.07);box-shadow:var(--shadow-sm)}
+.ptile img{width:22px;height:22px;object-fit:contain;border-radius:5px}
+/* Inline mark beside a provider name in an evidence table. A plain inline image, deliberately:
+   an inline-flex wrapper carries its own baseline, which dropped the rest of the cell's text
+   ("tikhub" + "search timeline") onto a second baseline. */
+img.plogo{width:18px;height:18px;object-fit:contain;border-radius:4px;
+  background:#fbfaf7;padding:1px;box-sizing:content-box;border:1px solid rgba(0,0,0,.06);
+  vertical-align:-5px;margin-right:7px}
+
+/* ---------- section rhythm ---------- */
+section{padding:76px 0 0}
+/* Sections carry top padding only, so whatever sits last runs straight into the footer. The
+   use-case pages hide it because they end on the dark .final band, which has its own padding —
+   the hub ends on a plain section and its CTAs were being clipped. */
+body > section:last-of-type{padding-bottom:96px}
+section > .wrap > h2{font-weight:650;font-size:clamp(22px,2.6vw,30px);line-height:1.2;
+  letter-spacing:-.015em;margin:0 0 6px}
+.seclab{font-family:var(--mono);font-size:10.5px;letter-spacing:.24em;
+  text-transform:uppercase;color:var(--muted2);margin-bottom:12px}
+p{margin:14px 0 0}
+h3{font-weight:650;font-size:17px;letter-spacing:-.2px;margin:28px 0 0}
+h4{font-weight:600;font-size:15px;margin:22px 0 0}
+ul,ol{margin:14px 0 0;padding-left:20px}
+li{margin:7px 0}
+li b,p b{font-weight:600}
+hr{border:0;border-top:1px solid var(--line);margin:0}
+
+/* ---------- tables (compare, provider, proof) ---------- */
+.tablewrap{margin-top:22px;overflow-x:auto;border-radius:var(--r);
+  background:var(--surface);box-shadow:var(--shadow-md)}
+table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:520px}
+th,td{text-align:left;padding:12px 16px;border-bottom:1px solid var(--line);vertical-align:top}
+thead th{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--muted2);font-weight:400;background:var(--panel);white-space:nowrap}
+tbody tr:last-child td{border-bottom:0}
+td b,th b{font-weight:600}
+/* the old-way column reads as the thing you're leaving behind */
+table.compare td:nth-child(2){color:var(--muted)}
+table.compare td:nth-child(3){color:var(--ink)}
+
+/* ---------- the copyable prompt ---------- */
+.promptbox{margin-top:22px;border-radius:var(--r);background:var(--inverse);
+  box-shadow:var(--shadow-lg);padding:16px 18px}
+.promptbox .ph{display:flex;align-items:center;gap:10px;padding-bottom:12px}
+.promptbox .ph span{font-family:var(--mono);font-size:10px;letter-spacing:.2em;
+  text-transform:uppercase;color:#8a8a86}
+.promptbox pre{margin:0;font-family:var(--mono);font-size:13px;line-height:1.65;
+  color:var(--inverse-ink);white-space:pre-wrap;word-break:break-word}
+.copybtn{margin-left:auto;flex:none;border:1px solid #ffffff33;background:transparent;
+  color:#d9d9d6;font-family:var(--sans);font-weight:500;font-size:11.5px;letter-spacing:.04em;
+  border-radius:7px;padding:6px 13px;cursor:pointer;transition:color .12s,border-color .12s}
+.copybtn:hover{color:#fff;border-color:#ffffff66}
+.copybtn.done{color:#7fdcae;border-color:#7fdcae66}
+/* the sample output keeps the terminal surface but stays clearly secondary */
+.sample{margin-top:18px;border-radius:var(--r);overflow:hidden;
+  background:var(--surface);box-shadow:var(--shadow-md)}
+.sample .sbar{padding:10px 16px;border-bottom:1px solid var(--line);background:var(--panel);
+  font-family:var(--mono);font-size:11px;color:var(--muted)}
+.sample pre{margin:0;padding:16px;overflow-x:auto;font-family:var(--mono);
+  font-size:12px;line-height:1.7;color:var(--ink)}
+
+/* ---------- callout / honest-read blockquote ---------- */
+blockquote{margin:22px 0 0;padding:16px 20px;border-radius:var(--rb);
+  background:var(--panel);border-left:2.5px solid var(--amber)}
+blockquote p{margin:8px 0 0;font-size:14px;color:var(--muted)}
+blockquote p:first-child{margin-top:0}
+blockquote b{color:var(--ink)}
+
+/* ---------- outcome cards ---------- */
+.cards{margin-top:24px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.card{border-radius:var(--r);padding:20px;background:var(--surface);
+  box-shadow:var(--shadow-sm);transition:box-shadow .24s var(--ease)}
+.card:hover{box-shadow:var(--shadow-lg)}
+.card h4{margin:0;font-size:15px;font-weight:650;letter-spacing:-.2px}
+.card p{margin:10px 0 0;font-size:13.5px;color:var(--muted);line-height:1.6}
+/* on the hub the whole card is the link, so it must not inherit link colour or underline */
+a.card{display:block;color:inherit;text-decoration:none}
+a.card:hover{text-decoration:none}
+a.card h4::after{content:" →";color:var(--muted2);font-weight:400;
+  transition:color .18s var(--ease),margin-left .18s var(--ease)}
+a.card:hover h4::after{color:var(--ink);margin-left:3px}
+@media(max-width:820px){.cards{grid-template-columns:1fr}}
+
+/* ---------- who this is for ---------- */
+.who{margin-top:22px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.who div{border-radius:var(--rb);padding:16px 18px;background:var(--panel);font-size:13.5px;
+  color:var(--muted);line-height:1.6}
+.who div b{display:block;color:var(--ink);font-weight:600;margin-bottom:3px}
+@media(max-width:820px){.who{grid-template-columns:1fr}}
+
+/* ---------- objections ---------- */
+details{border-radius:var(--rb);background:var(--surface);box-shadow:var(--shadow-sm);
+  margin-top:10px;overflow:hidden}
+details summary{cursor:pointer;padding:15px 18px;font-weight:600;font-size:14.5px;
+  list-style:none;display:flex;align-items:center;gap:12px}
+details summary::-webkit-details-marker{display:none}
+details summary::after{content:"+";margin-left:auto;color:var(--muted2);
+  font-family:var(--mono);font-size:16px;flex:none;transition:transform .2s var(--ease)}
+details[open] summary::after{content:"−"}
+details summary:hover{background:var(--panel)}
+details .body{padding:0 18px 18px;font-size:14px;color:var(--muted);line-height:1.65}
+details .body p:first-child{margin-top:0}
+details .body em{color:var(--muted2)}
+
+/* ---------- final CTA ---------- */
+.final{margin-top:88px;background:var(--inverse);color:var(--inverse-ink);
+  padding:76px 0;text-align:center}
+.final h2{font-family:var(--display);font-weight:400;font-size:clamp(24px,3.4vw,38px);
+  line-height:1.2;margin:0;color:var(--inverse-ink)}
+.final .candy{background:var(--surface);color:var(--ink);margin-top:28px}
+.final .trust{color:#8a8a86;margin-top:20px}
+.final .trust a{color:#d9d9d6}
+
+/* ---------- footer ---------- */
+footer{padding:34px 0;background:var(--inverse)}
+.foot-in{max-width:1160px;margin:0 auto;padding:0 28px;display:flex;align-items:center;
+  gap:18px;flex-wrap:wrap;font-family:var(--mono);font-size:12px}
+.foot-in .brand{color:var(--inverse-ink);font-size:14px}
+.foot-in .brand .glyph{background:#ffffff1f}
+.foot-in .sp{flex:1}
+.foot-in a{color:#8a8a86}
+.foot-in a:hover{color:var(--inverse-ink);text-decoration:none}
+.foot-in .note{color:#6e6e6a}
+
+/* ---------- the two steps ----------
+   Both are the same shape — numbered label, optional hint, dark block. An earlier version put a
+   grey card round step 1 only, which read as two different kinds of thing. */
+.steplabel{display:flex;align-items:center;gap:10px;font-size:15px;margin:30px 0 0}
+.steplabel b{font-weight:650}
+.steplabel .n{display:grid;place-items:center;width:22px;height:22px;flex:none;
+  border-radius:999px;background:var(--inverse);color:var(--inverse-ink);
+  font-family:var(--mono);font-size:11px}
+.steplabel .once{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--muted2);border:1px solid var(--line2);border-radius:999px;padding:3px 9px}
+p.stephint{margin:8px 0 0;font-size:13.5px;color:var(--muted)}
+
+/* ---------- price contrast ----------
+   The whole economic argument is "a seat you rent vs cents you spend", and prose was burying it.
+   Two numbers, one struck, at a size you cannot skim past. */
+.pricewall{margin-top:24px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:18px;
+  background:var(--surface);border-radius:var(--r);box-shadow:var(--shadow-md);padding:26px 24px}
+.pricewall .pw{display:flex;flex-direction:column;gap:5px;text-align:center;min-width:0}
+.pricewall .k{font-family:var(--mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--muted2)}
+.pricewall .v{font-family:var(--display);font-size:clamp(28px,4.4vw,44px);line-height:1;
+  letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.pricewall .s{font-size:12.5px;color:var(--muted);line-height:1.45}
+.pricewall .old .v{color:var(--muted2);text-decoration:line-through;
+  text-decoration-thickness:2px;text-decoration-color:#c0362f80}
+.pricewall .new .v{color:var(--green)}
+.pricewall .arrow{font-family:var(--mono);font-size:20px;color:var(--muted2)}
+@media(max-width:640px){
+  .pricewall{grid-template-columns:1fr;gap:14px;padding:22px 20px}
+  .pricewall .arrow{transform:rotate(90deg)}
+}
+
+/* ---------- mobile ----------
+   The comparison and evidence tables ARE the differentiator, and at 375px a 520px-min table put
+   price, reliability and sample size off-screen behind a scroller with no cue. Below the breakpoint
+   each row becomes a stacked card with its column name as the label. */
+@media(max-width:640px){
+  .hero{padding:120px 0 0}
+  section{padding:56px 0 0}
+  .wrap{padding:0 20px}
+
+  .tablewrap{background:transparent;box-shadow:none;overflow:visible}
+  table{min-width:0;display:block;font-size:14px}
+  table thead{display:none}
+  table tbody,table tr,table td{display:block;width:100%}
+  table tr{background:var(--surface);border-radius:var(--rb);box-shadow:var(--shadow-sm);
+    padding:6px 2px;margin-bottom:10px}
+  /* Label ABOVE the value, not beside it. A side-by-side flex row looked tidy until a cell
+     contained inline <code> or a long phrase, at which point the two competed for width and the
+     value wrapped around the label. Stacked survives any content. */
+  table td{border-bottom:1px solid var(--line);padding:10px 14px;display:block}
+  table tr td:last-child{border-bottom:0}
+  table td::before{content:attr(data-label);display:block;margin-bottom:3px;
+    font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--muted2)}
+  table td code{white-space:normal;word-break:break-word}
+  /* a cell with no column name (the grouped-library rows) keeps its own full width */
+  table td:not([data-label])::before{display:none}
+}
+@media(prefers-reduced-motion:reduce){
+  *{transition:none!important;animation:none!important;scroll-behavior:auto!important}
+}
+
+/* Inline provider mark inside a table cell or card, from the server-rendered use-case pages. */
+.lg{width:16px;height:16px;border-radius:4px;object-fit:contain;vertical-align:-3px;margin-right:7px}
+.lg-none{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:4px;
+  background:var(--inverse);color:var(--inverse-ink);font-size:9px;vertical-align:-3px;margin-right:7px}
+.ptile .lg,.ptile .lg-none{margin-right:0;width:22px;height:22px}
+td code{font-family:var(--mono);font-size:11.5px;color:var(--muted)}

@@ -1,0 +1,60 @@
+{
+  "detail": "OK",
+  "total": 69,
+  "searchAfter": "NoZgdADANAnA7FArBCBGKrVzagTHqAIgGcAXAJwEsAHAUzAGMB7AW0IyIENPzOA3AAQBrSgDsA5oQC6QA",
+  "creditsUsed": 0.4,
+  "people": [
+    {
+      "id": "0000000000000000",
+      "domain": "stripe.com",
+      "name": "Jane Doe",
+      "firstName": "Jane",
+      "lastName": "Doe",
+      "country": "us",
+      "state": "New York",
+      "location": "New York, New York, United States",
+      "linkedinUrl": "https://www.linkedin.com/in/jane-doe",
+      "seniorities": ["Founder", "C-Level"],
+      "departments": ["Founder/Owner", "Management", "R&D"],
+      "jobTitle": "Chief Technology Officer",
+      "experiences": [
+        {
+          "domain": "stripe.com",
+          "jobTitle": "Chief Technology Officer",
+          "dateFrom": "2025-07",
+          "linkedinCompanyHandle": "stripe"
+        },
+        {"domain": "example.com", "jobTitle": "Chief Technology Officer", "dateFrom": "2021-07", "linkedinCompanyHandle": "example-co"}
+      ],
+      "skills": [],
+      "headline": "Chief Technology Officer",
+      "connectionsCount": 3295,
+      "followersCount": 3837,
+      "updatedAt": "2026-07-31T09:48:59+02:00"
+    },
+    {
+      "id": "1111111111111111",
+      "domain": "stripe.com",
+      "name": "John Roe",
+      "firstName": "John",
+      "lastName": "Roe",
+      "country": "de",
+      "state": "Saxony",
+      "location": "Leipzig, Saxony, Germany",
+      "linkedinUrl": "https://www.linkedin.com/in/john-roe",
+      "seniorities": ["C-Level"],
+      "departments": ["Management"],
+      "jobTitle": "Chief Executive Officer",
+      "experiences": [
+        {"domain": "stripe.com", "jobTitle": "Chief Executive Officer", "linkedinCompanyHandle": "stripe"},
+        {"domain": "stripe.com", "jobTitle": "Chief Executive Officer", "linkedinCompanyHandle": "stripe"}
+      ],
+      "skills": [],
+      "headline": "Chief Technology Officer",
+      "connectionsCount": 0,
+      "followersCount": 0,
+      "updatedAt": "2026-05-22T07:30:22+02:00"
+    }
+  ],
+  "_truncated": "size=2; names, ids and LinkedIn URLs of non-public individuals replaced with placeholders"
+}

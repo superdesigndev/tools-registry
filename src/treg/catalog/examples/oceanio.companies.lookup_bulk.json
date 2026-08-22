@@ -1,0 +1,55 @@
+{
+  "companies": [
+    {
+      "domain": "stripe.com",
+      "name": "Stripe",
+      "primaryCountry": "us",
+      "countries": ["au", "br", "fr", "gb", "ie"],
+      "companySize": "5001-10000",
+      "industryCategories": ["Financial Services", "Payments", "Software", "Mobile"],
+      "industries": ["Payments", "FinTech", "Mobile Payments", "Financial Services", "Transaction Processing"],
+      "linkedinIndustry": "Technology, Information and Internet",
+      "keywords": ["customer experiences", "customer experience", "businesses", "business days", "stripe-integrated"],
+      "employeeCountOcean": 14610,
+      "employeeCountLinkedin": 12568,
+      "revenue": ">1000M",
+      "yearFounded": 2009,
+      "description": "Stripe is a suite of APIs powering online payment processing and commerce solutions for internet businesses of all sizes. Accept payments and scale faster with ",
+      "technologies": ["Animate.css", "Privy", "Thinkific", "Next.js", "Twitter Flight", "Nginx"],
+      "technologyCategories": ["CMS", "Message boards", "Ecommerce", "Analytics"],
+      "webTraffic": {"visits": 117011212, "pageViews": 386920974, "pagesPerVisit": 3.3066999912261963, "bounceRate": 0.5483},
+      "headcountGrowth": null,
+      "departmentSizes": [
+        {"department": "Accounting and Finance", "size": 1001},
+        {"department": "Board", "size": 8},
+        {"department": "Business Support", "size": 509},
+        {"department": "Customer Relations", "size": 417},
+        {"_truncated": "20 more departments"}
+      ],
+      "fundingRound": {
+        "date": "2023-04-25T00:00:00+02:00",
+        "type": "Grant",
+        "moneyRaisedInUsd": 11087947,
+        "cbUrl": "crunchbase.com/organization/stripe"
+      },
+      "locations": [
+        {
+          "primary": true,
+          "latitude": 37.3927116394043,
+          "longitude": -122.04199981689453,
+          "country": "us",
+          "locality": "South San Francisco",
+          "region": "California",
+          "postalCode": "94080",
+          "streetAddress": "354 Oyster Point Blvd",
+          "regionCode": "CA"
+        }
+      ],
+      "updatedAt": "2026-08-14T11:49:56+02:00"
+    }
+  ],
+  "totalRequested": 1,
+  "totalFound": 1,
+  "creditsUsed": 0.05,
+  "_truncated": "one company shown; lists shortened. Domains with no match come back as company: null"
+}

@@ -110,3 +110,37 @@ async def test_meta_reports_the_released_version(clients: AsyncClient):
     assert body["treg_version"], "a release check must be able to read the version from outside"
     assert body["treg_version"] != body["app_version"], "these are different questions"
     assert body["treg_version"][0].isdigit(), f"expected a version, got {body['treg_version']!r}"
+
+
+def test_the_pool_cannot_outnumber_postgres_during_a_deploy():
+    """A rolling deploy runs TWO instances against one database. At 20+40 each, that was 120
+    potential connections against a basic-plan ceiling of ~100 — a deploy could starve Postgres with
+    no bug anywhere, which is exactly what happened on 2026-08-15. Two instances of the current
+    numbers must stay comfortably under a 97-connection ceiling."""
+    import re
+    from pathlib import Path
+
+    import treg.db as db
+
+    src = Path(db.__file__).read_text()
+    m = re.search(r"pool_size=(\d+), max_overflow=(\d+)", src)
+    assert m, "expected explicit pool bounds for the postgres path"
+    per_instance = int(m.group(1)) + int(m.group(2))
+    assert per_instance * 2 <= 90, (
+        f"two deploy-time instances could hold {per_instance * 2} connections — "
+        "that is how the 2026-08-15 outage started")
+
+
+def test_migrations_fail_fast_rather_than_queueing_the_world():
+    """An ALTER on a hot table needs an exclusive lock. Without a lock_timeout it QUEUES behind live
+    traffic, and every new query then queues behind IT — both instances starve and the shared
+    database wedges (2026-08-15, root cause). The startup path must set the timeout before running
+    migrations so a contended deploy fails cleanly instead."""
+    import inspect as _inspect
+
+    import treg.db as db
+
+    src = _inspect.getsource(db.init_db)
+    assert "lock_timeout" in src, "init_db must set lock_timeout before _migrate_to_orgs"
+    assert src.index("lock_timeout") < src.index("_migrate_to_orgs"), (
+        "the timeout must be set BEFORE the migrations run")

@@ -16,6 +16,10 @@ written: Claude Code via its own `claude mcp add` (it owns its format, and redac
 output), Cursor and opencode via their documented JSON. CLI-light: stdlib only — no yaml (server-only
 dep) and no toml writer (not in stdlib), which is why Hermes (yaml) and Codex (toml + an env-var
 indirection, not an inline header) are reported as manual rather than half-written wrong.
+
+DeepSeek Harness is manual for a different reason: it has no MCP config file at all. A server there
+is a row in a profile's composition layer, and the answer is to install treg's own bundle, which
+carries that row — see docs/DSH-PLUGIN.md.
 """
 
 from __future__ import annotations
@@ -58,6 +62,12 @@ MANUAL_AGENTS: dict[str, dict] = {
     "hermes": {"display": "Hermes", "marker": lambda: (HOME / ".hermes").exists(),
                "how": "add to ~/.hermes/config.yaml under mcp_servers: a `url` + `headers: "
                       "{Authorization: \"Bearer <token>\"}` entry."},
+    "dsh": {"display": "DeepSeek Harness", "marker": lambda: (HOME / ".dsh").exists()
+            or bool(shutil.which("dsh")),
+            "how": "dsh has no MCP config file to write — a server is a row in a PROFILE's config "
+                   "layer. Install the bundle instead, which carries that row: `dsh plugin "
+                   "--profile <name> add github:superdesigndev/treg`. The row stays disabled until "
+                   "TREG_TOKEN is in the environment dsh starts in, so export it and restart dsh."},
     "openclaw": {"display": "OpenClaw", "marker": lambda: (HOME / ".openclaw").exists()
                  or bool(shutil.which("openclaw")),
                  "how": "run `openclaw mcp add --transport http treg <url> --header "

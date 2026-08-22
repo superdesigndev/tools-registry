@@ -4,15 +4,47 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>treg</title>
+<!-- The dashboard is an authenticated app: every view needs a session and its routes are hash
+     fragments. Nothing here is indexable, and a crawler that got in would index a sign-in prompt. -->
+<meta name="robots" content="noindex, follow"/>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist+Pixel&family=DM+Mono:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;450;500;600&display=swap" rel="stylesheet">
-<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<!-- Vue is vendored and served from this origin, never a CDN: an unpkg.com that a visitor's network
+     cannot reach used to leave the whole signed-in dashboard blank (issue #137). Version lives in
+     the filename — bump it here and in src/treg/web/vendor/ together. -->
+<script src="/vendor/vue-3.5.41.global.prod.js"></script>
+<script>
+// Fail loudly. `[v-cloak]{display:none}` hides the un-compiled template until Vue mounts, so
+// anything that stops Vue mounting turns the dashboard into a silent blank page with nothing in
+// the console but `Vue is not defined` — issue #137 needed a bug report to find, because the
+// screen said nothing at all. If #app is still cloaked once the page has loaded, Vue never got
+// there: say so, in place of the blank.
+addEventListener('load', function(){
+  setTimeout(function(){
+    var app = document.getElementById('app');
+    if (!app || !app.hasAttribute('v-cloak')) return;   // mounted fine — nothing to do
+    var why = window.Vue ? 'The dashboard failed to start.'
+                         : 'The dashboard could not load one of its files.';
+    var box = document.createElement('div');
+    box.setAttribute('role', 'alert');
+    box.style.cssText = 'max-width:560px;margin:18vh auto;padding:22px 24px;border:1px solid ' +
+      'var(--line,#e3dac7);border-radius:14px;background:var(--panel,#fffdf8);color:var(--ink,#201c15);' +
+      'font:14px/1.55 ui-monospace,"SF Mono",Menlo,Consolas,monospace';
+    box.innerHTML = '<b>▚ treg</b><p>' + why + ' This is usually a network hiccup between you and ' +
+      'the server.</p><p><button type="button" class="btn" id="dashReload">Reload</button> — and if it keeps ' +
+      'happening, tell us at <a href="https://github.com/superdesigndev/treg/issues">github.com/superdesigndev/treg/issues</a> ' +
+      'with whatever your browser console shows.</p>';
+    document.body.appendChild(box);
+    document.getElementById('dashReload').onclick = function(){ location.reload(); };
+  }, 1500);   // generous: a slow connection is still a working one, and must not see this
+});
+</script>
 <script src="/tutorial.js"></script>
 <script src="/dashboard-tour/tour.js"></script>
 <style>
-  [v-cloak]{display:none}  /* hide the raw template until Vue mounts — else a hard refresh flashes the un-compiled landing markup while the CDN script downloads */
+  [v-cloak]{display:none}  /* hide the raw template until Vue mounts — else a hard refresh flashes the un-compiled markup while the script downloads. Vue drops the attribute on mount, which is also how the loader guard above detects that it never did. */
   /* ===== Ledger: warm paper + clay, mono-forward. Dark default. ===== */
   :root{ --bg:#211d16;--panel:#2a251d;--panel2:#332d23;--ink:#f0e9d9;--muted:#a99e88;--line:#3b352a;
     --accent:#e0703f;--onAccent:#231c14;--green:#7fae72;--amber:#d0a24a;--teal:#6aa89c;--red:#e08a7a;--r:14px;--rb:9px;
@@ -256,6 +288,16 @@
      tab strip) stretch the track past the viewport, putting a horizontal scrollbar on the PAGE
      instead of inside the strip's own overflow-x container. */
   .layout{display:grid;grid-template-columns:230px minmax(0,1fr);min-height:calc(100vh - 57px)}
+  /* Public catalog: no sidebar, so the main column takes the whole width. */
+  .layout.solo{grid-template-columns:minmax(0,1fr)}
+  .pubnav{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:22px;
+    padding:11px 22px;background:color-mix(in srgb,var(--bg) 86%,transparent);
+    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+  .pubnav .brand{font-family:var(--mono);font-weight:600;font-size:16px;color:var(--ink);text-decoration:none}
+  .pubnav-links{margin-left:auto;display:flex;align-items:center;gap:20px;font-size:14px}
+  .pubnav-links a{color:var(--muted);font-weight:500;text-decoration:none;cursor:pointer}
+  .pubnav-links a:hover,.pubnav-links a[aria-current]{color:var(--ink)}
+  @media(max-width:640px){ .pubnav{gap:12px;padding:10px 14px} .pubnav-links{gap:13px} .pubnav-links .hidem{display:none} }
   .side{border-right:1px solid var(--line);padding:12px 10px;background:var(--panel);display:flex;flex-direction:column}
   .side .nav{display:flex;gap:10px;align-items:center;width:100%;text-align:left;background:none;border:0;color:var(--ink);padding:9px 11px;border-radius:var(--rb);font-size:13.5px}
   .side .nav:hover{background:var(--panel2)} .side .nav.active{background:var(--panel2);color:var(--accent);font-weight:600}
@@ -1056,7 +1098,7 @@ a:hover{text-decoration-color:var(--muted)}
 <body>
 <div id="app" v-cloak>
   <!-- LANDING (logged-out) -->
-  <div v-if="!authed" class="lp">
+  <div v-if="!authed && !publicCatalog" class="lp">
     <!-- SHARE-LINK GATE: a /app/skills|tools/<name> deep link while logged out gets a focused
          sign-in page (no sandbox demo, no tour) — the marketing landing is for the front door. -->
     <template v-if="shareGate">
@@ -1243,48 +1285,35 @@ a:hover{text-decoration-color:var(--muted)}
     <footer class="lp-foot">treg · a credential-injecting proxy · <a href="/tutorial">tutorial</a> · <a href="/llms.txt">llms.txt</a></footer>
     </template>
 
-    <!-- SIGN-IN MODAL (shared by the landing and the share-link gate) -->
-    <div class="lc-scrim" :class="{open:demo.signin}" @click.self="demo.signin=false">
-      <div class="lc-modal" role="dialog" aria-modal="true" aria-label="Sign in">
-        <button class="cls" @click="demo.signin=false" aria-label="Close">✕</button>
-        <div style="font-size:26px">▚</div>
-        <h2 style="margin:8px 0 2px;font-family:var(--mono)">{{invitePrefill?'Accept your invite':(shareGate?'Sign in to view it':'Make it yours')}}</h2>
-        <p v-if="invitePrefill" class="sub">Sign in with <b>{{invitePrefill}}</b> and you'll drop straight into the team.</p>
-        <p v-else-if="shareGate" class="sub">You'll land on “{{shareGate.name}}” right after.</p>
-        <p v-else class="sub">Bring the sandbox into a real account.</p>
-        <button v-if="meta.github" class="btn primary" style="width:100%;padding:11px;margin-bottom:8px" @click="githubLogin">Continue with GitHub</button>
-        <button v-if="meta.google" class="btn" style="width:100%;padding:11px;margin-bottom:8px" @click="googleLogin">Continue with Google</button>
-        <div v-if="!emailStage">
-          <div class="field"><input v-model="emailInput" type="email" placeholder="you@work.com" @keyup.enter="emailStart"/></div>
-          <button class="btn" style="width:100%" @click="emailStart" :disabled="busy">{{busy?'Sending…':'Email me a sign-in code'}}</button>
-        </div>
-        <div v-else>
-          <p class="sub" style="font-size:11px;margin:2px 0 8px">Code sent to <b>{{emailInput}}</b><span v-if="devCode"> · dev code <b class="mono">{{devCode}}</b></span> · <a href="#" @click.prevent="emailStage=false">change</a></p>
-          <div class="field"><input v-model="codeInput" inputmode="numeric" placeholder="6-digit code" @keyup.enter="emailVerify"/></div>
-          <button class="btn primary" style="width:100%" @click="emailVerify" :disabled="busy">{{busy?'Verifying…':'Sign in'}}</button>
-        </div>
-        <details style="margin-top:12px;text-align:left">
-          <summary class="sub" style="cursor:pointer;text-align:center">or paste an org token (agents &amp; CLI)</summary>
-          <div class="field" style="margin-top:8px"><input v-model="tokenInput" type="password" placeholder="X-Treg-Token" @keyup.enter="addToken(tokenInput)"/></div>
-          <button class="btn" style="width:100%" @click="addToken(tokenInput)" :disabled="busy">{{busy?'Checking…':'Sign in with token'}}</button>
-        </details>
-        <div v-if="loginErr" class="banner" style="margin-top:12px">{{loginErr}}</div>
-      </div>
-    </div>
   </div>
 
   <template v-else>
     <a href="#maincontent" class="skip">Skip to content</a>
-    <div class="top" role="banner">
+    <!-- A public catalog visitor is reading a WEBSITE, not operating an app: the workspace chrome
+         (org switcher, global tool search, member nav) is furniture for a job they have not started.
+         They get the marketing site's nav instead, so /catalog reads as part of treg.to rather than
+         as a dashboard someone forgot to lock. -->
+    <div class="pubnav" v-if="publicCatalog">
+      <a class="brand" href="/">▚ treg</a>
+      <nav class="pubnav-links">
+        <a href="/catalog" aria-current="page">Catalog</a>
+        <a href="/tutorial">Tutorial</a>
+        <a href="/docs">API</a>
+        <a class="hidem" href="https://github.com/superdesigndev/treg" target="_blank" rel="noopener">GitHub ↗</a>
+        <a @click="openSignin()">Sign in</a>
+        <button class="btn primary sm" @click="openSignin()">Start free</button>
+      </nav>
+    </div>
+    <div class="top" role="banner" v-else>
       <div class="brand">▚ treg</div>
       <div class="search"><span class="muted">/</span><input ref="search" v-model="q" :placeholder="view==='connections'?'search the catalog…':'search tools…'" aria-label="Search"/></div>
       <div class="spacer"></div>
     </div>
 
-    <div class="layout">
-      <nav class="side">
+    <div class="layout" :class="{solo:publicCatalog}">
+      <nav class="side" v-if="!publicCatalog">
         <!-- ORG (top): name → settings · ▾ → switch -->
-        <div class="orgblock">
+        <div class="orgblock" v-if="authed">
           <div class="orgmain" ref="orgmain" @click="toggleOrgMenu" role="button" tabindex="0" @keydown.enter="toggleOrgMenu" aria-haspopup="true" :aria-expanded="orgMenu" aria-label="Teams">
             <span class="role" :class="activeRole">{{activeRole}}</span>
             <b class="orgname">{{activeName}}</b>
@@ -1311,12 +1340,12 @@ a:hover{text-decoration-color:var(--muted)}
 
         <!-- NAV (middle) -->
         <div class="side-nav">
-          <button class="nav" :class="{active:view==='start'}" @click="go('start')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>Getting started</button>
-          <button v-if="canRegister" class="nav" :class="{active:view==='connections'}" @click="go('connections')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>Catalog</button>
-          <button class="nav" :class="{active:view==='tools'||view==='secrets'}" @click="go('tools')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>Your vault</button>
-          <button class="nav" :class="{active:view==='activity'}" @click="go('activity')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Activity</button>
-          <button v-if="canAdmin" class="nav" :class="{active:view==='usage'}" @click="go('usage')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Usage</button>
-          <button class="nav" :class="{active:view==='orgs'}" @click="go('orgs')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Team</button>
+          <button v-if="authed" class="nav" :class="{active:view==='start'}" @click="go('start')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>Getting started</button>
+          <button v-if="canRegister || publicCatalog" class="nav" :class="{active:view==='connections'}" @click="go('connections')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>Catalog</button>
+          <button v-if="authed" class="nav" :class="{active:view==='tools'||view==='secrets'}" @click="go('tools')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>Your vault</button>
+          <button v-if="authed" class="nav" :class="{active:view==='activity'}" @click="go('activity')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Activity</button>
+          <button v-if="authed" class="nav" :class="{active:view==='orgs'}" @click="go('orgs')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Team</button>
+          <button v-if="authed" class="nav" :class="{active:view==='referrals'}" @click="go('referrals')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>Refer a friend</button>
           <div v-if="isAdmin"><div class="grp">Platform</div><button class="nav" :class="{active:view==='admin'}" @click="go('admin')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Admin</button></div>
           <div class="grp" style="margin-top:auto">Help</div>
           <a class="nav" href="https://github.com/superdesigndev/treg" target="_blank" rel="noopener" style="gap:6px;text-decoration:none"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.56 0-.27-.01-1.17-.02-2.12-3.2.7-3.88-1.36-3.88-1.36-.52-1.33-1.28-1.68-1.28-1.68-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.03 1.75 2.69 1.25 3.34.95.1-.74.4-1.25.72-1.54-2.55-.29-5.24-1.28-5.24-5.68 0-1.26.45-2.28 1.18-3.09-.12-.29-.51-1.46.11-3.05 0 0 .96-.31 3.15 1.18a10.9 10.9 0 0 1 5.74 0c2.19-1.49 3.15-1.18 3.15-1.18.62 1.59.23 2.76.11 3.05.73.81 1.18 1.83 1.18 3.09 0 4.41-2.69 5.38-5.25 5.67.41.35.77 1.04.77 2.1 0 1.52-.01 2.74-.01 3.11 0 .3.2.66.8.55A11.5 11.5 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5z"/></svg>Open source</a>
@@ -1330,8 +1359,20 @@ a:hover{text-decoration-color:var(--muted)}
           <span style="font-size:11px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase">Balance</span>
           <span style="font-family:var(--mono);font-weight:700;color:var(--accent)">{{money(billing.balance_micro)}}</span>
         </div>
+        <!-- Second door into Referrals, right under the balance: this is where someone is already
+             thinking about what treg costs them, which is the moment the offer actually lands. -->
+        <div v-if="billing" style="margin:0 10px 6px;text-align:center">
+          <a href="#referrals" @click.prevent="go('referrals')" class="sub"
+             style="font-size:11px;text-decoration:none">Refer a friend — get {{money(ref.terms.referrer_micro||5000000)}}</a>
+        </div>
+        <!-- PUBLIC (bottom): a signed-out catalog visitor gets the way in, where a member's
+             account block would be. The catalog is readable without an account; calling is not. -->
+        <div v-if="!authed" class="side-acct" style="gap:8px">
+          <button class="btn primary sm" style="flex:1" @click="openSignin()">Start free</button>
+          <button class="iconbtn" @click="toggleTheme" :aria-label="theme==='dark'?'Switch to light theme':'Switch to dark theme'" title="Theme">{{theme==='dark'?'◐':'◑'}}</button>
+        </div>
         <!-- ACCOUNT (bottom) -->
-        <div class="side-acct">
+        <div v-else class="side-acct">
           <div class="ava" :title="me">{{initials}}</div>
           <div class="acct-you" :title="me">{{me}}</div>
           <button class="iconbtn" @click="toggleTheme" :aria-label="theme==='dark'?'Switch to light theme':'Switch to dark theme'" title="Theme">{{theme==='dark'?'◐':'◑'}}</button>
@@ -1359,7 +1400,7 @@ a:hover{text-decoration-color:var(--muted)}
               <button class="btn sm" @click="vendorAsk=true" title="Sell an API? Get it listed in this catalog"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.83z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>List as vendor</button>
               <!-- The one header action a paying visitor is actually looking for: where do I put MY
                    key. It only switches tabs, but naming it makes the Platform tab findable. -->
-              <button class="btn sm primary" @click="goByok()" title="Register your own provider key — your key wins over treg's and those calls are never metered"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777Zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>Bring your own key</button>
+              <button class="btn sm primary" @click="publicCatalog ? openSignin() : goByok()" title="Register your own provider key — your key wins over treg's and those calls are never metered"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777Zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>Bring your own key</button>
             </div>
           </div>
           <div v-if="connErr" class="banner" style="margin-top:12px">{{connErr}}</div>
@@ -1424,7 +1465,10 @@ a:hover{text-decoration-color:var(--muted)}
                     <!-- The corner answers the only question that changes what you do next: can I
                          call this today, or is there a signup between me and it? Which provider
                          serves it is a decision for the platform page, not a browse-time fact. -->
-                    <span class="pt-conn">
+                    <!-- Connection state is a MEMBER fact. On a public catalog URL there is no
+                         team to be connected, so the badge would read "not connected" on all 80
+                         tiles — a wall of red herrings for someone just browsing what exists. -->
+                    <span class="pt-conn" v-if="!publicCatalog">
                       <span v-if="platConnected(pl)" class="chip go"
                             :title="'You have a connected account for '+platConnNames(pl)"><span class="godot"></span>Connected</span>
                       <span v-else class="pt-quiet" title="No connected account for any provider serving this platform yet">not connected</span>
@@ -1638,8 +1682,11 @@ a:hover{text-decoration-color:var(--muted)}
               providers do sit on a single row, so you can compare price and coverage before you spend a call.</p>
             <div class="plat-provs" v-if="platProviders.length">
               <span class="plat-provs-l">Providers</span>
-              <button v-for="s in platProviders" :key="s" class="btn sm" @click="openProvider(s)">{{provName(s)}} →</button>
-              <button class="btn sm" @click="goByok(platProviders.length===1 ? platProviders[0] : null)"
+              <!-- Signed out, both destinations (a provider's marketplace page, the vault) need an
+                   account, so the chips state who supplies the shelf and the last one is the way in. -->
+              <button v-for="s in platProviders" :key="s" class="btn sm"
+                      @click="publicCatalog ? openSignin() : openProvider(s)">{{provName(s)}}{{publicCatalog?'':' \u2192'}}</button>
+              <button class="btn sm" @click="publicCatalog ? openSignin() : goByok(platProviders.length===1 ? platProviders[0] : null)"
                       title="Register your own provider key — your key wins over treg's and those calls are never metered">🔑 Bring your own key</button>
             </div>
           </div>
@@ -1794,15 +1841,19 @@ a:hover{text-decoration-color:var(--muted)}
                             <!-- OAuth providers can't be served on treg's key (they act AS your account),
                                  so Connect is their primary CTA and Try-it is secondary. Key/token
                                  providers are the reverse: Try-it (treg's key) leads, own key is optional. -->
-                            <button class="btn sm" :class="{primary:!mkOauth(e.provider)}" @click.stop="openEpTry(e)"
-                                    title="Call it now, or copy the agent / CLI / API way to run it">▶ Try it</button>
+                            <!-- Calling costs money and needs a team, so a public visitor gets the
+                                 way in rather than a button that can only 401. Everything else in
+                                 the expander — parameters, limits, rate card, the copyable command
+                                 — is open, and is the part worth reading before you sign up. -->
+                            <button class="btn sm" :class="{primary:!mkOauth(e.provider)}" @click.stop="publicCatalog ? openSignin() : openEpTry(e)"
+                                    :title="publicCatalog ? 'Create a free team to call this — $1.00 of credit, no card' : 'Call it now, or copy the agent / CLI / API way to run it'">▶ Try it</button>
                             <span v-if="catConnected(e.provider)" class="chip go" title="You already have a connected account that can call this"><span class="godot"></span>Connected</span>
-                            <button v-else-if="mkOauth(e.provider)" class="btn sm primary" @click.stop="openProvider(e.provider)"
+                            <button v-else-if="mkOauth(e.provider)" class="btn sm primary" @click.stop="publicCatalog ? openSignin() : openProvider(e.provider)"
                                     :title="'Connect '+(e.provider_display||e.provider)+' — one-click OAuth, calls act as your account'">Connect {{e.provider_display||e.provider}}</button>
                             <!-- Lands on the Catalog's Platform tab focused on this provider — the
                                  whole key shelf in view, not a dead-end detail page — so the user
                                  sees where their key lives among the rest before they paste it. -->
-                            <button v-else-if="mkKnown(e.provider)" class="btn sm" @click.stop="goByok(e.provider)"
+                            <button v-else-if="mkKnown(e.provider)" class="btn sm" @click.stop="publicCatalog ? openSignin() : goByok(e.provider)"
                                     :title="'Register your own '+(e.provider_display||e.provider)+' key — your key wins over treg\'s and those calls are never metered'">Bring your own key</button>
                           </span>
                         </div>
@@ -2343,10 +2394,45 @@ a:hover{text-decoration-color:var(--muted)}
                   <template v-if="billing.configured">
                     <div style="margin-top:16px;border-top:1px solid var(--line);padding-top:14px">
                       <div class="lbl">Add funds</div>
+                      <!-- A team that arrived through someone's link does not know a bonus exists.
+                           This is the one screen where saying so changes what they do, and the
+                           MINIMUM is the part that matters: the first preset ($5) is below it, so
+                           without this the most-clicked button silently forfeits the reward. -->
+                      <div v-if="billing.referral_offer" style="margin-top:8px;padding:9px 12px;font-size:12.5px;
+                           border:1px solid var(--green);border-radius:8px;
+                           background:color-mix(in srgb,var(--green) 12%,transparent)">
+                        <!-- The referrer is MASKED (`j•••@domain`): a referral link is public, so
+                             the full address would be published to every stranger who signs up
+                             through an influencer's link. The domain is what a real friend
+                             recognises. Falls back to "to treg" if we somehow have no address. -->
+                        You were invited
+                        <template v-if="billing.referral_offer.referrer_masked">by
+                          <b>{{billing.referral_offer.referrer_masked}}</b></template>
+                        <template v-else>to treg</template>
+                        — add
+                        <!-- Once they have paid something, ask for the REMAINDER. Repeating the
+                             full amount reads as though the money they already added did not
+                             count, and it does: the threshold is cumulative. -->
+                        <b>{{money(billing.referral_offer.remaining_micro)}}</b>
+                        <template v-if="billing.referral_offer.topped_up_micro"> more</template>
+                        <template v-else> or more</template>
+                        <!-- "straight away" is load-bearing. The referee has no Referrals page, so
+                             the balance is their ONLY feedback; promising a bonus without saying
+                             when is what made a correct payout look like a failure. -->
+                        and we'll add <b>{{money(billing.referral_offer.referred_micro)}}</b> to your
+                        balance <b>straight away</b>. They get
+                        {{money(billing.referral_offer.referrer_micro)}} after
+                        {{billing.referral_offer.hold_days}} days.
+                      </div>
                       <div class="fundgrid" style="margin-top:8px">
                         <button v-for="p in billing.topup.presets" :key="p" class="fundcard" :disabled="billingBusy" @click="addFunds(p)">
                           <b>${{p}}</b>
-                          <span>{{billingBusy&&topupAmount===p?'Opening Stripe…':'one-time'}}</span>
+                          <!-- The bonus is named ON the qualifying buttons, not only in the note
+                               above: the amount is chosen here, and a preset that quietly forfeits
+                               it is the whole failure this is meant to prevent. -->
+                          <span v-if="billingBusy&&topupAmount===p">Opening Stripe…</span>
+                          <span v-else-if="refPresetBonus(p)" style="color:var(--green)">+{{money(refPresetBonus(p))}} bonus</span>
+                          <span v-else>one-time</span>
                         </button>
                       </div>
                     </div>
@@ -2405,6 +2491,7 @@ a:hover{text-decoration-color:var(--muted)}
                       </template>
                     </div>
                   </template>
+
                 </div>
               </div>
               <p v-else class="sub">Loading…</p>
@@ -2505,6 +2592,89 @@ a:hover{text-decoration-color:var(--muted)}
             <!-- TEAM SETTINGS: just the danger zone (new/join/switch team live in the sidebar
                  picker). Visible to every role — leaving a team is self-service, not admin. -->
             <template v-if="orgTab==='danger'">
+            <!-- DAILY SPEND CAP. A team-level setting, so it lives here rather than under Billing.
+                 It was invisible entirely before this, which meant a team first met it as an
+                 unexplained 429; and it matters MOST when auto top-up is on, because a balance that
+                 refills itself is no longer a ceiling and this becomes the only thing bounding a
+                 runaway agent. `capCfg` is loaded by loadBilling(), which runs on every Team-page
+                 load — NOT per tab — so it is populated by the time this renders.
+                 NB the name: `orgSettings` is already a METHOD on this component (the ⚙ in the team
+                 picker), and data and methods share one namespace. -->
+            <div v-if="capCfg" style="margin-top:18px;border-top:1px solid var(--line);padding-top:14px">
+                  <span class="lbl" style="margin:0">Daily spend limit</span>
+                  <p class="sub" style="margin:4px 0 8px;font-size:12px">
+                    The most this team can spend per day on treg's keys. Resets at 00:00 UTC. It's the
+                    blast radius of a runaway agent — worth keeping even with auto top-up on, since a
+                    balance that refills itself can't stop one.
+                  </p>
+                  <div class="field" style="max-width:560px">
+                    <input v-model="capUsd" type="number" min="0" step="0.5" style="max-width:140px"/>
+                    <button class="btn primary" :disabled="capBusy" @click="saveCap">{{capBusy?'…':'Save'}}</button>
+                    <span class="sub" style="margin:0">
+                      USD/day · now {{money(capCfg.daily_cap_micro)}}<template v-if="!capCfg.daily_cap_set_by_team"> (our default)</template>
+                    </span>
+                  </div>
+                  <p v-if="capErr" class="banner" style="margin:10px 0 0">{{capErr}}</p>
+                  <p class="muted" style="font-size:12px;margin-top:8px">
+                    You can lower this freely. Raising it past {{money(capCfg.platform_ceiling_micro)}}/day needs a word with us — that's the ceiling we allow a team.
+                  </p>
+                </div>
+
+                <!-- PER-TAG BUDGETS. What a team reselling treg sets on ITS OWN customers. Only
+                     DECLARED dimensions are enforced on the call path, so the key is a picker over
+                     those rather than a free-text box — the API refuses a limit on anything else
+                     precisely because a stored-but-unenforced budget looks like protection and isn't. -->
+                <div v-if="capCfg" style="margin-top:22px;border-top:1px solid var(--line);padding-top:14px">
+                  <span class="lbl" style="margin:0">Per-customer limits</span>
+                  <p class="sub" style="margin:4px 0 8px;font-size:12px">
+                    Cap or block one of your own customers by the tags your calls carry
+                    (<code>X-Treg-Meta</code>). Limits <b>stack</b> — a workspace ceiling and a
+                    per-customer ceiling both apply, and a refusal names which one hit. They are
+                    <b>advisory</b>: concurrent calls can overshoot slightly, and your balance is the
+                    hard limit.
+                  </p>
+                  <div class="field" style="max-width:680px;flex-wrap:wrap">
+                    <!-- Every tag the team SENDS, not only the ones already budgeted. Setting a
+                         limit declares the dimension, so offering only the declared list made the
+                         common path a hidden two-step: you can see `feature` in Usage, so you expect
+                         to be able to cap it. -->
+                    <select class="msel" v-model="budDim" style="max-width:160px">
+                      <option v-for="k in budDims" :key="k" :value="k">{{k}}</option>
+                    </select>
+                    <input v-model="budVal" placeholder="cust_8123 — blank = default for all" style="max-width:230px"/>
+                    <input v-model="budDaily" type="number" min="0" step="0.5" placeholder="USD/day" style="max-width:120px"/>
+                    <button class="btn primary" :disabled="budBusy" @click="saveBudget()">{{budBusy?'…':(budVal?'Set limit':'Set default')}}</button>
+                  </div>
+                  <p v-if="budErr" class="banner" style="margin:10px 0 0">{{budErr}}</p>
+                  <template v-for="dim in (capCfg.budget_dims||[])" :key="dim">
+                    <table style="margin-top:10px">
+                      <tr><th>{{dim}}</th><th style="text-align:right">Daily limit</th><th>Status</th><th></th></tr>
+                      <!-- The default first: everything under it is an exception to it. Rendered even
+                           when unset, so "no limit" is something you can SEE rather than infer from
+                           an empty table. -->
+                      <tr>
+                        <td><b>every {{dim}}</b> <span class="muted">(default)</span></td>
+                        <td style="text-align:right">{{defaultFor(dim)?fmtCap(defaultFor(dim)):'no limit'}}</td>
+                        <td><span class="muted">—</span></td>
+                        <td style="text-align:right"><button v-if="defaultFor(dim)" class="btn sm" @click="removeBudget(defaultFor(dim))">Clear</button></td>
+                      </tr>
+                      <tr v-for="b in overridesFor(dim)" :key="b.val">
+                        <td style="padding-left:22px"><span class="chip">{{b.val}}</span></td>
+                        <!-- EFFECTIVE, never a dash: an override with no cap really is unlimited, and
+                             showing "—" would hide that it is exempt from the default. -->
+                        <td style="text-align:right">{{fmtCap(b)}}</td>
+                        <td><span class="badge" :class="b.status==='blocked'?'invalid':'ok'">{{b.status}}</span></td>
+                        <td style="text-align:right;white-space:nowrap">
+                          <button class="btn sm" @click="toggleBlock(b)">{{b.status==='blocked'?'Unblock':'Block'}}</button>
+                          <button class="btn sm" @click="removeBudget(b)">Remove</button>
+                        </td>
+                      </tr>
+                      <tr v-if="!overridesFor(dim).length"><td colspan="4" class="muted" style="font-size:12px">no exceptions — every {{dim}} follows the default</td></tr>
+                    </table>
+                  </template>
+                </div>
+
+
             <template v-if="!isPersonal(activeOrg)">
             <div class="lbl" style="margin-top:14px;color:var(--red)">Danger zone</div>
             <div style="display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start">
@@ -2526,17 +2696,24 @@ a:hover{text-decoration-color:var(--muted)}
         <!-- ACTIVITY -->
         <template v-if="view==='activity'">
           <h1>Activity - {{activeName}}</h1>
-          <p class="sub">Every proxy call and server CLI run in this org.</p>
-          <table><tr><th>When</th><th>Who</th><th>Tool</th><th>Action</th><th>Status</th><th style="text-align:right">Cost</th></tr>
-            <tr v-for="a in activityRows" :key="a.kind+'-'+a.id"><td class="muted">{{when(a.created_at)}}</td><td>{{short(a.user_email)}}<span v-if="a.client && a.client!=='cli'" class="chip" style="margin-left:6px" :title="'reported by the runtime — attribution, not authentication'">via {{a.client}}</span></td><td>{{a.tool}}</td><td><span v-if="a.kind==='run'" class="chip" style="margin-right:6px" :title="a.where==='local'?'ran on this member\'s machine':'ran on the registry server'">{{a.where||'run'}}</span>{{a.action}}</td><td><span class="badge" :class="a.ok?'ok':'invalid'">{{a.status}}</span></td><td style="text-align:right;white-space:nowrap" class="muted" :title="a.tier==='platform'?'charged to team balance':(a.cost!=null?'estimated — billed to your own provider key':'')">{{a.cost!=null?money(a.cost):'—'}}</td></tr></table>
-          <p v-if="!loading && !activityRows.length" class="sub">No activity yet.</p>
-        </template>
+          <!-- One page, two readings of the same traffic: the RAW FEED (every call, newest first)
+               and the ROLLUPS (who/what/when, and spend per caller tag). They were separate sidebar
+               entries, which made you leave one to answer a question about the other. -->
+          <div class="tabs" style="margin:10px 0 4px">
+            <button :class="{active:actTab==='feed'}" @click="actTab='feed'">Activity</button>
+            <button v-if="canAdmin" :class="{active:actTab==='usage'}" @click="actTab='usage'; loadUsage()">Usage</button>
+          </div>
 
-        <!-- USAGE (admin/owner) -->
-        <template v-if="view==='usage'">
+          <template v-if="actTab==='feed'">
+          <p class="sub">Every proxy call and server CLI run in this org.</p>
+          <table><tr><th>When</th><th>Who</th><th v-if="anyTagged">Tagged</th><th>Tool</th><th>Action</th><th>Status</th><th style="text-align:right">Cost</th></tr>
+            <tr v-for="a in activityRows" :key="a.kind+'-'+a.id"><td class="muted">{{when(a.created_at)}}</td><td>{{short(a.user_email)}}<span v-if="a.client && a.client!=='cli'" class="chip" style="margin-left:6px" :title="'reported by the runtime — attribution, not authentication'">via {{a.client}}</span></td><td v-if="anyTagged"><template v-if="a.tags"><span v-for="(v,k) in a.tags" :key="k" class="chip" style="margin-right:4px" :title="'X-Treg-Meta '+k+'='+v">{{k}}={{v}}</span></template><span v-else class="muted">—</span></td><td>{{a.tool}}</td><td><span v-if="a.kind==='run'" class="chip" style="margin-right:6px" :title="a.where==='local'?'ran on this member\'s machine':'ran on the registry server'">{{a.where||'run'}}</span>{{a.action}}</td><td><span class="badge" :class="a.ok?'ok':'invalid'">{{a.status}}</span></td><td style="text-align:right;white-space:nowrap" class="muted" :title="a.tier==='platform'?'charged to team balance':(a.cost!=null?'estimated — billed to your own provider key':'')">{{a.cost!=null?money(a.cost):'—'}}</td></tr></table>
+          <p v-if="!loading && !activityRows.length" class="sub">No activity yet.</p>
+          </template>
+
+          <template v-if="canAdmin && actTab==='usage'">
           <div class="tut-head" style="align-items:flex-end">
-            <div><h1>Usage - {{activeName}}</h1>
-              <p class="sub" style="margin:0">Calls &amp; runs per member over the last {{usageDays}} days. Counts only - no request or response content is stored.</p></div>
+            <div><p class="sub" style="margin:0">Calls &amp; runs per member over the last {{usageDays}} days. Counts only - no request or response content is stored.</p></div>
             <select class="msel" :value="usageDays" @change="usageDays=+$event.target.value; loadUsage()"><option :value="7">7 days</option><option :value="30">30 days</option><option :value="90">90 days</option></select>
           </div>
 
@@ -2567,8 +2744,42 @@ a:hover{text-decoration-color:var(--muted)}
               <tr><th>Day</th><th style="text-align:right">Events</th></tr>
               <tr v-for="d in usage.by_day" :key="d.day"><td class="muted">{{d.day}}</td><td style="text-align:right">{{d.total}}</td></tr>
             </table>
+          <!-- SPEND BY CALLER TAG — one section per key the team has ACTUALLY SENT, not a picker.
+               A dropdown hides the other dimensions behind an interaction, and the whole point of
+               tagging by both customer and workspace is seeing them side by side. The list comes from
+               /tag-keys (observed), so a team that never tags sees nothing here at all.
+
+               Money here comes from the LEDGER, unlike the per-member/tool/day counts below, which
+               come from the audit table and are allowed to lose rows. This is what a reselling team
+               invoices from, so it has to be complete. -->
+          <template v-for="key in tagKeys" :key="key">
+            <div v-if="tagUsage[key]" style="margin-top:20px">
+              <div class="lbl" style="margin:0">By {{key}} <span class="chip" style="margin-left:6px" title="a caller tag from X-Treg-Meta">X-Treg-Meta</span></div>
+              <p class="sub" style="margin:4px 0 8px;font-size:12px">
+                What each <b>{{key}}</b> spent, from the ledger. A call is credited in full to every
+                tag it carries, so these sections are different slices of the same money — never add
+                two of them together.
+              </p>
+              <table v-if="tagUsage[key].rows.length">
+                <tr><th>{{key}}</th><th style="text-align:right">Calls</th><th style="text-align:right">Spend</th></tr>
+                <tr v-for="r in tagUsage[key].rows" :key="r.value">
+                  <td><span class="chip">{{r.value}}</span></td>
+                  <td style="text-align:right" class="muted">{{r.calls}}</td>
+                  <td style="text-align:right"><b>{{money(r.charged_micro)}}</b></td>
+                </tr>
+                <tr v-if="tagUsage[key].unattributed_micro">
+                  <td class="muted" title="calls carrying no value for this tag — shown, never dropped">untagged</td>
+                  <td style="text-align:right" class="muted">—</td>
+                  <td style="text-align:right" class="muted">{{money(tagUsage[key].unattributed_micro)}}</td>
+                </tr>
+              </table>
+              <p v-else class="sub">Nothing tagged <b>{{key}}</b> in this window.</p>
+            </div>
+          </template>
+
           </div>
           <p v-else class="sub">Loading…</p>
+          </template>
         </template>
 
         <!-- ADMIN -->
@@ -2672,6 +2883,37 @@ a:hover{text-decoration-color:var(--muted)}
             </div>
           </div>
 
+          <!-- BUILD ON TREG — deliberately NOT a numbered step. Steps 1-2 are the one path every
+               new user walks; these two are optional and belong to different people (a vendor with an
+               API to list, a platform embedding treg). Numbering them implied everyone had three
+               things to do. Tabs, because nobody needs both. -->
+          <div style="margin-top:34px;border-top:1px solid var(--line);padding-top:22px">
+            <h2 style="margin:0 0 4px;font-size:17px">Build on treg</h2>
+            <p class="sub" style="margin:0 0 12px">Optional, for two other kinds of user. Each is a skill file — paste the line into your coding agent, in your own repo, and it implements the rest.</p>
+            <div class="seg">
+              <button :class="{on:buildTab==='vendor'}" @click="buildTab='vendor'">List as vendor</button>
+              <button :class="{on:buildTab==='platform'}" @click="buildTab='platform'">Integrate into your platform</button>
+            </div>
+
+            <div v-show="buildTab==='vendor'" style="max-width:720px">
+              <p class="sub">Put your API in front of every treg agent. Your agent reads the guide, writes the catalog entry for your endpoints and prices, and opens the PR.</p>
+              <div class="lc-codewrap" style="margin-top:8px">
+                <button class="lc-cp" @click="copyStart('Read '+proxy+'/vendor-listing.md and add our API to the treg catalog, then open a PR.','vend')">{{startCopied==='vend'?'✓ copied':'copy'}}</button>
+                <pre>Read <span class="hl-str">{{proxy}}/vendor-listing.md</span> and add our API to the
+treg catalog, then open a PR.</pre>
+              </div>
+            </div>
+
+            <div v-show="buildTab==='platform'" style="max-width:720px">
+              <p class="sub">Give <i>your</i> users 2,600+ tools without owning the keys — and bill each of your customers for what they used. Covers the call methods (HTTP, MCP, CLI), per-customer tagging, spend limits and invoicing.</p>
+              <div class="lc-codewrap" style="margin-top:8px">
+                <button class="lc-cp" @click="copyStart('Read '+proxy+'/integrate.md and integrate treg into our product, including per-customer usage tracking and billing.','intg')">{{startCopied==='intg'?'✓ copied':'copy'}}</button>
+                <pre>Read <span class="hl-str">{{proxy}}/integrate.md</span> and integrate treg into our
+product, including per-customer usage tracking and billing.</pre>
+              </div>
+            </div>
+          </div>
+
           <!-- The manual CLI paths, kept but tucked away -->
           <details style="margin-top:26px" :open="startTab==='setup'">
             <summary class="sub" style="cursor:pointer;margin-bottom:0">Prefer the terminal? Manual CLI setup &amp; sharing your team's keys →</summary>
@@ -2738,6 +2980,89 @@ a:hover{text-decoration-color:var(--muted)}
           </div>
           </details>
 
+          </div>
+        </template>
+
+        <!-- REFERRALS — a person's link and everyone who used it. A top-level view (never nested):
+             a view inside a view renders nowhere, and the nav button would look dead. -->
+        <template v-if="view==='referrals'">
+          <h1>Refer a friend</h1>
+          <p class="sub">They get {{money(ref.terms.referred_micro)}} when they add
+            {{money(ref.terms.min_topup_micro)}}. You get {{money(ref.terms.referrer_micro)}},
+            {{ref.terms.hold_days}} days later.</p>
+
+          <p v-if="ref.loading" class="sub">Loading…</p>
+          <!-- ONE column for the whole view. The children carry no max-width of their own: three
+               different ones is what made the card, the tiles and the table start and end at three
+               different x-positions. -->
+          <div v-else style="max-width:720px">
+            <!-- Everyone with a team gets a link — including free-tier users, who on a product
+                 pitched as "$1.00 free, no card" are most users and the likeliest to tell a friend.
+                 This branch is now only the degenerate case (no team to pay the reward into), kept
+                 because the reward has to land SOMEWHERE and a silent zero is the worst version. -->
+            <div v-if="!ref.eligible" class="card" style="margin-top:14px">
+              <div class="lbl">Create a team to unlock your link</div>
+              <p class="sub" style="margin:6px 0 12px">Referral rewards are paid as credit into a
+                team you own, so you'll need one first.</p>
+              <button class="btn primary sm" @click="go('orgs')">Go to teams</button>
+            </div>
+
+            <template v-else>
+              <div class="card" style="margin-top:14px">
+                <div class="lbl">Your link</div>
+                <div style="display:flex;gap:8px;margin-top:8px">
+                  <input readonly :value="ref.link" @focus="$event.target.select()"
+                         style="flex:1;min-width:0;font-family:var(--mono);font-size:12px">
+                  <button class="btn sm" @click="copyRefLink" style="flex:none">{{refCopied?'Copied':'Copy'}}</button>
+                </div>
+                <p class="sub" style="margin:10px 0 0" v-if="ref.credit_org">
+                  Your reward lands in <b>{{ref.credit_org.name}}</b>.</p>
+              </div>
+
+              <!-- `.stat` expects `.n` (the figure) then `.l` (the label), in that order — any other
+                   class names render as unstyled text, which is exactly what a hand-rolled k/v pair
+                   did here. -->
+              <!-- auto-FIT, not the sheet's auto-fill: at this width auto-fill lays out four 150px
+                   tracks and leaves the fourth empty, so three tiles stop short of the column's
+                   right edge while the card above and the table below reach it. auto-fit collapses
+                   the empty track and the three stretch to fill. -->
+              <div class="statgrid" style="margin-top:14px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
+                <div class="stat"><div class="n">{{ref.totals.signed_up}}</div><div class="l">signed up</div></div>
+                <div class="stat"><div class="n">{{ref.totals.topped_up}}</div><div class="l">topped up</div></div>
+                <div class="stat"><div class="n">{{money(ref.totals.earned_micro)}}</div><div class="l">earned</div></div>
+              </div>
+              <p v-if="ref.totals.pending_micro" class="sub" style="margin:-8px 0 0">
+                {{money(ref.totals.pending_micro)}} on the way — rewards land
+                {{ref.terms.hold_days}} days after your friend adds funds.</p>
+
+              <!-- The cap refusal IS the commercial conversation, same posture as a daily-cap
+                   refusal: it names the limit and points at a human rather than silently paying 0. -->
+              <div v-if="ref.cap.paid >= ref.cap.limit" class="card"
+                   style="margin-top:14px;border-color:var(--accent)">
+                <div class="lbl">You've hit the {{ref.cap.limit}}-referral limit</div>
+                <p class="sub" style="margin:6px 0 0">That's as far as the self-serve program goes.
+                  If you're sending real volume, email <b>support@treg.to</b> — we pay partners in cash.</p>
+              </div>
+
+              <div class="grp" style="margin:20px 0 8px">Your referrals</div>
+              <p v-if="!ref.referrals.length" class="sub" style="margin:0">
+                Nobody yet. Share your link above.</p>
+              <!-- House-style table: bare `<table>` is ALREADY a card (background, border, radius)
+                   and `th,td` already carry 10px/13px padding. Overriding that padding to `8px 0`
+                   is what pushed the amount flush against the card's own right edge. -->
+              <table v-else>
+                <tr><th>Who</th><th>Signed up</th><th>Status</th><th style="text-align:right">Reward</th></tr>
+                <tr v-for="(r,i) in ref.referrals" :key="i">
+                  <td>{{r.email || '—'}}</td>
+                  <td class="sub" style="white-space:nowrap">{{bhistDate(r.signed_up_at)}}</td>
+                  <td>{{refStatus(r)}}</td>
+                  <td style="text-align:right;font-family:var(--mono);white-space:nowrap">
+                    <span v-if="r.reward_micro">{{money(r.reward_micro)}}</span>
+                    <span v-else class="muted">—</span>
+                  </td>
+                </tr>
+              </table>
+            </template>
           </div>
         </template>
 
@@ -2906,6 +3231,14 @@ a:hover{text-decoration-color:var(--muted)}
         <p class="sub" style="margin:0 0 14px">What should your agent be allowed to do with this account?
           Widening it later means going through the provider's consent screen again.</p>
         <p v-if="capAsk.provider.consent_notice" class="mk-notice" style="margin:0 0 14px">{{capAsk.provider.consent_notice}}</p>
+        <!-- The price BEFORE the consent screen, not on the invoice: an oauth-billed provider (X)
+             charges treg's app per use, so calls on this connection are metered from the balance. -->
+        <p v-if="capAsk.provider.metered" class="mk-notice" style="margin:0 0 14px">Calls on this connection are
+          metered from your team balance — {{capAsk.provider.display_name}} bills per use
+          (reads ~${{capAsk.provider.billed_rates.read_per_result_usd}}/result,
+          posts ${{capAsk.provider.billed_rates.write_per_call_usd}},
+          ${{capAsk.provider.billed_rates.write_with_link_usd}} when the post links out).
+          Connecting your own developer app instead is never metered.</p>
         <div class="ttable-wrap"><table class="ttable">
           <tr v-for="cap in capAsk.provider.capabilities" :key="cap">
             <!-- Deliberately NOT .tn: that class is nowrap, which is right for a name column
@@ -3453,16 +3786,56 @@ treg login</pre></div>
       <div style="margin-top:8px;display:flex;gap:8px"><button class="btn sm" @click="go('org')">Open Team</button><button class="btn sm" @click="accessNote=''">Dismiss</button></div>
     </div>
   </template>
+
+  <!-- SIGN-IN MODAL — a SIBLING of both branches. It used to live inside the logged-out
+       landing, which meant the public catalog (which renders the app shell, not that branch)
+       had no way to sign anyone in and every CTA had to navigate away to find one. -->
+  <div class="lc-scrim" :class="{open:demo.signin}" @click.self="demo.signin=false">
+    <div class="lc-modal" role="dialog" aria-modal="true" aria-label="Sign in">
+      <button class="cls" @click="demo.signin=false" aria-label="Close">✕</button>
+      <div style="font-size:26px">▚</div>
+      <h2 style="margin:8px 0 2px;font-family:var(--mono)">{{invitePrefill?'Accept your invite':(shareGate?'Sign in to view it':(publicCatalog?'Start calling':'Make it yours'))}}</h2>
+      <p v-if="invitePrefill" class="sub">Sign in with <b>{{invitePrefill}}</b> and you'll drop straight into the team.</p>
+      <p v-else-if="shareGate" class="sub">You'll land on “{{shareGate.name}}” right after.</p>
+      <!-- The default line is the SANDBOX's ("bring it into a real account"), which is nonsense to
+           someone who arrived on a catalog page from a search result and has no sandbox. -->
+      <p v-else-if="publicCatalog" class="sub">Create a free team and call any of these — <b>$1.00 of credit</b>, no card.</p>
+      <p v-else class="sub">Bring the sandbox into a real account.</p>
+      <button v-if="meta.github" class="btn primary" style="width:100%;padding:11px;margin-bottom:8px" @click="githubLogin">Continue with GitHub</button>
+      <button v-if="meta.google" class="btn" style="width:100%;padding:11px;margin-bottom:8px" @click="googleLogin">Continue with Google</button>
+      <div v-if="!emailStage">
+        <div class="field"><input v-model="emailInput" type="email" placeholder="you@work.com" @keyup.enter="emailStart"/></div>
+        <button class="btn" style="width:100%" @click="emailStart" :disabled="busy">{{busy?'Sending…':'Email me a sign-in code'}}</button>
+      </div>
+      <div v-else>
+        <p class="sub" style="font-size:11px;margin:2px 0 8px">Code sent to <b>{{emailInput}}</b><span v-if="devCode"> · dev code <b class="mono">{{devCode}}</b></span> · <a href="#" @click.prevent="emailStage=false">change</a></p>
+        <div class="field"><input v-model="codeInput" inputmode="numeric" placeholder="6-digit code" @keyup.enter="emailVerify"/></div>
+        <button class="btn primary" style="width:100%" @click="emailVerify" :disabled="busy">{{busy?'Verifying…':'Sign in'}}</button>
+      </div>
+      <details style="margin-top:12px;text-align:left">
+        <summary class="sub" style="cursor:pointer;text-align:center">or paste an org token (agents &amp; CLI)</summary>
+        <div class="field" style="margin-top:8px"><input v-model="tokenInput" type="password" placeholder="X-Treg-Token" @keyup.enter="addToken(tokenInput)"/></div>
+        <button class="btn" style="width:100%" @click="addToken(tokenInput)" :disabled="busy">{{busy?'Checking…':'Sign in with token'}}</button>
+      </details>
+      <div v-if="loginErr" class="banner" style="margin-top:12px">{{loginErr}}</div>
+    </div>
+  </div>
 </div>
 
 <script>
 const { createApp } = Vue;
 const LS='treg-dash';
+
 createApp({
   data(){
     let cfg={active:null,orgs:{}}; try{ cfg=JSON.parse(localStorage.getItem(LS))||cfg; }catch(e){}
     return {
       theme: localStorage.getItem('treg-theme')||'light',
+      // True when this load is a PUBLIC catalog URL (/catalog, /catalog/<slug>). The catalog API is
+      // unauthenticated, so the same marketplace views render for a signed-out visitor — that is
+      // what makes the catalog indexable without maintaining a second copy of the UI. Everything
+      // that needs a session (org switcher, vault, activity, team, try-it) is hidden on `authed`.
+      publicCatalog:false,
       cfg, tokenInput:'', busy:false, loginErr:'', addOrg:false, orgMenu:false, orgMenuStyle:null,
       emailInput:'', codeInput:'', emailStage:false, devCode:'', pendingInvites:[], invitePrefill:'', inviteChoice:false, inviteBusy:false,
       inviteSel:{}, inviteLinkOrg:null, inviteErr:'',  // multi-select accept: checked ids, the org_id the clicked email link was for, partial-failure note
@@ -3481,11 +3854,22 @@ createApp({
       editProj:null, projToolDraft:{}, projToolBusy:false,
       denyRules:[], denyForm:{host:'',path_prefix:'',method:'',user_id:null,project_id:null,note:''}, denyBusy:false, confirmDeny:null, cliDeny:[],
       bootVersion:'', newVersion:false,
-      usage:null, usageDays:30, myUsage:null,  // usage-metering: rollups + the member's own used/cap
+      usage:null, usageDays:30, myUsage:null, actTab:'feed', buildTab:'vendor',  // Activity page: 'feed' | 'usage'
+      tagUsage:{}, tagKeys:[],   // spend per X-Treg-Meta key: {customer:{…}, workspace:{…}}
+  // usage-metering: rollups + the member's own used/cap
       // Billing (Stripe top-ups). `billing` null = not loaded / not an admin; billing.configured
       // false = this deployment sells no balance, so the whole block stays hidden.
       billing:null, billingBusy:false, topupAmount:10, autoAmount:10, autoThreshold:5, autoConsent:false, autoOpen:false,
+      capCfg:null, capUsd:0, capBusy:false, capErr:'',
+      budgets:[], budDims:[], budDim:'', budVal:'', budDaily:'', budBusy:false, budErr:'',
       bhist:{items:[],loading:false,ok:true},   // past top-ups + their invoice/receipt links; ok=false means Stripe was unreachable, amounts are still right
+      // Referral program. Seeded with the same SHAPE the API returns (terms/totals/cap present and
+      // zeroed) so the template can read ref.terms.hold_days on the very first paint — a v-if on
+      // `loading` guards the table, but the subtitle above it renders immediately.
+      ref:{loading:false,eligible:false,code:'',link:'',credit_org:null,referrals:[],
+           terms:{referrer_micro:0,referred_micro:0,min_topup_micro:0,hold_days:0},
+           totals:{signed_up:0,topped_up:0,earned_micro:0,pending_micro:0},cap:{paid:0,limit:0}},
+      refCopied:false,
       confirmDel:'', confirmLeave:false, confirmRemove:null,
       showJoin:false, joinCode:'', joinBusy:false, joinErr:'',
       secrets:[], showSecrets:false, secretRows:[{name:'',value:'',kind:'env'}], secretBusy:false, secretErr:'', runNote:'',
@@ -3663,7 +4047,10 @@ createApp({
     platProviders(){  // providers with endpoints here, in catalog order; only ones treg can connect
       const seen=[]; for(const g of (this.platData&&this.platData.capabilities||[])) for(const e of (g.endpoints||[])) if(!seen.includes(e.provider)) seen.push(e.provider);
       for(const e of (this.platData&&this.platData.extended||[])) if(!seen.includes(e.provider)) seen.push(e.provider);
-      return seen.filter(s=>this.providers.some(p=>p.service===s)); },
+      // The filter keeps the row to providers treg can actually connect — a member-only fact, read
+      // from /connections. A public visitor has no session, so naming every provider that supplies
+      // this shelf is both all we can do and the thing that page is there to say.
+      return this.publicCatalog ? seen : seen.filter(s=>this.providers.some(p=>p.service===s)); },
     // ---- the ledger ----
     // Sections, their order and the merged/single split are all decided by the server (see
     // catalog_store.domain_rows) so the CLI, the API and this page can't disagree about what the
@@ -3774,9 +4161,12 @@ createApp({
       // Cost precedence: what was CHARGED (settle amount; 0 on a release — the estimate alone would
       // over-report a refunded call as spend), else observed, else the estimate (old rows / own-key).
       const calls=(this.calls||[]).filter(c=>c.kind!=='local_run').map(c=>({kind:'call', id:c.id, created_at:c.created_at, user_email:c.user_email, client:c.client, tool:c.tool_name, action:c.method, status:c.status_code, ok:c.status_code<400,
-        cost:(c.cost_charged_micro!=null?c.cost_charged_micro:(c.cost_observed_micro!=null?c.cost_observed_micro:c.cost_estimated_micro)), tier:c.credential_tier}));
+        cost:(c.cost_charged_micro!=null?c.cost_charged_micro:(c.cost_observed_micro!=null?c.cost_observed_micro:c.cost_estimated_micro)), tier:c.credential_tier, tags:c.tags}));
       const runs=(this.runs||[]).map(r=>({kind:'run', where:r.where, id:r.id, created_at:r.created_at, user_email:r.user_email, client:r.client, tool:r.tool, action:(r.argv||[]).join(' ').slice(0,48)||'-', status:(r.where==='local'?'local run':'exit '+r.exit_code), ok:(r.where==='local'?true:r.exit_code===0)}));
       return calls.concat(runs).sort((a,b)=>a.created_at<b.created_at?1:-1);
+    },
+    anyTagged(){  // hide the column entirely for teams that never send X-Treg-Meta
+      return (this.calls||[]).some(c=>c.tags && Object.keys(c.tags).length);
     },
     sbxTourSteps(){ return [
       {spot:'vault', view:'endpoints', title:"Hi, I'm treg 👋",
@@ -4373,7 +4763,28 @@ createApp({
       this.confirmDeny=null; await this.loadOrgAdmin(); },
     async loadUsage(){ if(!this.canAdmin || !this.activeOrgId) return; this.usage=null;
       try{ this.usage=await this.api('/orgs/'+this.activeOrgId+'/usage?days='+this.usageDays); }
-      catch(e){ this.err='Failed to load usage: '+(e.detail||e.status); } },
+      catch(e){ this.err='Failed to load usage: '+(e.detail||e.status); }
+      await this.loadTagUsage(); },
+    async loadTagUsage(){ if(!this.canAdmin || !this.activeOrgId) return;
+      this.tagUsage={};
+      try{
+        // What the team has actually SENT. Reporting works on any key, unlike enforcement, which
+        // needs a declared one — so this is deliberately NOT the budgetable list, which hid
+        // `feature=` and friends from the dashboard even though the API served them fine.
+        const k=await this.api('/orgs/'+this.activeOrgId+'/tag-keys');
+        const primary=k.primary;
+        const keys=[...new Set([...(k.seen||[]), ...(k.budgetable||[])].filter(Boolean))];
+        // Primary first — it is the one a reselling team bills on; the rest alphabetically.
+        keys.sort((a,b)=> a===primary ? -1 : b===primary ? 1 : a.localeCompare(b));
+        this.tagKeys=keys;
+        // One request per key. Bounded by the 5-key cap on the header, and they run together.
+        const got=await Promise.all(keys.map(key=>
+          this.api('/orgs/'+this.activeOrgId+'/usage/by-tag?key='+encodeURIComponent(key)+
+                   '&days='+this.usageDays).catch(()=>null)));
+        const out={};
+        keys.forEach((key,i)=>{ if(got[i]) out[key]=got[i]; });
+        this.tagUsage=out;
+      }catch(e){ this.tagUsage={}; this.tagKeys=[]; } },
     // micro-USD -> a money string, EXACT. Cents round a $0.0006 charge to $0.00 and a $9.999 balance
     // to "$10.00"; a fixed 4 decimals rounds $0.00015 to $0.0001 (float: 0.00015 is stored just
     // under). So: whole-cent amounts render as normal cents, everything else renders all 6 micro
@@ -4387,7 +4798,61 @@ createApp({
       if(this.billing){ this.topupAmount=this.billing.topup.default_usd;
         this.autoAmount=Math.round(this.billing.autotopup.amount_usd);
         this.autoThreshold=Math.round(this.billing.autotopup.threshold_usd);
-        this.loadBillingHistory(); } },
+        this.loadBillingHistory(); }
+      // The daily cap lives beside the balance for the user even though it is an org setting.
+      this.capCfg=await this.api(`/orgs/${this.activeOrgId}/settings`).catch(()=>null);
+      if(this.capCfg){ this.capUsd=(this.capCfg.daily_cap_micro/1e6).toFixed(2);
+        const k=await this.api(`/orgs/${this.activeOrgId}/tag-keys`).catch(()=>null);
+        this.budDims=[...new Set([...((k&&k.seen)||[]), ...(this.capCfg.budget_dims||[])])];
+        if(!this.budDims.length) this.budDims=['customer'];
+        this.budDim=this.budDim||this.budDims[0];
+        this.budgets=await this.api(`/orgs/${this.activeOrgId}/budgets`).catch(()=>[]); } },
+    defaultFor(dim){ return (this.budgets||[]).find(b=>b.dim===dim && b.is_default) || null; },
+    overridesFor(dim){ return (this.budgets||[]).filter(b=>b.dim===dim && !b.is_default); },
+    fmtCap(b){ return b.daily_cap_micro==null ? 'no limit' : this.money(b.daily_cap_micro)+'/day'; },
+    // The server's own words when it has any. Every budget refusal is one a builder must be able to
+    // act on — "above_platform_ceiling" carries the ceiling, "too_many_budget_dimensions" names the
+    // dimensions in use — so the generic fallback is the last resort, never the first.
+    _errMsg(e, fallback){ return (e&&e.detail&&e.detail.message) || (e&&typeof e.detail==='string'&&e.detail)
+      || (e&&e.message) || fallback; },
+    // Blank `val` addresses the DIMENSION'S DEFAULT — `PUT /budgets/{dim}`, the route with no value.
+    _budgetUrl(dim, val){ const base=`/orgs/${this.activeOrgId}/budgets/${encodeURIComponent(dim)}`;
+      return val ? `${base}/${encodeURIComponent(val)}` : base; },
+    async _putBudget(dim, val, body){
+      return this.api(this._budgetUrl(dim, val),
+        {method:'PUT', headers:{'content-type':'application/json'}, body:JSON.stringify(body)});
+    },
+    async _reloadBudgets(){ this.budgets=await this.api(`/orgs/${this.activeOrgId}/budgets`).catch(()=>this.budgets); },
+    async saveBudget(){ this.budBusy=true; this.budErr='';
+      try{
+        const body={};
+        if(this.budDaily!=='') body.daily_cap_micro=Math.round(parseFloat(this.budDaily)*1e6);
+        await this._putBudget(this.budDim, this.budVal.trim(), body);
+        this.budVal=''; this.budDaily='';
+        await this.loadBilling();   // re-reads settings: a first limit DECLARES the dimension
+        await this._reloadBudgets();
+      }catch(e){ this.budErr=this._errMsg(e, 'could not save that limit'); }
+      finally{ this.budBusy=false; } },
+    async toggleBlock(b){ this.budErr='';
+      // A PARTIAL put: only `status` travels, so caps set earlier survive being blocked/unblocked.
+      try{ await this._putBudget(b.dim, b.val, {status: b.status==='blocked'?'active':'blocked'});
+        await this._reloadBudgets();
+      }catch(e){ this.budErr=this._errMsg(e, 'could not change that'); } },
+    async removeBudget(b){ this.budErr='';
+      try{ await this.api(this._budgetUrl(b.dim, b.val), {method:'DELETE'}); await this._reloadBudgets();
+      }catch(e){ this.budErr=this._errMsg(e, 'could not remove that'); } },
+    async saveCap(){ this.capBusy=true; this.capErr='';
+      try{
+        const micro=Math.round(parseFloat(this.capUsd||'0')*1e6);
+        this.capCfg=await this.api(`/orgs/${this.activeOrgId}/settings`,
+          {method:'PATCH', headers:{'content-type':'application/json'},
+           body:JSON.stringify({daily_cap_micro:micro})});
+        this.capUsd=(this.capCfg.daily_cap_micro/1e6).toFixed(2);
+      }catch(e){
+        // The server REFUSES a raise past the ceiling rather than clamping it, so say which it was —
+        // a silently clamped limit is discovered as an outage mid-launch.
+        this.capErr=this._errMsg(e, 'could not save that limit');
+      }finally{ this.capBusy=false; } },
     // Amounts come from our own credit blocks, so this list can never disagree with the balance above
     // it; Stripe supplies only the document links, and bhist.ok===false means those were unavailable.
     async loadBillingHistory(){ if(!this.canAdmin || !this.billing || !this.billing.configured){ this.bhist={items:[],loading:false,ok:true}; return; }
@@ -4400,6 +4865,39 @@ createApp({
         // return_url comes back to #billing, so the same tab is right here as it is for Checkout.
         window.location.href=out.url; }
       catch(e){ this.err='Could not open the billing portal: '+(e.detail||e.status); this.billingBusy=false; } },
+    // ---- referrals ----
+    // GET /referrals also runs the payout sweep server-side, so simply opening this page is what
+    // makes a reward whose hold has elapsed actually land. That is deliberate: treg has no
+    // scheduler, so the work rides on a request someone is already making.
+    async loadReferrals(){ if(!this.authed) return;
+      this.ref={...this.ref, loading:true};
+      // One call: GET mints the code if this is the first visit (asking for the page IS the lazy
+      // trigger), so there is no POST-then-GET round trip and no window where `link` is empty.
+      const out=await this.api('/referrals').catch(()=>null);
+      if(out) this.ref={...out, loading:false}; else this.ref={...this.ref, loading:false}; },
+    // How much extra THIS preset earns a referred team, or 0. Guarded on the offer existing, so a
+    // team that arrived on its own sees the buttons exactly as before.
+    refPresetBonus(usd){ const o=this.billing&&this.billing.referral_offer;
+      // NULL-GUARD FIRST. `referral_offer` is null for every team that was not referred — i.e. most
+      // of them — and reading through it throws inside a render, which in Vue blanks the ENTIRE
+      // dashboard rather than just this row. Cost one blank page during review; keep it on its own
+      // line rather than folded into the expression below, where deleting a clause drops it silently.
+      if(!o) return 0;
+      // Against what is REMAINING, not the full minimum: a team that already added $5 unlocks the
+      // bonus with another $5, and marking that button "one-time" would be simply wrong.
+      return (usd*1000000 >= o.remaining_micro) ? o.referred_micro : 0; },
+    async copyRefLink(){ try{ await navigator.clipboard.writeText(this.ref.link); }catch(e){}
+      this.refCopied=true; this.track('referral_link_copied');
+      setTimeout(()=>{ this.refCopied=false; }, 1600); },
+    // The row's own status, in the words a referrer thinks in. `capped`/`rejected` say WHY rather
+    // than showing a blank — "I referred someone and got nothing" is the support ticket this
+    // program generates, and the answer belongs on the page, not in an email to us.
+    refStatus(r){
+      if(r.status==='paid') return 'Paid';
+      if(r.status==='qualified') return 'Added funds — pays '+this.bhistDate(r.pays_at);
+      if(r.status==='pending') return 'Signed up';
+      if(r.status==='capped') return 'Over your limit';
+      return 'Not eligible'; },
     bhistLink(i){ return i.invoice_pdf || i.hosted_invoice_url || i.receipt_url || ''; },
     bhistLabel(i){ return (i.invoice_pdf||i.hosted_invoice_url) ? 'Invoice' : (i.receipt_url ? 'Receipt' : ''); },
     // created_at is naive UTC (the models._now convention), so it needs the Z that isoformat omits —
@@ -5011,10 +5509,15 @@ createApp({
       this.go('orgs'); },
     resetConfirms(){ this.confirmDelTool=null; this.confirmDelSecret=null; this.confirmDelBundle=null; this.confirmRemove=null; this.confirmLeave=false; this.confirmDel=''; this.confirmAdmUser=null; this.confirmAdmOrg=null; },
     go(v, fromPop){ this.resetConfirms();  // stale inline "Confirm" states must not survive a view switch (accidental-delete risk)
-      this.detail=null; this.view=v; if(v==='activity')this.loadCalls(); if(v==='admin')this.loadAdmin(); if(v==='orgs'){this.loadOrgAdmin(); this.loadMyUsage(); this.loadBilling();} if(v==='usage')this.loadUsage(); if(v==='secrets'){this.loadSecrets(); if(!this.providers.length)this.loadConnections();} if(v==='connections')this.loadConnections();
+      // `usage` is a TAB of the activity page now, not a view of its own — keep the old route
+      // working so an existing /app#usage link, and the balance card's deep link, still land right.
+      if(v==='usage'){ this.actTab='usage'; v='activity'; this.loadUsage(); }
+      else if(v==='activity'){ this.actTab='feed'; }
+      this.detail=null; this.view=v; if(v==='activity')this.loadCalls(); if(v==='admin')this.loadAdmin(); if(v==='orgs'){this.loadOrgAdmin(); this.loadMyUsage(); this.loadBilling();} if(v==='usage')this.loadUsage(); if(v==='secrets'){this.loadSecrets(); if(!this.providers.length)this.loadConnections();} if(v==='connections')this.loadConnections(); if(v==='referrals')this.loadReferrals();
       // push history so browser Back navigates BETWEEN views instead of leaving the app; the '/app'
       // pathname also walks back from a /app/skills/<x> detail URL so reload doesn't reopen the detail
-      if(!fromPop) history.pushState({view:v}, '', '/app#'+v); },
+      if(!fromPop) history.pushState({view:v}, '',
+        this.publicCatalog && v==='connections' ? '/catalog' : '/app#'+v); },
     // ---- detail pages (shareable deep links) ----
     routeFromPath(path){ const m=/^\/app\/(skills|tools)\/(.+)$/.exec(path||'');
       return m ? {kind:m[1]==='skills'?'skill':'tool', name:decodeURIComponent(m[2])} : null; },
@@ -5055,18 +5558,32 @@ createApp({
     // Platform pages are hash routes (/app#platform/<slug>): unlike /app/marketplace/<service> there
     // is no server route to serve the SPA on a hard reload of a /app/platforms/<slug> path.
     platformFromHash(){ const m=/^#platform\/(.+)$/.exec(location.hash||''); return m?decodeURIComponent(m[1]):null; },
+    // The PUBLIC catalog lives at real paths (/catalog, /catalog/<slug>), not hash routes, because
+    // a hash is never a distinct URL to a crawler and the whole catalog was therefore unindexable.
+    // Same Vue views as the signed-in marketplace — this is one UI, not a second implementation.
+    catalogFromPath(p){
+      if(p==='/catalog' || p==='/catalog/') return {view:'connections', slug:null};
+      const m=/^\/catalog\/([^/]+)\/?$/.exec(p||'');
+      return m ? {view:'platform', slug:decodeURIComponent(m[1])} : null;
+    },
     // A plain view hash (#usage, #orgs, …) so deep links land on the right pane on a FRESH load,
     // not only via back/forward. '#billing' is the name 402 bodies and emails use for "add funds";
     // billing lives on the Team pane's Billing tab, so it aliases there.
     viewFromHash(){ let v=(location.hash||'').replace('#','');
       if(v==='billing'){ this.orgTab='billing'; v='orgs'; }
-      return ['tools','orgs','activity','usage','admin','help','secrets','start','connections'].includes(v)?v:null; },
+      return ['tools','orgs','activity','usage','admin','help','secrets','start','connections','referrals'].includes(v)?v:null; },
     openPlatform(slug, fromPop){ this.resetConfirms();
       this.detail=null; this.platSlug=slug; this.view='platform'; this.platOpen={}; this.epOpen={}; this.epTab={}; this.platEx={}; this.platActionsOpen=false;
       this.platClearFilters(); this.platCopied='';
-      if(!fromPop) history.pushState({platform:slug}, '', '/app#platform/'+encodeURIComponent(slug));
+      // A public visitor stays on the indexable /catalog/<slug> URL; a signed-in one keeps the
+      // in-app hash route. Same view either way — only the address bar differs.
+      if(!fromPop) history.pushState({platform:slug}, '', this.publicCatalog
+        ? '/catalog/'+encodeURIComponent(slug)
+        : '/app#platform/'+encodeURIComponent(slug));
       this.loadPlatforms();                                   // the header's provider links need the list
-      if(!this.providers.length) this.loadConnections();       // and connected/not-connected needs both
+      // Connected/not-connected is a member fact and the endpoint needs a session; a public
+      // visitor has none, so skip it rather than fire a guaranteed 401 on every shelf view.
+      if(!this.publicCatalog && !this.providers.length) this.loadConnections();
       this.loadPlatform();
       window.scrollTo(0,0); },
     async loadPlatform(){ if(!this.platSlug) return;
@@ -5129,7 +5646,8 @@ createApp({
       // the tooltip) — but "from" is a floor, and the floor is free.
       const provs=(pl && pl.providers)||[];
       const hasOauth=provs.some(s=>{
-        const p=this.providers.find(x=>x.service===s); return p && p.auth_kind==='oauth'; });
+        const p=this.providers.find(x=>x.service===s);
+        return p && p.auth_kind==='oauth' && !p.metered; });
       if(hasOauth) return {free:true, text:'free with your account', paid};
       if(paid) return {free:false, text:paid, native:this.nativeAmount(pf)};
       return null; },  // priced with no published number, or key-auth with no rate — unknown, not free
@@ -5142,6 +5660,14 @@ createApp({
               p.native ? 'billed as '+p.native+' / '+this.priceUnit(pf.type)+', converted at the catalog’s FX rate' : '',
               pf.note].filter(Boolean).join(' — '); },
     catConnected(service){ return !!this.connCount[service]; },
+    // Whether a REGISTRY connection to this provider is still metered. Connecting usually ends the
+    // billing question — the account you connect is the licence — but a `metered` provider bills
+    // treg's own app per use (X since Feb 2026), so those calls are debited from the team balance
+    // no matter whose account made them. `/providers` carries the flag, and the deployment's
+    // TREG_OAUTH_BILLED_PROVIDERS decides whether it is set, so the price a browser shows follows
+    // the kill switch instead of hard-coding today's answer.
+    catMetered(service){
+      const p=this.providers.find(x=>x.service===service); return !!(p && p.metered); },
     // A platform is callable today if ANY provider serving it is connected — the card is browsing,
     // not routing, so which one it is stays a question for the platform page.
     platConnected(pl){ return ((pl&&pl.providers)||[]).some(s=>this.catConnected(s)); },
@@ -5172,7 +5698,8 @@ createApp({
       return typeof c.usd==='number' ? c.usd : null; },
     // An OAuth endpoint you have already connected costs nothing MORE to call — the account is the
     // licence — so a connected own_account row is the free path, and usually the right answer.
-    capFree(e){ return this.catConnected(e.provider) && (e.scope==='own_account' || (e.cost&&e.cost.type==='free')); },
+    capFree(e){ return this.catConnected(e.provider) && !this.catMetered(e.provider)
+      && (e.scope==='own_account' || (e.cost&&e.cost.type==='free')); },
     capCheapest(eps){
       let best=null;
       for(const e of (eps||[])){
@@ -5234,9 +5761,19 @@ createApp({
       if(c.type==='free') return 'free';
       if(c.value==null) return 'credit-priced';
       return this.costLabel(c); },
-    mkKnown(service){ return this.providers.some(p=>p.service===service); },
+    // `providers` needs a session. Publicly, "is this a provider treg knows" is answered by the
+    // open catalog response instead — otherwise the whole action chain collapses and a signed-out
+    // reader sees no way to bring their own key. `mkOauth` stays false without the registry, so the
+    // public branch offers BYOK (which is true for every provider) rather than guessing Connect.
+    mkKnown(service){ return this.providers.some(p=>p.service===service)
+      || (this.publicCatalog && !!((this.platData&&this.platData.providers||{})[service])); },
     mkOauth(service){ const p=this.providers.find(x=>x.service===service); return !!p && p.auth_kind==='oauth'; },
-    provName(service){ const p=this.providers.find(x=>x.service===service); return p?p.display_name:service; },
+    // `providers` comes from /connections, which needs a session. On a public catalog URL there is
+    // none, so fall back to the display name the OPEN catalog response already carries — otherwise
+    // every provider on a public shelf would render as its bare slug.
+    provName(service){ const p=this.providers.find(x=>x.service===service); if(p) return p.display_name;
+      const c=(this.platData&&this.platData.providers||{})[service];
+      return (c&&c.display_name) || service; },
     // Provider-wide facts, served once per provider on the platform response rather than copied
     // onto every row.
     provFact(service, key){ const p=(this.platData&&this.platData.providers||{})[service]; return (p&&p[key])||''; },
@@ -5410,8 +5947,9 @@ createApp({
         // every load/switch for the 99% of users who aren't super-admins (console-error noise + wasted request).
         this.loadBilling();  // fire-and-forget, self-guards on canAdmin — feeds the sidebar balance card on every load/switch
         if(this.view==='orgs'){ this.loadOrgAdmin(); this.loadMyUsage(); }  // refresh team panel after a switch
-        if(this.view==='usage') this.loadUsage();  // …the usage rollup (org-scoped)
-        if(this.view==='activity') this.loadCalls();  // …and the org-scoped call log (was showing the previous org's)
+        // Activity is one view with two tabs now, so a team switch has to refresh whichever is open
+        // — both are org-scoped and would otherwise keep showing the previous team's numbers.
+        if(this.view==='activity'){ this.loadCalls(); if(this.actTab==='usage') this.loadUsage(); }
         if(this.view==='secrets') this.loadSecrets();  // …and the Secrets view (was showing the previous org's)
       }catch(e){ this.err='Failed to load: '+(e.detail||e.status); }
       finally{ this.loading=false; } },
@@ -5431,7 +5969,7 @@ createApp({
       return ({'httpbin.org':'headers','postman-echo.com':'get',
         'api.intercom.io':'me','api.stripe.com':'balance','api.render.com':'services?limit=1',
         'api.vercel.com':'v2/user','app.posthog.com':'api/projects/@current','eu.posthog.com':'api/projects/@current',
-        'searchconsole.googleapis.com':'webmasters/v3/sites','googleads.googleapis.com':'v21/customers:listAccessibleCustomers',
+        'searchconsole.googleapis.com':'webmasters/v3/sites','googleads.googleapis.com':'v25/customers:listAccessibleCustomers',
         // part=snippet rather than the probe's part=id: same 1 quota unit, but it returns the channel
         // title, so the panel shows something a human recognises instead of an opaque UC… id.
         'youtube.googleapis.com':'youtube/v3/channels?part=snippet&mine=true',
@@ -5581,7 +6119,7 @@ createApp({
       if(d){ this.openDetail(d.kind, d.name, true); return; }
       let v=(e.state&&e.state.view)||(location.hash||'').replace('#','')||'tools';
       if(v==='billing'){ this.orgTab='billing'; v='orgs'; }
-      if(['tools','orgs','activity','usage','admin','help','secrets','start','connections'].includes(v)) this.go(v, true);
+      if(['tools','orgs','activity','usage','admin','help','secrets','start','connections','referrals'].includes(v)) this.go(v, true);
     });
     this.meta = await fetch('/meta',{headers:{'ngrok-skip-browser-warning':'1'}}).then(r=>r.json()).catch(()=>this.meta);
     this.proxy = this.meta.public_url || location.origin;
@@ -5601,6 +6139,11 @@ createApp({
     // before an OAuth hop (the callback always lands on /app, which would otherwise drop the path).
     let route=this.routeFromPath(location.pathname);
     let mkRoute=this.mkFromPath(location.pathname);
+    // A public catalog URL renders the marketplace views with or without a session. Set BEFORE the
+    // /auth/me check so the first paint is already in public mode, and drop the server-rendered
+    // fallback (see `_spa_catalog_page`) now that the real UI is about to take over.
+    const catRoute=this.catalogFromPath(location.pathname);
+    if(catRoute){ this.publicCatalog=true; document.getElementById('prerender')?.remove(); }
     const stashed=localStorage.getItem('treg-next');
     if(stashed){ localStorage.removeItem('treg-next');
       if(!route && !mkRoute){
@@ -5613,6 +6156,11 @@ createApp({
       // enter that team — the emailed "Sign in & accept" click was the consent. Otherwise the normal
       // first-run / invite-banner flow.
       if(mkRoute){ this.maybeOnboard(); this.openProvider(mkRoute, true); return; }
+      // Signed in on a /catalog URL: the same views, but as a member — so `publicCatalog` is
+      // dropped and the shell comes back in full (vault, activity, try-it).
+      if(catRoute){ this.publicCatalog=false; this.maybeOnboard();
+        if(catRoute.slug) this.openPlatform(catRoute.slug, true); else this.go('connections', true);
+        return; }
       const pfRoute=this.platformFromHash();
       if(pfRoute){ this.maybeOnboard(); this.openPlatform(pfRoute, true); return; }
       let landed=false;
@@ -5626,6 +6174,12 @@ createApp({
         else { this.go('start', true); history.replaceState({view:'start'},'','/app#start'); } }  // no deep link → Getting started is the default landing
       return; }  // GitHub/email session
     if(this.token){ await this.loadAll(); this.initIntercom();  // token mode: no email/hash → anonymous visitor chat
+      // A token holder on a /catalog URL is a member, not a public visitor: same treatment as the
+      // session branch. Without this the route falls through to viewFromHash() — which is null for
+      // a path route — and a shelf link lands on Getting started instead.
+      if(catRoute){ this.publicCatalog=false;
+        if(catRoute.slug) this.openPlatform(catRoute.slug, true); else this.go('connections', true);
+        return; }
       const pfTok=this.platformFromHash();
       if(mkRoute) this.openProvider(mkRoute, true); else if(pfTok) this.openPlatform(pfTok, true); else if(route) this.openDetail(route.kind, route.name, true);
       else { const hv=this.viewFromHash(); if(hv) this.go(hv, true);
@@ -5633,12 +6187,19 @@ createApp({
       return; }      // token-in-browser fallback
     // A marketplace link is only meaningful to a member, so a logged-out visitor gets the front
     // door rather than the share gate (which exists to accept skill/tool shares).
-    if(!inv && !linkOrg && !route && !qs.get('invite_expired')){ location.replace('/'); return; }  // logged-out plain visit → the marketing landing owns the front door
+    // Logged out on a /catalog URL: render the catalog anyway. Its API is unauthenticated, so this
+    // is the SAME marketplace UI a member sees, minus what needs a session — not a second build of
+    // it. This is the branch that makes the catalog crawlable.
+    if(catRoute){
+      if(catRoute.slug) this.openPlatform(catRoute.slug, true); else { this.view='connections'; this.loadPlatforms(); }
+      return; }
+    if(!inv && !linkOrg && !route && !qs.get('invite_expired') && !qs.get('ref')){ location.replace('/'); return; }  // logged-out plain visit → the marketing landing owns the front door. `ref` is NOT a plain visit: it is a use-case page's CTA (/app?ref=p1), and bouncing that visitor to the front door throws away the page they arrived on — on a paid click, the one we bought.
     if(route){ this.shareGate=route; this.demo.signin=true; }  // shared link while logged out: the focused gate (no sandbox mint, no tour); after sign-in the boot lands on it (email verify reloads in place; OAuth restores via the treg-next stash)
     else this.sbxInit();                            // other logged-out flows → the in-app landing + sign-in modal
     if(inv){ this.invitePrefill=inv; this.emailInput=inv; this.emailStage=false; this.demo.signin=true; }  // legacy code link while logged out: prefill + open sign-in; the invite auto-accepts after login (maybeOnboard)
   },
 }).mount('#app');
 </script>
+<script src="/adtrack.js"></script>
 </body>
 </html>

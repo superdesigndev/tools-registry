@@ -1,0 +1,19 @@
+[
+  {
+    "ticker": "btcusd",
+    "baseCurrency": "btc",
+    "quoteCurrency": "usd",
+    "priceData": [
+      {
+        "date": "2026-08-15T00:00:00+00:00",
+        "open": 62978.02325572401,
+        "high": 63136.9516280908,
+        "low": 62833.322932868585,
+        "close": 62936.17288094502,
+        "volume": 896.56465592,
+        "volumeNotional": 56426348.183926105,
+        "tradesDone": 160935.0
+      }
+    ]
+  }
+]

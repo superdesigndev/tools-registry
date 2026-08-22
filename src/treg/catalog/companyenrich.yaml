@@ -1,0 +1,1194 @@
+provider: companyenrich
+source:
+  docs: https://docs.companyenrich.com
+  openapi: https://docs.companyenrich.com/llms.txt  # no single spec file is published; each reference page embeds an
+                                                    # OpenAPI 3.0.1 fragment, reachable by appending .md to its URL
+                                                    # (e.g. https://docs.companyenrich.com/reference/post_people-search.md).
+                                                    # The fragments all declare servers: https://api.companyenrich.com.
+  curated: '2026-08-20'
+limits: "500 requests/minute per IP globally; per-user route limits scale with plan (60/min Starter, 120/min Pro, 600/min Scale). Autocomplete/lookup routes use a separate per-user bucket."
+pricing_url: https://companyenrich.com/pricing
+
+# CURATED + LIVE-VERIFIED 2026-08-20 against a real trial key (500 credits). Everything with a
+# `verified:` stamp below was called for real and its example response is the truncated, PII-scrubbed
+# body that came back.
+#
+# BILLING. One shared credit pool, spent per call or per RESULT depending on the route. The account
+# route GET /me returns {credits:{used,total}}, so the meter is readable — every paid cost block here
+# was confirmed by calling the endpoint and watching `used` move by exactly the documented amount:
+#   enrich 1 · get-by-id 1 · workforce 5 · company search 1/company · similar 5/company
+#   people search 2/person · people get 2 · people lookup 5 · people email 10
+# The SEARCH routes are the ones to watch: `pageSize` IS the price (1 credit per company, 2 per
+# person, 5 per similar company), and an empty result set still bills the one-unit minimum. Always
+# probe a new filter set with the free /count route before paying for rows.
+#
+# FREE ROUTES ARE THE POINT OF THE INTEGRATION. Counts, all four autocompletes, the industry
+# taxonomy, every geo lookup, /me and every async job-status route cost zero credits (confirmed: the
+# meter did not move). An agent can compose an entire audience definition for free and only pay at
+# the moment it materializes rows.
+#
+# NO ROUTING. This file describes what CompanyEnrich can do; where another provider in the catalog
+# implements the same capability, the caller compares and chooses. Nothing here fails over.
+#
+# NOT MODELLED (deliberate):
+#   - /lists/companies CRUD (5 routes). A saved-list workspace feature bound to the vendor dashboard;
+#     `capabilities.lists` was false on the trial account, so it is untestable and adds no capability
+#     an agent cannot get from search + the caller's own storage.
+#   - /companies/logo/{id} and /people/image/{id}. Binary asset redirects, not data.
+#   - Webhook delivery. The async routes accept `webhook_url`; treg's proxy cannot receive callbacks,
+#     so the poll endpoints below are the honest interface. They are free, so polling is free.
+
+proposed_capabilities:
+  companies.autocomplete: "Autocomplete a company by partial domain or name"
+  companies.similar: "Find companies similar to a seed company"
+  companies.search.count: "Count how many companies match a filter, before paying for rows"
+  companies.enrich.bulk.start: "Queue a bulk company-enrichment job"
+  companies.enrich.bulk.status: "Check a bulk company-enrichment job"
+  companies.enrich.bulk.list: "List your bulk company-enrichment jobs"
+  companies.export.start: "Queue a large company-search export"
+  companies.export.status: "Check a company-search export job"
+  companies.export.list: "List your company-search export jobs"
+  companies.industries.list: "List the industry taxonomy with NAICS codes"
+  companies.keywords.autocomplete: "Autocomplete company-description keywords"
+  companies.technologies.autocomplete: "Autocomplete technology-stack names"
+  companies.geo.regions: "List world regions usable as location filters"
+  companies.geo.countries: "Look up countries usable as location filters"
+  companies.geo.states: "Look up states or provinces usable as location filters"
+  companies.geo.cities: "Look up cities usable as location filters"
+  people.positions.autocomplete: "Autocomplete job titles for people search"
+  people.export.start: "Queue a large people-search export"
+  people.export.status: "Check a people-search export job"
+  people.export.list: "List your people-search export jobs"
+  people.email.bulk.start: "Queue a bulk work-email lookup job"
+  people.email.bulk.status: "Check a bulk work-email lookup job"
+  account.jobs.list: "List every background job on your account"
+  account.jobs.get: "Get one background job's details"
+
+endpoints:
+
+  # ---------------------------------------------------------------------------------------------
+  # Company enrichment
+  # ---------------------------------------------------------------------------------------------
+  - id: companyenrich.companies.enrich
+    domain: companies
+    capability: companies.enrich
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /companies/enrich
+    name: "Enrich a company by domain"
+    summary: "Enriches a company using its domain name as lookup parameter"
+    input:
+      queryParams:
+        domain: {type: string, required: true, note: "company domain, no protocol or www; max 1024 chars", example: "stripe.com"}
+        expand: {type: "array[string]", required: false, note: "repeat the parameter per expansion. `workforce` adds the department headcount block and costs 5 EXTRA credits", example: "workforce"}
+      note: "the preferred lookup — one domain maps to exactly one company. A domain with no company behind it returns HTTP 404, not an empty body. The response carries firmographics, description, industries, NAICS, socials, technologies and funding."
+    test_request:
+      queryParams: {domain: "stripe.com"}
+    cost:
+      type: per_call
+      value: 1
+      currency: credit
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://companyenrich.com/pricing
+      checked: '2026-08-20'
+      confidence: verified
+      note: "1 credit per call. VERIFIED live 2026-08-20 by reading GET /me before and after — the credit meter moved by exactly 1. `expand=workforce` adds 5 credits."
+    docs_url: https://docs.companyenrich.com/reference/get_companies-enrich
+    verified: '2026-08-20'
+    example_response: examples/companyenrich.companies.enrich.json
+
+  - id: companyenrich.companies.enrich.by_properties
+    domain: companies
+    capability: companies.enrich
+    platform: companies
+    scope: any_account
+    method: POST
+    path: /companies/enrich
+    name: "Enrich a company by name or social profile"
+    summary: "Enriches a company using its properties — best match is used in case of ambiguity"
+    input:
+      body:
+        name: {type: string, required: false, note: "company name", example: "Anthropic"}
+        linkedinUrl: {type: string, required: false, note: "company LinkedIn page URL", example: "https://www.linkedin.com/company/anthropicresearch"}
+        linkedinId: {type: string, required: false, note: "numeric LinkedIn company id"}
+        twitterUrl: {type: string, required: false, note: "company X/Twitter profile URL"}
+        facebookUrl: {type: string, required: false, note: "company Facebook page URL"}
+        instagramUrl: {type: string, required: false, note: "company Instagram profile URL"}
+        youTubeUrl: {type: string, required: false, note: "company YouTube channel URL"}
+      queryParams:
+        expand: {type: "array[string]", required: false, note: "`workforce` costs 5 EXTRA credits"}
+      note: "at least ONE of the seven properties must be supplied. Use this only when you do not have a domain — the domain route is deterministic, this one is a best-match and can resolve to the wrong company for a generic name. Supplying both a name and a social URL narrows it considerably."
+    test_request:
+      body: {name: "Anthropic", linkedinUrl: "https://www.linkedin.com/company/anthropicresearch"}
+    cost:
+      type: per_call
+      value: 1
+      currency: credit
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://companyenrich.com/pricing
+      checked: '2026-08-20'
+      confidence: verified
+      note: "1 credit per call, VERIFIED against the live credit meter 2026-08-20."
+    docs_url: https://docs.companyenrich.com/reference/post_companies-enrich
+    verified: '2026-08-20'
+    example_response: examples/companyenrich.companies.enrich.by_properties.json
+
+  - id: companyenrich.companies.enrich.batch
+    domain: companies
+    capability: companies.enrich
+    platform: companies
+    scope: any_account
+    method: POST
+    path: /companies/enrich/batch
+    name: "Enrich up to 50 companies by domain in one call"
+    summary: "Enriches a list of companies using their domain names — up to 50 domains per request"
+    input:
+      body:
+        domains: {type: "array[string]", required: true, note: "1-50 company domains. THIS IS THE PRICE DIAL — 1 credit per domain enriched", example: ["stripe.com", "anthropic.com"]}
+      queryParams:
+        expand: {type: "array[string]", required: false, note: "`workforce` costs 5 EXTRA credits per company"}
+      note: "returns a plain ARRAY of company objects (not an envelope). This is the synchronous batch — it answers in the same request. For more than 50 domains use the async bulk job (companyenrich.companies.enrich.bulk.start), which takes up to 10,000."
+    test_request:
+      body: {domains: ["stripe.com", "anthropic.com"]}
+    cost:
+      type: per_result
+      value: 1
+      currency: credit
+      per: 1
+      unit: record
+      source: docs
+      source_url: https://companyenrich.com/pricing
+      checked: '2026-08-20'
+      confidence: verified
+      note: "1 credit per domain enriched. VERIFIED 2026-08-20: a 2-domain batch moved the credit meter by exactly 2."
+    docs_url: https://docs.companyenrich.com/reference/post_companies-enrich-batch
+    verified: '2026-08-20'
+    example_response: examples/companyenrich.companies.enrich.batch.json
+
+  - id: companyenrich.companies.get
+    domain: companies
+    capability: companies.enrich
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /companies
+    name: "A company record by CompanyEnrich id"
+    summary: "Gets a company information by its CompanyEnrich ID"
+    input:
+      queryParams:
+        id: {type: string, required: true, note: "the UUID returned in the `id` field of any enrich or search result", example: "0192577c-1d7a-715c-a5b7-1b9b530445e0"}
+        expand: {type: "array[string]", required: false, note: "`workforce` costs 5 EXTRA credits"}
+      note: "re-fetching by id costs the same 1 credit as enriching by domain, so cache the enrich response rather than round-tripping ids."
+    test_request:
+      queryParams: {id: "0192577c-1d7a-715c-a5b7-1b9b530445e0"}
+    cost:
+      type: per_call
+      value: 1
+      currency: credit
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://companyenrich.com/pricing
+      checked: '2026-08-20'
+      confidence: verified
+      note: "1 credit per call, VERIFIED against the live credit meter 2026-08-20."
+    docs_url: https://docs.companyenrich.com/reference/get_companies
+    verified: '2026-08-20'
+    example_response: examples/companyenrich.companies.get.json
+
+  - id: companyenrich.companies.workforce
+    domain: companies
+    capability: companies.headcount_trend
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /companies/workforce
+    name: "Company headcount by department, with history"
+    summary: "Returns workforce insights for a single company — observed employee count, range bucket, and headcounts grouped by root departments"
+    input:
+      queryParams:
+        domain: {type: string, required: false, note: "company domain — supply EXACTLY ONE of domain or id", example: "stripe.com"}
+        id: {type: string, required: false, note: "CompanyEnrich company UUID — supply EXACTLY ONE of domain or id"}
+      note: "the strongest signal in this provider. Returns observed_employee_count, employee_count_range, department_headcount across 14 root departments (engineering_technical, sales, c_suite, …), unclassified_headcount, and a `history` array of the same shape per month — that history is what makes growth rates computable without repeated polling."
+    test_request:
+      queryParams: {domain: "stripe.com"}
+    cost:
+      type: per_success
+      value: 5
+      currency: credit
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://companyenrich.com/pricing
+      checked: '2026-08-20'
+      confidence: verified
+      note: "5 credits per SUCCESSFUL call. VERIFIED 2026-08-20 against the live credit meter."
+    docs_url: https://docs.companyenrich.com/reference/get_companies-workforce
+    verified: '2026-08-20'
+    example_response: examples/companyenrich.companies.workforce.json
+
+  - id: companyenrich.companies.autocomplete
+    domain: companies
+    capability: companies.autocomplete
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /companies/autocomplete
+    name: "Resolve a company name to its domain (free autocomplete)"
+    summary: "Returns a list of companies matching the given partial domain name — up to 10 companies per request"
+    input:
+      queryParams:
+        query: {type: string, required: true, note: "partial domain or company name", example: "stripe"}
+      note: "FREE, so this is the correct way to turn a fuzzy company name into a canonical domain BEFORE spending a credit on enrichment. Returns {domain, name, logoUrl} only."
+    test_request:
+      queryParams: {query: "stripe"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'documented FREE and confirmed live 2026-08-20 — the credit meter did not move'}
+    docs_url: https://docs.companyenrich.com/reference/get_companies-autocomplete
+    verified: '2026-08-20'
+    example_response: examples/companyenrich.companies.autocomplete.json
+
+  # ---------------------------------------------------------------------------------------------
+  # Company search
+  # ---------------------------------------------------------------------------------------------
+  - id: companyenrich.companies.search
+    domain: companies
+    capability: companies.search
+    platform: companies
+    scope: any_account
+    method: POST
+    path: /companies/search
+    name: "Search companies by firmographics, tech stack or keywords"
+    summary: "Searches companies based on given criteria — name, domain, industry, employees, revenue, founded year, and more"
+    input:
+      body:
+        page: {type: integer, required: false, note: "1-based page number; page * pageSize may not exceed 10,000 — past that use the scroll route", example: 1}
+        pageSize: {type: integer, required: false, note: "1-100, default 10. THIS IS THE PRICE — 1 credit per company returned", example: 1}
+        query: {type: string, required: false, note: "free-text match on company name and domain, max 250 chars"}
+        semanticQuery: {type: string, required: false, note: "natural-language description of the companies you want; costs 2 credits per company instead of 1", example: "companies that sell payment infrastructure to developers"}
+        semanticWeight: {type: number, required: false, note: "0-1, default 0.7 — higher favours semantic similarity over the structured filters"}
+        technologies: {type: "array[string]", required: false, note: "technology-stack names; resolve them first with the free /technologies/autocomplete", example: ["stripe"]}
+        keywords: {type: "array[string]", required: false, note: "description keywords; resolve them first with the free /keywords/autocomplete"}
+        countries: {type: "array[string]", required: false, note: "ISO 3166-1 alpha-2 codes", example: ["US"]}
+        regions: {type: "array[string]", required: false, note: "region ids from the free GET /geo/regions"}
+        states: {type: "array[integer]", required: false, note: "state ids from the free POST /geo/states"}
+        cities: {type: "array[integer]", required: false, note: "city ids from the free POST /geo/cities"}
+        employees: {type: "array[string]", required: false, note: "employee-count buckets, e.g. 1-10, 5K-10K, over-10K"}
+        reportedEmployees: {type: "array[string]", required: false, note: "same buckets, but the externally reported figure"}
+        workforceSize: {type: "array[object]", required: false, note: "absolute headcount ranges, finer-grained than the buckets"}
+        workforceGrowth: {type: object, required: false, note: "filter by headcount growth rate over a window"}
+        revenue: {type: "array[string]", required: false, note: "revenue buckets, e.g. over-1b"}
+        category: {type: "array[string]", required: false, note: "b2b, b2c, b2g, saas, marketplace, service-provider …"}
+        type: {type: "array[string]", required: false, note: "private, public, nonprofit, educational, government"}
+        naicsCode: {type: "array[integer]", required: false, note: "2-6 digit NAICS; a short code matches all its children"}
+        foundedYear: {type: object, required: false, note: "range object, e.g. {min: 2015, max: 2022}"}
+        fundingRounds: {type: "array[string]", required: false, note: "seed, series-a, …"}
+        fundingAmount: {type: object, required: false, note: "range object in USD"}
+        fundingYear: {type: object, required: false, note: "range object"}
+        require: {type: "array[string]", required: false, note: "features that MUST be present on the company record"}
+        exclude: {type: object, required: false, note: "domains/companies to drop; the per-search exclude cap is plan-bound (500 Starter → 50,000 Scale)"}
+        categoryOperator: {type: string, required: false, note: "and | or — how multiple `category` values combine"}
+        keywordsOperator: {type: string, required: false, note: "and | or"}
+        technologiesOperator: {type: string, required: false, note: "and | or"}
+        lists: {type: "array[integer]", required: false, note: "restrict to saved list ids (dashboard feature, plan-gated)"}
+      queryParams:
+        expand: {type: "array[string]", required: false, note: "`workforce` costs 5 EXTRA credits PER COMPANY returned — expensive on a search"}
+      note: "ALWAYS call companyenrich.companies.search.count first: it is free and tells you the match total, so you never buy an unexpectedly large page. An empty result set still bills the 1-credit minimum. Deep pagination past 10,000 rows requires the scroll route."
+    test_request:
+      body: {pageSize: 1, page: 1, technologies: ["stripe"], countries: ["US"]}
+    cost:
+      type: per_result
+      value: 1
+      currency: credit
+      per: 1
+      unit: record
+      source: docs
+      source_url: https://companyenrich.com/pricing
+      checked: '2026-08-20'
+      confidence: verified
+      note: "1 credit PER COMPANY RETURNED — `pageSize` is the price. 1-credit minimum when nothing matches. A `semanticQuery` search is 2 credits per company instead. VERIFIED 2026-08-20: pageSize 1 moved the meter by exactly 1."
+    docs_url: https://docs.companyenrich.com/reference/post_companies-search
+    verified: '2026-08-20'
+    example_response: examples/companyenrich.companies.search.json
+
+  - id: companyenrich.companies.search.scroll
+    domain: companies
+    capability: companies.search
+    platform: companies
+    scope: any_account
+    method: POST
+    path: /companies/search/scroll
+    name: "Scroll company search results past 10,000 rows"
+    summary: "Searches companies with cursor-based pagination — allows paginating into more than 10.000 results"
+    input:
+      body:
+        pageSize: {type: integer, required: false, note: "1-100. THIS IS THE PRICE — 1 credit per company returned", example: 1}
+        cursor: {type: string, required: false, note: "omit for the first page; then pass the `next_cursor` from the previous response"}
+      note: "identical filter set to companyenrich.companies.search (every field listed there applies here) — only the pagination differs: a cursor instead of a page number, and no 10,000-row ceiling. Prefer this for any full-audience export you intend to walk; prefer the async export job for anything over a few thousand rows."
+    test_request:
+      body: {pageSize: 1, technologies: ["stripe"], countries: ["US"]}
+    cost:
+      type: per_result
+      value: 1
+      currency: credit
+      per: 1
+      unit: record
+      source: docs
+      source_url: https://companyenrich.com/pricing
+      checked: '2026-08-20'
+      confidence: verified
+      note: "1 credit per company returned, 1-credit minimum on an empty page. VERIFIED live 2026-08-20."
+    docs_url: https://docs.companyenrich.com/reference/post_companies-search-scroll
+    verified: '2026-08-20'
+    example_response: examples/companyenrich.companies.search.scroll.json
+
+  - id: companyenrich.companies.search.count
+    domain: companies
+    capability: companies.search.count
+    platform: companies
+    scope: any_account
+    method: POST
+    path: /companies/search/count
+    name: "Count companies matching a filter (free)"
+    summary: "Returns the total count of companies matching the given search criteria without retrieving the actual results"
+    input:
+      body:
+        technologies: {type: "array[string]", required: false, note: "same filter object as companyenrich.companies.search — every field there is accepted here", example: ["stripe"]}
+        countries: {type: "array[string]", required: false, note: "ISO alpha-2 codes", example: ["US"]}
+      note: "FREE and it takes the entire search filter object, so it is the correct first call of any audience-building loop: tune filters here at zero cost, then spend credits once on the real search. Returns {count, total} where `count` is capped at the plan's page limit and `total` is the true match count."
+    test_request:
+      body: {technologies: ["stripe"], countries: ["US"]}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'documented FREE and confirmed live 2026-08-20 — the credit meter did not move'}
+    docs_url: https://docs.companyenrich.com/reference/post_companies-search-count
+    verified: '2026-08-20'
+    example_response: examples/companyenrich.companies.search.count.json
+
+  - id: companyenrich.companies.search.preview
+    domain: companies
+    capability: companies.search
+    platform: companies
+    scope: any_account
+    method: POST
+    path: /companies/search/preview
+    name: "Preview the top 25 company search results (free, Scale plan)"
+    summary: "Returns the top 25 results for free, perfect for previewing search results before running a full search"
+    input:
+      body:
+        technologies: {type: "array[string]", required: false, note: "same filter object as companyenrich.companies.search"}
+        countries: {type: "array[string]", required: false, note: "ISO alpha-2 codes"}
+      note: "PLAN-GATED. Only accounts on the vendor's top tier can call this; every other plan gets HTTP 403 with detail 'Your plan does not include access to preview functionality.' Check `capabilities.previews` on GET /me before calling. When available it is strictly better than paying for a first page."
+    test_request:
+      body: {technologies: ["stripe"], countries: ["US"]}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'free where the plan allows it; the plan requirement, not the credit price, is the gate'}
+    docs_url: https://docs.companyenrich.com/reference/post_companies-search-preview
+    # NOT VERIFIED: the test credential is a trial account with capabilities.previews=false. The route
+    # answered 403 with the plan-upgrade message on 2026-08-20 — the path and auth are therefore proven
+    # correct, but no successful response was observed, so no example is committed.
+
+  # ---------------------------------------------------------------------------------------------
+  # Similar companies (lookalikes)
+  # ---------------------------------------------------------------------------------------------
+  - id: companyenrich.companies.similar
+    domain: companies
+    capability: companies.similar
+    platform: companies
+    scope: any_account
+    method: POST
+    path: /companies/similar
+    name: "Lookalike companies for a seed domain or id"
+    summary: "Finds similar companies to the given company by id or domain — at most 100 companies are returned per request"
+    input:
+      body:
+        domains: {type: "array[string]", required: false, note: "1-10 seed domains; the result is similar to the SET, so several seeds sharpen the profile", example: ["stripe.com"]}
+        domain: {type: string, required: false, note: "DEPRECATED single-seed form — use `domains`"}
+        page: {type: integer, required: false, note: "1-based page number", example: 1}
+        pageSize: {type: integer, required: false, note: "1-100. THIS IS THE PRICE — 5 credits per company returned", example: 1}
+        similarityWeight: {type: number, required: false, note: "-1 to 1, default 0; higher weights raw similarity over the structured filters"}
+        minScore: {type: number, required: false, note: "0-1 floor on the similarity score"}
+        countries: {type: "array[string]", required: false, note: "narrow the lookalikes by geography — every companyenrich.companies.search filter is accepted here too"}
+        employees: {type: "array[string]", required: false, note: "narrow by size bucket"}
+      note: "THE MOST EXPENSIVE ROW-PRICED ROUTE — 5 credits per company, so a default pageSize of 10 is 50 credits. Call companyenrich.companies.similar.count first (free) and set pageSize explicitly, every time."
+    test_request:
+      body: {domains: ["stripe.com"], pageSize: 1, page: 1}
+    cost:
+      type: per_result
+      value: 5
+      currency: credit
+      per: 1
+      unit: record
+      source: docs
+      source_url: https://companyenrich.com/pricing
+      checked: '2026-08-20'
+      confidence: verified
+      note: "5 credits PER COMPANY RETURNED, and 5 credits even when nothing matches. VERIFIED 2026-08-20: pageSize 1 moved the credit meter by exactly 5."
+    docs_url: https://docs.companyenrich.com/reference/post_companies-similar
+    verified: '2026-08-20'
+    example_response: examples/companyenrich.companies.similar.json
+
+  - id: companyenrich.companies.similar.scroll
+    domain: companies
+    capability: companies.similar
+    platform: companies
+    scope: any_account
+    method: POST
+    path: /companies/similar/scroll
+    name: "Scroll lookalike-company results past 10,000 rows"
+    summary: "Finds similar companies with cursor-based pagination — allows paginating into more than 10.000 results"
+    input:
+      body:
+        domains: {type: "array[string]", required: false, note: "1-10 seed domains", example: ["stripe.com"]}
+        pageSize: {type: integer, required: false, note: "1-100. THIS IS THE PRICE — 5 credits per company returned", example: 1}
+        cursor: {type: string, required: false, note: "omit for the first page, then pass `next_cursor` from the previous response"}
+      note: "same filters and same 5-credit-per-row price as companyenrich.companies.similar; only the pagination differs. At 5 credits a row, walking a lookalike list this way gets expensive fast — the async export job reserves credits up front and is the safer shape for large pulls."
+    test_request:
+      body: {domains: ["stripe.com"], pageSize: 1}
+    cost:
+      type: per_result
+      value: 5
+      currency: credit
+      per: 1
+      unit: record
+      source: docs
+      source_url: https://companyenrich.com/pricing
+      checked: '2026-08-20'
+      confidence: verified
+      note: "5 credits per company returned, 5 on an empty page. VERIFIED live 2026-08-20."
+    docs_url: https://docs.companyenrich.com/reference/post_companies-similar-scroll
+    verified: '2026-08-20'
+    example_response: examples/companyenrich.companies.similar.scroll.json
+
+  - id: companyenrich.companies.similar.count
+    domain: companies
+    capability: companies.search.count
+    platform: companies
+    scope: any_account
+    method: POST
+    path: /companies/similar/count
+    name: "Count lookalike companies for a seed (free)"
+    summary: "Returns the total count of similar companies matching the given search criteria without retrieving the actual results"
+    input:
+      body:
+        domains: {type: "array[string]", required: false, note: "1-10 seed domains", example: ["stripe.com"]}
+        minScore: {type: number, required: false, note: "0-1 similarity floor — raise it here for free until the count looks right"}
+      note: "FREE, and the single most valuable call on this provider given similar-company rows cost 5 credits each. Tune `minScore` and the filters against the count until the audience is the size you want, then buy exactly that many rows."
+    test_request:
+      body: {domains: ["stripe.com"]}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'documented FREE and confirmed live 2026-08-20 — the credit meter did not move'}
+    docs_url: https://docs.companyenrich.com/reference/post_companies-similar-count
+    verified: '2026-08-20'
+    example_response: examples/companyenrich.companies.similar.count.json
+
+  # ---------------------------------------------------------------------------------------------
+  # Company async jobs — start + poll modelled honestly as separate endpoints
+  # ---------------------------------------------------------------------------------------------
+  - id: companyenrich.companies.enrich.bulk.start
+    domain: companies
+    capability: companies.enrich.bulk.start
+    platform: companies
+    scope: any_account
+    method: POST
+    path: /companies/enrich/bulk
+    name: "Start a bulk enrichment job (up to 10,000 domains)"
+    summary: "Creates an asynchronous bulk enrichment job for up to 10,000 domains — returns a job ID immediately"
+    input:
+      body:
+        domains: {type: "array[string]", required: true, note: "1-10,000 company domains. THIS IS THE PRICE — 1 credit per domain successfully enriched, charged on completion", example: ["anthropic.com"]}
+        webhook_url: {type: string, required: false, note: "callback URL fired on completion. Not usable through a proxied call — poll companyenrich.companies.enrich.bulk.status instead, which is free"}
+      note: "returns {job_id, status, total_domains, estimated_credits} in milliseconds and does the work in the background. Credits are charged ON COMPLETION and only for domains that actually enriched, so `estimated_credits` is an upper bound. Poll the status route (free) until status is `completed`, then download `results_url`."
+    test_request:
+      body: {domains: ["anthropic.com"]}
+    cost:
+      type: per_result
+      value: 1
+      currency: credit
+      per: 1
+      unit: record
+      source: docs
+      source_url: https://companyenrich.com/pricing
+      checked: '2026-08-20'
+      confidence: verified
+      note: "1 credit per domain SUCCESSFULLY enriched, charged when the job completes (not at submission). VERIFIED 2026-08-20: a 1-domain job reported credits_charged 1 on completion and the account meter moved by 1."
+    docs_url: https://docs.companyenrich.com/reference/post_companies-enrich-bulk
+    verified: '2026-08-20'
+    example_response: examples/companyenrich.companies.enrich.bulk.start.json
+
+  - id: companyenrich.companies.enrich.bulk.status
+    domain: companies
+    capability: companies.enrich.bulk.status
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /companies/enrich/bulk/{jobId}
+    name: "Check a bulk enrichment job"
+    summary: "Returns the current status of a bulk enrichment job — once completed, includes the results_url to download the enrichment results"
+    input:
+      pathParams:
+        jobId: {type: string, required: true, note: "the `job_id` returned by companyenrich.companies.enrich.bulk.start", example: "01a01ca2-932a-7b00-bc07-9417bb2a2b58"}
+      note: "the poll half of the async pair, and FREE — so poll as often as you like. status goes pending → processing → completed; `credits_charged` stays 0 until completion, then reports the real spend. `results_url` is a pre-signed download link that only appears on the completed response. Observed end-to-end time for a 1-domain job: about 30 seconds."
+    test_request:
+      pathParams: {jobId: "01a01ca2-932a-7b00-bc07-9417bb2a2b58"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'documented FREE and confirmed live 2026-08-20 — polling did not move the credit meter'}
+    docs_url: https://docs.companyenrich.com/reference/get_companies-enrich-bulk-jobid
+    verified: '2026-08-20'
+    example_response: examples/companyenrich.companies.enrich.bulk.status.json
+
+  - id: companyenrich.companies.enrich.bulk.jobs
+    domain: companies
+    capability: companies.enrich.bulk.list
+    platform: companies
+    scope: own_account
+    method: GET
+    path: /companies/enrich/bulk/jobs
+    name: "List your bulk enrichment jobs"
+    summary: "Returns a paginated list of all bulk enrichment jobs for the authenticated user"
+    input:
+      queryParams:
+        page: {type: integer, required: false, note: "1-based, default 1"}
+        pageSize: {type: integer, required: false, note: "default 20, max 100", example: 5}
+        status: {type: string, required: false, note: "filter by pending | processing | completed | failed"}
+      note: "FREE. Each row carries credits_charged, so this doubles as the spend audit for bulk enrichment."
+    test_request:
+      queryParams: {pageSize: 5}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'documented FREE and confirmed live 2026-08-20'}
+    docs_url: https://docs.companyenrich.com/reference/get_companies-enrich-bulk-jobs
+    verified: '2026-08-20'
+    example_response: examples/companyenrich.companies.enrich.bulk.jobs.json
+
+  - id: companyenrich.companies.search.async.start
+    domain: companies
+    capability: companies.export.start
+    platform: companies
+    scope: any_account
+    method: POST
+    path: /companies/search/async
+    name: "Start a company-search export (up to 50,000 rows)"
+    summary: "Creates an asynchronous search export job for up to 50,000 companies — supports both standard company search and similar-company search"
+    input:
+      body:
+        count: {type: integer, required: true, note: "how many companies to export, up to 50,000. THIS IS THE PRICE — credits are RESERVED at submission and settled on completion", example: 1}
+        search: {type: object, required: false, note: "a companyenrich.companies.search filter object — supply this OR `similar`, not both", example: {technologies: ["stripe"], countries: ["US"]}}
+        similar: {type: object, required: false, note: "a companyenrich.companies.similar filter object; rows then cost 5 credits each, not 1"}
+        webhook_url: {type: string, required: false, note: "callback on completion; poll the free status route instead when calling through a proxy"}
+      note: "the right shape for any large pull — it reserves credits up front so you cannot be surprised, and the response echoes `total_matching` next to `requested_count` so you can see how much of the audience you asked for. Poll companyenrich.companies.search.async.status for the download URL."
+    test_request:
+      body: {count: 1, search: {technologies: ["stripe"], countries: ["US"]}}
+    cost:
+      type: per_result
+      value: 1
+      currency: credit
+      per: 1
+      unit: record
+      source: docs
+      source_url: https://companyenrich.com/pricing
+      checked: '2026-08-20'
+      confidence: verified
+      note: "1 credit per company returned when exporting a standard search (5 per company when the job wraps a `similar` search), reserved at creation and settled on completion. VERIFIED 2026-08-20: a count-1 search export reported credits_charged 1."
+    docs_url: https://docs.companyenrich.com/reference/post_companies-search-async
+    verified: '2026-08-20'
+    example_response: examples/companyenrich.companies.search.async.start.json
+
+  - id: companyenrich.companies.search.async.status
+    domain: companies
+    capability: companies.export.status
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /companies/search/async/{jobId}
+    name: "Check a company-search export job"
+    summary: "Returns the current status of a search export job — once completed, includes the results_url to download the export results"
+    input:
+      pathParams:
+        jobId: {type: string, required: true, note: "the `job_id` from companyenrich.companies.search.async.start", example: "01a01ca2-97b9-7aa3-94d8-b34128beaef5"}
+      note: "FREE poll. Reports exported_count against requested_count and total_matching, and the settled credits_charged once complete. `results_url` is a pre-signed link present only on the completed response."
+    test_request:
+      pathParams: {jobId: "01a01ca2-97b9-7aa3-94d8-b34128beaef5"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'documented FREE and confirmed live 2026-08-20'}
+    docs_url: https://docs.companyenrich.com/reference/get_companies-search-async-jobid
+    verified: '2026-08-20'
+    example_response: examples/companyenrich.companies.search.async.status.json
+
+  - id: companyenrich.companies.search.async.jobs
+    domain: companies
+    capability: companies.export.list
+    platform: companies
+    scope: own_account
+    method: GET
+    path: /companies/search/async/jobs
+    name: "List your company-search export jobs"
+    summary: "Returns a paginated list of all search export jobs for the authenticated user"
+    input:
+      queryParams:
+        page: {type: integer, required: false, note: "1-based, default 1"}
+        pageSize: {type: integer, required: false, note: "default 20, max 100", example: 3}
+        status: {type: string, required: false, note: "filter by job status"}
+      note: "FREE. Every row carries credits_charged, so this is the spend audit for company exports."
+    test_request:
+      queryParams: {pageSize: 3}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'documented FREE and confirmed live 2026-08-20'}
+    docs_url: https://docs.companyenrich.com/reference/get_companies-search-async-jobs
+    verified: '2026-08-20'
+    example_response: examples/companyenrich.companies.search.async.jobs.json
+
+  # ---------------------------------------------------------------------------------------------
+  # People
+  # ---------------------------------------------------------------------------------------------
+  - id: companyenrich.people.search
+    domain: people
+    capability: people.search
+    platform: people
+    scope: any_account
+    method: POST
+    path: /people/search
+    name: "Search people by title, seniority, department or company"
+    summary: "Searches people based on given criteria using page-based pagination"
+    input:
+      body:
+        page: {type: integer, required: false, note: "1-based; page * pageSize may not exceed 10,000 — past that use the scroll route", example: 1}
+        pageSize: {type: integer, required: false, note: "1-100, default 10. THIS IS THE PRICE — 2 credits per PERSON returned, so a default page costs 20 credits", example: 1}
+        domains: {type: "array[string]", required: false, note: "employer domains, up to 2,500 — the usual way to enumerate a company's staff", example: ["stripe.com"]}
+        positionQuery: {type: "array[string]", required: false, note: "free-text matches on the person's CURRENT job title; resolve real titles first with the free /positions/autocomplete", example: ["Chief Executive Officer"]}
+        seniority: {type: "array[string]", required: false, note: "one or more of owner, founder, c-suite, partner, vp, head, director, manager, senior, entry, intern. NOTE the hyphen in `c-suite` — an underscore is rejected with a bodyless HTTP 400", example: ["c-suite"]}
+        department: {type: "array[string]", required: false, note: "hierarchical department slugs, e.g. c-suite/finance-executive, engineering-technical/data-science"}
+        countries: {type: "array[string]", required: false, note: "ISO 3166-1 alpha-2 codes"}
+        query: {type: string, required: false, note: "free-text match on the employer's name and domain, max 250 chars"}
+        companyFilter: {type: object, required: false, note: "a nested company lookup — search people at companies matching firmographic criteria rather than a fixed domain list"}
+        atCurrentCompanyAfter: {type: string, required: false, note: "UTC date — only people who joined their current employer after it; the job-change signal"}
+        atCurrentCompanyBefore: {type: string, required: false, note: "UTC date — only people who joined before it"}
+        atCurrentPositionAfter: {type: string, required: false, note: "UTC date — only people promoted into their current role after it"}
+        atCurrentPositionBefore: {type: string, required: false, note: "UTC date"}
+        education: {type: object, required: false, note: "school/degree filter"}
+        exclude: {type: object, required: false, note: "people or companies to drop from the results"}
+      queryParams:
+        expand: {type: "array[string]", required: false, note: "`education` adds the education block at extra credit cost per person"}
+      note: "BILLS PER RESULT — 2 credits per person, with a 2-credit minimum when nothing matches. There is no free count route for people (unlike companies), so keep pageSize at 1 while you tune filters. Results carry name, location, socials.linkedin_url and the full `experiences` array with position, seniority and department per role — but NOT an email address; that is a separate, dearer call (companyenrich.people.email)."
+    test_request:
+      body: {pageSize: 1, page: 1, domains: ["stripe.com"], seniority: ["c-suite"]}
+    cost:
+      type: per_result
+      value: 2
+      currency: credit
+      per: 1
+      unit: record
+      source: docs
+      source_url: https://companyenrich.com/pricing
+      checked: '2026-08-20'
+      confidence: verified
+      note: "2 credits PER PERSON RETURNED — pageSize is the price — with a 2-credit minimum on an empty result. VERIFIED 2026-08-20: pageSize 1 moved the credit meter by exactly 2."
+    docs_url: https://docs.companyenrich.com/reference/post_people-search
+    verified: '2026-08-20'
+    example_response: examples/companyenrich.people.search.json
+
+  - id: companyenrich.people.search.scroll
+    domain: people
+    capability: people.search
+    platform: people
+    scope: any_account
+    method: POST
+    path: /people/search/scroll
+    name: "Scroll people search results past 10,000 rows"
+    summary: "Searches people based on given criteria using cursor-based pagination"
+    input:
+      body:
+        pageSize: {type: integer, required: false, note: "1-100. THIS IS THE PRICE — 2 credits per person returned", example: 1}
+        cursor: {type: string, required: false, note: "omit for the first page, then pass `next_cursor` from the previous response"}
+        domains: {type: "array[string]", required: false, note: "employer domains, up to 2,500", example: ["stripe.com"]}
+        positionQuery: {type: "array[string]", required: false, note: "matches on current job title", example: ["Chief Executive Officer"]}
+      note: "identical filter set to companyenrich.people.search — every field there applies — with a cursor instead of a page number and no 10,000-row ceiling. For anything large, the async people export reserves credits up front and is safer."
+    test_request:
+      body: {pageSize: 1, domains: ["stripe.com"], positionQuery: ["Chief Executive Officer"]}
+    cost:
+      type: per_result
+      value: 2
+      currency: credit
+      per: 1
+      unit: record
+      source: docs
+      source_url: https://companyenrich.com/pricing
+      checked: '2026-08-20'
+      confidence: verified
+      note: "2 credits per person returned, 2-credit minimum on an empty page. VERIFIED live 2026-08-20."
+    docs_url: https://docs.companyenrich.com/reference/post_people-search-scroll
+    verified: '2026-08-20'
+    example_response: examples/companyenrich.people.search.scroll.json
+
+  - id: companyenrich.people.get
+    domain: people
+    capability: people.enrich
+    platform: people
+    scope: any_account
+    method: GET
+    path: /people
+    name: "A person record by CompanyEnrich id"
+    summary: "Gets person information by its CompanyEnrich ID"
+    input:
+      queryParams:
+        id: {type: integer, required: true, note: "the numeric `id` from a people search, lookup or email response", example: 256474769}
+        expand: {type: "array[string]", required: false, note: "`education` adds the education block at extra credit cost"}
+      note: "re-fetching a person costs the same 2 credits as returning them from a search, so cache search results rather than round-tripping ids."
+    test_request:
+      queryParams: {id: 256474769}
+    cost:
+      type: per_call
+      value: 2
+      currency: credit
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://companyenrich.com/pricing
+      checked: '2026-08-20'
+      confidence: verified
+      note: "2 credits per call. VERIFIED against the live credit meter 2026-08-20."
+    docs_url: https://docs.companyenrich.com/reference/get_people
+    verified: '2026-08-20'
+    example_response: examples/companyenrich.people.get.json
+
+  - id: companyenrich.people.lookup
+    domain: people
+    capability: people.enrich
+    platform: people
+    scope: any_account
+    method: POST
+    path: /people/lookup
+    name: "Reverse email lookup — who is behind this address"
+    summary: "Looks up a person by email address — resolves the company from the email domain first, then matches the person by email local-part patterns"
+    input:
+      body:
+        email: {type: string, required: true, note: "a work email address; free-mail domains will not resolve to a company", example: "patrick@stripe.com"}
+      queryParams:
+        expand: {type: "array[string]", required: false, note: "`education` adds the education block at extra credit cost"}
+      note: "READ THE MECHANISM BEFORE TRUSTING THE ANSWER. This is not a mailbox lookup — the provider resolves the employer from the domain and then guesses which employee the local part refers to, from that company's address patterns. Verified live 2026-08-20: `patrick@stripe.com` returned a Stripe employee named Patrick, but NOT the Patrick that address belongs to. Treat the result as a candidate, and confirm it against the returned experiences before acting on it."
+    test_request:
+      body: {email: "patrick@stripe.com"}
+    cost:
+      type: per_success
+      value: 5
+      currency: credit
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://companyenrich.com/pricing
+      checked: '2026-08-20'
+      confidence: verified
+      note: "5 credits per SUCCESSFUL call. VERIFIED against the live credit meter 2026-08-20."
+    docs_url: https://docs.companyenrich.com/reference/post_people-lookup
+    verified: '2026-08-20'
+    example_response: examples/companyenrich.people.lookup.json
+
+  - id: companyenrich.people.email
+    domain: people
+    capability: people.email.find
+    platform: people
+    scope: any_account
+    method: GET
+    path: /people/email
+    name: "Find a person's work email by person id (beta)"
+    summary: "Resolves a work email address for a single person on a specific domain"
+    input:
+      queryParams:
+        id: {type: integer, required: true, note: "the numeric CompanyEnrich person id, from a people search or lookup", example: 256474769}
+        domain: {type: string, required: false, note: "which employer to resolve the address on; must match one of the person's experiences. Omit it and the provider tries their current employers in seniority order", example: "stripe.com"}
+      note: "BETA, and the priciest single call in this provider at 10 credits. Takes a person ID, not a name — so a full name-to-email flow is people search (2 credits) then this (10). Returns a `status` of found | not-found | pending | unavailable plus a `certainty` grade (verified live: 'very-high'); a `pending` status means the lookup is still running and you should re-request. Billing is for NEWLY accessed found emails only, so re-requesting an address you already resolved is free."
+    test_request:
+      queryParams: {id: 256474769, domain: "stripe.com"}
+    cost:
+      type: per_success
+      value: 10
+      currency: credit
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://companyenrich.com/pricing
+      checked: '2026-08-20'
+      confidence: verified
+      note: "10 credits per newly accessed FOUND email — a not-found or a repeat of an address you already bought is free. VERIFIED 2026-08-20: the credit meter moved by exactly 10 on the first resolve, and a later bulk job re-requesting the same address reported credits_charged 0."
+    docs_url: https://docs.companyenrich.com/reference/get_people-email
+    verified: '2026-08-20'
+    example_response: examples/companyenrich.people.email.json
+
+  - id: companyenrich.people.email.bulk.start
+    domain: people
+    capability: people.email.bulk.start
+    platform: people
+    scope: any_account
+    method: POST
+    path: /people/email/bulk
+    name: "Start a bulk work-email lookup (beta, up to 1,000 people)"
+    summary: "Creates an asynchronous bulk person email enrichment job for up to 1,000 lookup items"
+    input:
+      body:
+        items: {type: "array[object]", required: true, note: "1-1,000 objects of {person_id (required, integer), domain (optional string)}. NOTE the field is `person_id`, not `id` — using `id` is rejected with a bodyless HTTP 400", example: [{person_id: 256474769, domain: "stripe.com"}]}
+        webhook_url: {type: string, required: false, note: "callback on completion; poll the free status route instead when calling through a proxy"}
+      note: "the batch form of companyenrich.people.email. Returns {job_id, status, total_requests, estimated_credits} immediately; `estimated_credits` assumes every lookup succeeds and is charged fresh, so it is a strict upper bound. Completed jobs report found_count / not_found_count / unavailable_count separately."
+    test_request:
+      body: {items: [{person_id: 256474769, domain: "stripe.com"}]}
+    cost:
+      type: per_success
+      value: 10
+      currency: credit
+      per: 1
+      unit: record
+      source: docs
+      source_url: https://companyenrich.com/pricing
+      checked: '2026-08-20'
+      confidence: documented
+      note: "up to 10 credits per item, charged on completion for newly accessed FOUND emails only — not-found items and addresses already bought are free. The live 2026-08-20 test job completed with credits_charged 0 because its one address had been resolved minutes earlier by the single-lookup route, which confirms the already-accessed exemption but leaves the 10-credit case documented rather than observed here."
+    docs_url: https://docs.companyenrich.com/reference/post_people-email-bulk
+    verified: '2026-08-20'
+    example_response: examples/companyenrich.people.email.bulk.start.json
+
+  - id: companyenrich.people.email.bulk.status
+    domain: people
+    capability: people.email.bulk.status
+    platform: people
+    scope: any_account
+    method: GET
+    path: /people/email/bulk/{jobId}
+    name: "Check a bulk work-email lookup job"
+    summary: "Returns the current status of a bulk person email enrichment job — once completed, includes the results_url to download the full results"
+    input:
+      pathParams:
+        jobId: {type: string, required: true, note: "the `job_id` from companyenrich.people.email.bulk.start", example: "01a01ca3-7120-7ee5-beba-a7bc64de4ea7"}
+      note: "FREE poll. Breaks the outcome down into found_count / not_found_count / unavailable_count and reports the settled credits_charged, so it is also the receipt. `results_url` is a pre-signed download link present only once the job completes."
+    test_request:
+      pathParams: {jobId: "01a01ca3-7120-7ee5-beba-a7bc64de4ea7"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'documented FREE and confirmed live 2026-08-20'}
+    docs_url: https://docs.companyenrich.com/reference/get_people-email-bulk-jobid
+    verified: '2026-08-20'
+    example_response: examples/companyenrich.people.email.bulk.status.json
+
+  - id: companyenrich.people.search.async.start
+    domain: people
+    capability: people.export.start
+    platform: people
+    scope: any_account
+    method: POST
+    path: /people/search/async
+    name: "Start a people-search export (up to 50,000 rows)"
+    summary: "Creates an asynchronous search export job for up to 50,000 people — returns a job ID immediately"
+    input:
+      body:
+        count: {type: integer, required: true, note: "how many people to export, up to 50,000. THIS IS THE PRICE — 2 credits each, reserved at submission", example: 1}
+        domains: {type: "array[string]", required: false, note: "employer domains, up to 2,500", example: ["stripe.com"]}
+        seniority: {type: "array[string]", required: false, note: "owner, founder, c-suite, partner, vp, head, director, manager, senior, entry, intern", example: ["c-suite"]}
+        department: {type: "array[string]", required: false, note: "hierarchical department slugs"}
+        positionQuery: {type: "array[string]", required: false, note: "matches on current job title"}
+        countries: {type: "array[string]", required: false, note: "ISO alpha-2 codes"}
+        companyFilter: {type: object, required: false, note: "nested firmographic company filter"}
+        webhook_url: {type: string, required: false, note: "callback on completion; poll the free status route instead when calling through a proxy"}
+      note: "takes the same filters as companyenrich.people.search, flattened alongside a required `count`. The response echoes `total_matching` next to `requested_count`, which is the closest thing this provider offers to a free people count — the estimate arrives before the rows are built, though the credits are already reserved by then."
+    test_request:
+      body: {count: 1, domains: ["stripe.com"], seniority: ["c-suite"]}
+    cost:
+      type: per_result
+      value: 2
+      currency: credit
+      per: 1
+      unit: record
+      source: docs
+      source_url: https://companyenrich.com/pricing
+      checked: '2026-08-20'
+      confidence: verified
+      note: "2 credits per person returned, reserved when the job is created and settled on completion. VERIFIED 2026-08-20: a count-1 export reported credits_charged 2."
+    docs_url: https://docs.companyenrich.com/reference/post_people-search-async
+    verified: '2026-08-20'
+    example_response: examples/companyenrich.people.search.async.start.json
+
+  - id: companyenrich.people.search.async.status
+    domain: people
+    capability: people.export.status
+    platform: people
+    scope: any_account
+    method: GET
+    path: /people/search/async/{jobId}
+    name: "Check a people-search export job"
+    summary: "Returns the current status of a person search export job — once completed, includes the results_url to download the export results"
+    input:
+      pathParams:
+        jobId: {type: string, required: true, note: "the `job_id` from companyenrich.people.search.async.start", example: "01a01ca3-32df-70c8-bb03-8060f181e9fc"}
+      note: "FREE poll. Observed end-to-end time for a 1-row export: about 30 seconds. `results_url` is a pre-signed download link present only on the completed response."
+    test_request:
+      pathParams: {jobId: "01a01ca3-32df-70c8-bb03-8060f181e9fc"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'documented FREE and confirmed live 2026-08-20'}
+    docs_url: https://docs.companyenrich.com/reference/get_people-search-async-jobid
+    verified: '2026-08-20'
+    example_response: examples/companyenrich.people.search.async.status.json
+
+  - id: companyenrich.people.search.async.jobs
+    domain: people
+    capability: people.export.list
+    platform: people
+    scope: own_account
+    method: GET
+    path: /people/search/async/jobs
+    name: "List your people-search export jobs"
+    summary: "Returns a paginated list of all person search export jobs for the authenticated user"
+    input:
+      queryParams:
+        page: {type: integer, required: false, note: "1-based, default 1"}
+        pageSize: {type: integer, required: false, note: "default 20, max 100", example: 3}
+        status: {type: string, required: false, note: "filter by job status"}
+      note: "FREE. Every row carries credits_charged, so this is the spend audit for people exports."
+    test_request:
+      queryParams: {pageSize: 3}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'documented FREE and confirmed live 2026-08-20'}
+    docs_url: https://docs.companyenrich.com/reference/get_people-search-async-jobs
+    verified: '2026-08-20'
+    example_response: examples/companyenrich.people.search.async.jobs.json
+
+  # ---------------------------------------------------------------------------------------------
+  # Jobs (all types)
+  # ---------------------------------------------------------------------------------------------
+  - id: companyenrich.jobs.list
+    domain: account
+    kind: utility
+    capability: account.jobs.list
+    platform: account
+    scope: own_account
+    method: GET
+    path: /jobs
+    name: "List every background job on the account"
+    summary: "Returns a paginated list of all jobs (bulk enrichment, etc.) for the authenticated user"
+    input:
+      queryParams:
+        page: {type: integer, required: false, note: "1-based, default 1"}
+        pageSize: {type: integer, required: false, note: "default 20, max 100", example: 5}
+        status: {type: string, required: false, note: "pending | processing | completed | failed"}
+        type: {type: string, required: false, note: "bulk_enrichment, and the other job types"}
+      note: "FREE, and the ONE view across every async job type — the per-type job lists only show their own kind. Each row carries credits_charged, so this is the account-wide spend audit for async work."
+    test_request:
+      queryParams: {pageSize: 5}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'documented FREE and confirmed live 2026-08-20'}
+    docs_url: https://docs.companyenrich.com/reference/get_jobs
+    verified: '2026-08-20'
+    example_response: examples/companyenrich.jobs.list.json
+
+  - id: companyenrich.jobs.get
+    domain: account
+    kind: utility
+    capability: account.jobs.get
+    platform: account
+    scope: own_account
+    method: GET
+    path: /jobs/{jobId}
+    name: "Get one background job's details"
+    summary: "Returns details for a specific job by ID"
+    input:
+      pathParams:
+        jobId: {type: string, required: true, note: "any job id, of any type", example: "01a01ca2-932a-7b00-bc07-9417bb2a2b58"}
+      note: "FREE. The type-agnostic detail view — it reports id, type, status, title, timestamps and credits_charged, but NOT the results_url. To download results, poll the type-specific status route instead."
+    test_request:
+      pathParams: {jobId: "01a01ca2-932a-7b00-bc07-9417bb2a2b58"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'documented FREE and confirmed live 2026-08-20'}
+    docs_url: https://docs.companyenrich.com/reference/get_jobs-jobid
+    verified: '2026-08-20'
+    example_response: examples/companyenrich.jobs.get.json
+
+  # ---------------------------------------------------------------------------------------------
+  # Reference data — every route below is FREE and exists to build valid filters
+  # ---------------------------------------------------------------------------------------------
+  - id: companyenrich.industries.list
+    domain: companies
+    capability: companies.industries.list
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /industries
+    name: "List the industry taxonomy with NAICS codes"
+    summary: "Obtain a list of all company industries"
+    input:
+      note: "FREE, takes no parameters, and returns the entire taxonomy as {name, naicsCodes[]} — including the hierarchical forms ('Agriculture/Crops'). This is the mapping table between the `industry`/`industries` strings on a company record and the `naicsCode` filter on search, so fetch it once and cache it."
+    test_request:
+      queryParams: {}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'documented FREE and confirmed live 2026-08-20'}
+    docs_url: https://docs.companyenrich.com/reference/get_industries
+    verified: '2026-08-20'
+    example_response: examples/companyenrich.industries.list.json
+
+  - id: companyenrich.keywords.autocomplete
+    domain: companies
+    capability: companies.keywords.autocomplete
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /keywords/autocomplete
+    name: "Autocomplete company keywords"
+    summary: "Lookup keywords"
+    input:
+      queryParams:
+        query: {type: string, required: true, note: "partial keyword", example: "payment"}
+      note: "FREE. Returns a flat array of strings. The `keywords` filter on company search matches against this controlled vocabulary, so resolve here first — an invented keyword silently matches nothing and you still pay the 1-credit search minimum."
+    test_request:
+      queryParams: {query: "payment"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'documented FREE and confirmed live 2026-08-20'}
+    docs_url: https://docs.companyenrich.com/reference/get_keywords-autocomplete
+    verified: '2026-08-20'
+    example_response: examples/companyenrich.keywords.autocomplete.json
+
+  - id: companyenrich.technologies.autocomplete
+    domain: companies
+    capability: companies.technologies.autocomplete
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /technologies/autocomplete
+    name: "Autocomplete technology names"
+    summary: "Lookup technologies"
+    input:
+      queryParams:
+        query: {type: string, required: true, note: "partial technology name", example: "stripe"}
+      note: "FREE. Returns a flat array of lowercase technology slugs. Same rule as keywords — the `technologies` search filter only matches these exact strings, so resolve here before paying for a search."
+    test_request:
+      queryParams: {query: "stripe"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'documented FREE and confirmed live 2026-08-20'}
+    docs_url: https://docs.companyenrich.com/reference/get_technologies-autocomplete
+    verified: '2026-08-20'
+    example_response: examples/companyenrich.technologies.autocomplete.json
+
+  - id: companyenrich.positions.autocomplete
+    domain: people
+    capability: people.positions.autocomplete
+    platform: people
+    scope: any_account
+    method: GET
+    path: /positions/autocomplete
+    name: "Autocomplete job titles"
+    summary: "Lookup positions"
+    input:
+      queryParams:
+        query: {type: string, required: true, note: "partial job title", example: "chief exec"}
+      note: "FREE, and disproportionately useful because people search has no free count route: this shows you the real title strings in the index ('Chief Executive Officer & Co-Founder', 'Interim Chief Executive Officer') before you spend 2 credits per row on a `positionQuery` that may match nothing."
+    test_request:
+      queryParams: {query: "chief exec"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'documented FREE and confirmed live 2026-08-20'}
+    docs_url: https://docs.companyenrich.com/reference/get_positions-autocomplete
+    verified: '2026-08-20'
+    example_response: examples/companyenrich.positions.autocomplete.json
+
+  - id: companyenrich.geo.regions
+    domain: companies
+    capability: companies.geo.regions
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /geo/regions
+    name: "List world regions"
+    summary: "Returns all regions"
+    input:
+      note: "FREE, no parameters. Returns hierarchical region ids ('Africa', 'Africa/Eastern Africa') each with the ISO country codes it contains — these ids are what the `regions` filter on company search accepts, and the embedded country lists let you expand a region into `countries` yourself."
+    test_request:
+      queryParams: {}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'documented FREE and confirmed live 2026-08-20'}
+    docs_url: https://docs.companyenrich.com/reference/get_geo-regions
+    verified: '2026-08-20'
+    example_response: examples/companyenrich.geo.regions.json
+
+  - id: companyenrich.geo.country.get
+    domain: companies
+    capability: companies.geo.countries
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /geo/countries/{countryCode}
+    name: "Get a country by ISO code"
+    summary: "Searches a country by its ISO 3166-1 alpha-2 code"
+    input:
+      pathParams:
+        countryCode: {type: string, required: true, note: "ISO 3166-1 alpha-2 code", example: "US"}
+      note: "FREE. Returns {code, name, latitude, longitude} — the cheap way to confirm a country code is one this provider recognises before using it in a `countries` filter."
+    test_request:
+      pathParams: {countryCode: "US"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'documented FREE and confirmed live 2026-08-20'}
+    docs_url: https://docs.companyenrich.com/reference/get_geo-countries-countrycode
+    verified: '2026-08-20'
+    example_response: examples/companyenrich.geo.country.get.json
+
+  - id: companyenrich.geo.countries.search
+    domain: companies
+    capability: companies.geo.countries
+    platform: companies
+    scope: any_account
+    method: POST
+    path: /geo/countries
+    name: "Search countries by name"
+    summary: "Searches countries by name — returns up to 100 countries per page"
+    input:
+      body:
+        query: {type: string, required: false, note: "country name. WHOLE WORDS ONLY — verified live 2026-08-20: 'United States' and 'Ireland' match, but the prefix 'germ' returns zero items. Omit it to page through every country", example: "United States"}
+        page: {type: integer, required: false, note: "1-based page number"}
+      note: "FREE. Name-to-code resolution for the `countries` filter. Because matching is whole-word rather than prefix, feed it a full country name, not a fragment."
+    test_request:
+      body: {query: "United States"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'documented FREE and confirmed live 2026-08-20'}
+    docs_url: https://docs.companyenrich.com/reference/post_geo-countries
+    verified: '2026-08-20'
+    example_response: examples/companyenrich.geo.countries.search.json
+
+  - id: companyenrich.geo.states.search
+    domain: companies
+    capability: companies.geo.states
+    platform: companies
+    scope: any_account
+    method: POST
+    path: /geo/states
+    name: "Search states and provinces"
+    summary: "Searches states by name or country codes — returns up to 100 states per page"
+    input:
+      body:
+        query: {type: string, required: false, note: "state or province name; prefixes DO work here ('cali' matched California)", example: "cali"}
+        countryCodes: {type: "array[string]", required: false, note: "ISO alpha-2 codes to scope the search", example: ["US"]}
+        page: {type: integer, required: false, note: "1-based page number"}
+      note: "FREE. Returns numeric state `id`s — those integers, not the names, are what the `states` filter on company search takes."
+    test_request:
+      body: {query: "cali", countryCodes: ["US"]}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'documented FREE and confirmed live 2026-08-20'}
+    docs_url: https://docs.companyenrich.com/reference/post_geo-states
+    verified: '2026-08-20'
+    example_response: examples/companyenrich.geo.states.search.json
+
+  - id: companyenrich.geo.cities.search
+    domain: companies
+    capability: companies.geo.cities
+    platform: companies
+    scope: any_account
+    method: POST
+    path: /geo/cities
+    name: "Search cities by name"
+    summary: "Searches cities by name or country codes — returns up to 100 cities per page"
+    input:
+      body:
+        query: {type: string, required: false, note: "city name; prefixes work ('san fran' matched three San Francisco entries)", example: "san fran"}
+        countryCodes: {type: "array[string]", required: false, note: "ISO alpha-2 codes to scope the search", example: ["US"]}
+        page: {type: integer, required: false, note: "1-based page number"}
+      note: "FREE. Returns numeric city `id`s for the `cities` filter. Expect near-duplicates for one metro ('San Francisco', 'City and County of San Francisco', 'South San Francisco') — pass all the ids you mean, or you will silently narrow the audience."
+    test_request:
+      body: {query: "san fran", countryCodes: ["US"]}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'documented FREE and confirmed live 2026-08-20'}
+    docs_url: https://docs.companyenrich.com/reference/post_geo-cities
+    verified: '2026-08-20'
+    example_response: examples/companyenrich.geo.cities.search.json
+
+  # ---------------------------------------------------------------------------------------------
+  # Account
+  # ---------------------------------------------------------------------------------------------
+  - id: companyenrich.account.me
+    domain: account
+    kind: utility
+    capability: account.usage
+    platform: account
+    scope: own_account
+    method: GET
+    path: /me
+    name: "Check credit balance and key validity"
+    summary: "Returns information about the authenticated user, including their API key, credit balance, and account capabilities"
+    input:
+      note: "FREE, no parameters, and the registry's probe. Returns credits.{used,total} — a readable meter, which is what let every cost block in this file be confirmed rather than transcribed: call it, make the call, call it again. Also returns capabilities.{lists, previews, companySearchLimit, peopleSearchLimit}, which is how you find out whether the plan-gated preview routes will work before calling them."
+    test_request:
+      queryParams: {}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'documented FREE and confirmed live 2026-08-20; auth is still required, so a bad key is rejected with 401'}
+    docs_url: https://docs.companyenrich.com/reference/get_me
+    verified: '2026-08-20'
+    example_response: examples/companyenrich.account.me.json

@@ -1,0 +1,24 @@
+{
+  "data": [
+    {
+      "id": 5857930,
+      "user_id": 100000,
+      "uri": "https://api.tomba.io/v1/reveal/search",
+      "params": {
+        "filters": "{\"country\":[\"IE\"],\"industry\":[\"Financial Services\"]}",
+        "page": "1"
+      },
+      "type": "Reveal Companies",
+      "hash": "<scrubbed>",
+      "cost": 0,
+      "route_name": "SearchCompanies",
+      "source": "API",
+      "country": "AU",
+      "user_agent": "curl/8.7.1",
+      "ip_address": "203.0.113.10",
+      "created_at": "2026-08-20T02:58:33.409+02:00"
+    },
+    "…3 more items truncated for the catalog example"
+  ]
+}
+

@@ -1,0 +1,58 @@
+{
+ "status": "ok",
+ "brand": {
+  "domain": "stripe.com",
+  "title": "Stripe",
+  "description": "Stripe is a global financial‑infrastructure platform that helps businesses of all sizes accept payments, issue cards, manage subscriptions, and build custom revenue models. Through APIs and tools like Payments, Billin…",
+  "slogan": "Financial infrastructure to grow your revenue.",
+  "colors": [{"hex": "#543cfc", "name": "Meteor Shower", "source": "logo"}, "… further items truncated for the catalog example"],
+  "logos": [
+   {
+    "url": "https://media.brand.dev/aeb3719a-0950-4ac2-95f4-36ec03371e14.svg",
+    "mode": "dark",
+    "colors": [{"hex": "#543cfc", "name": "Meteor Shower"}, "… further items truncated for the catalog example"],
+    "resolution": {"width": 512, "height": 512, "aspect_ratio": 1},
+    "type": "icon"
+   },
+   "… further items truncated for the catalog example"
+  ],
+  "backdrops": [
+   {
+    "url": "https://media.brand.dev/86a4247b-142f-4caa-8a53-fec61ef892ad.jpg",
+    "colors": [{"hex": "#f57b2d", "name": "Iceland Poppy"}, "… further items truncated for the catalog example"],
+    "resolution": {"width": 1000, "height": 169, "aspect_ratio": 5.92}
+   },
+   "… further items truncated for the catalog example"
+  ],
+  "address": {
+   "street": "354 Oyster Point Blvd",
+   "city": "South San Francisco",
+   "country": "United States",
+   "country_code": "US",
+   "state_province": "California",
+   "state_code": "CA",
+   "postal_code": "94080"
+  },
+  "socials": [{"type": "x", "url": "https://x.com/stripe"}, "… further items truncated for the catalog example"],
+  "employees": {"range": "5001 to 10000", "exact": 17089},
+  "email": "jane@example.com",
+  "is_nsfw": false,
+  "industries": {
+   "eic": [
+    {"industry": "Finance", "subindustry": "Payments & Money Movement"},
+    "… further items truncated for the catalog example"
+   ]
+  },
+  "links": {
+   "contact": "https://stripe.com/contact/sales",
+   "privacy": "https://stripe.com/privacy",
+   "blog": "https://stripe.com/blog",
+   "pricing": "https://stripe.com/pricing",
+   "careers": "https://stripe.com/careers",
+   "terms": null
+  },
+  "primary_language": "english"
+ },
+ "code": 200,
+ "key_metadata": {"credits_consumed": 10, "credits_remaining": 234}
+}

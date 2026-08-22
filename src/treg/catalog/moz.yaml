@@ -51,7 +51,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /url_metrics
-    name: "Get URL authority and link metrics"
+    name: "Domain Authority, Page Authority and Spam Score by URL"
     summary: "Domain Authority, Page Authority, Spam Score and link counts for up to 50 URLs"
     input:
       bodyType: json
@@ -86,7 +86,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /url_metrics
-    name: "Get backlink summary with distribution histograms"
+    name: "Backlinks summary by domain — authority, spam histograms"
     summary: "Aggregate backlink profile plus histograms by DA, spam score and root domains"
     input:
       bodyType: json
@@ -117,7 +117,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /links
-    name: "List inbound links with source and target metrics"
+    name: "Backlinks by domain or URL — source and target metrics"
     summary: "Individual inbound links, with full URL metrics for both source and target"
     input:
       bodyType: json
@@ -156,7 +156,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /linking_root_domains
-    name: "List root domains linking to a target"
+    name: "Referring domains by domain or URL — authority, spam"
     summary: "Root domains linking to a target, with each source's DA, spam score and link counts"
     input:
       bodyType: json
@@ -193,7 +193,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /anchor_text
-    name: "Get anchor text distribution of inbound links"
+    name: "Anchor texts in backlinks by domain or URL"
     summary: "Anchor-text distribution of inbound links, with domain and page counts per phrase"
     input:
       bodyType: json
@@ -226,7 +226,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /top_pages
-    name: "List a domain's highest-authority pages"
+    name: "Highest-authority pages by domain, with URL metrics"
     summary: "Highest-authority pages of a domain, with full URL metrics per page"
     input:
       bodyType: json
@@ -264,7 +264,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /link_status
-    name: "Check if specific sources link to a target"
+    name: "Check whether specific sources link to a target domain"
     summary: "Check whether specific sources link to a target — returns one boolean per source"
     input:
       bodyType: json
@@ -297,7 +297,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /link_intersect
-    name: "Find link-gap prospects from competitor backlinks"
+    name: "Sources linking to competitors but not you — link gap"
     summary: "Sources that link to the given competitors but not to you — link-gap prospecting"
     input:
       bodyType: json
@@ -335,7 +335,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /index_metadata
-    name: "Get current Moz link index version"
+    name: "Current Moz link index version"
     summary: "Which Moz link index is serving results — tells you if metrics moved on a refresh"
     input:
       bodyType: json
@@ -364,7 +364,7 @@ endpoints:
     scope: own_account
     method: POST
     path: /usage_data
-    name: "Get API quota usage for this period"
+    name: "Account usage — quota rows consumed this period"
     summary: "Rows consumed this period — Moz's quota meter, covering both V1 and V2 usage"
     input:
       bodyType: json
@@ -391,7 +391,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /global_top_pages
-    name: "List most-linked pages on the web"
+    name: "Most-linked pages on the web — index-wide, no target"
     summary: "Most-linked pages on the web, with full URL metrics (index-wide, takes no target)"
     input:
       bodyType: json
@@ -423,7 +423,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /global_top_root_domains
-    name: "List most-linked root domains on the web"
+    name: "Most-linked domains on the web — Domain Authority, spam"
     summary: "Most-linked root domains on the web, with DA and spam score (index-wide, no target)"
     input:
       bodyType: json

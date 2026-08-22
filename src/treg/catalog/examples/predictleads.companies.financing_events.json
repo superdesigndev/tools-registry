@@ -1,0 +1,52 @@
+{
+  "data": [
+    {
+      "id": "c74f07a5-5f18-4cfe-ae28-23d197919873",
+      "type": "financing_event",
+      "attributes": {
+        "effective_date": "2023-03-15",
+        "found_at": "2023-03-13T07:03:10+01:00",
+        "categories": [
+          "venture"
+        ],
+        "financing_type": "funding round",
+        "financing_type_normalized": null,
+        "amount": "$6.5 billion",
+        "amount_normalized": 6500000000,
+        "source_urls": [
+          "https://www.cnbc.com/2023/03/15/stripe-raises-series-i-billion-at-sharply-reduced-50-billion-valuation.html"
+        ]
+      },
+      "relationships": {
+        "company": {
+          "data": {
+            "id": "a0383c53-8142-5e7c-8ca3-9980289a3ccc",
+            "type": "company"
+          }
+        },
+        "investors": {
+          "data": []
+        }
+      }
+    }
+  ],
+  "included": [
+    {
+      "id": "a0383c53-8142-5e7c-8ca3-9980289a3ccc",
+      "type": "company",
+      "attributes": {
+        "domain": "stripe.com",
+        "company_name": "Stripe, Inc.",
+        "ticker": null
+      }
+    }
+  ],
+  "meta": {
+    "schema_version": "3.0",
+    "record_state": "active",
+    "message_type": "ok",
+    "message": "You can try running the same query on any subsidiary company domain (bridge.xyz, chargeforstripe.com, chargestripe.com, financialnigeria.com, lemonsqueezy.com, metronome.com, ngx-stripe.dev, okayhq.com, openchannel.io, orum.io, ...). You can also try news_events, job_openings, technologies, connecti …[truncated]",
+    "redirects_to_domain": null,
+    "parent_company_domain": null
+  }
+}

@@ -1,0 +1,67 @@
+{
+  "pagination": {
+    "limit": 3,
+    "offset": 0,
+    "count": 3,
+    "total": 67
+  },
+  "data": [
+    {
+      "name": "NASDAQ - ALL MARKETS",
+      "acronym": "NASDAQ",
+      "mic": "XNAS",
+      "country": null,
+      "country_code": "US",
+      "city": "NEW YORK",
+      "website": "www.nasdaq.com",
+      "timezone": {
+        "timezone": "America/New_York",
+        "abbr": "EST",
+        "abbr_dst": "EDT"
+      },
+      "currency": {
+        "code": "USD",
+        "symbol": "$",
+        "name": "US Dollar"
+      }
+    },
+    {
+      "name": "NEW YORK STOCK EXCHANGE, INC.",
+      "acronym": "NYSE",
+      "mic": "XNYS",
+      "country": null,
+      "country_code": "US",
+      "city": "NEW YORK",
+      "website": "www.nyse.com",
+      "timezone": {
+        "timezone": "America/New_York",
+        "abbr": "EST",
+        "abbr_dst": "EDT"
+      },
+      "currency": {
+        "code": "USD",
+        "symbol": "$",
+        "name": "US Dollar"
+      }
+    },
+    {
+      "name": "NYSE ARCA",
+      "acronym": "NYSE",
+      "mic": "ARCX",
+      "country": null,
+      "country_code": "US",
+      "city": "NEW YORK",
+      "website": "www.nyse.com",
+      "timezone": {
+        "timezone": "America/New_York",
+        "abbr": "EST",
+        "abbr_dst": "EDT"
+      },
+      "currency": {
+        "code": "USD",
+        "symbol": "$",
+        "name": "US Dollar"
+      }
+    }
+  ]
+}

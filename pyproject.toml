@@ -1,6 +1,6 @@
 [project]
 name = "tools-registry"
-version = "0.11.0"
+version = "0.12.0"
 description = "A remote registry that turns team skills into shareable, callable tools via a credential-injecting proxy."
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -72,6 +72,12 @@ dev = [
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+# `scripts/` is standalone tooling, not part of the shipped package (the wheel is `src/treg` only),
+# but tests import from it — `from scripts import catalog_drift`. Only `python -m pytest` puts the
+# working directory on sys.path; CI runs plain `uv run pytest`, where that import is a
+# ModuleNotFoundError at collection. Say it here so both invocations agree, rather than adding
+# `scripts/__init__.py` and changing what the sdist thinks it contains.
+pythonpath = ["."]
 
 [build-system]
 requires = ["hatchling"]

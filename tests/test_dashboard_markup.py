@@ -797,9 +797,15 @@ def test_the_run_actions_lead_the_expansion_tab_bar():
     Try-it is the primary (ink-fill) CTA for a key/token provider — trying on treg's key is what most
     visitors want — with the own-key path demoted to a secondary "Bring your own key". For an OAuth
     provider treg can't serve on its own key, so Connect is the primary instead and Try-it is
-    secondary. The green Connected state replaces the connect button once an account exists."""
+    secondary. The green Connected state replaces the connect button once an account exists.
+
+    Each action is ONE button whose handler forks on `publicCatalog` — signed out, all three open
+    the sign-in modal instead, because calling needs a team. The member half of every fork is what
+    is asserted below; it must keep its shape when someone edits the public half."""
     block = _ledger()
-    bar = block[block.index('<span class="ltabs-r">') :][:2400]
+    # Sized to the whole action group, not a round number — the window has been outgrown once
+    # already (by the publicCatalog forks) and silently cut the last assertions out of range.
+    bar = block[block.index('<span class="ltabs-r">') :][:3400]
     # Try-it: primary UNLESS the provider is OAuth
     assert 'openEpTry(e)' in bar and ':class="{primary:!mkOauth(e.provider)}"' in bar
     # OAuth → Connect is the ink-fill primary
@@ -862,3 +868,114 @@ def test_dashboard_delete_org_sends_the_confirmation_slug():
     normalization from any deeper org route). The dashboard already makes the human type the slug —
     if this ever stops being sent, Delete org silently 422s for every dashboard user."""
     assert "'/orgs/'+this.activeOrgId+'?confirm='" in INDEX
+
+
+# --- referrals (view==='referrals') -----------------------------------------------------------
+
+
+def test_referrals_is_a_top_level_view():
+    """Nested inside another view it would render nowhere, and the nav button would look dead —
+    the exact silent failure the dialog checks above exist for."""
+    assert _enclosing_views("<template v-if=\"view==='referrals'\">") == []
+
+
+def test_referrals_is_registered_in_BOTH_view_whitelists():
+    """`go('referrals')` works on click regardless; these two lists are what make it survive a
+    RELOAD and a BACK button. One is `viewFromHash` (fresh load / deep link), the other is the
+    popstate handler. Missing either is invisible until someone refreshes the page."""
+    assert INDEX.count("'connections','referrals'") == 2
+
+
+def test_referral_page_shows_why_a_referral_paid_nothing():
+    """"I referred someone and got nothing" is the ticket this program generates. `capped` and
+    `rejected` must render a reason on the page rather than an empty cell."""
+    assert "refStatus(r)" in INDEX
+    assert "Over your limit" in INDEX and "Not eligible" in INDEX
+
+
+def test_the_referral_link_is_not_gated_behind_paying_us():
+    """Every signed-in person gets a link, free tier included — they are most of the userbase on a
+    product pitched as "$1.00 free, no card", and the likeliest to tell a friend. The `!eligible`
+    branch survives only for the degenerate case of having no team to pay a reward into, so it must
+    NOT ask anyone to add funds."""
+    assert 'v-if="!ref.eligible"' in INDEX
+    assert "Create a team to unlock your link" in INDEX
+    assert "Add funds once to unlock your link" not in INDEX
+
+
+def _referrals_view() -> str:
+    """The Referrals view block ONLY. Anchored on the template tag, not the bare `view==='referrals'`
+    string — the nav button matches that first and would slice from the sidebar."""
+    start = INDEX.index("<template v-if=\"view==='referrals'\">")
+    end = INDEX.index("<template v-if=\"view==='help'\">", start)
+    return INDEX[start:end]
+
+
+def test_referral_stat_tiles_use_the_sheets_own_class_names():
+    """`.stat` styles `.n` (the figure, 26px accent) and `.l` (the uppercase caption) — and nothing
+    else. A hand-rolled `.k`/`.v` pair renders as two lines of unstyled body text that still *look*
+    like content, so nothing errors and the bug ships. Order matters too: figure first."""
+    block = _referrals_view()
+    assert 'class="statgrid"' in block
+    assert block.count('<div class="n">') == 3 and block.count('<div class="l">') == 3
+    assert 'class="k"' not in block and 'class="v"' not in block
+    assert block.index('<div class="n">') < block.index('<div class="l">')
+
+
+def test_referral_stat_tiles_fill_the_column():
+    """The sheet's `.statgrid` is auto-FILL, which at this width lays out four 150px tracks and
+    leaves the fourth empty — three tiles then stop short of the right edge the card above and the
+    table below both reach. auto-fit collapses the empty track."""
+    assert "grid-template-columns:repeat(auto-fit,minmax(150px,1fr))" in _referrals_view()
+
+
+def test_referral_table_keeps_the_sheets_cell_padding():
+    """A bare `<table>` IS a card here (background, border, radius) and `th,td` already carry
+    10px/13px. Overriding that to `padding:8px 0` — copied from a table that lives INSIDE a card —
+    puts the right-aligned amount flush against the card's own edge, which reads as clipped."""
+    block = _referrals_view()
+    table = block[block.index("<table"):block.index("</table>")]
+    assert "padding:" not in table, "let th,td carry the padding"
+    assert "<th>" in table, "house tables have a header row"
+
+
+def test_the_referral_column_is_one_width():
+    """Card, tiles and table sit in a SINGLE max-width container. Three separate max-widths is what
+    made them start and end at three different x-positions."""
+    assert _referrals_view().count("max-width:") == 1
+
+
+def test_the_billing_page_names_the_bonus_on_the_qualifying_presets():
+    """A referred team decides HOW MUCH to add on this screen, and the first preset ($5) is below the
+    minimum. A note alone is not enough — the amount is chosen at the buttons, so the qualifying ones
+    have to say so themselves."""
+    at = INDEX.index('<div class="fundgrid"')
+    grid = INDEX[at : INDEX.index("</div>", INDEX.index("</button>", at))]
+    assert "refPresetBonus(p)" in grid, "presets must mark which ones earn the bonus"
+    assert "billing.referral_offer" in INDEX
+
+
+def test_the_referral_offer_is_hidden_from_teams_that_were_not_referred():
+    """`v-if` on the offer object, so a team that arrived on its own sees the billing page exactly as
+    it was before this shipped."""
+    assert 'v-if="billing.referral_offer"' in INDEX
+
+
+def test_the_billing_prompt_renders_the_masked_referrer_never_a_raw_one():
+    """The template must read `referrer_masked`. Reaching for any full-address field here would
+    publish an influencer's email to every stranger who signs up through their public link."""
+    at = INDEX.index("You were invited")
+    block = INDEX[at : INDEX.index("</div>", at)]
+    assert "billing.referral_offer.referrer_masked" in block
+    assert "referrer_email" not in INDEX
+
+
+def test_the_referral_preset_helper_null_guards_before_reading_the_offer():
+    """`referral_offer` is null for every team that was NOT referred — most of them. Reading through
+    it throws inside a render, and a render error in Vue blanks the entire dashboard, not just the
+    row. This shipped once, as a blank billing page, when a guard clause was folded into a larger
+    expression and then edited away."""
+    at = INDEX.index("refPresetBonus(usd)")
+    body = INDEX[at : INDEX.index("},", at)]
+    assert "if(!o) return 0;" in body
+    assert body.index("if(!o) return 0;") < body.index("o.remaining_micro")

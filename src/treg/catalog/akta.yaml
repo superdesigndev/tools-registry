@@ -47,7 +47,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v1/company/enrichment/
-    name: "Enrich a company from its website"
+    name: "Company enrichment by website — firmographics, tech stack"
     summary: "Enrich a company from its website — firmographics, financials, tech stack, management"
     input:
       queryParams:
@@ -78,7 +78,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v1/company/search/
-    name: "Look up a company's Akta id"
+    name: "Company name or domain to Akta id — free lookup"
     summary: "Look up a company by name or domain for its Akta id (free — costs 0 credits)"
     input:
       queryParams:
@@ -98,7 +98,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v1/news/
-    name: "Get recent company or industry news"
+    name: "Recent company or industry news, scored for sentiment"
     summary: "Get recent news about a company or industry, scored for sentiment and significance"
     input:
       queryParams:
@@ -142,7 +142,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v1/company/headcount-trends/
-    name: "Get company headcount trends by department"
+    name: "Company headcount trend by website — department split"
     summary: "See how a company's headcount has moved over time and how staff split across departments"
     input:
       queryParams:
@@ -152,6 +152,7 @@ endpoints:
       queryParams: {company: "canva.com"}
     cost: {type: per_success, value: 2.5, currency: credit, per: 1, unit: call, source: docs, source_url: 'https://docs.akta.pro/getting-started/pricing', checked: '2026-07-28', confidence: documented, note: 2.5 Akta credits per request}
     unverified: "http 403 {\"detail\": \"Your current subscription does not include access to this endpoint.\"} — re-probed 2026-07-31, identical response, so the plan gate has not moved. An account-tier gap, not a call error: every /company/{jobs,posts,website-traffic,employee-reviews,headcount-trends,product-reviews-with-products} route on this key returns the same message, and a 403 consumes no credits"
+    platform_blocked: "upstream 403 'Your current subscription does not include access to this endpoint' on treg's shared Akta key (alternative-data tier; re-probed 2026-07-31). Works with your own Akta key on a plan that includes Alternative Signals."
     docs_url: https://docs.akta.pro/api-reference/alternative-data/headcount-trends
 
   - id: akta.companies.reviews
@@ -161,7 +162,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v1/company/employee-reviews/
-    name: "Get company employee reviews"
+    name: "Employee reviews and ratings for a company by website"
     summary: "Read employee reviews and ratings for a company"
     input:
       queryParams:
@@ -173,6 +174,7 @@ endpoints:
       queryParams: {company: "canva.com", limit: 1}
     cost: {type: per_result, value: 1.5, currency: credit, per: 50, unit: review, source: docs, source_url: 'https://docs.akta.pro/getting-started/pricing', checked: '2026-07-28', confidence: documented, note: 1.5 Akta credits per 50 reviews returned}
     unverified: "http 403 {\"detail\": \"Your current subscription does not include access to this endpoint.\"} — re-probed 2026-07-31, unchanged. Account-tier gap, same message as the other alternative-data routes; the 403 is free, so re-probing costs nothing"
+    platform_blocked: "upstream 403 'Your current subscription does not include access to this endpoint' on treg's shared Akta key (alternative-data tier; re-probed 2026-07-31). Works with your own Akta key on a plan that includes Alternative Signals."
     docs_url: https://docs.akta.pro/api-reference/alternative-data/employee-reviews
 
   - id: akta.companies.industry.resolve
@@ -182,7 +184,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v1/industry/search/
-    name: "Resolve industry text to Akta codes"
+    name: "Resolve industry text to Akta industry codes — free"
     summary: "Turn a free-text industry description into Akta's standard industry codes (free)"
     input:
       queryParams:

@@ -1,0 +1,18 @@
+{
+  "jobID": "33204458-df12-4d45-8e32-3a92dc6359be",
+  "status": "completed",
+  "linkedinUrl": "https://www.linkedin.com/company/stripe",
+  "companyName": "Stripe",
+  "companyLogoUrl": "https://api.leadsforge.ai/images/<opaque-image-token>",
+  "followerCount": 1643530,
+  "total": 1,
+  "processed": 1,
+  "reservedCredits": 1,
+  "consumedCredits": 1,
+  "createdAt": "2026-08-20T00:47:30.390172Z",
+  "updatedAt": "2026-08-20T00:49:33.347924Z",
+  "completedAt": "2026-08-20T00:49:33.345366Z",
+  "clientRequestID": "treg-verify-4",
+  "statusURL": "/public/v1/company-followers/jobs/33204458-df12-4d45-8e32-3a92dc6359be",
+  "resultsURL": "/public/v1/company-followers/jobs/33204458-df12-4d45-8e32-3a92dc6359be/results"
+}

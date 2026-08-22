@@ -1,0 +1,48 @@
+{
+  "data": [
+    {
+      "id": "4513b97b-1e35-4da0-b25e-cfca27e7880f",
+      "type": "financing_event",
+      "attributes": {
+        "effective_date": "2026-08-19",
+        "found_at": "2026-08-19T21:03:00+02:00",
+        "categories": [
+          "other"
+        ],
+        "financing_type": "non-convertible debentures",
+        "financing_type_normalized": null,
+        "amount": "Rs 60 crore",
+        "amount_normalized": 6270000,
+        "source_urls": [
+          "https://kediacapital.com/news/market-news/4/38/1261157"
+        ]
+      },
+      "relationships": {
+        "company": {
+          "data": {
+            "id": "06c54234-92b3-50cc-86ab-1d4ee88a5bbb",
+            "type": "company"
+          }
+        },
+        "investors": {
+          "data": []
+        }
+      }
+    }
+  ],
+  "included": [
+    {
+      "id": "06c54234-92b3-50cc-86ab-1d4ee88a5bbb",
+      "type": "company",
+      "attributes": {
+        "domain": "regencyfincorp.com",
+        "company_name": "Regency Fincorp Limited",
+        "ticker": null
+      }
+    }
+  ],
+  "meta": {
+    "schema_version": "3.0",
+    "record_state": "active"
+  }
+}

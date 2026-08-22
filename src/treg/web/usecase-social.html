@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Social and Creator Trend Data for AI Agents | treg.to</title>
+<meta name="description" content="Let your agent research posts, creators and conversations across TikTok, Reddit, YouTube, X and Instagram through one key. Pay per call. $1.00 free."/>
+<link rel="canonical" href="https://treg.to/use-cases/social-trend-research-for-ai-agents"/>
+<meta property="og:title" content="Social and Creator Trend Data for AI Agents | treg.to"/>
+<meta property="og:description" content="Let your agent research posts, creators and conversations across TikTok, Reddit, YouTube, X and Instagram through one key. Pay per call. $1.00 free."/>
+<meta property="og:url" content="https://treg.to/use-cases/social-trend-research-for-ai-agents"/>
+<meta property="og:type" content="website"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Pixel&family=Inter:wght@400;450;500;600;650;700&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/usecase.css"/>
+</head>
+<body data-page="p3">
+
+<div class="navwrap"><nav class="nav">
+  <a class="brand" href="/"><span class="glyph">&#9626;</span> treg</a>
+  <div class="links">
+    <a class="hidem" href="/tutorial">docs</a>
+    <a class="hidem" href="https://github.com/superdesigndev/treg" target="_blank" rel="noopener">repo</a>
+    <a class="candy sm" href="/app?ref=p3" data-ev="lp_cta_primary" data-page="p3">Start free</a>
+  </div>
+</nav></div>
+
+<header class="hero"><div class="wrap">
+  <div class="kicker">2,600+ tools · 40+ providers · one key</div>
+  <h1>Research Today&#x27;s Social Trends from One Prompt</h1>
+  <div class="lede"><p>Your agent can read real posts, creators, videos and comment threads across TikTok, Reddit, YouTube, X and
+Instagram through one key — no platform developer account, no app review, no invite.</p></div>
+  <div class="ctas"><a class="candy" href="/app?ref=p3" data-ev="lp_cta_primary" data-page="p3">Run This Workflow Free</a><a class="ghostbtn" href="#workflow" data-ev="lp_cta_secondary" data-page="p3">See the Example</a></div>
+  <div class="trust">$1.00 of free credit on every new team. No provider signup, no credit card.</div>
+  <div class="subline"><p>X post search is the most-called tool on treg.to — <strong>3,311 calls at a 100% success rate</strong>,
+2.6 s median. TikTok, Instagram, Reddit and YouTube answer the same token, most of them at $0.001 a call.</p></div>
+  <div class="provstrip"><span class="pl">compared on this page</span><span class="ptiles"><span class="ptile"><img src="/logos/scrapecreators.svg" alt="" loading="lazy" width="22" height="22"></span><span class="ptile"><img src="/logos/tikhub.svg" alt="" loading="lazy" width="22" height="22"></span></span></div>
+</div></header>
+<section><div class="wrap"><div class="seclab">The economics</div><h2>The old way vs. the treg.to way</h2><div class="tablewrap"><table class="compare">
+<thead>
+<tr>
+<th></th>
+<th>The old way</th>
+<th>With treg</th>
+</tr>
+</thead>
+<tbody>
+<tr><td><strong>What you pay for</strong></td><td data-label="The old way">X API at $200/mo, plus a social listening seat, to answer a question you have once a week</td><td data-label="With treg">One prepaid balance. Most social calls are $0.001</td></tr>
+<tr><td><strong>Keys</strong></td><td data-label="The old way">A developer account per platform — and TikTok's is invite-only, Instagram's needs app review, LinkedIn's is partner-only</td><td data-label="With treg">One treg token. Every tool in the catalog answers to it</td></tr>
+<tr><td><strong>Picking a provider</strong></td><td data-label="The old way">Whichever platform approved you</td><td data-label="With treg"><code>catalog get</code> lists every provider serving that platform with price, measured success rate and median speed</td></tr>
+<tr><td><strong>Commitment</strong></td><td data-label="The old way">Monthly platform fees and quota tiers before you know if the data answers your question</td><td data-label="With treg">No subscription. Ask one question for a fraction of a cent</td></tr>
+<tr><td><strong>The workflow</strong></td><td data-label="The old way">Five browser tabs, manual scrolling, screenshots into a doc</td><td data-label="With treg">One agent run across five platforms, deduplicated into one brief</td></tr>
+</tbody>
+</table></div><p><strong>The honest version of this pitch:</strong> the reason this is hard is not price, it is access. Several of these
+platforms do not sell a usable public API at any price to a small team. That is the wall treg.to gets you
+over.</p><hr /><div class="pricewall">
+  <div class="pw old"><span class="k">Instead of</span><span class="v">$200/mo</span>
+    <span class="s">the X API alone</span></div>
+  <div class="pw arrow" aria-hidden="true">&rarr;</div>
+  <div class="pw new"><span class="k">You paid</span><span class="v">$0.0059</span>
+    <span class="s">what our run actually cost</span></div>
+</div></div></section>
+<section id="workflow"><div class="wrap"><div class="seclab">Try it</div><h2>A real workflow</h2><h3>Copy this into Claude Code, Cursor, Codex or opencode</h3><div class="steplabel"><span class="n">1</span><b>Set treg up in your agent</b>
+  <span class="once">first time only</span></div>
+<p class="stephint">Paste this into the same agent. It installs the CLI, signs you in and registers the
+tools. One line, once &mdash; already set up? Skip to step 2.</p>
+<div class="promptbox">
+  <div class="ph"><span>setup</span>
+    <button class="copybtn" data-copy="#setup" data-ev="lp_copy_setup" data-page="p3">copy</button>
+  </div><pre id="setup">set up treg &mdash; https://treg.to/llms.txt</pre>
+</div>
+<div class="steplabel"><span class="n">2</span><b>Run the workflow</b></div><div class="promptbox">
+  <div class="ph"><span>the prompt</span>
+    <button class="copybtn" data-copy="#prompt" data-ev="lp_copy_prompt" data-page="p3">copy</button>
+  </div><pre id="prompt">Find the fastest-growing conversations about AI agents across TikTok, Reddit,
+YouTube and X. Identify repeated hooks, audience questions and five content
+opportunities.</pre>
+</div><h3>What happens when you run it</h3><p><strong>The agent pulls posts from each platform.</strong> These are among the most-exercised tools in the catalog,
+so the records behind them are long:</p><div class="tablewrap"><table class="data">
+<thead>
+<tr>
+<th>Platform</th>
+<th>Endpoint</th>
+<th>Cost</th>
+<th>Success rate</th>
+<th>Median</th>
+</tr>
+</thead>
+<tbody>
+<tr><td data-label="Platform"><strong>X</strong></td><td data-label="Endpoint"><img class="plogo" src="/logos/tikhub.svg" alt="" loading="lazy" width="18" height="18">tikhub search timeline</td><td data-label="Cost">$0.001</td><td data-label="Success rate"><strong>100% (3,311 calls)</strong></td><td data-label="Median">2.6 s</td></tr>
+<tr><td data-label="Platform"><strong>TikTok</strong></td><td data-label="Endpoint"><img class="plogo" src="/logos/tikhub.svg" alt="" loading="lazy" width="18" height="18">tikhub hashtag search</td><td data-label="Cost">$0.001</td><td data-label="Success rate">100% (436 calls)</td><td data-label="Median">1.3 s</td></tr>
+<tr><td></td><td data-label="Endpoint"><img class="plogo" src="/logos/tikhub.svg" alt="" loading="lazy" width="18" height="18">tikhub video search</td><td data-label="Cost">$0.001</td><td data-label="Success rate">100% (389 calls)</td><td data-label="Median">3.3 s</td></tr>
+<tr><td></td><td data-label="Endpoint"><img class="plogo" src="/logos/tikhub.svg" alt="" loading="lazy" width="18" height="18">tikhub profile</td><td data-label="Cost">$0.001</td><td data-label="Success rate">100% (365 calls)</td><td data-label="Median">0.4 s</td></tr>
+<tr><td data-label="Platform"><strong>Reddit</strong></td><td data-label="Endpoint"><img class="plogo" src="/logos/tikhub.svg" alt="" loading="lazy" width="18" height="18">tikhub search</td><td data-label="Cost">$0.001</td><td data-label="Success rate"><strong>100% (384 calls)</strong></td><td data-label="Median">1.0 s</td></tr>
+<tr><td></td><td data-label="Endpoint"><img class="plogo" src="/logos/scrapecreators.svg" alt="" loading="lazy" width="18" height="18">ScrapeCreators</td><td data-label="Cost">$0.00188</td><td data-label="Success rate">98% (283 calls)</td><td data-label="Median">8.5 s</td></tr>
+<tr><td data-label="Platform"><strong>Instagram</strong></td><td data-label="Endpoint"><img class="plogo" src="/logos/scrapecreators.svg" alt="" loading="lazy" width="18" height="18">ScrapeCreators Reels</td><td data-label="Cost">$0.00188</td><td data-label="Success rate">100% (300 calls)</td><td data-label="Median">3.9 s</td></tr>
+</tbody>
+</table></div><p>Note the Reddit row: the cheaper provider is also the faster one by eight seconds and has the better
+record. That is not a coincidence you could have guessed — it is what the measurements say, and it is
+visible before you call.</p><p>A 200-call sweep across four platforms is well under a dollar.</p><p><strong>It reads engagement, not just text.</strong> Views, likes, comments and posting dates come back with each
+post, so the agent can rank by velocity rather than by how loud a post sounds.</p><p><strong>It clusters and reports.</strong> Repeated hooks, the questions that keep appearing in comments, and where
+the conversation is thin enough to enter.</p><blockquote>
+<p><strong>What treg.to does and does not do here.</strong> It returns real posts with real engagement numbers. The
+ranking of "fastest-growing" is your agent's analysis of that data, not a metric a provider hands over.
+Coverage also differs per platform — check what an endpoint actually returns before you build a
+reporting workflow on it.</p>
+</blockquote><h3>What comes back</h3><div class="sample"><div class="sbar">what comes back</div><pre>Topic: AI agents · 4 platforms · [window] · pulled [date]
+
+CONVERSATION CLUSTERS
+1. &lt;theme&gt;            412 posts · median 18k views · rising
+   repeated hook:     &quot;&lt;the phrasing that keeps working&gt;&quot;
+   top question:      &quot;&lt;what commenters keep asking&gt;&quot;
+2. &lt;theme&gt;            186 posts · median 42k views · flat
+...
+
+FIVE CONTENT OPPORTUNITIES
+ 1. &lt;angle&gt; — asked 40+ times across Reddit and YouTube comments, no video covers it directly
+ 2. &lt;angle&gt; — the hook that works on TikTok has not been tried on X
+ ...
+
+PLATFORMS   tiktok · reddit · youtube · x
+COST        $[from your run]</pre></div><p><em>Structure is illustrative. Post data is the platforms', relayed unchanged.</em></p><div class="ctas"><button class="candy" data-copy="#prompt" data-ev="lp_copy_prompt" data-page="p3">Copy Prompt</button></div><hr /></div></section>
+<section id="proof"><div class="wrap"><div class="seclab">Evidence</div><h2>Proof — from one real run</h2><p><em>Run on treg.to, 17 Aug 2026, on the topic "AI agents". Every figure is from the Activity log of that run.</em></p><div class="tablewrap"><table class="data">
+<thead>
+<tr>
+<th>Field</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr><td data-label="Field">Providers considered</td><td data-label="Value">4 for Reddit search, 4 for TikTok search, 4 for YouTube search, 3 for X</td></tr>
+<tr><td data-label="Field">Providers selected</td><td data-label="Value"><code>scrapecreators.reddit.search.posts</code> · <code>tikhub.tiktok.search.videos</code> · <code>tikhub.youtube.search.videos</code> · <code>tikhub.x.twitter-web-fetch-search-timeline</code></td></tr>
+<tr><td data-label="Field">Why</td><td data-label="Value"><img class="plogo" src="/logos/tikhub.svg" alt="" loading="lazy" width="18" height="18">tikhub was the cheapest on both video platforms ($0.001 and $0.002 against $0.015 from SerpApi and $0.01476 from JustOneAPI)</td></tr>
+<tr><td data-label="Field">Total cost of the run</td><td data-label="Value"><strong>$0.00588</strong> — four platforms, four calls</td></tr>
+<tr><td data-label="Field">Subscription cost avoided</td><td data-label="Value">X API alone lists at <strong>$200/mo</strong>. TikTok's API is invite-only and YouTube's is quota-capped, so parts of this are not purchasable at any price by a small team</td></tr>
+<tr><td data-label="Field">Time to completion</td><td data-label="Value">Under 10 seconds across all four</td></tr>
+<tr><td data-label="Field">Data freshness</td><td data-label="Value">Provider responses stamped <strong>2026-08-16 19:07:31</strong> and <strong>19:08:30</strong>; results included a YouTube video published 11 hours earlier and one published the previous day</td></tr>
+<tr><td data-label="Field">Platforms covered</td><td data-label="Value"><strong>4 of 4</strong> — Reddit, TikTok, YouTube, X</td></tr>
+<tr><td data-label="Field">Posts retrieved</td><td data-label="Value">29 Reddit posts · 10 TikTok videos · 19 YouTube videos + 25 Shorts · X search timeline</td></tr>
+<tr><td data-label="Field">Cost per 100 items</td><td data-label="Value">roughly <strong>$0.007</strong></td></tr>
+</tbody>
+</table></div><p>Everything came back with engagement attached: TikTok returned play, like, comment and share counts per
+video (top result 9,704 plays / 863 likes); YouTube returned view counts and publish age (4.7M views on the
+leading video, 2.3M on the leading Short); Reddit returned scores and comment counts.</p><blockquote>
+<p><strong>The honest read of this run, and you should know it before you rely on this page.</strong> The Reddit search
+for "ai agents" returned <strong>poor relevance</strong> — the top-scoring results included an unrelated r/lol post
+and a news item about the Corporate Transparency Act. Ranking is the provider's, and on this query it was
+bad. The fix is cheap and it is the workflow the catalog is built for: search a named subreddit instead
+of the whole site, or switch provider. The measurements point at the same answer — the tikhub route is
+half the price, eight seconds faster and carries a 100% record over 384 calls against this one's 98%
+over 283. We used the wrong one, and the catalog would have told us so before the call.</p>
+</blockquote><hr /></div></section>
+<section><div class="wrap"><div class="seclab">Outcomes</div><h2>Three things you can do the day you sign up</h2><div class="cards"><div class="card"><h4>Find the questions your audience keeps asking.</h4><p>Pull the comment threads under the top posts in your niche and let the agent cluster them. What comes back
+is a content calendar written by the audience rather than guessed at in a meeting.</p></div><div class="card"><h4>Check whether a hook is already saturated.</h4><p>Before you film it, have the agent search the exact phrasing across platforms and report how many creators
+used it in the last month and how those posts performed.</p></div><div class="card"><h4>Track a creator or a competitor without a listening seat.</h4><p>Run the same profile and hashtag pull weekly. The agent reports what changed. A week you skip costs
+nothing, which is not true of a subscription.</p></div></div></div></section>
+<section><div class="wrap"><div class="seclab">Fit</div><h2>Who this is for</h2><div class="who"><div><b>Social strategists</b> who need a defensible answer about what is working this week, not a dashboard average from last quarter.</div><div><b>Creator marketers</b> vetting who to work with, using real recent engagement instead of a media kit.</div><div><b>Content teams</b> planning against what an audience is actually asking, across more platforms than one person can read.</div><div><b>Developers building research agents</b> who want one HTTP surface across platforms whose official APIs are invite-only, app-review-gated or partner-only.</div></div></div></section>
+<section><div class="wrap"><div class="seclab">Questions</div><h2>Before you sign up</h2><details open data-ev="lp_objection_open" data-q="Why not just call the providers directly?"><summary>Why not just call the providers directly?</summary><div class="body"><p>On this vertical, usually because you cannot. TikTok's API is invite-only, Instagram's needs app review,
+LinkedIn's is partner-only, YouTube's is quota-capped, and X's is $200/mo. Getting approved on four
+platforms to answer one research question is weeks of work, and some of those doors do not open for a
+small team at all.</p>
+<p>There is also a result here we did not expect. treg.to carries <strong>both</strong> X's official API and an
+independent route, and has measured both: the official search endpoint returns a usable answer on
+<strong>62%</strong> of calls, while the independent route has returned one on <strong>100% of 3,311 calls</strong>. Paying $200 a
+month is not buying you the more reliable option. We would not have known that either without measuring
+it, and it is the reason the catalog shows a record rather than a logo.</p>
+<p>treg.to is closer to OpenRouter for agent tools than to a data vendor: one base URL, one token, many
+providers behind it.</p></div></details><details data-ev="lp_objection_open" data-q="How are credentials handled?"><summary>How are credentials handled?</summary><div class="body"><p>The credential is injected on the server. Your agent makes the real upstream request through treg.to's
+<code>/call/</code> endpoint; treg.to adds the key and relays the provider's answer back verbatim. No provider key
+is ever written to your machine, your repo or your agent's context. Every call is recorded and attributed
+to the token that made it.</p></div></details><details data-ev="lp_objection_open" data-q="Can I choose a specific provider?"><summary>Can I choose a specific provider?</summary><div class="body"><p>Yes. Every endpoint has an id, and calling it by id calls that provider. If you want the choice made once
+for the whole team, <code>treg org pin &lt;capability&gt; --provider &lt;provider&gt;</code> refuses calls to any other provider
+of that capability.
+<em>(Providers differ more on field coverage than on price here — one returns comments,
+another does not. Read the endpoint before you pin one.)</em></p></div></details><details data-ev="lp_objection_open" data-q="Can I use my existing provider key?"><summary>Can I use my existing provider key?</summary><div class="body"><p>Yes, and it takes precedence. Register the key once and every call to that provider routes through it —
+those calls are never metered against your treg.to balance. Your key always wins over treg.to's.</p></div></details><details data-ev="lp_objection_open" data-q="What happens if a provider fails?"><summary>What happens if a provider fails?</summary><div class="body"><p>treg.to does not silently reroute you. That is deliberate: only you know which inputs you actually hold,
+so treg.to relays your request rather than rewriting it. What your agent gets instead is the information
+to recover — it already knows the alternatives and their parameters, so on a 429, a 5xx or a timeout it
+can try the next provider and tell you which one it switched to. Failed calls are not billed. If a call
+succeeded upstream but the answer was lost coming back, an <code>Idempotency-Key</code> returns the stored result
+without paying twice.
+<em>(Social endpoints are the most likely place you will see this, because they sit on top of platforms that
+change. The catalog's <code>last OK</code> column tells you which ones have answered recently.)</em></p></div></details><details data-ev="lp_objection_open" data-q="How much does a call cost?"><summary>How much does a call cost?</summary><div class="body"><p>Most social endpoints are $0.001 a call. Reddit search runs $0.001 to $0.01476 depending on provider. The
+exact price is shown before the call, and treg.to adds no markup. New teams start with $1.00 of free
+credit — around a thousand posts' worth of calls.</p></div></details><details data-ev="lp_objection_open" data-q="Which agents does it work with?"><summary>Which agents does it work with?</summary><div class="body"><p>The installer registers treg.to's MCP server into Claude Code, Cursor and opencode automatically. Any MCP
+client that supports the authorization spec can connect with OAuth. Anything that can run a shell command —
+Codex included — can use the <code>treg</code> CLI or plain HTTP.</p>
+<hr /></div></details></div></section>
+<section class="final"><div class="wrap">
+  <h2>Ask what the internet is saying today, and get real posts back</h2>
+  <div class="ctas"><a class="candy" href="/app?ref=p3" data-ev="lp_cta_primary" data-page="p3">Run This Workflow Free</a></div>
+  <div class="trust"><p>$1.00 of free credit on every new team. No credit card, no provider signup. treg.to is open source
+(AGPL).</p></div>
+</div></section>
+
+<footer>
+  <div class="foot-in">
+    <a class="brand" href="/"><span class="glyph">&#9626;</span> treg</a>
+    <span class="note">&mdash; 100% open source</span>
+    <span class="sp"></span>
+    <a href="/resources">resources</a><a href="/tutorial">docs</a><a href="/llms.txt">llms.txt</a>
+    <a href="https://github.com/superdesigndev/treg" target="_blank" rel="noopener">github &#8599;</a>
+    <a href="/terms">terms</a><a href="/privacy">privacy</a>
+  </div>
+</footer>
+
+<script>
+/* Landing-page instrumentation. The conversion that matters is the FIRST SUCCESSFUL CALL,
+   not the signup — see marketing/landing/_measurement.md. `lp_copy_prompt` is the leading
+   indicator we score pages on, so it fires from every copy affordance.
+   INTEGRATION POINT: this forwards to window.posthog if the page ever loads it. Until then
+   events are queued on window.tregEvents so nothing is silently lost. */
+(function(){
+  window.tregEvents = window.tregEvents || [];
+  function ev(name, props){
+    var p = Object.assign({page: document.body.dataset.page}, props || {});
+    window.tregEvents.push([name, p, Date.now()]);
+    if (window.posthog && window.posthog.capture) window.posthog.capture(name, p);
+  }
+  ev('lp_view');
+
+  /* copy-to-clipboard, same interaction as the landing page's give-box */
+  document.addEventListener('click', function(e){
+    var b = e.target.closest('[data-copy]');
+    if (b) {
+      var src = document.querySelector(b.dataset.copy);
+      if (src) {
+        var t = src.textContent.trim();
+        (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).catch(function(){});
+        var old = b.textContent;
+        b.textContent = b.classList.contains('copybtn') ? 'copied' : 'Copied \u2713';
+        b.classList.add('done');
+        setTimeout(function(){ b.textContent = old; b.classList.remove('done'); }, 1800);
+      }
+      /* which prompt was copied matters: a page can carry more than one workflow, and knowing
+         which one people take is the whole reason to run two. */
+      ev(b.dataset.ev || 'lp_copy_prompt', {prompt: b.dataset.copy});
+      return;
+    }
+    var a = e.target.closest('[data-ev]');
+    if (a && a.tagName !== 'DETAILS') ev(a.dataset.ev);
+  });
+
+  /* which objection people open is the best diagnostic on the page: it names what the hero failed to answer.
+     The first one ships open, and Chrome fires `toggle` for that initial state — counting it would score a
+     false open on every page view, so only user-driven changes count. */
+  document.querySelectorAll('details[data-ev]').forEach(function(d){
+    var initial = d.open;
+    d.addEventListener('toggle', function(){
+      if (d.open && !initial) ev('lp_objection_open', {q: d.dataset.q});
+      initial = false;
+    });
+  });
+
+  /* did the evidence actually get read? */
+  var proof = document.getElementById('proof');
+  if (proof && 'IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function(es){
+      es.forEach(function(en){ if (en.isIntersecting) { ev('lp_scroll_proof'); io.disconnect(); } });
+    }, {threshold: 0.3});
+    io.observe(proof);
+  }
+})();
+</script>
+<script src="/adtrack.js"></script>
+</body>
+</html>

@@ -1,0 +1,43 @@
+{
+  "id": 256474769,
+  "name": "Patrick Collison",
+  "location": {
+    "country": {
+      "code": "US",
+      "name": "United States",
+      "latitude": 38,
+      "longitude": -97
+    },
+    "address": "San Francisco Bay Area"
+  },
+  "first_name": "Patrick",
+  "last_name": "Collison",
+  "socials": {
+    "linkedin_url": "https://www.linkedin.com/in/patrickcollison"
+  },
+  "experiences": [
+    {
+      "type": "company",
+      "company": {
+        "id": "01924f5c-60bc-7caa-821e-1b1b9f523908",
+        "name": "Arc Institute",
+        "domain": "arcinstitute.org",
+        "industry": null,
+        "logo_url": "https://api.companyenrich.com/companies/logo/01924f5c-60bc-7caa-821e-1b1b9f523908"
+      },
+      "startDate": "2021-01-01",
+      "endDate": null,
+      "isCurrent": true,
+      "isMatched": false,
+      "position": "Co-founder",
+      "seniority": "founder",
+      "department": "c-suite/founder"
+    },
+    "... 2 more items truncated"
+  ],
+  "position": "Stripe CEO",
+  "seniority": "founder",
+  "department": "c-suite/founder",
+  "image_url": "https://api.companyenrich.com/people/image/256474769",
+  "updated_at": "2026-08-02T00:15:55.23512Z"
+}

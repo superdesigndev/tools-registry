@@ -1,0 +1,44 @@
+{
+  "success": true,
+  "result": {
+    "name": "Stripe",
+    "lid": "stripe",
+    "urn": "urn:li:fs_salesCompany:2135371",
+    "url": "https://www.linkedin.com/company/stripe/",
+    "pictureUrl": "https://icypeas-li-profile-pictures-production.s3.sbg.io.cloud.ovh.net/stripe-92a860b0cd3b4f99b355cbc5024a2e34d172409f332a4b179a46273941bd3cb9",
+    "description": "Stripe builds programmable financial services. Millions of companies—from the world’s largest enterprises to the most ambitious startups—use Stripe to accept payments, grow their r… (truncated)",
+    "address": {
+      "streetAddress": "354 Oyster Point Blvd",
+      "addressLocality": "South San Francisco",
+      "addressRegion": "California",
+      "postalCode": "94080",
+      "addressCountry": "United States of America",
+      "addressCountryCode": "US"
+    },
+    "numberOfEmployees": 14127,
+    "headcountRange": "5001-10000",
+    "industry": "Technology, Information and Internet",
+    "foundedYear": 2010,
+    "type": "Privately Held",
+    "website": "https://stripe.com/jobs",
+    "slogan": "Help increase the GDP of the internet.",
+    "specialties": [],
+    "estimatedRevenuRange": {
+      "estimatedMinRevenue": {
+        "amount": 500,
+        "unit": "MILLION",
+        "currency": "USD"
+      },
+      "estimatedMaxRevenue": {
+        "amount": 1,
+        "unit": "BILLION",
+        "currency": "USD"
+      }
+    },
+    "employeeGrowth": [],
+    "deleted": false,
+    "phone": ""
+  },
+  "searchId": "AbKhHKABgC6p8QIDw4K6",
+  "status": "FOUND"
+}

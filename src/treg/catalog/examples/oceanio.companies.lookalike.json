@@ -1,0 +1,48 @@
+{
+  "detail": "OK",
+  "total": 15286,
+  "searchAfter": "NoRgrAbAzATAdABgDQCIDGBDAzgCwGYBOApkXGgPYC2KAukA",
+  "creditsUsed": 0.4,
+  "companies": [
+    {
+      "company": {
+        "domain": "razorpay.com",
+        "name": "Razorpay",
+        "primaryCountry": "in",
+        "countries": [],
+        "companySize": null,
+        "industryCategories": null,
+        "industries": ["FinTech", "Financial Services", "Mobile Payments", "Payments", "Transaction Processing"],
+        "linkedinIndustry": null,
+        "keywords": [],
+        "employeeCountOcean": 3664,
+        "employeeCountLinkedin": null,
+        "revenue": null,
+        "yearFounded": null,
+        "description": "Online Payments India: Start Accepting Payments Instantly with Razorpay's Payment Suite, which Supports Netbanking, Credit Card & Debit Cards, UPI etc.",
+        "technologies": ["Google Analytics", "YouTube", "Google Tag Manager", "Linkedin Insight Tag", "Google Ads Conversion Tracking", "Sentry"],
+        "technologyCategories": [],
+        "webTraffic": {
+          "visits": 39524764,
+          "pageViews": 114179138,
+          "pagesPerVisit": 2.8887999057769775,
+          "bounceRate": 0.3932
+        },
+        "headcountGrowth": {
+          "threeMonths": -78,
+          "threeMonthsPercentage": -0.022,
+          "sixMonths": 27,
+          "sixMonthsPercentage": 0.008,
+          "twelveMonths": -95,
+          "twelveMonthsPercentage": -0.027
+        },
+        "departmentSizes": null,
+        "fundingRound": null,
+        "locations": [],
+        "updatedAt": null
+      },
+      "relevance": "A"
+    }
+  ],
+  "_truncated": "1 of the 2 returned rows shown, out of 15,286 lookalike matches for stripe.com; lists shortened"
+}

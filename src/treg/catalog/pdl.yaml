@@ -41,7 +41,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /person/enrich
-    name: "Enrich a person from email or name"
+    name: "Enrich a person by email, LinkedIn or name + company"
     summary: "Enrich a person from email, LinkedIn or name + company — job history, skills, contact"
     input:
       queryParams:
@@ -89,7 +89,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /person/search
-    name: "Search people by title, company, skills"
+    name: "Search people by title, company, skills or location"
     summary: "Search PDL people by title, company, seniority, skills or location — pays per record"
     input:
       queryParams:
@@ -125,7 +125,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /company/enrich
-    name: "Enrich a company from website or name"
+    name: "Enrich a company by website, name or ticker"
     summary: "Enrich a company from website, name or ticker — industry, size, founded, location"
     input:
       queryParams:
@@ -166,7 +166,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /company/search
-    name: "Search companies by industry, size, location"
+    name: "Search companies by industry, headcount or location"
     summary: "Search PDL companies by industry, headcount, location or tags — pays per record"
     input:
       queryParams:
@@ -201,7 +201,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /autocomplete
-    name: "Get autocomplete suggestions for filter fields"
+    name: "Autocomplete filter values (free key check)"
     summary: "Check the key works and get suggested values for a filter field (free — 0 credits)"
     input:
       queryParams:

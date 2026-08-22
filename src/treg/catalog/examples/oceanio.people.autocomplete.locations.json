@@ -1,0 +1,29 @@
+{
+  "locations": [
+    {
+      "countryCode": "us",
+      "filterCode": "San Francisco",
+      "name": "San Francisco",
+      "parentCode": "us-CA",
+      "parentName": "California, United States",
+      "type": "4-city"
+    },
+    {
+      "countryCode": "ni",
+      "filterCode": "San Francisco Libre",
+      "name": "San Francisco Libre",
+      "parentCode": "ni-MN",
+      "parentName": "Managua, Nicaragua",
+      "type": "4-city"
+    },
+    {
+      "countryCode": "pa",
+      "filterCode": "San Francisco",
+      "name": "San Francisco",
+      "parentCode": "pa-8",
+      "parentName": "Panam\u00e1 Province, Panama",
+      "type": "4-city"
+    }
+  ],
+  "_truncated": "first 3 of 5"
+}

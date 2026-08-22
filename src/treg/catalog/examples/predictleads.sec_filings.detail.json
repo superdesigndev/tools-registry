@@ -1,0 +1,37 @@
+{
+  "data": [
+    {
+      "id": "019fea12-bfd4-77ca-b958-3706a5afcb56",
+      "type": "sec_filing",
+      "attributes": {
+        "form_type": "10-K",
+        "filed_at": "2026-07-29",
+        "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000119312526323660/msft-20260630.htm",
+        "document": "UNITED STATES\n\nWashington, D.C. 20549\n\n \n\n \n\nFORM 10-K\n\n \n\n \n\n|  |  |\n| --- | --- |\n|  |  |\n| ☒ | ANNUAL REPORT PURSUANT TO SECTION 13 OR 15(d) OF THE SECURITIES EXCHANGE ACT OF 1934 |\n\n \n\n|  |  |\n| --- | --- |\n|  |  |\n|  | For the Fiscal Year Ended June 30, 2026 |\n|  |  |\n|  | OR |\n|  |  |\n| ☐ | TR …[truncated]"
+      },
+      "relationships": {
+        "company": {
+          "data": {
+            "id": "8e53f01f-e59c-5511-a8fc-63186faaa69e",
+            "type": "company"
+          }
+        }
+      }
+    }
+  ],
+  "included": [
+    {
+      "id": "8e53f01f-e59c-5511-a8fc-63186faaa69e",
+      "type": "company",
+      "attributes": {
+        "domain": "microsoft.com",
+        "company_name": "Microsoft Corp.",
+        "ticker": "NASDAQ:MSFT"
+      }
+    }
+  ],
+  "meta": {
+    "schema_version": "3.1",
+    "record_state": "active"
+  }
+}

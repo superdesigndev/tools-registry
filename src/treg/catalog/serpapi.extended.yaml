@@ -10,7 +10,7 @@ endpoints:
   platform: google
   method: GET
   path: /search
-  name: Search Google Maps places
+  name: "Google Maps place results for a query — rating, address"
   summary: Live Google Maps place results for a keyword and location — position, place_id, rating, address, phone, website
   input:
     queryParams:
@@ -65,7 +65,7 @@ endpoints:
   platform: google
   method: GET
   path: /search
-  name: Search Google Shopping products
+  name: "Google Shopping results for a query — price, seller"
   summary: Live Google Shopping results for a keyword — price, seller, rating, delivery
   input:
     queryParams:
@@ -115,7 +115,7 @@ endpoints:
   platform: google
   method: GET
   path: /search
-  name: Search Google Scholar articles
+  name: "Google Scholar results for a query — citation counts"
   summary: Live Google Scholar results for a keyword — title, link, snippet, citation count
   input:
     queryParams:
@@ -151,7 +151,7 @@ endpoints:
   platform: google
   method: GET
   path: /search
-  name: Get Google Trends interest data
+  name: "Google Trends interest over time for search terms"
   summary: Interest-over-time, regional breakdown, related topics or related queries for up to 5 comma-separated terms
   input:
     queryParams:
@@ -205,7 +205,7 @@ endpoints:
   platform: google
   method: GET
   path: /search
-  name: Search Google News articles
+  name: "Google News results for a query or topic"
   summary: Live Google News results for a keyword, topic token or story token
   input:
     queryParams:
@@ -256,7 +256,7 @@ endpoints:
   platform: google
   method: GET
   path: /search
-  name: Search Google Images
+  name: "Google Images results for a query"
   summary: Live Google Images results for a keyword — thumbnail, original URL, source, size
   input:
     queryParams:
@@ -292,7 +292,7 @@ endpoints:
   platform: google
   method: GET
   path: /search
-  name: Search Google Jobs listings
+  name: "Google Jobs postings for a query and location"
   summary: Live Google Jobs results for a keyword and location
   input:
     queryParams:
@@ -346,7 +346,7 @@ endpoints:
   platform: google
   method: GET
   path: /search
-  name: Get Google Finance quote and history
+  name: "Google Finance quote, chart and news by ticker"
   summary: Live Google Finance data for a ticker — price, chart series, key statistics, related news
   input:
     queryParams:
@@ -393,7 +393,7 @@ endpoints:
   platform: google
   method: GET
   path: /search
-  name: Search Google Patents
+  name: "Google Patents results for a query — inventor, assignee"
   summary: Live Google Patents results for a keyword — patent id, dates, inventor, assignee
   input:
     queryParams:
@@ -448,7 +448,7 @@ endpoints:
   platform: google
   method: GET
   path: /search
-  name: Search Google Flights itineraries
+  name: "Google Flights itineraries by route and date — prices"
   summary: Live Google Flights results — best/other flights, price insights, for a route and date
   input:
     queryParams:
@@ -511,7 +511,7 @@ endpoints:
   platform: google
   method: GET
   path: /search
-  name: Search Google Hotels properties
+  name: "Google Hotels results for a query and stay dates"
   summary: Live Google Hotels results for a query, check-in/out dates and party size
   input:
     queryParams:
@@ -564,7 +564,7 @@ endpoints:
   platform: google
   method: GET
   path: /search
-  name: Search Google local business results
+  name: "Google local pack results for a query and location"
   summary: The Google 'local pack' — nearby businesses for a keyword and location
   input:
     queryParams:
@@ -613,7 +613,7 @@ endpoints:
   platform: google
   method: GET
   path: /search
-  name: Reverse image search with Google Lens
+  name: "Google Lens reverse image search by image URL"
   summary: Visual matches, exact matches or 'about this image' data for an image URL
   input:
     queryParams:
@@ -655,7 +655,7 @@ endpoints:
   platform: google
   method: GET
   path: /search
-  name: Search Google Videos
+  name: "Google Videos results for a query"
   summary: Live Google Videos vertical results for a keyword
   input:
     queryParams:
@@ -691,7 +691,7 @@ endpoints:
   platform: google
   method: GET
   path: /search
-  name: Search Google Events listings
+  name: "Google Events results for a query and location"
   summary: Live Google Events vertical results for a keyword and location
   input:
     queryParams:
@@ -735,7 +735,7 @@ endpoints:
   platform: google
   method: GET
   path: /search
-  name: Get paid ads shown on a Google SERP
+  name: "Paid ads on a Google results page for a query"
   summary: The shopping/text ad units Google shows on its own results page for a keyword (distinct from the Ads Transparency Center)
   input:
     queryParams:
@@ -786,7 +786,7 @@ endpoints:
   method: GET
   path: /search
   capability: google.serp.organic
-  name: Search Google (lightweight organic)
+  name: "Google organic results for a query — fast, trimmed"
   summary: A faster, trimmed-down variant of the main Google organic engine — same query grammar, smaller payload
   input:
     queryParams:
@@ -830,7 +830,7 @@ endpoints:
   platform: google
   method: GET
   path: /search
-  name: Get Google AI Mode response
+  name: "Google AI Mode answer for a query"
   summary: Google's conversational AI Mode answer for a query
   input:
     queryParams:
@@ -865,7 +865,7 @@ endpoints:
   platform: google
   method: GET
   path: /search
-  name: Get a Google AI Overview panel
+  name: "Google AI Overview panel by page token"
   summary: The AI Overview panel Google attaches to a SERP, fetched via the page_token a prior engine=google call returned
   input:
     queryParams:
@@ -895,7 +895,7 @@ endpoints:
   platform: bing
   method: GET
   path: /search
-  name: Search Bing organic results
+  name: "Bing organic search results for a query"
   summary: Live Bing organic results for a keyword
   input:
     queryParams:
@@ -942,7 +942,7 @@ endpoints:
   platform: bing
   method: GET
   path: /search
-  name: Search Bing News
+  name: "Bing News results for a query"
   summary: Live Bing News vertical results for a keyword
   input:
     queryParams:
@@ -979,7 +979,7 @@ endpoints:
   platform: bing
   method: GET
   path: /search
-  name: Search Bing Images
+  name: "Bing Images results for a query"
   summary: Live Bing Images vertical results for a keyword
   input:
     queryParams:
@@ -1016,7 +1016,7 @@ endpoints:
   platform: bing
   method: GET
   path: /search
-  name: Search Bing Videos
+  name: "Bing Videos results for a query"
   summary: Live Bing Videos vertical results for a keyword
   input:
     queryParams:
@@ -1053,7 +1053,7 @@ endpoints:
   platform: bing
   method: GET
   path: /search
-  name: Search Bing Shopping
+  name: "Bing Shopping results for a query"
   summary: Live Bing Shopping vertical results for a keyword
   input:
     queryParams:
@@ -1090,7 +1090,7 @@ endpoints:
   platform: bing
   method: GET
   path: /search
-  name: Get a Bing Copilot answer
+  name: "Bing Copilot answer for a prompt"
   summary: Bing's conversational Copilot answer for a prompt
   input:
     queryParams:
@@ -1125,7 +1125,7 @@ endpoints:
   platform: baidu
   method: GET
   path: /search
-  name: Search Baidu organic results
+  name: "Baidu organic search results for a query"
   summary: Live Baidu organic results for a keyword
   input:
     queryParams:
@@ -1166,7 +1166,7 @@ endpoints:
   platform: baidu
   method: GET
   path: /search
-  name: Search Baidu News
+  name: "Baidu News results for a query"
   summary: Live Baidu News vertical results for a keyword
   input:
     queryParams:
@@ -1203,7 +1203,7 @@ endpoints:
   platform: duckduckgo
   method: GET
   path: /search
-  name: Search DuckDuckGo organic results
+  name: "DuckDuckGo organic search results for a query"
   summary: Live DuckDuckGo organic results for a keyword
   input:
     queryParams:
@@ -1247,7 +1247,7 @@ endpoints:
   platform: duckduckgo
   method: GET
   path: /search
-  name: Search DuckDuckGo News
+  name: "DuckDuckGo News results for a query"
   summary: Live DuckDuckGo News vertical results for a keyword
   input:
     queryParams:
@@ -1284,7 +1284,7 @@ endpoints:
   platform: duckduckgo
   method: GET
   path: /search
-  name: Search DuckDuckGo (lightweight)
+  name: "DuckDuckGo organic results for a query — fast, trimmed"
   summary: A faster, trimmed-down variant of DuckDuckGo organic search
   input:
     queryParams:
@@ -1321,7 +1321,7 @@ endpoints:
   platform: duckduckgo
   method: GET
   path: /search
-  name: Search DuckDuckGo Maps
+  name: "DuckDuckGo Maps results for a query and location"
   summary: Live DuckDuckGo Maps vertical results for a keyword and location
   input:
     queryParams:
@@ -1356,7 +1356,7 @@ endpoints:
   platform: yahoo
   method: GET
   path: /search
-  name: Search Yahoo organic results
+  name: "Yahoo organic search results for a query"
   summary: Live Yahoo organic results for a keyword
   input:
     queryParams:
@@ -1400,7 +1400,7 @@ endpoints:
   platform: yahoo
   method: GET
   path: /search
-  name: Search Yahoo Images
+  name: "Yahoo Images results for a query"
   summary: Live Yahoo Images vertical results for a keyword
   input:
     queryParams:
@@ -1437,7 +1437,7 @@ endpoints:
   platform: yahoo
   method: GET
   path: /search
-  name: Search Yahoo Videos
+  name: "Yahoo Videos results for a query"
   summary: Live Yahoo Videos vertical results for a keyword
   input:
     queryParams:
@@ -1474,7 +1474,7 @@ endpoints:
   platform: yandex
   method: GET
   path: /search
-  name: Search Yandex organic results
+  name: "Yandex organic search results for a query"
   summary: Live Yandex organic results for a keyword
   input:
     queryParams:
@@ -1517,7 +1517,7 @@ endpoints:
   platform: yandex
   method: GET
   path: /search
-  name: Search Yandex Images
+  name: "Yandex Images results for a query"
   summary: Live Yandex Images vertical results for a keyword
   input:
     queryParams:
@@ -1554,7 +1554,7 @@ endpoints:
   platform: yandex
   method: GET
   path: /search
-  name: Search Yandex Videos
+  name: "Yandex Videos results for a query"
   summary: Live Yandex Videos vertical results for a keyword
   input:
     queryParams:
@@ -1591,7 +1591,7 @@ endpoints:
   platform: naver
   method: GET
   path: /search
-  name: Search Naver organic results
+  name: "Naver organic search results for a query"
   summary: Live Naver organic results for a keyword
   input:
     queryParams:
@@ -1633,7 +1633,7 @@ endpoints:
   platform: naver
   method: GET
   path: /search
-  name: Get a Naver AI overview panel
+  name: "Naver AI overview panel for a query"
   summary: Naver's AI-generated overview panel for a query
   input:
     queryParams:
@@ -1669,7 +1669,7 @@ endpoints:
   method: GET
   path: /search
   capability: amazon.search.products
-  name: Search Amazon products
+  name: "Amazon product search by keyword — ASIN, price, rating"
   summary: Live Amazon search results for a keyword — ASIN, title, price, rating, reviews
   input:
     queryParams:
@@ -1713,7 +1713,7 @@ endpoints:
   method: GET
   path: /search
   capability: amazon.product.detail
-  name: Get an Amazon product's detail page
+  name: "Amazon product page by ASIN — price, specs, reviews"
   summary: Full Amazon product page data for a given ASIN — price, specs, reviews, related products
   input:
     queryParams:
@@ -1755,7 +1755,7 @@ endpoints:
   platform: ebay
   method: GET
   path: /search
-  name: Search eBay listings
+  name: "eBay listing search by keyword or category"
   summary: Live eBay search results for a keyword or category
   input:
     queryParams:
@@ -1797,7 +1797,7 @@ endpoints:
   platform: ebay
   method: GET
   path: /search
-  name: Get an eBay listing's detail page
+  name: "eBay listing page by product id — price, seller, shipping"
   summary: Full eBay item page data for a given product id — price, seller, shipping, specifications
   input:
     queryParams:
@@ -1838,7 +1838,7 @@ endpoints:
   platform: walmart
   method: GET
   path: /search
-  name: Search Walmart products
+  name: "Walmart product search by keyword"
   summary: Live Walmart search results for a keyword
   input:
     queryParams:
@@ -1880,7 +1880,7 @@ endpoints:
   platform: walmart
   method: GET
   path: /search
-  name: Get a Walmart product's detail page
+  name: "Walmart product page by product id — price, stock, reviews"
   summary: Full Walmart product page data for a given product id — price, stock, shipping, reviews
   input:
     queryParams:
@@ -1917,7 +1917,7 @@ endpoints:
   platform: web
   method: GET
   path: /search
-  name: Search Home Depot products
+  name: "Home Depot product search by keyword"
   summary: Live Home Depot search results for a keyword
   input:
     queryParams:
@@ -1957,7 +1957,7 @@ endpoints:
   platform: yelp
   method: GET
   path: /search
-  name: Search Yelp businesses
+  name: "Yelp business search by description and location"
   summary: Live Yelp business listings for a description and location
   input:
     queryParams:
@@ -2001,7 +2001,7 @@ endpoints:
   platform: tripadvisor
   method: GET
   path: /search
-  name: Search Tripadvisor listings
+  name: "Tripadvisor search for a destination — hotels, restaurants"
   summary: Live Tripadvisor results for a destination or query — hotels, restaurants, things to do
   input:
     queryParams:
@@ -2044,7 +2044,7 @@ endpoints:
   platform: facebook
   method: GET
   path: /search
-  name: Get a public Facebook profile or Page
+  name: "Public Facebook profile or Page by username or id"
   summary: Public Facebook profile/Page data for a username or numeric id — followers, likes, about, photos
   input:
     queryParams:
@@ -2083,7 +2083,7 @@ endpoints:
   method: GET
   path: /search
   capability: instagram.user.profile
-  name: Get a public Instagram profile
+  name: "Public Instagram profile by username — bio, followers"
   summary: Public Instagram profile data for a username — bio, followers, recent posts
   input:
     queryParams:
@@ -2124,7 +2124,7 @@ endpoints:
   platform: ai-search
   method: GET
   path: /search
-  name: Get a Brave AI Mode answer
+  name: "Brave AI Mode answer for a query"
   summary: Brave Search's conversational AI answer for a query
   input:
     queryParams:

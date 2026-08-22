@@ -10,18 +10,36 @@ Regenerate via `scripts/build-map.py`.
 
 | Source file | Documented in |
 |---|---|
+| `.claude-plugin/marketplace.json` | interface/skill.md |
+| `.claude-plugin/plugin.json` | interface/skill.md |
+| `.github/workflows/catalog-drift.yml` | architecture/catalog.md |
 | `README.md` | foundation/charter.md |
+| `assets/brand/og-card.html` | interface/seo.md |
+| `dsh/cordis.patch.yml` | interface/skill.md |
+| `dsh/index.js` | interface/skill.md |
 | `examples/proxy-demo/server.js` | architecture/local-proxy.md |
 | `external:meetings/2026-06-30-jason-tools-registry.md` | foundation/charter.md, reference/glossary.md |
+| `package.json` | interface/skill.md |
+| `plugin/.codex-plugin/plugin.json` | interface/skill.md |
+| `plugins/treg/.cursor-plugin/plugin.json` | interface/skill.md |
 | `render.yaml` | ops/deploy.md |
+| `scripts/build_plugin.py` | interface/skill.md |
+| `scripts/catalog_drift.py` | architecture/catalog.md |
+| `scripts/catalog_validate.py` | architecture/catalog.md |
 | `src/treg/__main__.py` | ops/deploy.md |
+| `src/treg/adsconv.py` | architecture/ads-conversions.md |
+| `src/treg/agent_pages.py` | interface/seo.md |
 | `src/treg/agents.py` | interface/cli.md |
 | `src/treg/analytics.py` | architecture/data-model.md |
-| `src/treg/api.py` | architecture/money.md, architecture/multi-tenancy.md, architecture/proxy-model.md, architecture/super-admin.md, guides/expanding-a-category.md, interface/api.md, interface/dashboard.md, interface/landing-sandbox.md |
+| `src/treg/api.py` | architecture/money.md, architecture/multi-tenancy.md, architecture/proxy-model.md, architecture/super-admin.md, guides/expanding-a-category.md, interface/api.md, interface/dashboard.md, interface/landing-sandbox.md, interface/seo.md |
 | `src/treg/audit.py` | architecture/data-model.md, ops/deploy.md |
 | `src/treg/billing.py` | architecture/money.md |
+| `src/treg/catalog/aliases.yaml` | architecture/catalog.md |
+| `src/treg/catalog/google-search-console.extended.yaml` | architecture/catalog.md |
+| `src/treg/catalog/google-search-console.yaml` | architecture/catalog.md |
+| `src/treg/catalog/justoneapi.extended.yaml` | architecture/catalog.md |
+| `src/treg/catalog/tikhub.extended.yaml` | architecture/catalog.md |
 | `src/treg/catalog_store.py` | architecture/catalog.md, interface/api.md |
-| `src/treg/catalog/fx.yaml` | architecture/catalog.md, architecture/money.md |
 | `src/treg/cli.py` | interface/cli.md, interface/onboarding.md, interface/shell.md |
 | `src/treg/config.py` | architecture/super-admin.md, guides/expanding-a-category.md, ops/deploy.md |
 | `src/treg/convert.py` | interface/cli.md |
@@ -38,8 +56,9 @@ Regenerate via `scripts/build-map.py`.
 | `src/treg/localproxy.py` | architecture/local-proxy.md |
 | `src/treg/localrun.py` | architecture/local-run.md |
 | `src/treg/mcp.py` | architecture/mcp-oauth.md |
+| `src/treg/mcp_install.py` | interface/skill.md |
 | `src/treg/mcp_oauth.py` | architecture/mcp-oauth.md |
-| `src/treg/models.py` | architecture/data-model.md, architecture/multi-tenancy.md |
+| `src/treg/models.py` | architecture/data-model.md, architecture/money.md, architecture/multi-tenancy.md |
 | `src/treg/oauth.py` | architecture/auth-secrets.md |
 | `src/treg/oauth_providers.py` | architecture/auth-secrets.md, guides/expanding-a-category.md |
 | `src/treg/providers.py` | interface/env-import.md |
@@ -47,32 +66,41 @@ Regenerate via `scripts/build-map.py`.
 | `src/treg/pubfeed.py` | interface/landing-sandbox.md |
 | `src/treg/ratestore.py` | architecture/data-model.md, interface/api.md |
 | `src/treg/reconcile.py` | architecture/money.md |
+| `src/treg/referrals.py` | architecture/data-model.md, architecture/money.md |
 | `src/treg/runner.py` | interface/api.md |
 | `src/treg/sandbox.py` | interface/landing-sandbox.md |
 | `src/treg/session.py` | interface/dashboard.md |
 | `src/treg/shell.py` | interface/shell.md |
 | `src/treg/skills.py` | interface/env-import.md |
+| `src/treg/web/adtrack.js` | architecture/ads-conversions.md |
+| `src/treg/web/catalog.css` | interface/seo.md |
 | `src/treg/web/connect-demo.html` | architecture/mcp-oauth.md |
-| `src/treg/web/index.html` | interface/dashboard.md, interface/landing-sandbox.md, interface/onboarding.md |
+| `src/treg/web/index.html` | interface/dashboard.md, interface/landing-sandbox.md, interface/onboarding.md, interface/seo.md |
 | `src/treg/web/install.sh` | interface/landing-sandbox.md |
+| `src/treg/web/landing.html` | interface/seo.md |
+| `src/treg/web/robots.txt` | interface/seo.md |
 | `src/treg/web/selfhost.sh` | ops/deploy.md |
 | `src/treg/web/skill.md` | interface/skill.md |
+| `src/treg/web/support.html` | interface/seo.md |
 | `src/treg/web/tour/index.html` | interface/dashboard.md |
 | `src/treg/web/tour/tour.js` | interface/dashboard.md |
 | `src/treg/web/tutorial.html` | interface/dashboard.md |
 | `src/treg/web/tutorial.js` | interface/dashboard.md |
+| `src/treg/web/vendor/README.md` | interface/dashboard.md |
+| `src/treg/web/vendor/vue-3.5.41.global.prod.js` | interface/dashboard.md |
 
 ## Fragment → sources
 
 | Fragment | Sources |
 |---|---|
+| `architecture/ads-conversions.md` | `adsconv.py`, `adtrack.js` |
 | `architecture/auth-secrets.md` | `injectors.py`, `crypto.py`, `oauth.py`, `oauth_providers.py`, `health.py` |
-| `architecture/catalog.md` | `catalog_store.py`, `endpoint_stats.py`, `fx.yaml` |
-| `architecture/data-model.md` | `models.py`, `db.py`, `audit.py`, `analytics.py`, `ratestore.py` |
+| `architecture/catalog.md` | `catalog-drift.yml`, `catalog_drift.py`, `catalog_validate.py`, `aliases.yaml`, `google-search-console.yaml`, `google-search-console.extended.yaml`, `justoneapi.extended.yaml`, `tikhub.extended.yaml`, `catalog_store.py`, `endpoint_stats.py` |
+| `architecture/data-model.md` | `models.py`, `db.py`, `referrals.py`, `audit.py`, `analytics.py`, `ratestore.py` |
 | `architecture/local-proxy.md` | `localproxy.py`, `server.js` |
 | `architecture/local-run.md` | `localrun.py`, `egress.py`, `fsjail.py` |
 | `architecture/mcp-oauth.md` | `mcp.py`, `mcp_oauth.py`, `connect-demo.html` |
-| `architecture/money.md` | `ledger.py`, `billing.py`, `reconcile.py`, `api.py` |
+| `architecture/money.md` | `ledger.py`, `models.py`, `billing.py`, `reconcile.py`, `referrals.py`, `api.py` |
 | `architecture/multi-tenancy.md` | `models.py`, `api.py`, `db.py` |
 | `architecture/proxy-model.md` | `proxy.py`, `api.py` |
 | `architecture/super-admin.md` | `api.py`, `config.py` |
@@ -81,11 +109,12 @@ Regenerate via `scripts/build-map.py`.
 | `interface/api.md` | `api.py`, `catalog_store.py`, `email.py`, `runner.py`, `ratestore.py` |
 | `interface/catalog-review-proposal.md` | _(no source files — narrative/reference)_ |
 | `interface/cli.md` | `cli.py`, `convert.py`, `agents.py` |
-| `interface/dashboard.md` | `index.html`, `tutorial.js`, `tutorial.html`, `tour.js`, `index.html`, `api.py`, `session.py` |
+| `interface/dashboard.md` | `index.html`, `README.md`, `vue-3.5.41.global.prod.js`, `tutorial.js`, `tutorial.html`, `tour.js`, `index.html`, `api.py`, `session.py` |
 | `interface/env-import.md` | `providers.py`, `skills.py` |
 | `interface/landing-sandbox.md` | `sandbox.py`, `pubfeed.py`, `api.py`, `index.html`, `install.sh` |
 | `interface/onboarding.md` | `demo.py`, `cli.py`, `index.html` |
+| `interface/seo.md` | `api.py`, `agent_pages.py`, `robots.txt`, `catalog.css`, `index.html`, `landing.html`, `support.html`, `og-card.html` |
 | `interface/shell.md` | `shell.py`, `cli.py` |
-| `interface/skill.md` | `skill.md` |
+| `interface/skill.md` | `skill.md`, `mcp_install.py`, `build_plugin.py`, `plugin.json`, `marketplace.json`, `plugin.json`, `plugin.json`, `package.json`, `cordis.patch.yml`, `index.js` |
 | `ops/deploy.md` | `__main__.py`, `selfhost.sh`, `config.py`, `db.py`, `email.py`, `audit.py`, `render.yaml` |
 | `reference/glossary.md` | `2026-06-30-jason-tools-registry.md` |

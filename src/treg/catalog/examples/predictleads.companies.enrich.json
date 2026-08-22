@@ -1,0 +1,61 @@
+{
+  "data": [
+    {
+      "id": "a0383c53-8142-5e7c-8ca3-9980289a3ccc",
+      "type": "company",
+      "attributes": {
+        "domain": "stripe.com",
+        "company_name": "Stripe, Inc.",
+        "friendly_company_name": "Stripe",
+        "ticker": null,
+        "meta_title": "Stripe | Financial Infrastructure to Grow Your Revenue",
+        "description_short": "Stripe is a payment-processing software provider that serves businesses of various sizes.",
+        "language": "en",
+        "location": "South San Francisco, California, United States, Northern America, Americas",
+        "location_data": [
+          {
+            "location": "South San Francisco, California, United States, Northern America, Americas",
+            "city": "South San Francisco",
+            "admin_area": "California",
+            "state": "California",
+            "country": "United States",
+            "continent": "Americas",
+            "category": "headquarters"
+          }
+        ],
+        "_truncated": "4 further attribute fields omitted for brevity"
+      },
+      "relationships": {
+        "subsidiary_companies": {
+          "data": [
+            {
+              "id": "d4303de6-b14e-5591-ad9b-511be3e03b2c",
+              "type": "company"
+            },
+            "… 72 more items omitted"
+          ]
+        },
+        "similar_companies": {
+          "data": [
+            {
+              "id": "1397711c-8ace-5ad2-8bb9-3e65f6608905",
+              "type": "company"
+            },
+            "… 4 more items omitted"
+          ]
+        }
+      }
+    }
+  ],
+  "included": [
+    "… 78 related company objects omitted"
+  ],
+  "meta": {
+    "schema_version": "3.5",
+    "record_state": "active",
+    "message_type": "ok",
+    "message": "You can try running the same query on any subsidiary company domain (bridge.xyz, chargeforstripe.com, chargestripe.com, financialnigeria.com …[truncated]",
+    "redirects_to_domain": null,
+    "parent_company_domain": null
+  }
+}

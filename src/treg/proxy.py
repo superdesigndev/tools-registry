@@ -33,15 +33,25 @@ _HOP_BY_HOP = frozenset(
         "proxy-authorization", "te", "trailers", "transfer-encoding", "upgrade",
     }
 )
-# treg's own control/infra headers + the edge's forwarding headers — never leak to the upstream.
+# The edge's forwarding headers + third-party infra — never leak to the upstream. treg's OWN headers
+# are handled by the `x-treg-` PREFIX rule below, not by name: this set used to enumerate them and the
+# enumeration silently failed. `x-treg-client` was never listed, so every provider we relay to has been
+# receiving the caller's runtime name; `x-treg-meta` would have leaked a builder's customer ids the same
+# way. A prefix is the only form of this rule that stays correct when the next header is added.
 _CONTROL = frozenset(
     {
-        "x-treg-token", "x-treg-org", "ngrok-skip-browser-warning",
+        "ngrok-skip-browser-warning",
         "x-forwarded-for", "x-forwarded-proto", "x-forwarded-host", "x-forwarded-port",
         "x-real-ip", "forwarded", "via",
     }
 )
+_TREG_PREFIX = "x-treg-"
 _DROP_REQUEST = _HOP_BY_HOP | _CONTROL
+
+
+def _is_dropped_request_header(name: str, extra: frozenset[str]) -> bool:
+    """Whether a caller header is ours/hop-by-hop and must not reach the upstream."""
+    return name in _DROP_REQUEST or name in extra or name.startswith(_TREG_PREFIX)
 _DROP_RESPONSE = _HOP_BY_HOP
 _TREG_COOKIES = frozenset({"treg_session", "treg_oauth_state"})  # our cookies, scrubbed from Cookie
 
@@ -75,9 +85,10 @@ async def relay(
     # `.raw` is the original (bytes, bytes) pairs; httpx.Headers is a multidict, so binding
     # injection (headers[name]=v) overwrites only its target and leaves the rest untouched.
     # RFC 7230 §6.1: also drop any header NAMED in the caller's own Connection header.
-    req_drop = _DROP_REQUEST | _connection_named(request.headers.get("connection"))
+    req_drop = _connection_named(request.headers.get("connection"))
     headers = httpx.Headers(
-        [(k, v) for k, v in request.headers.raw if k.decode("latin-1").lower() not in req_drop]
+        [(k, v) for k, v in request.headers.raw
+         if not _is_dropped_request_header(k.decode("latin-1").lower(), req_drop)]
     )
     _scrub_treg_cookies(headers)  # keep caller cookies, drop treg's own session cookie
     # Mirror the caller's compression choice. We relay the upstream body RAW (aiter_raw), so if the

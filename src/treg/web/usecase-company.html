@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Company Data and Funding for AI Agents | treg.to</title>
+<meta name="description" content="Let your agent search companies and pull funding, headcount and leadership through one key. Eleven providers, from free to $0.38 a record."/>
+<link rel="canonical" href="https://treg.to/use-cases/company-research-for-ai-agents"/>
+<meta property="og:title" content="Company Data and Funding for AI Agents | treg.to"/>
+<meta property="og:description" content="Let your agent search companies and pull funding, headcount and leadership through one key. Eleven providers, from free to $0.38 a record."/>
+<meta property="og:url" content="https://treg.to/use-cases/company-research-for-ai-agents"/>
+<meta property="og:type" content="website"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Pixel&family=Inter:wght@400;450;500;600;650;700&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/usecase.css"/>
+</head>
+<body data-page="p5">
+
+<div class="navwrap"><nav class="nav">
+  <a class="brand" href="/"><span class="glyph">&#9626;</span> treg</a>
+  <div class="links">
+    <a class="hidem" href="/tutorial">docs</a>
+    <a class="hidem" href="https://github.com/superdesigndev/treg" target="_blank" rel="noopener">repo</a>
+    <a class="candy sm" href="/app?ref=p5" data-ev="lp_cta_primary" data-page="p5">Start free</a>
+  </div>
+</nav></div>
+
+<header class="hero"><div class="wrap">
+  <div class="kicker">2,600+ tools · 40+ providers · one key</div>
+  <h1>Research Any Company List Without Buying a Database</h1>
+  <div class="lede"><p>Your agent can find companies by size, industry, tech or funding, then pull funding history, headcount
+and leadership across eleven providers — paying per record instead of buying a database.</p></div>
+  <div class="ctas"><a class="candy" href="/app?ref=p5" data-ev="lp_cta_primary" data-page="p5">Run This Workflow Free</a><a class="ghostbtn" href="#workflow" data-ev="lp_cta_secondary" data-page="p5">See the Example</a></div>
+  <div class="trust">$1.00 of free credit on every new team. No provider signup, no credit card.</div>
+  <div class="subline"><p>Company search alone has eleven providers behind it, from free to $0.38 a record. Your agent
+sees that before it calls.</p></div>
+  <div class="provstrip"><span class="pl">compared on this page</span><span class="ptiles"><span class="ptile"><img src="/logos/akta.svg" alt="" loading="lazy" width="22" height="22"></span><span class="ptile"><img src="/logos/apollo.svg" alt="" loading="lazy" width="22" height="22"></span><span class="ptile"><img src="/logos/coresignal.svg" alt="" loading="lazy" width="22" height="22"></span><span class="ptile"><img src="/logos/crunchbase.svg" alt="" loading="lazy" width="22" height="22"></span><span class="ptile"><img src="/logos/diffbot.svg" alt="" loading="lazy" width="22" height="22"></span><span class="ptile"><img src="/logos/hunter.svg" alt="" loading="lazy" width="22" height="22"></span><span class="ptile"><img src="/logos/leadmagic.svg" alt="" loading="lazy" width="22" height="22"></span><span class="ptile"><img src="/logos/lusha.svg" alt="" loading="lazy" width="22" height="22"></span><span class="ptile"><img src="/logos/pdl.svg" alt="" loading="lazy" width="22" height="22"></span><span class="ptile"><img src="/logos/thecompaniesapi.svg" alt="" loading="lazy" width="22" height="22"></span></span></div>
+</div></header>
+<section><div class="wrap"><div class="seclab">The economics</div><h2>The old way vs. the treg.to way</h2><div class="tablewrap"><table class="compare">
+<thead>
+<tr>
+<th></th>
+<th>The old way</th>
+<th>With treg</th>
+</tr>
+</thead>
+<tbody>
+<tr><td><strong>What you pay for</strong></td><td data-label="The old way">Crunchbase $99/mo + Diffbot $299/mo, whether you run a search this month or not</td><td data-label="With treg">One prepaid balance. Company search starts at free and tops out at $0.38 a record</td></tr>
+<tr><td><strong>Keys</strong></td><td data-label="The old way">An account and a contract per data vendor, most of them annual</td><td data-label="With treg">One treg token. Every tool in the catalog answers to it</td></tr>
+<tr><td><strong>Picking a provider</strong></td><td data-label="The old way">You buy one and find out afterwards whether it covers your market</td><td data-label="With treg"><code>catalog get</code> puts all eleven side by side with price, measured success rate and median speed</td></tr>
+<tr><td><strong>Commitment</strong></td><td data-label="The old way">Annual data contracts to answer a question that changes every quarter</td><td data-label="With treg">No subscription. Test coverage for cents before committing to anything</td></tr>
+<tr><td><strong>The workflow</strong></td><td data-label="The old way">Funding in one tool, headcount in another, people in a third, joined in a spreadsheet</td><td data-label="With treg">One agent run: companies, their funding and the people attached to them, in one pass</td></tr>
+</tbody>
+</table></div><hr /><div class="pricewall">
+  <div class="pw old"><span class="k">Instead of</span><span class="v">$398/mo</span>
+    <span class="s">Crunchbase + Diffbot, at list</span></div>
+  <div class="pw arrow" aria-hidden="true">&rarr;</div>
+  <div class="pw new"><span class="k">You paid</span><span class="v">$0.102</span>
+    <span class="s">what our run actually cost</span></div>
+</div></div></section>
+<section id="workflow"><div class="wrap"><div class="seclab">Try it</div><h2>A real workflow</h2><h3>Copy this into Claude Code, Cursor, Codex or opencode</h3><div class="steplabel"><span class="n">1</span><b>Set treg up in your agent</b>
+  <span class="once">first time only</span></div>
+<p class="stephint">Paste this into the same agent. It installs the CLI, signs you in and registers the
+tools. One line, once &mdash; already set up? Skip to step 2.</p>
+<div class="promptbox">
+  <div class="ph"><span>setup</span>
+    <button class="copybtn" data-copy="#setup" data-ev="lp_copy_setup" data-page="p5">copy</button>
+  </div><pre id="setup">set up treg &mdash; https://treg.to/llms.txt</pre>
+</div>
+<div class="steplabel"><span class="n">2</span><b>Run the workflow</b></div><div class="promptbox">
+  <div class="ph"><span>the prompt</span>
+    <button class="copybtn" data-copy="#prompt" data-ev="lp_copy_prompt" data-page="p5">copy</button>
+  </div><pre id="prompt">Find AI infrastructure companies with 20-200 employees. For each one, pull its
+funding history, headcount and leadership, and flag the ones that raised most
+recently.</pre>
+</div><h3>What happens when you run it</h3><p><strong>The agent finds the companies.</strong> Eleven providers answer company search, and the spread is the widest
+in the catalog:</p><div class="tablewrap"><table class="data">
+<thead>
+<tr>
+<th>Provider</th>
+<th>Cost per company</th>
+<th>Success rate</th>
+<th>Median</th>
+</tr>
+</thead>
+<tbody>
+<tr><td data-label="Provider"><strong><img class="plogo" src="/logos/akta.svg" alt="" loading="lazy" width="18" height="18">Akta</strong></td><td data-label="Cost per company">free</td><td data-label="Success rate">100% (248 calls)</td><td data-label="Median">3.2 s</td></tr>
+<tr><td data-label="Provider"><strong><img class="plogo" src="/logos/coresignal.svg" alt="" loading="lazy" width="18" height="18">Coresignal</strong></td><td data-label="Cost per company">free — returns ids; cost lands on the read</td><td data-label="Success rate">not yet measured</td><td data-label="Median">—</td></tr>
+<tr><td data-label="Provider"><strong><img class="plogo" src="/logos/hunter.svg" alt="" loading="lazy" width="18" height="18">Hunter Discover</strong></td><td data-label="Cost per company">free</td><td data-label="Success rate">100% (24 calls)</td><td data-label="Median">1.7 s</td></tr>
+<tr><td data-label="Provider"><strong><img class="plogo" src="/logos/thecompaniesapi.svg" alt="" loading="lazy" width="18" height="18">The Companies API</strong></td><td data-label="Cost per company">$0.0019, or free with <code>simplified=true</code></td><td data-label="Success rate">100% (339 calls)</td><td data-label="Median">0.3 s</td></tr>
+<tr><td data-label="Provider"><strong><img class="plogo" src="/logos/lusha.svg" alt="" loading="lazy" width="18" height="18">Lusha</strong></td><td data-label="Cost per company">$0.004992 per 25 results</td><td data-label="Success rate">not yet measured</td><td data-label="Median">—</td></tr>
+<tr><td data-label="Provider"><strong><img class="plogo" src="/logos/leadmagic.svg" alt="" loading="lazy" width="18" height="18">LeadMagic</strong></td><td data-label="Cost per company">$0.025</td><td data-label="Success rate">70% (10 calls)</td><td data-label="Median">3.2 s</td></tr>
+<tr><td data-label="Provider"><strong><img class="plogo" src="/logos/apollo.svg" alt="" loading="lazy" width="18" height="18">Apollo</strong></td><td data-label="Cost per company">$0.026 per page</td><td data-label="Success rate">not yet measured</td><td data-label="Median">—</td></tr>
+<tr><td data-label="Provider"><strong><img class="plogo" src="/logos/diffbot.svg" alt="" loading="lazy" width="18" height="18">Diffbot</strong></td><td data-label="Cost per company">$0.0299</td><td data-label="Success rate">100% (5 calls)</td><td data-label="Median">0.7 s</td></tr>
+<tr><td data-label="Provider"><strong><img class="plogo" src="/logos/pdl.svg" alt="" loading="lazy" width="18" height="18">PDL</strong></td><td data-label="Cost per company">$0.38</td><td data-label="Success rate">not yet measured</td><td data-label="Median">—</td></tr>
+<tr><td data-label="Provider"><strong><img class="plogo" src="/logos/crunchbase.svg" alt="" loading="lazy" width="18" height="18">Crunchbase</strong></td><td data-label="Cost per company">own key only, no per-call price</td><td data-label="Success rate">not yet measured</td><td data-label="Median">—</td></tr>
+</tbody>
+</table></div><p><strong>A 200× spread for the same job, and three of the eleven are free.</strong> That table does not exist anywhere
+else, because building it means holding accounts with all eleven.</p><p><strong>It pulls the detail.</strong> Funding history at $0.10 a company with LeadMagic; company enrichment at
+$0.026 with Apollo or $0.392 with Coresignal; the LinkedIn company page — headcount, leadership, location —
+at $0.00188.</p><p><strong>It finds the people attached to the signal.</strong> Person enrichment from $0.025, so the output is a
+company, a reason to talk to them, and who to talk to.</p><blockquote>
+<p><strong>Read this before you build on it.</strong> Coverage differs sharply by provider and by company size — see the
+funding results in the evidence below, where two small recently-funded startups returned nothing and
+Stripe returned a full history. Test coverage on your own list first; the misses are free.</p>
+</blockquote><h3>What comes back</h3><div class="sample"><div class="sbar">what comes back</div><pre>AI infrastructure · last 90 days · pulled [date]
+
+COMPANY        HEADCOUNT   SIGNAL                              STRENGTH   DECISION-MAKER
+&lt;company&gt;      140 (+22)   &lt;round&gt; raised &lt;date&gt;               strong     &lt;name&gt;, &lt;title&gt;
+&lt;company&gt;      68 (+15)    hiring in &lt;function&gt;, &lt;n&gt; roles     medium     &lt;name&gt;, &lt;title&gt;
+&lt;company&gt;      310 (+4)    &lt;signal&gt;                            weak       &lt;name&gt;, &lt;title&gt;
+...
+
+RANKED SIGNALS
+ 1. &lt;signal type&gt; — &lt;n&gt; companies, most recent &lt;date&gt;
+ 2. &lt;signal type&gt; — &lt;n&gt; companies
+ ...
+
+PROVIDERS USED   &lt;provider&gt; (search) · &lt;provider&gt; (funding) · &lt;provider&gt; (people)
+COST             $[from your run]</pre></div><p><em>Structure is illustrative. Values come from the providers, relayed unchanged.</em></p><div class="ctas"><button class="candy" data-copy="#prompt" data-ev="lp_copy_prompt" data-page="p5">Copy Prompt</button></div><hr /></div></section>
+<section id="proof"><div class="wrap"><div class="seclab">Evidence</div><h2>Proof — from one real run</h2><p><em>Run on treg.to, 17 Aug 2026. Every figure is from the Activity log of that run.</em></p><div class="tablewrap"><table class="data">
+<thead>
+<tr>
+<th>Field</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr><td data-label="Field">Providers considered</td><td data-label="Value"><strong>11</strong> for company search</td></tr>
+<tr><td data-label="Field">Providers selected</td><td data-label="Value"><code>hunter.x.discover-companies</code> (free) · <code>scrapecreators.x.v1-linkedin-company</code></td></tr>
+<tr><td data-label="Field">Why</td><td data-label="Value"><img class="plogo" src="/logos/hunter.svg" alt="" loading="lazy" width="18" height="18">Hunter Discover is free, takes a plain-English brief and resolved it into explicit funding and headcount filters. LinkedIn company data at $0.00188 was the cheapest way to add headcount and leadership</td></tr>
+<tr><td data-label="Field">Total cost of the run</td><td data-label="Value"><strong>$0.10188</strong> — discovery free, one enrichment, one funding lookup (two further funding lookups missed and cost nothing)</td></tr>
+<tr><td data-label="Field">Subscription cost avoided</td><td data-label="Value"><strong>$398/mo</strong> at list — Crunchbase $99 + Diffbot $299</td></tr>
+<tr><td data-label="Field">Time to completion</td><td data-label="Value">Under 5 seconds</td></tr>
+<tr><td data-label="Field">Data freshness</td><td data-label="Value">Live at call time</td></tr>
+<tr><td data-label="Field">Companies returned</td><td data-label="Value"><strong>9</strong>, filtered to recently funded AI infrastructure at 20–200 employees</td></tr>
+<tr><td data-label="Field">Cost per company researched</td><td data-label="Value"><strong>$0.00</strong> for discovery; $0.00188 per company enriched</td></tr>
+</tbody>
+</table></div><p><strong>What the free call returned.</strong> Nine companies with domains and contactable-address counts — Daloopa,
+ZincFive, Ethernovia, RunPod, AttoTude, Netris, Bobyard, Normal Computing, Arycs Technologies. Hunter
+translated the brief into filters and showed its working: headcount <code>20-50</code> and <code>51-200</code>, funding series
+pre-seed through series C+.</p><blockquote>
+<p><strong>The honest read of this run, and it is the most useful thing in it.</strong> The LinkedIn enrichment returned
+<strong>the wrong company</strong>. Asked for <code>linkedin.com/company/runpod</code>, it correctly returned a 2-person retail
+partnership in Sligo, Ireland — because that is what lives at that URL. The AI infrastructure company is
+at <code>/company/runpod-io</code>. The provider answered exactly what was asked, and a confident wrong answer cost
+$0.00188.</p>
+<p>This is the catalog's first selection rule in practice: <strong>match the inputs you actually hold</strong>, ahead of
+price. It is also why treg.to relays your request rather than rewriting it — a system that silently
+"corrected" that URL would have guessed, and guessed inside your research.</p>
+</blockquote><p><strong>The funding leg, run separately.</strong> LeadMagic's funding endpoint was tried on three companies:</p><div class="tablewrap"><table class="data">
+<thead>
+<tr>
+<th>Company</th>
+<th>Result</th>
+<th>Charged</th>
+</tr>
+</thead>
+<tbody>
+<tr><td data-label="Company">runpod.io</td><td data-label="Result">no funding data</td><td data-label="Charged"><strong>$0.00</strong></td></tr>
+<tr><td data-label="Company">daloopa.com</td><td data-label="Result">no funding data</td><td data-label="Charged"><strong>$0.00</strong></td></tr>
+<tr><td data-label="Company">stripe.com</td><td data-label="Result">full history — $9.8B total raised, revenue, last round, named investors</td><td data-label="Charged">$0.10</td></tr>
+</tbody>
+</table></div><blockquote>
+<p><strong>This is the finding that should change how you use this page.</strong> The endpoint works, and works well —
+Stripe came back with founding year, headquarters, revenue, total funding, the most recent round and the
+investor list. But <strong>it found nothing for either small recently-funded startup</strong>, which is precisely the
+segment the example prompt targets. Coverage is strongest where public reporting is strongest.</p>
+<p>The cost structure absorbs this: both misses were free, so testing coverage on your own list costs
+nothing until it works. Test before you build a workflow on it.</p>
+</blockquote><p><strong>What this page does not cover.</strong> Activity and hiring signals are a different job from the one above,
+and this workflow does not do them — everything shown here is company search, funding, headcount and
+leadership. If your work depends on hiring or intent signals, check the catalog for what serves that
+capability before you build on it.</p><hr /></div></section>
+<section><div class="wrap"><div class="seclab">Outcomes</div><h2>Three things you can do the day you sign up</h2><div class="cards"><div class="card"><h4>Test whether your market is the size you think it is.</h4><p>Company search starts free. Before anyone signs a data contract, run the filters that define your ICP and
+count what comes back.</p></div><div class="card"><h4>Build a research brief on a company in one prompt.</h4><p>Funding history, headcount, leadership and the LinkedIn page, pulled together — for well
+under a cent when the cheap providers cover it.</p></div><div class="card"><h4>Watch a list for changes rather than re-researching it.</h4><p>Run the same company set monthly and have the agent report only what moved: new funding, headcount jumps,
+new leadership. A quiet month costs almost nothing.</p></div></div></div></section>
+<section><div class="wrap"><div class="seclab">Fit</div><h2>Who this is for</h2><div class="who"><div><b>Founders</b> sizing a market or a partner list without buying a database to find out.</div><div><b>Investors</b> tracking a sector's funding and hiring without a per-seat data platform.</div><div><b>Sales teams</b> who want a reason to reach out attached to every account, not just a name.</div><div><b>Market researchers and developers building research agents</b> who want one surface across eleven company data providers and one bill.</div></div></div></section>
+<section><div class="wrap"><div class="seclab">Questions</div><h2>Before you sign up</h2><details open data-ev="lp_objection_open" data-q="Why not just call the providers directly?"><summary>Why not just call the providers directly?</summary><div class="body"><p>Because the answer to "which company data provider should I buy" is genuinely unknown until you test it
+against your own market — coverage differs far more than price does, and the price differs by 200×. Buying
+one to find out is the expensive way. Testing all eleven for a few cents is not. If you already pay for
+one, connect it and those calls route through your key, unmetered. treg.to is closer to OpenRouter for
+agent tools than to a data vendor: one base URL, one token, many providers behind it.</p></div></details><details data-ev="lp_objection_open" data-q="How are credentials handled?"><summary>How are credentials handled?</summary><div class="body"><p>The credential is injected on the server. Your agent makes the real upstream request through treg.to's
+<code>/call/</code> endpoint; treg.to adds the key and relays the provider's answer back verbatim. No provider key
+is ever written to your machine, your repo or your agent's context. Every call is recorded and attributed
+to the token that made it.</p></div></details><details data-ev="lp_objection_open" data-q="Can I choose a specific provider?"><summary>Can I choose a specific provider?</summary><div class="body"><p>Yes. Every endpoint has an id, and calling it by id calls that provider. If you want the choice made once
+for the whole team, <code>treg org pin &lt;capability&gt; --provider &lt;provider&gt;</code> refuses calls to any other provider
+of that capability.
+<em>(The point of this page. Test broadly first, then pin the one that covered your market, so
+the whole team's numbers stay consistent.)</em></p></div></details><details data-ev="lp_objection_open" data-q="Can I use my existing provider key?"><summary>Can I use my existing provider key?</summary><div class="body"><p>Yes, and it takes precedence. Register the key once and every call to that provider routes through it —
+those calls are never metered against your treg.to balance. Your key always wins over treg.to's.
+<em>(Crunchbase is own-key only here — if your team has a licence, connect it and those calls cost nothing on
+treg.to.)</em></p></div></details><details data-ev="lp_objection_open" data-q="What happens if a provider fails?"><summary>What happens if a provider fails?</summary><div class="body"><p>treg.to does not silently reroute you. That is deliberate: only you know which inputs you actually hold,
+so treg.to relays your request rather than rewriting it. What your agent gets instead is the information
+to recover — it already knows the alternatives and their parameters, so on a 429, a 5xx or a timeout it
+can try the next provider and tell you which one it switched to. Failed calls are not billed. If a call
+succeeded upstream but the answer was lost coming back, an <code>Idempotency-Key</code> returns the stored result
+without paying twice.</p></div></details><details data-ev="lp_objection_open" data-q="How much does a call cost?"><summary>How much does a call cost?</summary><div class="body"><p>Company search is free with three of the eleven providers and $0.38 a record at the top end. Funding
+history is $0.10 a company; person enrichment from $0.025. The exact price is
+shown before the call, and treg.to adds no markup. New teams start with $1.00 of free credit.</p></div></details><details data-ev="lp_objection_open" data-q="Which agents does it work with?"><summary>Which agents does it work with?</summary><div class="body"><p>The installer registers treg.to's MCP server into Claude Code, Cursor and opencode automatically. Any MCP
+client that supports the authorization spec can connect with OAuth. Anything that can run a shell command —
+Codex included — can use the <code>treg</code> CLI or plain HTTP.</p>
+<hr /></div></details></div></section>
+<section class="final"><div class="wrap">
+  <h2>Research a market this afternoon, without buying a database</h2>
+  <div class="ctas"><a class="candy" href="/app?ref=p5" data-ev="lp_cta_primary" data-page="p5">Run This Workflow Free</a></div>
+  <div class="trust"><p>$1.00 of free credit on every new team. No credit card, no provider signup. treg.to is open source
+(AGPL).</p></div>
+</div></section>
+
+<footer>
+  <div class="foot-in">
+    <a class="brand" href="/"><span class="glyph">&#9626;</span> treg</a>
+    <span class="note">&mdash; 100% open source</span>
+    <span class="sp"></span>
+    <a href="/resources">resources</a><a href="/tutorial">docs</a><a href="/llms.txt">llms.txt</a>
+    <a href="https://github.com/superdesigndev/treg" target="_blank" rel="noopener">github &#8599;</a>
+    <a href="/terms">terms</a><a href="/privacy">privacy</a>
+  </div>
+</footer>
+
+<script>
+/* Landing-page instrumentation. The conversion that matters is the FIRST SUCCESSFUL CALL,
+   not the signup — see marketing/landing/_measurement.md. `lp_copy_prompt` is the leading
+   indicator we score pages on, so it fires from every copy affordance.
+   INTEGRATION POINT: this forwards to window.posthog if the page ever loads it. Until then
+   events are queued on window.tregEvents so nothing is silently lost. */
+(function(){
+  window.tregEvents = window.tregEvents || [];
+  function ev(name, props){
+    var p = Object.assign({page: document.body.dataset.page}, props || {});
+    window.tregEvents.push([name, p, Date.now()]);
+    if (window.posthog && window.posthog.capture) window.posthog.capture(name, p);
+  }
+  ev('lp_view');
+
+  /* copy-to-clipboard, same interaction as the landing page's give-box */
+  document.addEventListener('click', function(e){
+    var b = e.target.closest('[data-copy]');
+    if (b) {
+      var src = document.querySelector(b.dataset.copy);
+      if (src) {
+        var t = src.textContent.trim();
+        (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).catch(function(){});
+        var old = b.textContent;
+        b.textContent = b.classList.contains('copybtn') ? 'copied' : 'Copied \u2713';
+        b.classList.add('done');
+        setTimeout(function(){ b.textContent = old; b.classList.remove('done'); }, 1800);
+      }
+      /* which prompt was copied matters: a page can carry more than one workflow, and knowing
+         which one people take is the whole reason to run two. */
+      ev(b.dataset.ev || 'lp_copy_prompt', {prompt: b.dataset.copy});
+      return;
+    }
+    var a = e.target.closest('[data-ev]');
+    if (a && a.tagName !== 'DETAILS') ev(a.dataset.ev);
+  });
+
+  /* which objection people open is the best diagnostic on the page: it names what the hero failed to answer.
+     The first one ships open, and Chrome fires `toggle` for that initial state — counting it would score a
+     false open on every page view, so only user-driven changes count. */
+  document.querySelectorAll('details[data-ev]').forEach(function(d){
+    var initial = d.open;
+    d.addEventListener('toggle', function(){
+      if (d.open && !initial) ev('lp_objection_open', {q: d.dataset.q});
+      initial = false;
+    });
+  });
+
+  /* did the evidence actually get read? */
+  var proof = document.getElementById('proof');
+  if (proof && 'IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function(es){
+      es.forEach(function(en){ if (en.isIntersecting) { ev('lp_scroll_proof'); io.disconnect(); } });
+    }, {threshold: 0.3});
+    io.observe(proof);
+  }
+})();
+</script>
+<script src="/adtrack.js"></script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+{
+ "status": "ok",
+ "domain": "stripe.com",
+ "screenshot": "https://media.brand.dev/screenshots/cache/63a2638dd94c15976be8da8dcc0a298a.png",
+ "screenshotType": "viewport",
+ "width": 1920,
+ "height": 1080,
+ "code": 200,
+ "key_metadata": {"credits_consumed": 1, "credits_remaining": 208}
+}

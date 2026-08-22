@@ -13,7 +13,7 @@ endpoints:
   capability: companies.search
   method: POST
   path: /discover
-  name: Discover companies matching criteria
+  name: "Discover companies by criteria or plain-language query"
   summary: Identifies companies matching specified criteria; returns up to 100 companies per request
   input:
     body:
@@ -65,7 +65,7 @@ endpoints:
   capability: companies.search
   method: GET
   path: /discover/people
-  name: "Discover companies with email counts (people activity)"
+  name: "Discover companies with their email counts"
   summary: Returns companies matching Discover filters together with their personal/generic email counts
   input:
     queryParams:
@@ -187,7 +187,7 @@ endpoints:
   platform: companies
   method: GET
   path: /domain-finder
-  name: "Find company domain"
+  name: "Find a company's domain from its name"
   summary: Returns the most likely domain name(s) for a given company name
   input:
     queryParams:
@@ -224,7 +224,7 @@ endpoints:
   platform: people
   method: GET
   path: /email-count
-  name: Count known emails for a domain
+  name: "Count known emails for a domain, by department"
   summary: Returns the number of email addresses Hunter has for a domain or company, broken down by department and seniority
   input:
     queryParams:
@@ -328,7 +328,7 @@ endpoints:
   platform: people
   method: GET
   path: /combined/find
-  name: "Enrich person and company by email"
+  name: "Enrich a person and their company by email"
   summary: Retrieves person and company information from a single email address
   input:
     queryParams:

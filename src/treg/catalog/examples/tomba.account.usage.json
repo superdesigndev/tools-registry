@@ -1,0 +1,31 @@
+{
+  "data": [
+    {
+      "id": 2275654,
+      "user_id": 100000,
+      "search": 14,
+      "verifier": 1,
+      "export": 0,
+      "sources": 2,
+      "email_count": 3,
+      "source_website": 0,
+      "source_bulk": 0,
+      "source_extension": 0,
+      "source_api": 20,
+      "source_sheets": 0,
+      "created_at": "2026-08-20T00:00:00+02:00"
+    }
+  ],
+  "total": {
+    "export": 0,
+    "search": 14,
+    "source_api": 20,
+    "source_bulk": 0,
+    "source_extension": 0,
+    "source_sheets": 0,
+    "source_website": 0,
+    "sources": 2,
+    "verifier": 1
+  }
+}
+

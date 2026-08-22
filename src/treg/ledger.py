@@ -44,19 +44,26 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime, timedelta, timezone
+from typing import NamedTuple
 
-from sqlalchemy import func, update
+from sqlalchemy import delete, func, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
 from .config import get_settings
-from .models import CreditBlock, Hold, LedgerEntry, Org
+from .models import CreditBlock, Hold, LedgerEntry, Org, TagSpend
 
 # Block consumption order: promotional credit burns first, then the oldest purchased block. Promo is
 # a marketing expense and never refundable, so spending it first keeps the refundable (and disputable)
 # purchased pool as small as possible for as long as possible.
-_KIND_ORDER = {"promotional": 0, "purchased": 1}
+#
+# `referral` sits alongside `promotional` at 0 for exactly that reason — a referral bonus is marketing
+# spend we can never be asked to return, so it must burn before the money someone actually paid us.
+# It is a separate kind ONLY so reporting can tell the two apart. Note that an unrecognised kind
+# sorts LAST (`.get(kind, 99)` in `_consume_blocks`), i.e. after purchased: any new non-refundable
+# kind must be added here or it silently gets the most expensive treatment available.
+_KIND_ORDER = {"promotional": 0, "referral": 0, "purchased": 1}
 
 
 class InsufficientBalance(Exception):
@@ -102,10 +109,15 @@ async def _entry(
     db: AsyncSession, *, org_id: int, kind: str, amount_micro: int,
     block_id: str | None = None, call_id: str | None = None,
     endpoint_id: str | None = None, meta: dict | None = None,
+    created_at: datetime | None = None,
 ) -> LedgerEntry:
+    # `created_at` is passed in when another row must carry the SAME instant (settle stamps its tag
+    # rows with it). Two `_now()` calls a microsecond apart can straddle a reporting boundary, and
+    # then one query counts the call and the other doesn't.
     row = LedgerEntry(
         id=_id(), org_id=org_id, kind=kind, amount_micro=amount_micro, block_id=block_id,
         call_id=call_id, endpoint_id=endpoint_id, meta=meta or {},
+        **({"created_at": created_at} if created_at is not None else {}),
     )
     db.add(row)
     return row
@@ -142,7 +154,7 @@ async def grant(
     db.add(block)
     await _add_balance(db, org_id, amount)
     await _entry(db, org_id=org_id, kind="grant", amount_micro=amount, block_id=block.id,
-                 meta={"block_kind": kind, **(meta or {})})
+                 meta={**(meta or {}), "block_kind": kind})
     await db.commit()
     return block
 
@@ -181,7 +193,7 @@ async def topup(
         return winner
     await _add_balance(db, org_id, int(amount_micro))
     await _entry(db, org_id=org_id, kind="topup", amount_micro=int(amount_micro), block_id=block.id,
-                 meta={"payment_ref": payment_ref, **(meta or {})})
+                 meta={**(meta or {}), "payment_ref": payment_ref})
     await db.commit()
     return block
 
@@ -195,6 +207,7 @@ async def _block_for_payment(db: AsyncSession, payment_ref: str) -> CreditBlock 
 # ---- the call path -----------------------------------------------------------------------------
 async def reserve(
     db: AsyncSession, org_id: int, endpoint_id: str, est_micro: int, *, meta: dict | None = None,
+    tags: dict[str, str] | None = None, call_id: str | None = None,
 ) -> str:
     """Withhold the estimated cost of one call and return its `call_id`. Commits.
 
@@ -202,12 +215,20 @@ async def reserve(
     the amount actually withheld is `with_margin(est_micro)`. Raises `InsufficientBalance` when the
     balance can't cover it — the caller turns that into a 402.
 
+    `tags` is the caller's `X-Treg-Meta` bag. An EXPLICIT parameter, never read out of `meta`: what a
+    call is attributed to decides who a builder bills, so it may not arrive through the same
+    free-form channel that carries provenance. `settle`/`release` take it back off the stored rows
+    rather than from their own caller — whoever reserved is whoever pays, so a header changing
+    mid-flight cannot reattribute a charge that is already in progress.
+
     Reaps this org's stale holds first, so a call that crashed before settling can't keep money out
     of circulation (and can't make a funded org look broke).
     """
     await reap_stale_holds(db, org_id=org_id)
     charged = max(0, with_margin(int(est_micro)))
-    call_id = _id()
+    # The caller may supply the id so ONE value identifies the call everywhere: the hold, both
+    # ledger entries, the audit row and the X-Treg-Call-Id the caller gets back.
+    call_id = call_id or _id()
     result = await db.execute(
         # The gate. One statement: the WHERE is the check and the SET is the debit, so two concurrent
         # callers cannot both pass it. rowcount 0 = the balance was not there.
@@ -222,10 +243,56 @@ async def reserve(
     db.add(Hold(id=call_id, org_id=org_id, endpoint_id=endpoint_id or "", amount_micro=charged))
     await _entry(db, org_id=org_id, kind="reserve", amount_micro=-charged, call_id=call_id,
                  endpoint_id=endpoint_id,
-                 meta={"estimated_micro": int(est_micro), "charged_micro": charged,
-                       "margin": get_settings().platform_margin, **(meta or {})})
+                 meta={**(meta or {}),
+                       "estimated_micro": int(est_micro), "charged_micro": charged,
+                       "margin": get_settings().platform_margin})
+    # One row per caller tag, at the estimate, in THIS transaction. A builder's budget and invoice are
+    # read from these; writing them anywhere else (or later) would make both lossy.
+    for dim, val in (tags or {}).items():
+        db.add(TagSpend(org_id=org_id, dim=dim, val=val, hold_id=call_id, amount_micro=charged))
     await db.commit()
     return call_id
+
+
+class _ClaimedHold(NamedTuple):
+    """A hold's fields, COPIED OUT before its row was deleted.
+
+    Deliberately values and not the ORM object: the `delete()` that claims the row can expire the
+    matching instance in the session, and touching an expired attribute afterwards is implicit async
+    I/O (MissingGreenlet). Reading everything up front makes that impossible rather than merely
+    unlikely.
+    """
+
+    amount_micro: int
+    org_id: int
+    endpoint_id: str
+
+
+async def _claim_hold(db: AsyncSession, call_id: str) -> _ClaimedHold | None:
+    """Take exclusive ownership of one open hold, or return None if it is gone or already claimed.
+
+    CLAIM the hold before any money moves: the DELETE's rowcount is what decides which of
+    settle/release gets to close it. Loading the row and testing it is a check-then-act, and two
+    paths that both read before either writes will both proceed — settle consuming blocks while
+    release refunds the same money, which breaks
+    `balance == sum(blocks) - sum(open holds)` and (since tag rows live here too) deletes a
+    customer's spend out of the invoice after it has already left the balance.
+    Same idiom as `reserve`'s conditional UPDATE, for the same reason: where two paths read before
+    either writes, the database has to be the one that says no.
+    """
+    hold = await db.get(Hold, call_id)
+    if hold is None:
+        return None
+    claimed = _ClaimedHold(hold.amount_micro, hold.org_id, hold.endpoint_id)
+    result = await db.execute(delete(Hold).where(Hold.id == call_id))
+    if result.rowcount != 1:
+        # Lost the claim: somebody else is closing this hold. Deliberately NO rollback — the DELETE
+        # matched nothing and only a read precedes it, so there is nothing to discard, and rolling
+        # back would EXPIRE every object in the session. `reap_stale_holds` shares one session across
+        # a loop of preloaded Hold rows, so that expiry made the next `hold.id` attempt implicit async
+        # I/O (MissingGreenlet) and killed the rest of the sweep.
+        return None
+    return claimed
 
 
 async def settle(
@@ -240,10 +307,12 @@ async def settle(
     A no-op returning 0 when the hold is already gone — the reaper or a retry got there first, and a
     double settle must not charge twice.
     """
-    hold = await db.get(Hold, call_id)
+    hold = await _claim_hold(db, call_id)
     if hold is None:
         return 0
     reserved = hold.amount_micro
+    # ONE instant for this settlement — shared by the ledger entry and the tag rows below.
+    settled_at = _now()
     settled = reserved if actual_micro is None else max(0, with_margin(int(actual_micro)))
     consumed, shortfall = await _consume_blocks(db, hold.org_id, settled, call_id, hold.endpoint_id)
     # The hold came out of the balance at reserve time; give back whatever the call didn't use. If the
@@ -253,16 +322,25 @@ async def settle(
         await _add_balance(db, hold.org_id, reserved - consumed)
     await _entry(
         db, org_id=hold.org_id, kind="settle", amount_micro=-consumed, call_id=call_id,
-        endpoint_id=hold.endpoint_id,
-        meta={"reserved_micro": reserved, "observed_micro": None if actual_micro is None else int(actual_micro),
+        endpoint_id=hold.endpoint_id, created_at=settled_at,
+        meta={**(meta or {}),
+              "reserved_micro": reserved, "observed_micro": None if actual_micro is None else int(actual_micro),
               "settled_micro": settled, "consumed_micro": consumed,
               "refunded_micro": reserved - consumed, "margin": get_settings().platform_margin,
               # Blocks came up short of what the call cost (price drift, or a race with a refund):
-              # the entry says so rather than the balance silently absorbing it.
-              **({"block_shortfall_micro": shortfall} if shortfall else {}),
-              **(meta or {})},
+              # the entry says so rather than the balance silently absorbing it. Written
+              # UNCONDITIONALLY (0 when there was none) — as a conditional key a caller could
+              # supply their own `block_shortfall_micro` and it would survive the merge on every
+              # call that had no shortfall, which is most of them.
+              "block_shortfall_micro": shortfall},
     )
-    await db.delete(hold)
+    # The tag rows were written at the ESTIMATE; move them to what the call actually consumed and mark
+    # them settled, which is what makes them invoiceable.
+    # `created_at` is restamped to SETTLE time on purpose: `spend_since` windows on the settle
+    # entry, so a hold opened before a window and settled inside it belongs to that window. Left
+    # at reserve time, such a call showed up in the org total but not in any tag total.
+    await db.execute(update(TagSpend).where(TagSpend.hold_id == call_id)
+                     .values(amount_micro=consumed, settled=True, created_at=settled_at))
     await db.commit()
     return consumed
 
@@ -271,14 +349,16 @@ async def release(db: AsyncSession, call_id: str, *, reason: str = "", meta: dic
     """Return a hold in FULL and close it — the call produced nothing billable (provider 5xx, network
     error, our own crash before relay). Returns the amount returned; 0 if the hold is already gone.
     Commits."""
-    hold = await db.get(Hold, call_id)
+    hold = await _claim_hold(db, call_id)
     if hold is None:
         return 0
     amount = hold.amount_micro
     await _add_balance(db, hold.org_id, amount)
     await _entry(db, org_id=hold.org_id, kind="release", amount_micro=amount, call_id=call_id,
-                 endpoint_id=hold.endpoint_id, meta={"reason": reason, **(meta or {})})
-    await db.delete(hold)
+                 endpoint_id=hold.endpoint_id, meta={**(meta or {}), "reason": reason})
+    # Nothing was billable, so nothing is attributable: the tag rows go with the hold. Leaving them
+    # would bill a builder's user for a call the provider never completed.
+    await db.execute(delete(TagSpend).where(TagSpend.hold_id == call_id))
     await db.commit()
     return amount
 
@@ -351,6 +431,79 @@ async def spent_today(db: AsyncSession, org_id: int) -> int:
             Hold.org_id == org_id, Hold.created_at >= since)
     )).scalar() or 0
     return int(-settled) + int(held)  # settle entries are negative (money leaving); holds are positive
+
+
+async def tag_calls_since(db: AsyncSession, org_id: int, dim: str, val: str, since: datetime) -> int:
+    """How many billable calls one tag has made since `since`.
+
+    Counted from `TagSpend`, NOT from `CallRecord`, for two reasons that both silently broke a cap:
+    audit rows are shed under load, so a call-count cap would let a burst straight through exactly
+    when it matters; and `CallRecord` only carries the PRIMARY dimension, so a cap on any other
+    declared dimension matched nothing and never fired at all.
+
+    Counts BILLABLE calls: a team calling on its own key writes no tag row, and a released call has
+    its rows deleted. That is the right grain for a reseller's plan limit — say so in the docs.
+    """
+    total = (await db.execute(
+        select(func.count()).select_from(TagSpend).where(
+            TagSpend.org_id == org_id, TagSpend.dim == dim, TagSpend.val == val,
+            TagSpend.created_at >= since)
+    )).scalar() or 0
+    return int(total)
+
+
+async def calls_by_tag(db: AsyncSession, org_id: int, dim: str, since: datetime) -> dict[str, int]:
+    """Billable call counts for every value of one tag key, grouped in SQL over the same index."""
+    rows = (await db.execute(
+        select(TagSpend.val, func.count()).where(
+            TagSpend.org_id == org_id, TagSpend.dim == dim, TagSpend.created_at >= since)
+        .group_by(TagSpend.val)
+    )).all()
+    return {val: int(n) for val, n in rows}
+
+
+async def tag_spent_since(db: AsyncSession, org_id: int, dim: str, val: str, since: datetime) -> int:
+    """What one tag has committed since `since` — settled spend PLUS money still held for it.
+
+    The cap read. In-flight holds count at their ESTIMATE, so a burst of concurrent calls is counted
+    before any of it settles and the cap errs toward refusing — the correct direction for money.
+
+    One indexed aggregate. That is the whole reason `TagSpend` exists as a table instead of a JSON key:
+    this runs on every proxied call.
+    """
+    total = (await db.execute(
+        select(func.coalesce(func.sum(TagSpend.amount_micro), 0)).where(
+            TagSpend.org_id == org_id, TagSpend.dim == dim, TagSpend.val == val,
+            TagSpend.created_at >= since)
+    )).scalar() or 0
+    return int(total)
+
+
+async def tag_invoice_since(db: AsyncSession, org_id: int, dim: str, val: str, since: datetime) -> int:
+    """What one tag actually SPENT since `since` — settled rows only.
+
+    The invoice read, deliberately not the same function as `tag_spent_since`. An open hold is not
+    spend: billing it would charge for work in flight and then charge again when it settles.
+    """
+    total = (await db.execute(
+        select(func.coalesce(func.sum(TagSpend.amount_micro), 0)).where(
+            TagSpend.org_id == org_id, TagSpend.dim == dim, TagSpend.val == val,
+            TagSpend.settled.is_(True), TagSpend.created_at >= since)
+    )).scalar() or 0
+    return int(total)
+
+
+async def spend_by_tag(db: AsyncSession, org_id: int, dim: str, since: datetime) -> dict[str, int]:
+    """Settled spend for every value of one tag key — `{"cust_8123": 41234, ...}`. What a builder
+    invoices from. Grouped in SQL over the same index the cap uses; no JSON folding, so it stays
+    portable across sqlite and Postgres (see reconcile.py's docstring for why that matters)."""
+    rows = (await db.execute(
+        select(TagSpend.val, func.coalesce(func.sum(TagSpend.amount_micro), 0)).where(
+            TagSpend.org_id == org_id, TagSpend.dim == dim,
+            TagSpend.settled.is_(True), TagSpend.created_at >= since)
+        .group_by(TagSpend.val)
+    )).all()
+    return {val: int(total) for val, total in rows}
 
 
 async def spend_since(db: AsyncSession, org_id: int, since: datetime) -> dict:

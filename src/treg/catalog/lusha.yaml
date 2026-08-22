@@ -57,7 +57,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /v3/contacts/search-and-enrich
-    name: "Find and enrich a person's contact info"
+    name: "Find a person's work email and phone by LinkedIn or name"
     summary: "Enrich a person — work email, direct dial and mobile — from email, LinkedIn or name"
     input:
       bodyType: json
@@ -96,7 +96,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /v3/contacts/prospecting
-    name: "Search contacts by role and company"
+    name: "Search people by title, company or intent (free preview)"
     summary: "Search Lusha's contacts by title, seniority, company, location or intent (free preview)"
     input:
       bodyType: json
@@ -118,7 +118,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /v3/contacts/enrich
-    name: "Reveal contacts' emails and phone numbers"
+    name: "Reveal emails and phone numbers for found contact ids"
     summary: "Reveal emails and phone numbers for contacts you already found in a prospecting search"
     input:
       bodyType: json
@@ -157,7 +157,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /v3/companies/search-and-enrich
-    name: "Find and enrich a company's details"
+    name: "Enrich a company by domain or name — headcount, funding"
     summary: "Enrich a company from domain or name — industry, headcount, revenue, funding, tech"
     input:
       bodyType: json
@@ -193,7 +193,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /v3/companies/prospecting
-    name: "Search companies by industry and size"
+    name: "Search companies by industry or tech (free preview)"
     summary: "Search Lusha's companies by industry, headcount, revenue or tech (free preview)"
     input:
       bodyType: json

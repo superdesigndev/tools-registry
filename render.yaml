@@ -116,5 +116,27 @@ services:
         sync: false
       - key: TREG_PLATFORM_KEY_THECOMPANIESAPI    # raw token, injected as "Basic {secret}" un-encoded
         sync: false
+      - key: TREG_PLATFORM_KEY_COMPANYENRICH      # CompanyEnrich API key (Authorization: Bearer)
+        sync: false
+      - key: TREG_PLATFORM_KEY_OCEANIO            # Ocean.io API token (X-Api-Token); tier 4 refused until fx.yaml prices it
+        sync: false
+      - key: TREG_PLATFORM_KEY_PREDICTLEADS       # base64 of "api_key:api_token" (HTTP Basic)
+        sync: false
+      - key: TREG_PLATFORM_KEY_FINDYMAIL          # Findymail API key (Authorization: Bearer)
+        sync: false
+      - key: TREG_PLATFORM_KEY_BRANDDEV           # Brand.dev API key (Authorization: Bearer)
+        sync: false
+      - key: TREG_PLATFORM_KEY_ICYPEAS            # Icypeas API key (raw Authorization header)
+        sync: false
+      - key: TREG_PLATFORM_KEY_LEADSFORGE         # LeadsForge API key (Authorization: Bearer)
+        sync: false
+      - key: TREG_PLATFORM_KEY_INFLUENCERSCLUB    # influencers.club dashboard API key, a JWT (Authorization: Bearer)
+        sync: false
+      - key: TREG_PLATFORM_KEY_FIBER_AI           # Fiber AI key (x-api-key)
+        sync: false
+      - key: TREG_PLATFORM_KEY_TOMBA              # Tomba API key ta_… (X-Tomba-Key)
+        sync: false
+      - key: TREG_PLATFORM_KEY_TOMBA_SECRET       # Tomba API secret ts_… (X-Tomba-Secret) — set BOTH
+        sync: false
       - key: TREG_PLATFORM_PROVIDERS           # e.g. "tikhub,dataforseo,scrapecreators"; "" = tier 4 off
         value: ""

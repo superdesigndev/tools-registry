@@ -12,10 +12,13 @@ from datetime import datetime, timedelta
 
 import pytest
 from httpx import AsyncClient
+from sqlmodel import select
 
+from treg import api as A
 from treg import crypto, oauth
 from treg.config import get_settings
-from treg.models import Secret
+from treg.db import session_maker
+from treg.models import Secret, Tool
 
 # The test upstream serves /token, standing in for Google's token endpoint.
 BYO = {
@@ -216,6 +219,66 @@ async def test_successful_discovery_marks_the_connection_working(clients: AsyncC
 
     assert (await clients.get(f"/connections/{sid}/resources")).status_code == 200
     assert {c["id"]: c for c in (await clients.get("/connections")).json()}[sid]["health"] == "ok"
+
+
+# ---- Business-owned Meta assets join the picker ---------------------------------------------
+@pytest.fixture
+def treg_meta_app(monkeypatch):
+    monkeypatch.setenv("TREG_META_CLIENT_ID", "treg-meta-cid")
+    monkeypatch.setenv("TREG_META_CLIENT_SECRET", "treg-meta-csec")
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
+
+
+def _meta_test_provider(monkeypatch, service: str, **over):
+    import dataclasses
+
+    from treg import oauth_providers as P
+
+    monkeypatch.setitem(P.REGISTRY, service, dataclasses.replace(
+        P.REGISTRY[service], discover_base_url="http://upstream", **over))
+
+
+async def test_business_owned_pages_join_the_facebook_picker(clients: AsyncClient, treg_meta_app, monkeypatch):
+    """An agency member reaches most Pages through their Business portfolio, not a personal Page
+    role — /me/accounts alone answers [] for exactly the Pages they manage all day. The Business
+    walk must add owned and client Pages, without doubling a Page both listings return."""
+    _meta_test_provider(monkeypatch, "facebook")
+    st = await _connect_byo(clients, provider="facebook", name="facebook")
+    r = await clients.get(f"/connections/{st['secret_id']}/resources")
+    assert r.status_code == 200, r.text
+    got = {x["id"]: x["label"] for x in r.json()["resources"]}
+    assert got == {
+        "PAGE-DIRECT": "Directly Managed Page",  # once, though both listings return it
+        "PAGE-NO-IG": "Business Page Without Instagram",
+        "PAGE-CLIENT": "Agency Client Page",
+    }
+    assert [x["id"] for x in r.json()["resources"]][0] == "PAGE-DIRECT", \
+        "the primary listing's rows keep first position"
+
+
+async def test_business_owned_instagram_accounts_join_the_picker(clients: AsyncClient, treg_meta_app, monkeypatch):
+    """Same walk through the Instagram lens: Business-owned Pages contribute their linked
+    professional accounts, a Page without one drops out instead of surviving as an id-less
+    phantom row, and the directly-reachable account is not doubled."""
+    _meta_test_provider(monkeypatch, "instagram")
+    st = await _connect_byo(clients, provider="instagram", name="instagram")
+    r = await clients.get(f"/connections/{st['secret_id']}/resources")
+    assert r.status_code == 200, r.text
+    got = {x["id"]: x["label"] for x in r.json()["resources"]}
+    assert got == {"IG-DIRECT": "direct_ig", "IG-CLIENT": "client_ig"}
+
+
+async def test_a_failing_business_walk_leaves_the_primary_listing_intact(clients: AsyncClient, treg_meta_app, monkeypatch):
+    """Connections that consented before business_management joined our scopes get a clean
+    permission error from the Business walk. That must read as "no extra assets", never a 502 —
+    the primary listing already answered."""
+    _meta_test_provider(monkeypatch, "facebook", discover_extra_path="/no-such-listing")
+    st = await _connect_byo(clients, provider="facebook", name="facebook")
+    r = await clients.get(f"/connections/{st['secret_id']}/resources")
+    assert r.status_code == 200, r.text
+    assert [x["id"] for x in r.json()["resources"]] == ["PAGE-DIRECT"]
 
 
 # ---- disconnecting must not leave a broken tool behind -------------------------------------
@@ -609,3 +672,107 @@ def test_every_provider_has_a_logo():
 async def test_logos_are_served(clients):
     r = await clients.get("/logos/slack.svg")
     assert r.status_code == 200 and r.text.lstrip().startswith("<svg")
+
+
+# ---- split-host providers (GA4: reports vs property listing) -------------------------------
+async def test_split_host_connect_provisions_the_admin_tool_too(clients: AsyncClient, treg_google_app):
+    """GA4's property list lives on analyticsadmin while reports run on analyticsdata. One consent
+    covers both (scopes are per-capability), but /call/ resolves per HOST — so the connect must
+    yield a Tool row on each host or the agent can't discover its own property ids (observed live:
+    13 calls / 7 orgs dead-ended exactly there)."""
+    st = await _connect_byo(clients, provider="google-analytics", name="google-analytics")
+    assert st["status"] == "done"
+    tools = {t["name"]: t for t in (await clients.get("/tools")).json()}
+
+    data = tools["google-analytics"]
+    admin = tools["google-analytics-admin"]
+    assert data.get("host") == "analyticsdata.googleapis.com"
+    assert admin.get("host") == "analyticsadmin.googleapis.com"
+    # SAME credential on both — this is one connection wearing two hosts, not two connections.
+    assert admin["bindings"] == data["bindings"]
+    assert admin["bindings"][0]["secret_id"] == st["secret_id"]
+    # The admin tool can prove itself on `health --run`, and tells the agent what it is for.
+    assert admin["health_check"] == {"method": "GET", "path": "/v1beta/accountSummaries",
+                                     "expect_status": 200}
+    assert any("accountSummaries" in e.get("path", "") for e in admin["examples"])
+
+
+async def test_split_host_reconnect_rebinds_extras_without_duplicating(clients: AsyncClient, treg_google_app):
+    first = await _connect_byo(clients, provider="google-analytics", name="google-analytics")
+    await _connect_byo(clients, provider="google-analytics", name="google-analytics",
+                       connection_id=first["secret_id"])
+    admins = [t for t in (await clients.get("/tools")).json() if t["name"] == "google-analytics-admin"]
+    assert len(admins) == 1, "reconnecting must rebind the extra tool, not pile up duplicates"
+
+
+async def test_startup_backfills_missing_split_host_tool_idempotently(
+        clients: AsyncClient, treg_google_app):
+    """A pre-split-host GA4 connection heals on boot without requiring another consent."""
+    st = await _connect_byo(clients, provider="google-analytics", name="google-analytics")
+    async with session_maker() as db:
+        old_admin = (await db.execute(
+            select(Tool).where(Tool.name == "google-analytics-admin")
+        )).scalars().one()
+        await db.delete(old_admin)
+        await db.commit()
+
+    assert await A._backfill_provider_extra_tools() == 1
+    tools = [t for t in (await clients.get("/tools")).json()
+             if t["name"] == "google-analytics-admin"]
+    assert len(tools) == 1
+    assert tools[0]["bindings"][0]["secret_id"] == st["secret_id"]
+
+    assert await A._backfill_provider_extra_tools() == 0
+    tools = [t for t in (await clients.get("/tools")).json()
+             if t["name"] == "google-analytics-admin"]
+    assert len(tools) == 1, "re-running startup must not duplicate the companion"
+
+
+async def test_revoke_removes_the_extra_tool_too(clients: AsyncClient, treg_google_app):
+    """The admin tool's only binding is this credential — revoking must not leave it behind broken."""
+    st = await _connect_byo(clients, provider="google-analytics", name="google-analytics")
+    r = await clients.delete(f"/connections/{st['secret_id']}")
+    assert r.status_code == 200
+    names = {t["name"] for t in (await clients.get("/tools")).json()}
+    assert "google-analytics" not in names
+    assert "google-analytics-admin" not in names
+
+
+# ---- picking a resource stamps a ready-made call onto the tool -----------------------------
+async def test_pick_resource_stamps_ready_made_example(clients: AsyncClient, treg_google_app):
+    """The pick is the moment treg finally knows the property id every runReport needs — render it
+    into the tool's examples so the agent reads the call off the tool instead of hunting for ids."""
+    st = await _connect_byo(clients, provider="google-analytics", name="google-analytics")
+    sid = st["secret_id"]
+    r = await clients.post(f"/connections/{sid}/resource",
+                           json={"resource_ref": "properties/384078430", "resource_name": "Prod site"})
+    assert r.status_code == 200, r.text
+
+    tool = next(t for t in (await clients.get("/tools")).json() if t["name"] == "google-analytics")
+    stamped = [e for e in tool["examples"] if e.get("stamped") == "resource"]
+    assert len(stamped) == 1
+    assert stamped[0]["path"] == "v1beta/properties/384078430:runReport"
+    assert "Prod site" in stamped[0]["note"]
+    # the un-rendered registry template with {property_id} must not ALSO sit there confusing agents
+    assert not any("{resource}" in e.get("path", "") for e in tool["examples"])
+
+    # Re-picking a different property REPLACES the stamp — a stale id is confidently wrong.
+    await clients.post(f"/connections/{sid}/resource",
+                       json={"resource_ref": "properties/999", "resource_name": "Staging"})
+    tool = next(t for t in (await clients.get("/tools")).json() if t["name"] == "google-analytics")
+    stamped = [e for e in tool["examples"] if e.get("stamped") == "resource"]
+    assert len(stamped) == 1
+    assert stamped[0]["path"] == "v1beta/properties/999:runReport"
+
+
+async def test_pick_resource_without_template_changes_no_examples(clients: AsyncClient, treg_google_app):
+    """GSC has no resource_example (yet) — picking a site must leave its examples alone."""
+    st = await _connect_byo(clients, provider="google-search-console", name="google-search-console")
+    before = next(t for t in (await clients.get("/tools")).json()
+                  if t["name"] == "google-search-console")["examples"]
+    r = await clients.post(f"/connections/{st['secret_id']}/resource",
+                           json={"resource_ref": "sc-domain:example.com"})
+    assert r.status_code == 200
+    after = next(t for t in (await clients.get("/tools")).json()
+                 if t["name"] == "google-search-console")["examples"]
+    assert after == before

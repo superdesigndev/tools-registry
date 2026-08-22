@@ -1,0 +1,15 @@
+{
+  "success": true,
+  "data": [
+    {
+      "result": "https://www.linkedin.com/in/patrickcollison",
+      "status": "FOUND",
+      "searchId": "DXiiHKABUJ-l80HaKt5c"
+    },
+    {
+      "result": "https://www.linkedin.com/in/jane-doe-3bb842135",
+      "status": "FOUND",
+      "searchId": "DniiHKABUJ-l80HaKt5c"
+    }
+  ]
+}

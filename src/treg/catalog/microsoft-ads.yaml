@@ -36,7 +36,7 @@ endpoints:
     scope: own_account
     method: POST
     path: /Campaigns/QueryByAccountId
-    name: "List campaigns in an account"
+    name: "List your Microsoft Ads campaigns — status, budget"
     summary: "Campaigns in your Microsoft Advertising account, with status, budget and bid strategy"
     input:
       body:
@@ -54,7 +54,7 @@ endpoints:
     scope: own_account
     method: POST
     path: /AdGroups/QueryByCampaignId
-    name: "List ad groups in a campaign"
+    name: "List ad groups in a Microsoft Ads campaign — bids, status"
     summary: "List the ad groups in a Microsoft Advertising campaign with their bids and status"
     input:
       body:
@@ -71,7 +71,7 @@ endpoints:
     scope: own_account
     method: POST
     path: /Ads/QueryByAdGroupId
-    name: "List ads in an ad group"
+    name: "List ads in a Microsoft Ads ad group — headlines, URLs"
     summary: "List the ads in a Microsoft Advertising ad group with their headlines and final URLs"
     input:
       body:
@@ -89,7 +89,7 @@ endpoints:
     scope: own_account
     method: POST
     path: /Keywords/QueryByAdGroupId
-    name: "List keywords in an ad group"
+    name: "List keywords in a Microsoft Ads ad group — match types"
     summary: "List the keywords in a Microsoft Advertising ad group with match types and bids"
     input:
       body:

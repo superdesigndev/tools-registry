@@ -102,7 +102,7 @@ endpoints:
   platform: amazon
   method: GET
   path: /v1/amazon/shop
-  name: Get Amazon Shop page
+  name: "Amazon Shop storefront by URL — profile, products"
   summary: Scrapes a creator's Amazon Shop page by URL, returning their storefront profile and product collections.
   cost:
     type: per_call
@@ -133,7 +133,7 @@ endpoints:
   platform: apple-music
   method: GET
   path: /v1/apple-music/album
-  name: Get Apple Music Album
+  name: "Apple Music album by id or URL — tracks, release info"
   summary: Retrieves public Apple Music album details, including title, artist, artwork, release info, tracks, and more by the artist.
   cost:
     type: per_call
@@ -167,7 +167,7 @@ endpoints:
   platform: apple-music
   method: GET
   path: /v1/apple-music/artist
-  name: Get Apple Music Artist
+  name: "Apple Music artist by id or URL — top songs, albums"
   summary: Retrieves public Apple Music artist details, including artwork, editorial notes, top songs, albums, music videos, playlists, and related sections.
   cost:
     type: per_call
@@ -201,7 +201,7 @@ endpoints:
   platform: apple-music
   method: GET
   path: /v1/apple-music/search
-  name: "Search Apple Music"
+  name: "Search Apple Music by keyword — songs, artists, albums"
   summary: Searches Apple Music and returns public result sections for artists, albums, songs, playlists, stations, and music videos.
   cost:
     type: per_call
@@ -235,7 +235,7 @@ endpoints:
   platform: apple-music
   method: GET
   path: /v1/apple-music/track
-  name: Get Apple Music Track
+  name: "Apple Music track by id or URL — song details"
   summary: Retrieves public Apple Music song details by id or URL.
   cost:
     type: per_call
@@ -269,7 +269,7 @@ endpoints:
   platform: bluesky
   method: GET
   path: /v1/bluesky/post
-  name: Get Bluesky Post
+  name: "Bluesky post by URL — text, author, engagement counts"
   summary: Fetches a single Bluesky post by URL, returning the post's record text, author info, embed content, replyCount, repostCount, likeCount, and quoteCount.
   cost:
     type: per_call
@@ -299,7 +299,7 @@ endpoints:
   platform: bluesky
   method: GET
   path: /v1/bluesky/profile
-  name: Get Bluesky Profile
+  name: "Bluesky profile by username — bio, follower counts"
   summary: Retrieves a Bluesky user's public profile including handle, displayName, avatar, description, followersCount, followsCount, postsCount, createdAt, and verification status.
   cost:
     type: per_call
@@ -329,7 +329,7 @@ endpoints:
   platform: bluesky
   method: GET
   path: /v1/bluesky/user/posts
-  name: List Bluesky Posts
+  name: "Bluesky user posts by username — text, engagement"
   summary: Fetches a paginated feed of posts from a Bluesky user, returning each post's uri, record text, author info, embed content, replyCount, repostCount, likeCount, quoteCount, and indexedAt.
   cost:
     type: per_call
@@ -365,7 +365,7 @@ endpoints:
   platform: web
   method: GET
   path: /v1/detect-age-gender
-  name: Get image Age and Gender
+  name: "Estimate age and gender from a profile photo URL"
   summary: Uses AI to analyze a creator's profile photo and estimate their age and gender.
   cost:
     type: per_call
@@ -394,7 +394,7 @@ endpoints:
   platform: meta-ads
   method: GET
   path: /v1/facebook/adLibrary/ad
-  name: "Get Facebook Ad Details"
+  name: "Facebook ad library ad details by id or URL"
   summary: Retrieves detailed information about a specific Facebook ad by its ID or URL.
   cost:
     type: per_call
@@ -438,7 +438,7 @@ endpoints:
   platform: meta-ads
   method: GET
   path: /v1/facebook/adLibrary/ad/transcript
-  name: "Get Facebook Ad Transcript"
+  name: "Facebook ad library video ad transcript by id or URL"
   summary: Retrieves a transcript for a single Facebook Ad Library video ad by ID or URL.
   cost:
     type: per_call
@@ -478,7 +478,7 @@ endpoints:
   capability: meta-ads.library.advertiser
   method: GET
   path: /v1/facebook/adLibrary/company/ads
-  name: "List Facebook Company Ads"
+  name: "Facebook ad library company ads by page id or name"
   summary: Fetches all ads currently running for a specific company from the Meta Ad Library.
   cost:
     type: per_call
@@ -558,7 +558,7 @@ endpoints:
   capability: meta-ads.library.search
   method: GET
   path: /v1/facebook/adLibrary/search/ads
-  name: "Search Facebook Ads"
+  name: "Search Facebook ad library ads by keyword"
   summary: Searches the Meta Ad Library by keyword and returns matching ads.
   cost:
     type: per_call
@@ -637,7 +637,7 @@ endpoints:
   platform: meta-ads
   method: GET
   path: /v1/facebook/adLibrary/search/companies
-  name: "Search Facebook Ad Library Companies"
+  name: "Search Facebook ad library companies by name — page ids"
   summary: Searches for companies by name in the Meta Ad Library and returns their page IDs for use with other ad library endpoints.
   cost:
     type: per_call
@@ -666,7 +666,7 @@ endpoints:
   platform: facebook
   method: GET
   path: /v1/facebook/event/details
-  name: Get Facebook events Event Details
+  name: "Facebook event details by id or URL"
   summary: Get a specific event by its URL or id.
   cost:
     type: per_call
@@ -703,7 +703,7 @@ endpoints:
   platform: facebook
   method: GET
   path: /v1/facebook/events
-  name: "List Facebook Events by City"
+  name: "Facebook events for a city by URL"
   summary: Get the events of a city.
   cost:
     type: per_call
@@ -744,7 +744,7 @@ endpoints:
   platform: facebook
   method: GET
   path: /v1/facebook/events/search
-  name: Search Facebook events by name
+  name: "Search Facebook events by name"
   summary: Search for events by name.
   cost:
     type: per_call
@@ -781,7 +781,7 @@ endpoints:
   platform: facebook
   method: GET
   path: /v1/facebook/group
-  name: Get Facebook Group Info
+  name: "Facebook group profile by URL or id — members, admins"
   summary: Fetches the public information shown on a Facebook group's About page, including its description, privacy and visibility, member and activity counts, categories, administrators and moderators when Facebook exposes them, group history, and rules.
   cost:
     type: per_call
@@ -818,7 +818,7 @@ endpoints:
   platform: facebook
   method: GET
   path: /v1/facebook/group/posts
-  name: List Facebook Group Posts
+  name: "Facebook group posts by URL or group id"
   summary: Fetches posts from a public Facebook group, limited to 3 posts per page due to API limitations.
   cost:
     type: per_call
@@ -865,7 +865,7 @@ endpoints:
   platform: facebook
   method: GET
   path: /v1/facebook/marketplace/item
-  name: Get Facebook Marketplace item detail
+  name: "Facebook Marketplace item by id or URL — price, seller"
   summary: Fetches details for a Facebook Marketplace item by item id or Marketplace item URL, including title, description, price, location, condition, photos, seller, and availability flags.
   cost:
     type: per_call
@@ -902,7 +902,7 @@ endpoints:
   platform: facebook
   method: GET
   path: /v1/facebook/marketplace/location/search
-  name: Search Facebook Marketplace locations
+  name: "Search Facebook Marketplace locations by city — lat/lng"
   summary: Searches Facebook Marketplace locations/cities and returns coordinates you can use with the Marketplace Search endpoint.
   cost:
     type: per_call
@@ -934,7 +934,7 @@ endpoints:
   platform: facebook
   method: GET
   path: /v1/facebook/marketplace/search
-  name: Search Facebook Marketplace listings
+  name: "Search Facebook Marketplace listings by keyword and lat/lng"
   summary: Searches Facebook Marketplace listings by keyword and lat/lng.
   cost:
     type: per_call
@@ -1028,7 +1028,7 @@ endpoints:
   platform: facebook
   method: GET
   path: /v1/facebook/post
-  name: Get Facebook Post
+  name: "Facebook post or reel by URL"
   summary: Retrieves a single public Facebook post or reel by URL.
   cost:
     type: per_call
@@ -1065,7 +1065,7 @@ endpoints:
   platform: facebook
   method: GET
   path: /v1/facebook/post/comment/replies
-  name: List Facebook Comment Replies
+  name: "Facebook comment replies by feedback id"
   summary: Get the replies to a comment.
   cost:
     type: per_call
@@ -1107,7 +1107,7 @@ endpoints:
   capability: facebook.post.comments
   method: GET
   path: /v1/facebook/post/comments
-  name: List Facebook Comments
+  name: "Facebook post or reel comments by URL"
   summary: Fetches comments from a Facebook post or reel with cursor-based pagination.
   cost:
     type: per_call
@@ -1148,7 +1148,7 @@ endpoints:
   platform: facebook
   method: GET
   path: /v1/facebook/post/transcript
-  name: Get Facebook Transcript
+  name: "Facebook video post transcript by URL"
   summary: Extracts the transcript text from a Facebook video post or reel.
   cost:
     type: per_call
@@ -1182,7 +1182,7 @@ endpoints:
   platform: facebook
   method: GET
   path: /v1/facebook/profile
-  name: Get Facebook Profile
+  name: "Facebook page profile by URL — contact info, followers"
   summary: Retrieves public Facebook page details including category, address, email, phone, website, services, priceRange, rating, likeCount, and followerCount.
   cost:
     type: per_call
@@ -1229,7 +1229,7 @@ endpoints:
   platform: facebook
   method: GET
   path: /v1/facebook/profile/events
-  name: List Facebook Profile Events
+  name: "Facebook page events by URL"
   summary: Get the events of a public Facebook page.
   cost:
     type: per_call
@@ -1266,7 +1266,7 @@ endpoints:
   platform: facebook
   method: GET
   path: /v1/facebook/profile/photos
-  name: List Facebook Profile Photos
+  name: "Facebook page photos by URL"
   summary: Fetches photos from a public Facebook page with pagination support.
   cost:
     type: per_call
@@ -1309,7 +1309,7 @@ endpoints:
   capability: facebook.user.posts
   method: GET
   path: /v1/facebook/profile/posts
-  name: List Facebook Profile Posts
+  name: "Facebook page posts by URL or page id"
   summary: Returns publicly visible Facebook profile posts, limited to 3 posts per page due to API limitations.
   cost:
     type: per_call
@@ -1350,7 +1350,7 @@ endpoints:
   platform: facebook
   method: GET
   path: /v1/facebook/profile/reels
-  name: List Facebook Profile Reels
+  name: "Facebook page reels by URL"
   summary: Fetches up to 10 reels per request from a public Facebook page.
   cost:
     type: per_call
@@ -1392,7 +1392,7 @@ endpoints:
   platform: github
   method: GET
   path: /v1/github/repository
-  name: Get GitHub Repository
+  name: "GitHub repository by URL — stars, forks, topics"
   summary: Retrieves public metadata for one GitHub repository, including owner, description, language, stars, forks, topics, license, visibility, default branch, open issues, and timestamps.
   cost:
     type: per_call
@@ -1422,7 +1422,7 @@ endpoints:
   platform: github
   method: GET
   path: /v1/github/trending/developers
-  name: List GitHub Trending Developers
+  name: "GitHub trending developers — filter by language"
   summary: Scrapes GitHub's public Trending developers page.
   cost:
     type: per_call
@@ -1457,7 +1457,7 @@ endpoints:
   platform: github
   method: GET
   path: /v1/github/trending/repositories
-  name: List GitHub Trending Repositories
+  name: "GitHub trending repositories — filter by language"
   summary: Scrapes GitHub's public Trending repositories page.
   cost:
     type: per_call
@@ -1497,7 +1497,7 @@ endpoints:
   platform: github
   method: GET
   path: /v1/github/user
-  name: Get GitHub User
+  name: "GitHub user profile by username — bio, followers"
   summary: Retrieves public GitHub user details including name, bio, avatar, company, location, blog, follower counts, public repo counts, and account timestamps.
   cost:
     type: per_call
@@ -1532,7 +1532,7 @@ endpoints:
   platform: github
   method: GET
   path: /v1/github/user/activity
-  name: Get GitHub Activity
+  name: "GitHub user activity timeline by username"
   summary: Retrieves GitHub profile contribution activity for a user from the public profile activity timeline.
   cost:
     type: per_call
@@ -1577,7 +1577,7 @@ endpoints:
   platform: github
   method: GET
   path: /v1/github/user/contributions
-  name: List GitHub Contributions
+  name: "GitHub contribution graph by username and year"
   summary: Retrieves the public GitHub contribution graph for a user and year, including total contributions and daily contribution counts/intensity.
   cost:
     type: per_call
@@ -1617,7 +1617,7 @@ endpoints:
   platform: github
   method: GET
   path: /v1/github/user/followers
-  name: List GitHub Followers
+  name: "GitHub user followers by username"
   summary: Retrieves public GitHub followers for a user.
   cost:
     type: per_call
@@ -1657,7 +1657,7 @@ endpoints:
   platform: github
   method: GET
   path: /v1/github/user/following
-  name: List GitHub Following
+  name: "GitHub user following list by username"
   summary: Retrieves public accounts followed by a GitHub user.
   cost:
     type: per_call
@@ -1697,7 +1697,7 @@ endpoints:
   platform: github
   method: GET
   path: /v1/github/user/pull-requests
-  name: List GitHub Pull Requests
+  name: "GitHub user pull requests by username"
   summary: Searches public GitHub pull requests authored by a user using GitHub's public search index.
   cost:
     type: per_call
@@ -1742,7 +1742,7 @@ endpoints:
   platform: github
   method: GET
   path: /v1/github/user/repositories
-  name: List GitHub Repositories
+  name: "GitHub user repositories by username — stars, language"
   summary: Retrieves a user's public repositories with repo metadata like description, language, stars, forks, topics, license, visibility, default branch, and timestamps.
   cost:
     type: per_call
@@ -1797,7 +1797,7 @@ endpoints:
   platform: google-ads
   method: GET
   path: /v1/google/ad
-  name: "Get Google Ad Details"
+  name: "Google ad library ad details by URL — impressions"
   summary: Retrieves detailed information about a specific Google ad including advertiserId, creativeId, format, firstShown, lastShown, and overallImpressions.
   cost:
     type: per_call
@@ -1833,7 +1833,7 @@ endpoints:
   platform: google-ads
   method: GET
   path: /v1/google/adLibrary/advertisers/search
-  name: "Search Google Advertisers"
+  name: "Search Google ad library advertisers by name"
   summary: Searches the Google Ad Transparency Library for advertisers by name.
   cost:
     type: per_call
@@ -1869,7 +1869,7 @@ endpoints:
   platform: google-ads
   method: GET
   path: /v1/google/company/ads
-  name: "List Google Company Ads"
+  name: "Google ad library company ads by domain or advertiser id"
   summary: Fetches public ads for a company from the Google Ad Transparency Library by domain or advertiser_id.
   cost:
     type: per_call
@@ -1946,7 +1946,7 @@ endpoints:
   capability: google.serp.organic
   method: GET
   path: /v1/google/search
-  name: "Search Google"
+  name: "Search Google by keyword — organic results"
   summary: Performs a Google search and returns organic results with url, title, and description for each result.
   cost:
     type: per_call
@@ -1993,7 +1993,7 @@ endpoints:
   capability: instagram.music.posts
   method: GET
   path: /v1/instagram/audio/reels
-  name: List Instagram Reels By Audio Id
+  name: "Instagram reels using an audio, by audio id"
   summary: Fetches the reels Instagram exposes for an audio page like instagram.com/reels/audio/{audio_id}/.
   cost:
     type: per_call
@@ -2030,7 +2030,7 @@ endpoints:
   capability: instagram.user.profile
   method: GET
   path: /v1/instagram/basic-profile
-  name: Get Instagram Basic Profile
+  name: "Instagram basic profile by user id — bio, followers"
   summary: Fetches a lightweight Instagram profile summary by user ID, returning username, full name, biography, profile picture URL, verification status, follower count, following count, media count, and account privacy and type.
   cost:
     type: per_call
@@ -2067,7 +2067,7 @@ endpoints:
   capability: instagram.post.detail
   method: GET
   path: /v1/instagram/post
-  name: Get Instagram Post/Reel Info
+  name: "Instagram post or reel by URL or shortcode"
   summary: Fetches detailed metadata for a single Instagram post or reel by shortcode or URL.
   cost:
     type: per_call
@@ -2114,7 +2114,7 @@ endpoints:
   capability: instagram.reels.recommended
   method: GET
   path: /v1/instagram/reels/trending
-  name: List Instagram Trending Reels
+  name: "Instagram trending reels feed"
   summary: Fetches trending reels from Instagram's public instagram.com/reels page.
   cost:
     type: per_call
@@ -2138,7 +2138,7 @@ endpoints:
   capability: instagram.hashtag.posts
   method: GET
   path: /v1/instagram/search/hashtag
-  name: Search Instagram Hashtag Posts
+  name: "Search Instagram posts by hashtag — caption, engagement"
   summary: Finds public Instagram posts for a hashtag using Google Search, then returns post details such as caption, play count when available, like count, comment count, owner, and post time.
   cost:
     type: per_call
@@ -2185,7 +2185,7 @@ endpoints:
   capability: instagram.search.users
   method: GET
   path: /v1/instagram/search/profiles
-  name: Search Instagram Profiles
+  name: "Search Instagram profiles by keyword"
   summary: Searches Google for public Instagram results matching a keyword or phrase, then returns matching public profiles.
   cost:
     type: per_call
@@ -2221,7 +2221,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /v1/instagram/user/embed
-  name: Get Instagram Embed HTML
+  name: "Instagram profile embed HTML by username"
   summary: Returns the raw HTML embed snippet for an Instagram user's profile widget.
   cost:
     type: per_call
@@ -2253,7 +2253,7 @@ endpoints:
   capability: instagram.highlight.items
   method: GET
   path: /v1/instagram/user/highlight/detail
-  name: List Instagram Highlights Details
+  name: "Instagram story highlight contents by highlight id"
   summary: Fetches the full contents of a specific Instagram story highlight album by its ID.
   cost:
     type: per_call
@@ -2285,7 +2285,7 @@ endpoints:
   capability: instagram.user.highlights
   method: GET
   path: /v1/instagram/user/highlights
-  name: List Instagram Story Highlights
+  name: "Instagram story highlights by username or user id"
   summary: Lists all story highlight albums for an Instagram user.
   cost:
     type: per_call
@@ -2322,7 +2322,7 @@ endpoints:
   capability: instagram.user.reels
   method: GET
   path: /v1/instagram/user/reels
-  name: List Instagram Reels
+  name: "Instagram user reels by username — short videos"
   summary: Returns a paginated list of a user's public Instagram reels (short-form videos).
   cost:
     type: per_call
@@ -2368,7 +2368,7 @@ endpoints:
   platform: kick
   method: GET
   path: /v1/kick/clip
-  name: Get Kick Clip
+  name: "Kick clip by URL — video, channel info"
   summary: Fetches detailed data for a Kick clip by URL, including video, metadata, and channel info.
   cost:
     type: per_call
@@ -2397,7 +2397,7 @@ endpoints:
   platform: linkinbio
   method: GET
   path: /v1/komi
-  name: Get Komi page
+  name: "Komi link-in-bio page by URL — profile, social links"
   summary: Scrapes a Komi page by URL, extracting the creator's profile, social links, and featured content.
   cost:
     type: per_call
@@ -2432,7 +2432,7 @@ endpoints:
   capability: kuaishou.video.detail
   method: GET
   path: /v1/kwai/post
-  name: Get Kwai Post
+  name: "Kwai post by URL — caption, media, counts"
   summary: Fetches public Kwai post details including caption, media URLs, cover images, counts, author info, and music metadata.
   cost:
     type: per_call
@@ -2464,7 +2464,7 @@ endpoints:
   capability: kuaishou.user.profile
   method: GET
   path: /v1/kwai/profile
-  name: Get Kwai Profile
+  name: "Kwai profile by username or URL — bio, counts"
   summary: Fetches public Kwai profile data including username, bio, avatar, verification status, gender, and public counts.
   cost:
     type: per_call
@@ -2500,7 +2500,7 @@ endpoints:
   platform: kuaishou
   method: GET
   path: /v1/kwai/user/posts
-  name: List Kwai User Posts
+  name: "Kwai user posts by username or URL"
   summary: Fetches a paginated list of public Kwai posts for a user, including captions, media URLs, covers, counts, author info, and the next cursor when more results are available.
   cost:
     type: per_call
@@ -2546,7 +2546,7 @@ endpoints:
   platform: linkinbio
   method: GET
   path: /v1/linkbio
-  name: Get Linkbio page
+  name: "Linkbio (lnk.bio) link-in-bio page by URL"
   summary: Scrapes a Linkbio (lnk.bio) page by URL, extracting the creator's profile and all their links.
   cost:
     type: per_call
@@ -2581,7 +2581,7 @@ endpoints:
   capability: linkedin.ad.detail
   method: GET
   path: /v1/linkedin/ad
-  name: "Get LinkedIn Ad Details"
+  name: "LinkedIn ad details by URL"
   summary: Retrieves detailed information about a specific LinkedIn ad by URL.
   cost:
     type: per_call
@@ -2613,7 +2613,7 @@ endpoints:
   capability: linkedin.search.ads
   method: GET
   path: /v1/linkedin/ads/search
-  name: "Search LinkedIn Ads"
+  name: "Search LinkedIn ad library by company or keyword"
   summary: Searches the LinkedIn Ad Library by company name, keyword, or companyId with optional country and date filters.
   cost:
     type: per_call
@@ -2675,7 +2675,7 @@ endpoints:
   capability: linkedin.company.profile
   method: GET
   path: /v1/linkedin/company
-  name: Get LinkedIn Company Page
+  name: "LinkedIn company profile by URL — headcount, industry"
   summary: Fetches a LinkedIn company page with details including name, description, logo, cover image, slogan, location, headquarters, employee count (headcount/staff size), website, industry, company type, founded year, specialties, funding rounds with investors, featured employees, recent posts, and simi...
   cost:
     type: per_call
@@ -2707,7 +2707,7 @@ endpoints:
   capability: linkedin.company.posts
   method: GET
   path: /v1/linkedin/company/posts
-  name: List LinkedIn Company Posts
+  name: "LinkedIn company posts by URL — full text, dates"
   summary: Retrieves paginated posts from a LinkedIn company page, including each post's URL, ID, publication date, and full text content.
   cost:
     type: per_call
@@ -2744,7 +2744,7 @@ endpoints:
   capability: linkedin.post.detail
   method: GET
   path: /v1/linkedin/post
-  name: Get LinkedIn Post
+  name: "LinkedIn post or article by URL — likes, comments"
   summary: Fetches a single LinkedIn post or article, returning the title, headline, full description text, author info with follower count, publication date, like count (reactions), comment count, and individual comments.
   cost:
     type: per_call
@@ -2775,7 +2775,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /v1/linkedin/post/transcript
-  name: Get LinkedIn Post Transcript
+  name: "LinkedIn post video transcript by URL"
   summary: Fetches the transcript from a LinkedIn post video when LinkedIn exposes one publicly.
   cost:
     type: per_call
@@ -2807,7 +2807,7 @@ endpoints:
   capability: linkedin.search.posts
   method: GET
   path: /v1/linkedin/search/posts
-  name: Search LinkedIn Posts
+  name: "Search LinkedIn posts by keyword"
   summary: Finds public LinkedIn posts, feed updates, and Pulse articles by keyword using Google Search, then returns post details such as description, author, media, images, like count, comment count, and published date when LinkedIn exposes them publicly.
   cost:
     type: per_call
@@ -2848,7 +2848,7 @@ endpoints:
   platform: linkinbio
   method: GET
   path: /v1/linkme
-  name: Get Linkme Profile
+  name: "Linkme link-in-bio profile by URL — links, contacts"
   summary: Retrieves a Linkme profile by URL, including identity, social links, and contact details.
   cost:
     type: per_call
@@ -2882,7 +2882,7 @@ endpoints:
   platform: linkinbio
   method: GET
   path: /v1/linktree
-  name: Get Linktree page
+  name: "Linktree link-in-bio page by URL — profile, links"
   summary: Scrapes a Linktree page by URL, extracting the creator's profile and all their links.
   cost:
     type: per_call
@@ -2916,7 +2916,7 @@ endpoints:
   platform: linkinbio
   method: GET
   path: /v1/pillar
-  name: Get Pillar page
+  name: "Pillar link-in-bio page by URL — links, products"
   summary: Scrapes a Pillar page by URL, extracting the creator's profile, social links, and products.
   cost:
     type: per_call
@@ -2950,7 +2950,7 @@ endpoints:
   platform: pinterest
   method: GET
   path: /v1/pinterest/board
-  name: Get Pinterest Board
+  name: "Pinterest board pins by board URL"
   summary: Fetches a paginated list of pins from a Pinterest board by URL, returning each pin's id, description, title, images, board info, pin_join annotations, and aggregated_pin_data.
   cost:
     type: per_call
@@ -2990,7 +2990,7 @@ endpoints:
   platform: pinterest
   method: GET
   path: /v1/pinterest/pin
-  name: Get Pinterest Pin
+  name: "Pinterest pin by URL — title, images, annotations"
   summary: Fetches detailed information about a single Pinterest pin by URL, returning title, description, link, dominantColor, originPinner, pinner, images at multiple resolutions (imageSpec_236x through imageSpec_orig), and pinJoin with visual annotations.
   cost:
     type: per_call
@@ -3030,7 +3030,7 @@ endpoints:
   platform: pinterest
   method: GET
   path: /v1/pinterest/search
-  name: "Search Pinterest"
+  name: "Search Pinterest pins by keyword"
   summary: Searches Pinterest for pins matching a query, returning results with id, url, title, description, images, link, domain, board info, and pinner details.
   cost:
     type: per_call
@@ -3070,7 +3070,7 @@ endpoints:
   platform: pinterest
   method: GET
   path: /v1/pinterest/user/boards
-  name: List Pinterest User Boards
+  name: "Pinterest user boards by username — pin counts"
   summary: Fetches a paginated list of boards for a Pinterest user, returning each board's name, url, description, pin_count, follower_count, owner info, cover_images, and created_at.
   cost:
     type: per_call
@@ -3106,7 +3106,7 @@ endpoints:
   capability: reddit.post.comments
   method: GET
   path: /v1/reddit/post/comments
-  name: List Reddit Post Comments
+  name: "Reddit post comments by URL"
   summary: Retrieves comments and post details from a Reddit post by URL.
   cost:
     type: per_call
@@ -3145,7 +3145,7 @@ endpoints:
   platform: reddit
   method: GET
   path: /v1/reddit/post/transcript
-  name: Get Reddit Post Transcript
+  name: "Reddit video post transcript by URL — captions"
   summary: Gets the transcript from a Reddit video post or direct v.redd.it URL when Reddit exposes a VTT caption file.
   cost:
     type: per_call
@@ -3185,7 +3185,7 @@ endpoints:
   capability: reddit.subreddit.info
   method: GET
   path: /v1/reddit/subreddit/details
-  name: Get Reddit Subreddit Details
+  name: "Subreddit details by name or URL"
   summary: Retrieves metadata about a subreddit by name or URL.
   cost:
     type: per_call
@@ -3224,7 +3224,7 @@ endpoints:
   platform: reddit
   method: GET
   path: /v1/reddit/subreddit/search
-  name: "Search Within Subreddit"
+  name: "Search within a subreddit by keyword — posts, comments"
   summary: Searches within a specific subreddit for posts, comments, and media matching a query.
   cost:
     type: per_call
@@ -3270,7 +3270,7 @@ endpoints:
   platform: rumble
   method: GET
   path: /v1/rumble/channel/videos
-  name: List Rumble Channel Videos
+  name: "Rumble channel videos by username or URL"
   summary: Gets videos from a Rumble channel by handle or URL.
   cost:
     type: per_call
@@ -3310,7 +3310,7 @@ endpoints:
   platform: rumble
   method: GET
   path: /v1/rumble/search
-  name: "Search Rumble"
+  name: "Search Rumble videos by keyword"
   summary: Searches Rumble videos by keyword.
   cost:
     type: per_call
@@ -3345,7 +3345,7 @@ endpoints:
   platform: rumble
   method: GET
   path: /v1/rumble/video
-  name: Get Rumble Video
+  name: "Rumble video details by URL"
   summary: Gets Rumble video details by URL.
   cost:
     type: per_call
@@ -3375,7 +3375,7 @@ endpoints:
   platform: rumble
   method: GET
   path: /v1/rumble/video/comments
-  name: List Rumble Comments
+  name: "Rumble video comments by URL — top level"
   summary: Gets all top level comments for a Rumble video by URL.
   cost:
     type: per_call
@@ -3405,7 +3405,7 @@ endpoints:
   platform: rumble
   method: GET
   path: /v1/rumble/video/transcript
-  name: Get Rumble Transcript
+  name: "Rumble video transcript by URL — captions"
   summary: Gets a Rumble video's transcript when captions are available.
   cost:
     type: per_call
@@ -3435,7 +3435,7 @@ endpoints:
   platform: snapchat
   method: GET
   path: /v1/snapchat/profile
-  name: Get Snapchat User Profile
+  name: "Snapchat profile by username — stories, spotlight"
   summary: Retrieves a Snapchat user's public profile by handle, including identity, stories, and spotlight content.
   cost:
     type: per_call
@@ -3464,7 +3464,7 @@ endpoints:
   platform: snapchat
   method: GET
   path: /v1/snapchat/spotlight
-  name: Get Snapchat Spotlight by Link
+  name: "Snapchat Spotlight video by URL"
   summary: Fetches public data for a Snapchat Spotlight video by URL.
   cost:
     type: per_call
@@ -3493,7 +3493,7 @@ endpoints:
   platform: snapchat
   method: GET
   path: /v1/snapchat/spotlight/comments
-  name: List Snapchat Spotlight Comments by Link
+  name: "Snapchat Spotlight comments by URL"
   summary: Fetches public comments from Snapchat's Spotlight comments API by URL.
   cost:
     type: per_call
@@ -3527,7 +3527,7 @@ endpoints:
   platform: soundcloud
   method: GET
   path: /v1/soundcloud/artist
-  name: Get SoundCloud Artist
+  name: "SoundCloud artist profile by username or URL"
   summary: Fetches detailed information about a SoundCloud artist by its handle or URL.
   cost:
     type: per_call
@@ -3561,7 +3561,7 @@ endpoints:
   platform: soundcloud
   method: GET
   path: /v1/soundcloud/artist/tracks
-  name: List SoundCloud Artist Tracks
+  name: "SoundCloud artist tracks by username or URL"
   summary: Fetches tracks/songs for a SoundCloud artist by handle or URL.
   cost:
     type: per_call
@@ -3600,7 +3600,7 @@ endpoints:
   platform: soundcloud
   method: GET
   path: /v1/soundcloud/track
-  name: Get SoundCloud Track
+  name: "SoundCloud track by URL — song details"
   summary: Fetches detailed information about a SoundCloud track/song by URL.
   cost:
     type: per_call
@@ -3629,7 +3629,7 @@ endpoints:
   platform: spotify
   method: GET
   path: /v1/spotify/album
-  name: Get Spotify Album
+  name: "Spotify album by id or URL — tracks, release info"
   summary: Retrieves detailed information about a Spotify album by its id or URL, including album metadata, artists, release date, cover art, copyright info, tracks, and sharing details.
   cost:
     type: per_call
@@ -3664,7 +3664,7 @@ endpoints:
   platform: spotify
   method: GET
   path: /v1/spotify/artist
-  name: Get Spotify Artist
+  name: "Spotify artist by id or URL — followers, genres"
   summary: Retrieves detailed information about a Spotify artist by their handle, including name, followers count, genres, and related artists.
   cost:
     type: per_call
@@ -3699,7 +3699,7 @@ endpoints:
   platform: spotify
   method: GET
   path: /v1/spotify/podcast
-  name: Get Spotify Podcast
+  name: "Spotify podcast details by id or URL"
   summary: Retrieves detailed information about a Spotify podcast by its id or URL.
   cost:
     type: per_call
@@ -3734,7 +3734,7 @@ endpoints:
   platform: spotify
   method: GET
   path: /v1/spotify/podcast/episodes
-  name: List Spotify Podcast Episodes
+  name: "Spotify podcast episodes by id or URL"
   summary: Returns episodes for a Spotify podcast.
   cost:
     type: per_call
@@ -3774,7 +3774,7 @@ endpoints:
   platform: spotify
   method: GET
   path: /v1/spotify/search
-  name: "Search Spotify"
+  name: "Search Spotify by keyword — tracks, artists, albums"
   summary: Search Spotify for tracks, artists, albums, episodes, podcasts, and audiobooks.
   cost:
     type: per_call
@@ -3804,7 +3804,7 @@ endpoints:
   platform: spotify
   method: GET
   path: /v1/spotify/track
-  name: Get Spotify Track
+  name: "Spotify track by id or URL — album, duration"
   summary: Retrieves detailed information about a Spotify track by its id or URL, including track metadata, artists, album info, duration, playability, and sharing details.
   cost:
     type: per_call
@@ -3840,7 +3840,7 @@ endpoints:
   capability: threads.post.detail
   method: GET
   path: /v1/threads/post
-  name: Get Threads Post
+  name: "Threads post by URL — likes, views, replies"
   summary: Fetches a single Threads post by URL, returning the post's caption, like_count, view_counts, reshare_count, direct_reply_count, image_versions2, and taken_at.
   cost:
     type: per_call
@@ -3880,7 +3880,7 @@ endpoints:
   capability: threads.user.profile
   method: GET
   path: /v1/threads/profile
-  name: Get Threads Profile
+  name: "Threads profile by username — bio, followers"
   summary: Retrieves a Threads user's public profile including username, full_name, biography, profile_pic_url, follower_count, is_verified, bio_links, and hd_profile_pic_versions.
   cost:
     type: per_call
@@ -3915,7 +3915,7 @@ endpoints:
   capability: threads.search.posts
   method: GET
   path: /v1/threads/search
-  name: Search Threads by Keyword
+  name: "Search Threads posts by keyword"
   summary: Searches Threads for posts matching a keyword, returning up to 10 results with caption text, like_count, reshare_count, direct_reply_count, user info, and image_versions2.
   cost:
     type: per_call
@@ -3960,7 +3960,7 @@ endpoints:
   capability: threads.search.profiles
   method: GET
   path: /v1/threads/search/users
-  name: Search Threads Users
+  name: "Search Threads users by name"
   summary: Searches for Threads users by username, returning matching profiles with username, full_name, profile_pic_url, is_verified, and pk.
   cost:
     type: per_call
@@ -3990,7 +3990,7 @@ endpoints:
   capability: threads.user.posts
   method: GET
   path: /v1/threads/user/posts
-  name: List Threads Posts
+  name: "Threads user posts by username — likes, reshares"
   summary: Fetches the most recent posts from a Threads user, returning id, caption text, code, like_count, reshare_count, direct_reply_count, repost_count, image_versions2, video_versions, and taken_at.
   cost:
     type: per_call
@@ -4025,7 +4025,7 @@ endpoints:
   capability: tiktok-ads.library.ad.detail
   method: GET
   path: /v1/tiktok/ad-library/ad
-  name: "Get TikTok Ad Library Ad"
+  name: "TikTok ad library ad details by ad id"
   summary: Fetches one TikTok ad by ID or URL.
   cost:
     type: per_call
@@ -4055,7 +4055,7 @@ endpoints:
   capability: tiktok-ads.library.search
   method: GET
   path: /v1/tiktok/ad-library/search
-  name: "Search TikTok Ad Library"
+  name: "Search TikTok ad library by keyword or advertiser"
   summary: Searches TikTok's public Ads Library by advertiser name or keyword.
   cost:
     type: per_call
@@ -4089,7 +4089,7 @@ endpoints:
   platform: tiktok
   method: GET
   path: /v1/tiktok/creators/popular
-  name: Get TikTok popular creators
+  name: "TikTok popular creators — filter by followers, country"
   summary: Discovers trending and popular TikTok creators, filterable by follower count range, creator country, and audience country.
   cost:
     type: per_call
@@ -4139,7 +4139,7 @@ endpoints:
   capability: tiktok.feed.home
   method: GET
   path: /v1/tiktok/get-trending-feed
-  name: List TikTok Trending Feed
+  name: "TikTok trending feed by region — viral videos"
   summary: Fetches TikTok's trending/For You feed for a given region — useful for discovering viral content and what's currently popular.
   cost:
     type: per_call
@@ -4174,7 +4174,7 @@ endpoints:
   capability: tiktok.live.detail
   method: GET
   path: /v1/tiktok/live
-  name: Get TikTok Live Info
+  name: "TikTok live room info by room id or user id"
   summary: Gets curated room-level info for a TikTok live using TokAPI's live info endpoint.
   cost:
     type: per_call
@@ -4210,7 +4210,7 @@ endpoints:
   capability: tiktok-shop.product.detail
   method: GET
   path: /v1/tiktok/product
-  name: Get TikTok Shop Product Details
+  name: "TikTok Shop product by URL — stock, affiliate videos"
   summary: Fetches full details for a specific US TikTok Shop product by its URL, including stock levels and affiliate videos.
   cost:
     type: per_call
@@ -4245,7 +4245,7 @@ endpoints:
   capability: tiktok.user.country
   method: GET
   path: /v1/tiktok/profile/region
-  name: Get TikTok Profile Region
+  name: "TikTok profile region code by username"
   summary: Returns the TikTok region code for a public profile, like `US` for United States or `MX` for Mexico.
   cost:
     type: per_call
@@ -4275,7 +4275,7 @@ endpoints:
   capability: tiktok.search.hashtags
   method: GET
   path: /v1/tiktok/search/hashtag
-  name: Search TikTok by Hashtag
+  name: "Search TikTok videos by hashtag"
   summary: Searches for TikTok videos under a specific hashtag — useful for finding content by topic or trend.
   cost:
     type: per_call
@@ -4318,7 +4318,7 @@ endpoints:
   capability: tiktok.search.suggestions
   method: GET
   path: /v1/tiktok/search/suggestions
-  name: Search TikTok Suggestions
+  name: "TikTok search autocomplete suggestions by keyword"
   summary: Gets the autocomplete suggestions TikTok shows while someone is typing in search.
   cost:
     type: per_call
@@ -4353,7 +4353,7 @@ endpoints:
   capability: tiktok.search.general
   method: GET
   path: /v1/tiktok/search/top
-  name: "Search TikTok Top Results"
+  name: "Search TikTok top results by keyword — videos, photos"
   summary: Searches TikTok's 'Top' results by query — returns both videos and photo carousels, unlike keyword search which only returns videos.
   cost:
     type: per_call
@@ -4401,7 +4401,7 @@ endpoints:
   capability: tiktok.search.users
   method: GET
   path: /v1/tiktok/search/users
-  name: Search TikTok Users
+  name: "Search TikTok users by name or keyword"
   summary: Searches for TikTok users by keyword or name — useful for finding creators or accounts matching a query.
   cost:
     type: per_call
@@ -4439,7 +4439,7 @@ endpoints:
   capability: tiktok-shop.product.reviews
   method: GET
   path: /v1/tiktok/shop/product/reviews
-  name: Get TikTok Shop Product Reviews
+  name: "TikTok Shop product reviews by URL or product id"
   summary: Fetches customer reviews for a TikTok Shop product by URL or product_id.
   cost:
     type: per_call
@@ -4484,7 +4484,7 @@ endpoints:
   capability: tiktok-shop.shop.products
   method: GET
   path: /v1/tiktok/shop/products
-  name: "List TikTok Shop Products"
+  name: "TikTok Shop store products by store URL"
   summary: Lists all products from a specific TikTok Shop store by its URL.
   cost:
     type: per_call
@@ -4528,7 +4528,7 @@ endpoints:
   capability: tiktok-shop.search.products
   method: GET
   path: /v1/tiktok/shop/search
-  name: Search TikTok Shop products
+  name: "Search TikTok Shop products by keyword"
   summary: Searches TikTok Shop for products matching a keyword query.
   cost:
     type: per_call
@@ -4568,7 +4568,7 @@ endpoints:
   capability: tiktok.music.detail
   method: GET
   path: /v1/tiktok/song
-  name: Get TikTok Song Details
+  name: "TikTok sound or song details by clip id"
   summary: Fetches detailed metadata for a specific TikTok sound or song by its clipId.
   cost:
     type: per_call
@@ -4598,7 +4598,7 @@ endpoints:
   capability: tiktok.music.videos
   method: GET
   path: /v1/tiktok/song/videos
-  name: "List TikTok Song Videos"
+  name: "TikTok videos using a sound, by clip id"
   summary: Fetches TikTok videos that use a specific sound or song, identified by its clipId.
   cost:
     type: per_call
@@ -4632,7 +4632,7 @@ endpoints:
   platform: tiktok
   method: GET
   path: /v1/tiktok/user/audience
-  name: Get TikTok User's Audience Demographics
+  name: "TikTok audience demographics by username — countries"
   summary: Retrieves audience demographic data for a TikTok user, showing where their followers are located by country.
   cost:
     type: per_call
@@ -4662,7 +4662,7 @@ endpoints:
   capability: tiktok.user.followers
   method: GET
   path: /v1/tiktok/user/followers
-  name: List TikTok Followers
+  name: "TikTok user followers by username or id"
   summary: Retrieves the follower list of a TikTok account by handle or user_id — useful for seeing who follows a creator or getting subscriber data.
   cost:
     type: per_call
@@ -4706,7 +4706,7 @@ endpoints:
   capability: tiktok.user.following
   method: GET
   path: /v1/tiktok/user/following
-  name: List TikTok Following
+  name: "TikTok user following list by username"
   summary: Retrieves the following list — accounts that a TikTok user follows — by their handle.
   cost:
     type: per_call
@@ -4745,7 +4745,7 @@ endpoints:
   capability: tiktok.live.status
   method: GET
   path: /v1/tiktok/user/live
-  name: Get TikTok Live
+  name: "TikTok live status by username — room details"
   summary: Checks if a TikTok user is currently live streaming and retrieves their live room details.
   cost:
     type: per_call
@@ -4774,7 +4774,7 @@ endpoints:
   platform: tiktok-shop
   method: GET
   path: /v1/tiktok/user/showcase
-  name: Get TikTok Shop User Showcase
+  name: "TikTok Shop creator showcase products by username"
   summary: Fetches products featured in a TikTok user's public showcase — the products a creator promotes on their profile.
   cost:
     type: per_call
@@ -4814,7 +4814,7 @@ endpoints:
   capability: tiktok.comment.replies
   method: GET
   path: /v1/tiktok/video/comment/replies
-  name: List TikTok Comment Replies
+  name: "TikTok comment replies by comment id"
   summary: Fetches replies to a specific TikTok comment by its ID.
   cost:
     type: per_call
@@ -4854,7 +4854,7 @@ endpoints:
   platform: tiktok
   method: GET
   path: /v1/tiktok/video/transcript
-  name: Get TikTok Transcript
+  name: "TikTok video transcript by URL — captions, subtitles"
   summary: Extracts the transcript, captions, or subtitles from a TikTok video by URL.
   cost:
     type: per_call
@@ -4893,7 +4893,7 @@ endpoints:
   platform: truthsocial
   method: GET
   path: /v1/truthsocial/post
-  name: Get Truth Social Post
+  name: "Truth Social post by URL — text, engagement counts"
   summary: Fetches a single Truth Social post by URL, returning text, id, created_at, url, content, account details, media_attachments, card link previews, replies_count, reblogs_count, and favourites_count.
   cost:
     type: per_call
@@ -4922,7 +4922,7 @@ endpoints:
   platform: truthsocial
   method: GET
   path: /v1/truthsocial/profile
-  name: Get Truth Social Profile
+  name: "Truth Social profile by username — bio, followers"
   summary: Retrieves a Truth Social user's public profile including display_name, username, avatar, header, followers_count, following_count, statuses_count, verified status, website, and created_at.
   cost:
     type: per_call
@@ -4951,7 +4951,7 @@ endpoints:
   platform: truthsocial
   method: GET
   path: /v1/truthsocial/user/posts
-  name: List Truth Social User Posts
+  name: "Truth Social user posts by username"
   summary: Fetches a paginated list of posts from a Truth Social user, returning text, id, created_at, url, content, account info, media_attachments, card link previews, replies_count, reblogs_count, and favourites_count.
   cost:
     type: per_call
@@ -4995,7 +4995,7 @@ endpoints:
   platform: twitch
   method: GET
   path: /v1/twitch/clip
-  name: Get Twitch Clip
+  name: "Twitch clip by URL — video URLs, metadata"
   summary: Fetches detailed data for a Twitch clip by URL, including metadata and direct video URLs.
   docs_url: https://docs.scrapecreators.com/twitch/clip
   input:
@@ -5022,7 +5022,7 @@ endpoints:
   platform: twitch
   method: GET
   path: /v1/twitch/profile
-  name: Get Twitch Profile
+  name: "Twitch profile by username — identity, links"
   summary: Retrieves a Twitch user's public profile by handle, including identity, social links, and content.
   cost:
     type: per_call
@@ -5057,7 +5057,7 @@ endpoints:
   platform: twitch
   method: GET
   path: /v1/twitch/user/schedule
-  name: Get Twitch User Schedule
+  name: "Twitch stream schedule by username"
   summary: Fetches a user's schedule by handle, returning a list of scheduled events with start time, end time, title, description, and thumbnail URL.
   cost:
     type: per_call
@@ -5087,7 +5087,7 @@ endpoints:
   platform: twitch
   method: GET
   path: /v1/twitch/user/videos
-  name: List Twitch User Videos
+  name: "Twitch user videos by username — views, game info"
   summary: Fetches a list of videos (100 max) for a Twitch user, returning each video's id, slug, url, embedURL, title, viewCount, language, durationSeconds, game info, broadcaster details with follower count, thumbnailURL, and videoQualities at multiple resolutions with a signed videoURL for playback.
   cost:
     type: per_call
@@ -5125,7 +5125,7 @@ endpoints:
   platform: x
   method: GET
   path: /v1/twitter/community
-  name: Get Twitter Community
+  name: "X (Twitter) community details by URL"
   summary: Retrieves details about a Twitter/X Community by URL.
   cost:
     type: per_call
@@ -5155,7 +5155,7 @@ endpoints:
   platform: x
   method: GET
   path: /v1/twitter/community/tweets
-  name: List Twitter Community Tweets
+  name: "X (Twitter) community tweets by URL"
   summary: Fetches tweets posted within a Twitter/X Community by URL.
   cost:
     type: per_call
@@ -5186,7 +5186,7 @@ endpoints:
   capability: x.post.detail
   method: GET
   path: /v1/twitter/tweet
-  name: Get Twitter Tweet Details
+  name: "X (Twitter) tweet by URL — author, engagement"
   summary: Retrieves detailed information about a specific tweet by URL, including the author's profile and engagement metrics.
   cost:
     type: per_call
@@ -5224,7 +5224,7 @@ endpoints:
   platform: x
   method: GET
   path: /v1/twitter/tweet/transcript
-  name: Get Twitter Transcript
+  name: "X (Twitter) video tweet transcript by URL"
   summary: Extracts the transcript from a Twitter video tweet using AI-powered transcription.
   cost:
     type: per_call
@@ -5260,7 +5260,7 @@ endpoints:
   capability: youtube.channel.videos
   method: GET
   path: /v1/youtube/channel-videos
-  name: List YouTube Channel Videos
+  name: "YouTube channel videos by id or username — views, dates"
   summary: Fetches a paginated list of videos uploaded by a YouTube channel, including each video's title, URL, thumbnail, view count (views), publish date, duration, and description.
   cost:
     type: per_call
@@ -5315,7 +5315,7 @@ endpoints:
   capability: youtube.channel.posts
   method: GET
   path: /v1/youtube/channel/community-posts
-  name: List YouTube Channel Community Posts
+  name: "YouTube channel community posts by id or username"
   summary: Fetches community posts from a YouTube channel's Posts tab, including post ID, URL, content, images, attached video, like count, publish time, channel info, and a continuationToken when YouTube has more results.
   cost:
     type: per_call
@@ -5354,7 +5354,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /v1/youtube/channel/lives
-  name: Get YouTube Channel Lives
+  name: "YouTube channel live streams by id or username"
   summary: Fetches live streams and past streams from a YouTube channel's Live tab, including title, URL, thumbnail, view count, publish time, duration, and a continuationToken when YouTube has more results.
   cost:
     type: per_call
@@ -5393,7 +5393,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /v1/youtube/channel/playlists
-  name: List YouTube Channel Playlists
+  name: "YouTube channel playlists by id or username"
   summary: Fetches playlists from a YouTube channel's Playlists tab, including playlist ID, title, thumbnail, video count, channel info, playlist URL, and a continuationToken when YouTube has more results.
   cost:
     type: per_call
@@ -5433,7 +5433,7 @@ endpoints:
   capability: youtube.channel.shorts
   method: GET
   path: /v1/youtube/channel/shorts
-  name: List YouTube Channel Shorts
+  name: "YouTube channel Shorts by id or username — views, likes"
   summary: Retrieves a paginated list of short-form videos (Shorts) from a YouTube channel, including each short's title, URL, view count (views), likes, comments, and description.
   cost:
     type: per_call
@@ -5478,7 +5478,7 @@ endpoints:
   capability: youtube.post.detail
   method: GET
   path: /v1/youtube/community-post
-  name: Get YouTube Community Post Details
+  name: "YouTube community post by URL — text, images, likes"
   summary: Retrieves the full details of a YouTube community post, including its text content, attached images, like count, publish date, and associated channel info.
   cost:
     type: per_call
@@ -5507,7 +5507,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /v1/youtube/playlist
-  name: Get YouTube Playlist
+  name: "YouTube playlist videos by playlist id"
   summary: Retrieves all videos in a YouTube playlist, including the playlist title, owner info, total video count, and each video's title, URL, thumbnail, duration, and channel.
   cost:
     type: per_call
@@ -5537,7 +5537,7 @@ endpoints:
   capability: youtube.search.videos
   method: GET
   path: /v1/youtube/search
-  name: "Search YouTube"
+  name: "Search YouTube by keyword — videos, channels, playlists"
   summary: Searches YouTube by keyword query and returns matching videos, channels, playlists, shorts, shelves, and live streams.
   cost:
     type: per_call
@@ -5599,7 +5599,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /v1/youtube/search/hashtag
-  name: Search YouTube by Hashtag
+  name: "Search YouTube videos by hashtag"
   summary: Searches YouTube for content matching a specific hashtag and returns matching videos with title, URL, thumbnail, view count (views), publish date, duration, and channel info.
   cost:
     type: per_call
@@ -5639,7 +5639,7 @@ endpoints:
   capability: youtube.trending.videos
   method: GET
   path: /v1/youtube/shorts/trending
-  name: List YouTube Trending Shorts
+  name: "YouTube trending Shorts — views, likes, channels"
   summary: Fetches approximately 48 currently trending YouTube Shorts (viral/popular short-form videos) per call, returning each short's title, URL, thumbnail, view count (views), like count (likes), comment count, publish date, channel info, keywords, and duration.
   cost:
     type: per_call
@@ -5661,7 +5661,7 @@ endpoints:
   capability: youtube.comment.replies
   method: GET
   path: /v1/youtube/video/comment/replies
-  name: List YouTube Comment Replies
+  name: "YouTube comment replies by continuation token"
   summary: Fetches replies to a specific comment on a YouTube video, including each reply's text content, author details (name, channel ID, avatar, verified/creator status), like count, and publish date.
   cost:
     type: per_call
@@ -5690,7 +5690,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /v1/youtube/video/sponsors
-  name: Get YouTube Video Sponsors
+  name: "YouTube video sponsors by URL (experimental)"
   summary: Experimental endpoint.
   cost:
     type: per_call
@@ -5725,7 +5725,7 @@ endpoints:
   capability: youtube.video.captions
   method: GET
   path: /v1/youtube/video/transcript
-  name: Get YouTube Transcript
+  name: "YouTube video transcript by URL — captions, subtitles"
   summary: Retrieves the captions, subtitles, or transcript of a YouTube video or short.
   cost:
     type: per_call
@@ -5764,7 +5764,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /v2/instagram/media/transcript
-  name: Get Instagram Transcript
+  name: "Instagram video or reel transcript by URL"
   summary: Generates an AI-powered speech-to-text transcription for an Instagram video post or reel.
   cost:
     type: per_call
@@ -5798,7 +5798,7 @@ endpoints:
   capability: instagram.search.reels
   method: GET
   path: /v2/instagram/reels/search
-  name: Search Instagram Reels
+  name: "Search Instagram reels by keyword"
   summary: Searches for Instagram reels matching a keyword or phrase via Google Search, bypassing Instagram's login-gated search.
   cost:
     type: per_call
@@ -5840,7 +5840,7 @@ endpoints:
   capability: tiktok.user.videos
   method: GET
   path: /v3/tiktok/profile/videos
-  name: List TikTok Profile Videos
+  name: "TikTok user videos by username or id"
   summary: Fetches videos posted by a TikTok user, sortable by latest or most popular — use this to get a creator's video feed or TikToks.
   cost:
     type: per_call

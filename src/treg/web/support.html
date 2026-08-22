@@ -5,11 +5,67 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Treg Support</title>
 <meta name="description" content="How to get help with treg — the tool catalog for your agent."/>
+<!-- One page answers /support, /contact and /help. The canonical collapses all three into one URL
+     so they cannot compete with each other in search. -->
+<link rel="canonical" href="{BASE}/support"/>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist+Pixel&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/legal.css"/>
+
+<!-- FAQPage over section 02 below. The five questions and answers here are the ones ON the page,
+     copied from it — Google treats FAQ schema that does not match the visible text as a violation,
+     so if you edit a question in the body, edit it here in the same commit. -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "url": "{BASE}/support",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "I cannot sign in.",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "treg has three doors: GitHub, Google, and a one-time code sent to your email. If a code does not arrive, check spam for mail from no-reply@treg.to. Signing in for the first time creates the account — there is no separate registration."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "A call was refused for funds.",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Catalog endpoints that treg serves on its own key are metered against your team's prepaid balance. Run `treg balance` to see it, and `treg topup` to add more. A new team starts with $1.00 free, and there is a default ceiling of $5 per team per day so a runaway agent cannot spend without limit."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "I want my API keys removed.",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Deleting a tool or a secret in the dashboard removes the stored credential. To delete an entire team and everything in it, use `treg org delete <slug>`. If you would rather we did it, email us from the address on the account."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Something is charging more than I expected.",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Every metered call is recorded with what it cost. `treg balance` shows the ledger. If a price looks wrong, tell us the endpoint id and we will check it against the provider's own rate — the catalog's prices are read from provider rate cards and from what we observe being charged, and both can drift."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is my data used for anything else?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. Credentials are encrypted at rest and used only to make the calls you or your team ask for. The privacy policy is the full answer."
+      }
+    }
+  ]
+}
+</script>
 </head>
 <body>
 

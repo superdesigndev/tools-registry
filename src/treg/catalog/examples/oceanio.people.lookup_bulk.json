@@ -1,0 +1,41 @@
+{
+  "people": [
+    {
+      "id": "8646fe23931d019b",
+      "domain": "stripe.com",
+      "name": "Patrick Collison",
+      "firstName": "Patrick",
+      "lastName": "Collison",
+      "country": "us",
+      "state": "California",
+      "location": "San Francisco, California, United States",
+      "linkedinUrl": "https://www.linkedin.com/in/patrickcollison",
+      "seniorities": ["C-Level"],
+      "departments": ["Management"],
+      "jobTitle": "CEO",
+      "experiences": [
+        {
+          "domain": "arcinstitute.org",
+          "jobTitle": "Cofounder",
+          "dateFrom": "2021-01",
+          "linkedinCompanyHandle": "arc-institute-org"
+        },
+        {
+          "domain": "stripe.com",
+          "jobTitle": "CEO",
+          "dateFrom": "2010-01",
+          "linkedinCompanyHandle": "stripe"
+        }
+      ],
+      "skills": ["Programming Languages", "Software Engineering", "Artificial Intelligence", "Distributed Systems", "APIs"],
+      "headline": "Stripe CEO",
+      "connectionsCount": 500,
+      "followersCount": 80005,
+      "updatedAt": "2026-08-03T01:48:20+02:00"
+    }
+  ],
+  "totalRequested": 1,
+  "totalFound": 1,
+  "creditsUsed": 0.05,
+  "_truncated": "one person shown (public figure); lists shortened. Only matched people come back"
+}

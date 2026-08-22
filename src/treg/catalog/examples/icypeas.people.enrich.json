@@ -1,0 +1,70 @@
+{
+  "success": true,
+  "result": {
+    "firstname": "Patrick",
+    "lastname": "Collison",
+    "numOfConnections": 499,
+    "headline": "Content Strategist.",
+    "url": "https://www.linkedin.com/in/patrickcollison",
+    "skills": [],
+    "languages": [
+      {
+        "value": "Irish",
+        "level": "",
+        "norm": "UNK"
+      }
+    ],
+    "lid": "patrickcollison",
+    "description": "Dynamically communicate prospective opportunities and proactive technologies. Efficiently aggregate interactive materials before state of the art collaboration and idea-sharing. Cr… (truncated)",
+    "address": {
+      "streetAddress": "",
+      "addressLocality": "San Francisco",
+      "addressRegion": "California",
+      "postalCode": "",
+      "addressCountry": "United States",
+      "addressCountryCode": "US"
+    },
+    "educations": [
+      {
+        "fieldsOfStudy": "… (nested detail elided)",
+        "urn": "urn:li:fs_salesSchool:1503",
+        "name": "Massachusetts Institute of Technology",
+        "degree": "",
+        "startDate": "2006-01-01T00:00:00.000Z",
+        "endDate": "2010-01-01T00:00:00.000Z"
+      }
+    ],
+    "worksFor": [
+      {
+        "name": "Arc Institute",
+        "location": "Palo Alto, Californie, États-Unis",
+        "contractType": "",
+        "workArrangement": "",
+        "lid": "arc-institute-org",
+        "urn": "urn:li:fs_salesCompany:76635532",
+        "startDate": "2021-01-01T00:00:00.000Z",
+        "description": "",
+        "jobTitle": "Cofounder",
+        "company": "… (nested detail elided)"
+      }
+    ],
+    "alumniOf": [
+      {
+        "name": "Auctomatic",
+        "location": "",
+        "contractType": "",
+        "workArrangement": "",
+        "lid": "auctomatic",
+        "urn": "urn:li:fs_salesCompany:167094",
+        "startDate": "2007-01-01T00:00:00.000Z",
+        "endDate": "2008-01-01T00:00:00.000Z",
+        "description": "",
+        "jobTitle": "Cofounder"
+      }
+    ],
+    "volunteeringExperiences": [],
+    "deleted": false
+  },
+  "searchId": "8bKhHKABgC6p8QIDv4FB",
+  "status": "FOUND"
+}

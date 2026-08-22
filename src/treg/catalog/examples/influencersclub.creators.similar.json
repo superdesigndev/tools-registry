@@ -1,0 +1,31 @@
+{
+  "total": 159,
+  "limit": 2,
+  "accounts": [
+    {
+      "user_id": "uc_1461169",
+      "profile": {
+        "full_name": "Kobi Brown",
+        "username": "astrokobi",
+        "picture": "https://pictures.influencersclub.workers.dev/img/9-pIDbNtirJUftGrs9JzwOd3PgZZnFwQcZzqsGvX7fzLkCRnsNwHNpb75YYaDe-KQFasOX4csVpJq0qsGrbXEiUoJSlsmdDkfeT-WmumwFIYiTDEHeWhkVzQ",
+        "followers": 1306593,
+        "engagement_percent": 0.9100000262260437
+      },
+      "similarity_score": 0.77431923
+    },
+    {
+      "user_id": "uc_6818278",
+      "profile": {
+        "full_name": "Andrew McCarthy",
+        "username": "cosmic_background",
+        "picture": "https://pictures.influencersclub.workers.dev/img/ZW1cKIkwoiOmln_bFErE5QQVMrBOoBJkk32T8nfp_KYNq1DzbF3bO0PRy571Z-pKgLiUARbSU0k4UiFY3b9xqqFt2naizOUdt6x6FSrireYNjrqv-LsXeis",
+        "followers": 1914983,
+        "engagement_percent": 0.28999999165534973
+      },
+      "similarity_score": 0.7215352
+    }
+  ],
+  "credits_left": 5.21,
+  "credits_cost": 0.02,
+  "trial_searches_left": 13
+}

@@ -1,0 +1,231 @@
+provider: coingecko
+source:
+  docs: https://docs.coingecko.com/reference/introduction
+  openapi: null # CoinGecko publishes rendered reference pages; paths below transcribed 2026-08-15
+  curated: 2026-08-15
+# The first Market data provider, and the category's flagship: the one true credit-priced vendor in
+# the sector (fx.yaml: Basic $29/mo / 100,000 credits = $0.00029/credit, license Commercial).
+# Billing: CoinGecko's usage docs state each successful API request consumes 1 call credit, uniform
+# across the endpoints below — hence every cost block is `per_call, 1 credit, documented`. Errors and
+# rate-limit rejections consume nothing.
+# Host: the PRO host only (pro-api.coingecko.com, header x-cg-pro-api-key — the registry injects it).
+# The demo host answers 200 to anything and demo keys ride a different header; neither is served
+# here. Verified live 2026-08-15 on treg's own Basic key; examples captured the same day.
+pricing_url: https://www.coingecko.com/en/api/pricing
+endpoints:
+  - id: coingecko.simple.price
+    domain: crypto
+    capability: crypto.price.current
+    platform: crypto
+    scope: any_account
+    method: GET
+    path: /simple/price
+    name: "Current crypto price by coin id — market cap, 24h change"
+    summary: "Current price for up to hundreds of coins at once, in any quote currency, with optional market cap, 24h volume and 24h change"
+    input:
+      queryParams:
+        ids: {type: string, required: true, note: "comma-separated CoinGecko coin ids (bitcoin,ethereum) — find ids with coingecko.search", example: "bitcoin,ethereum"}
+        vs_currencies: {type: string, required: true, note: "comma-separated quote currencies (usd,eur,btc)", example: "usd"}
+        include_market_cap: {type: boolean, required: false}
+        include_24hr_vol: {type: boolean, required: false}
+        include_24hr_change: {type: boolean, required: false}
+    test_request: {queryParams: {ids: "bitcoin,ethereum", vs_currencies: "usd", include_24hr_change: "true"}}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, source_url: "https://docs.coingecko.com/reference/common-errors-rate-limit", checked: "2026-08-15", confidence: documented, note: "1 credit per successful request, uniform across plan endpoints"}
+    verified: 2026-08-15
+    example_response: examples/coingecko.simple.price.json
+    docs_url: https://docs.coingecko.com/reference/simple-price
+
+  - id: coingecko.simple.supported-currencies
+    domain: crypto
+    capability: crypto.price.currencies
+    platform: crypto
+    scope: any_account
+    method: GET
+    path: /simple/supported_vs_currencies
+    name: "List supported quote currencies (fiat, BTC, ETH)"
+    summary: "Every vs_currency the price endpoints accept (fiat, BTC, ETH and more)"
+    input:
+      note: "no parameters"
+    test_request: {queryParams: {}}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, source_url: "https://docs.coingecko.com/reference/common-errors-rate-limit", checked: "2026-08-15", confidence: documented}
+    verified: 2026-08-15
+    example_response: examples/coingecko.simple.supported-currencies.json
+    docs_url: https://docs.coingecko.com/reference/simple-supported-currencies
+
+  - id: coingecko.coins.markets
+    domain: crypto
+    capability: crypto.market.rankings
+    platform: crypto
+    scope: any_account
+    method: GET
+    path: /coins/markets
+    name: "Top crypto coins ranked by market cap — price, 24h change"
+    summary: "Coins ranked by market cap (or volume), each with price, market cap, 24h change, supply and ATH — the one-call market overview"
+    input:
+      queryParams:
+        vs_currency: {type: string, required: true, example: "usd"}
+        ids: {type: string, required: false, note: "restrict to specific coin ids, comma-separated"}
+        order: {type: string, required: false, note: "market_cap_desc (default) | volume_desc | id_asc …"}
+        per_page: {type: integer, required: false, note: "1-250, default 100"}
+        page: {type: integer, required: false}
+        price_change_percentage: {type: string, required: false, note: "extra change windows: 1h,24h,7d,30d,1y"}
+    test_request: {queryParams: {vs_currency: "usd", per_page: "3", page: "1"}}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, source_url: "https://docs.coingecko.com/reference/common-errors-rate-limit", checked: "2026-08-15", confidence: documented}
+    verified: 2026-08-15
+    example_response: examples/coingecko.coins.markets.json
+    docs_url: https://docs.coingecko.com/reference/coins-markets
+
+  - id: coingecko.coins.get
+    domain: crypto
+    capability: crypto.coin.profile
+    platform: crypto
+    scope: any_account
+    method: GET
+    path: /coins/{coin_id}
+    name: "Full crypto coin profile by coin id — links, market data"
+    summary: "Everything about one coin: description, links, market data, supply, ATH/ATL — heavy response, use the flags to slim it"
+    input:
+      queryParams:
+        coin_id: {type: string, required: true, note: "path parameter — the CoinGecko id (bitcoin)", example: "bitcoin"}
+        localization: {type: boolean, required: false, note: "false drops 40+ translations from the response"}
+        tickers: {type: boolean, required: false, note: "false drops per-exchange tickers (large)"}
+        market_data: {type: boolean, required: false}
+        community_data: {type: boolean, required: false}
+        developer_data: {type: boolean, required: false}
+    test_request: {queryParams: {coin_id: "bitcoin", localization: "false", tickers: "false", market_data: "true", community_data: "false", developer_data: "false"}}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, source_url: "https://docs.coingecko.com/reference/common-errors-rate-limit", checked: "2026-08-15", confidence: documented}
+    verified: 2026-08-15
+    example_response: examples/coingecko.coins.get.json
+    docs_url: https://docs.coingecko.com/reference/coins-id
+
+  - id: coingecko.coins.market-chart
+    domain: crypto
+    capability: crypto.price.history
+    platform: crypto
+    scope: any_account
+    method: GET
+    path: /coins/{coin_id}/market_chart
+    name: "Crypto price history by coin id — market cap, volume series"
+    summary: "Historical price, market cap and volume series for a coin over N days (auto granularity: 5-minutely under 1 day, hourly under 90, daily beyond)"
+    input:
+      queryParams:
+        coin_id: {type: string, required: true, note: "path parameter", example: "bitcoin"}
+        vs_currency: {type: string, required: true, example: "usd"}
+        days: {type: string, required: true, note: "1 | 7 | 30 | 365 | max"}
+        interval: {type: string, required: false, note: "daily forces daily points"}
+    test_request: {queryParams: {coin_id: "bitcoin", vs_currency: "usd", days: "1"}}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, source_url: "https://docs.coingecko.com/reference/common-errors-rate-limit", checked: "2026-08-15", confidence: documented}
+    verified: 2026-08-15
+    example_response: examples/coingecko.coins.market-chart.json
+    docs_url: https://docs.coingecko.com/reference/coins-id-market-chart
+
+  - id: coingecko.coins.history
+    domain: crypto
+    capability: crypto.price.history
+    platform: crypto
+    scope: any_account
+    method: GET
+    path: /coins/{coin_id}/history
+    name: "Crypto coin snapshot on a date — price, market cap, volume"
+    summary: "Price, market cap and volume of a coin on one historical date"
+    input:
+      queryParams:
+        coin_id: {type: string, required: true, note: "path parameter", example: "bitcoin"}
+        date: {type: string, required: true, note: "dd-mm-yyyy", example: "01-01-2026"}
+        localization: {type: boolean, required: false}
+    test_request: {queryParams: {coin_id: "bitcoin", date: "01-01-2026", localization: "false"}}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, source_url: "https://docs.coingecko.com/reference/common-errors-rate-limit", checked: "2026-08-15", confidence: documented}
+    verified: 2026-08-15
+    example_response: examples/coingecko.coins.history.json
+    docs_url: https://docs.coingecko.com/reference/coins-id-history
+
+  - id: coingecko.coins.ohlc
+    domain: crypto
+    capability: crypto.price.ohlc
+    platform: crypto
+    scope: any_account
+    method: GET
+    path: /coins/{coin_id}/ohlc
+    name: "Crypto OHLC candles by coin id over N days"
+    summary: "Open/high/low/close candles over N days (30-minutely under 2 days, 4-hourly to 30, daily beyond)"
+    input:
+      queryParams:
+        coin_id: {type: string, required: true, note: "path parameter", example: "bitcoin"}
+        vs_currency: {type: string, required: true, example: "usd"}
+        days: {type: string, required: true, note: "1 | 7 | 14 | 30 | 90 | 180 | 365"}
+    test_request: {queryParams: {coin_id: "bitcoin", vs_currency: "usd", days: "1"}}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, source_url: "https://docs.coingecko.com/reference/common-errors-rate-limit", checked: "2026-08-15", confidence: documented}
+    verified: 2026-08-15
+    example_response: examples/coingecko.coins.ohlc.json
+    docs_url: https://docs.coingecko.com/reference/coins-id-ohlc
+
+  - id: coingecko.search
+    domain: crypto
+    capability: crypto.search
+    platform: crypto
+    scope: any_account
+    method: GET
+    path: /search
+    name: "Search crypto coins and exchanges by name or ticker"
+    summary: "Resolve a name or ticker to CoinGecko ids — the id-lookup for every other endpoint"
+    input:
+      queryParams:
+        query: {type: string, required: true, example: "solana"}
+    test_request: {queryParams: {query: "solana"}}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, source_url: "https://docs.coingecko.com/reference/common-errors-rate-limit", checked: "2026-08-15", confidence: documented}
+    verified: 2026-08-15
+    example_response: examples/coingecko.search.json
+    docs_url: https://docs.coingecko.com/reference/search-data
+
+  - id: coingecko.search.trending
+    domain: crypto
+    capability: crypto.market.trending
+    platform: crypto
+    scope: any_account
+    method: GET
+    path: /search/trending
+    name: "Trending crypto coins and NFTs — most searched in 24h"
+    summary: "The coins, NFTs and categories most searched on CoinGecko in the last 24 hours"
+    input:
+      note: "no parameters"
+    test_request: {queryParams: {}}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, source_url: "https://docs.coingecko.com/reference/common-errors-rate-limit", checked: "2026-08-15", confidence: documented}
+    verified: 2026-08-15
+    example_response: examples/coingecko.search.trending.json
+    docs_url: https://docs.coingecko.com/reference/trending-search
+
+  - id: coingecko.global
+    domain: crypto
+    capability: crypto.market.global
+    platform: crypto
+    scope: any_account
+    method: GET
+    path: /global
+    name: "Global crypto market stats — total cap, BTC dominance"
+    summary: "Total market cap, 24h volume, BTC dominance and active coin count across the whole market"
+    input:
+      note: "no parameters"
+    test_request: {queryParams: {}}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, source_url: "https://docs.coingecko.com/reference/common-errors-rate-limit", checked: "2026-08-15", confidence: documented}
+    verified: 2026-08-15
+    example_response: examples/coingecko.global.json
+    docs_url: https://docs.coingecko.com/reference/crypto-global
+
+  - id: coingecko.exchanges
+    domain: crypto
+    capability: crypto.exchanges.list
+    platform: crypto
+    scope: any_account
+    method: GET
+    path: /exchanges
+    name: "Crypto exchanges ranked by trust score — volume, country"
+    summary: "Exchanges ranked by trust score, each with 24h BTC volume, country and year established"
+    input:
+      queryParams:
+        per_page: {type: integer, required: false, note: "1-250, default 100"}
+        page: {type: integer, required: false}
+    test_request: {queryParams: {per_page: "3", page: "1"}}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, source_url: "https://docs.coingecko.com/reference/common-errors-rate-limit", checked: "2026-08-15", confidence: documented}
+    verified: 2026-08-15
+    example_response: examples/coingecko.exchanges.json
+    docs_url: https://docs.coingecko.com/reference/exchanges

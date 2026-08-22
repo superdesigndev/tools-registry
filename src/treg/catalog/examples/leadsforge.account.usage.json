@@ -1,0 +1,9 @@
+{
+  "availableCredits": 100,
+  "reservedCredits": 0,
+  "emailEnrichmentPrice": 1,
+  "phoneNumberEnrichmentPrice": 10,
+  "linkedinEnrichmentPrice": 1,
+  "companyLookalikePrice": 1,
+  "companyFollowersPrice": 1
+}

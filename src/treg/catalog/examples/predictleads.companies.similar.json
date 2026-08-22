@@ -1,0 +1,48 @@
+{
+  "data": [
+    {
+      "id": "019eef28-cd6a-7856-b599-209926f54a60",
+      "type": "company_similarity",
+      "attributes": {
+        "score": 0.9815,
+        "position": 1,
+        "reason": "Both provide comprehensive global payment processing and financial services for online businesses and consumers.",
+        "refreshed_at": "2026-06-22T11:48:09Z"
+      },
+      "relationships": {
+        "company": {
+          "data": {
+            "id": "a0383c53-8142-5e7c-8ca3-9980289a3ccc",
+            "type": "company"
+          }
+        },
+        "similar_company": {
+          "data": {
+            "id": "1397711c-8ace-5ad2-8bb9-3e65f6608905",
+            "type": "company"
+          }
+        }
+      }
+    }
+  ],
+  "included": [
+    {
+      "id": "a0383c53-8142-5e7c-8ca3-9980289a3ccc",
+      "type": "company",
+      "attributes": {
+        "domain": "stripe.com",
+        "company_name": "Stripe, Inc.",
+        "ticker": null
+      }
+    },
+    "… 1 more items omitted"
+  ],
+  "meta": {
+    "schema_version": "3.0",
+    "record_state": "active",
+    "message_type": "ok",
+    "message": "You can try running the same query on any subsidiary company domain (bridge.xyz, chargeforstripe.com, chargestripe.com, financialnigeria.com, lemonsqueezy.com, metronome.com, ngx-stripe.dev, okayhq.com, openchannel.io, orum.io, ...). You can also try news_events, job_openings, technologies, connecti …[truncated]",
+    "redirects_to_domain": null,
+    "parent_company_domain": null
+  }
+}

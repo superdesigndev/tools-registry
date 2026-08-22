@@ -1,0 +1,77 @@
+{
+ "status": "ok",
+ "domain": "stripe.com",
+ "styleguide": {
+  "mode": "light",
+  "colors": {"accent": "#533afd", "background": "#ffffff", "text": "#81b81a"},
+  "typography": {
+   "headings": {
+    "h1": {
+     "fontFamily": "sohne-var",
+     "fontSize": "48px",
+     "fontWeight": 300,
+     "lineHeight": "55.2px",
+     "letterSpacing": "-0.96px",
+     "fontFallbacks": ["sohne-var", "… further items truncated for the catalog example"]
+    },
+    "_truncated": "… further keys truncated for the catalog example (h2, h3, h4)"
+   },
+   "p": {
+    "fontFamily": "sohne-var",
+    "fontSize": "14px",
+    "fontWeight": 300,
+    "lineHeight": "35.2px",
+    "letterSpacing": "-0.64px",
+    "fontFallbacks": ["sohne-var", "… further items truncated for the catalog example"]
+   }
+  },
+  "elementSpacing": {"xs": "6px", "sm": "16px", "md": "24px", "lg": "40px", "xl": "80px"},
+  "shadows": {"sm": "rgba(23, 23, 23, 0.08) 0px 15px 35px 0px", "md": "none", "lg": "none", "xl": "none", "inner": "none"},
+  "components": {
+   "button": {
+    "primary": {
+     "backgroundColor": "#533afd",
+     "color": "#ffffff",
+     "borderColor": "transparent",
+     "borderRadius": "4px",
+     "borderWidth": "1px",
+     "borderStyle": "solid",
+     "padding": "15.5px 24px 16.5px",
+     "fontSize": "16px",
+     "fontWeight": 400,
+     "minWidth": "141px",
+     "minHeight": "48px",
+     "textDecoration": "none",
+     "boxShadow": "none",
+     "fontFallbacks": ["sohne-var", "… further items truncated for the catalog example"],
+     "fontFamily": "sohne-var",
+     "css": "box-sizing: border-box; display: inline-block; min-width: 141px; min-height: 48px; background-color: #533afd; color: #ffffff; border: 1px solid transparent; border-radius: 4px; padding: 15.5px 24px 16.5px; font-size: …"
+    },
+    "_truncated": "… further keys truncated for the catalog example (secondary, link)"
+   },
+   "card": {
+    "backgroundColor": "#ffffff",
+    "borderColor": "#000000",
+    "borderRadius": "6px",
+    "borderWidth": "0px",
+    "borderStyle": "none",
+    "padding": "8px",
+    "boxShadow": "rgba(0, 0, 0, 0.1) 0px 20.187px 40.374px -20.187px",
+    "textColor": "#000000",
+    "css": "background-color: #ffffff; color: #000000; border: 0px none #000000; border-radius: 6px; padding: 8px; box-shadow: rgba(0, 0, 0, 0.1) 0px 20.187px 40.374px -20.187px;"
+   }
+  },
+  "fontLinks": {
+   "sohne-var": {
+    "type": "custom",
+    "files": {
+     "400": "https://b.stripecdn.com/mkt-ssr-statics/assets/_next/static/media/Sohne.cb178166.woff2",
+     "_truncated": "weights 100-900 all present"
+    },
+    "displayName": "Sohne Var"
+   }
+  }
+ },
+ "code": 200,
+ "key_metadata": {"credits_consumed": 10, "credits_remaining": 214}
+}

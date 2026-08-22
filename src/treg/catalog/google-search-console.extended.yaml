@@ -26,7 +26,7 @@ endpoints:
   platform: search-console
   method: POST
   path: /v1/urlTestingTools/mobileFriendlyTest:run
-  name: "Run mobile-friendly test"
+  name: "Run Google's mobile-friendly test on a URL"
   summary: mobileFriendlyTest.run — Runs Mobile-Friendly Test for a given URL.
   scope: any_account
   cost: &id001
@@ -48,7 +48,7 @@ endpoints:
   platform: search-console
   method: DELETE
   path: /webmasters/v3/sites/{siteUrl}
-  name: "Delete a site property"
+  name: "Remove a site from your Search Console"
   summary: sites.delete — Removes a site from the set of the user's Search Console sites.
   scope: own_account
   cost: *id001
@@ -58,13 +58,13 @@ endpoints:
       siteUrl:
         type: string
         required: true
-        note: The URI of the property as defined in Search Console. **Examples:** `http://www.example.com/` or `sc-domain:example.com`.
+        note: Pass the raw property URI; treg encodes it. **Examples:** `http://www.example.com/` or `sc-domain:example.com`.
 - id: google-search-console.x.webmasters-sites-get
   tier: extended
   platform: search-console
   method: GET
   path: /webmasters/v3/sites/{siteUrl}
-  name: "Get site details"
+  name: "Your Search Console site details by site URL"
   summary: sites.get — Retrieves information about specific site.
   scope: own_account
   cost: *id001
@@ -74,14 +74,14 @@ endpoints:
       siteUrl:
         type: string
         required: true
-        note: The URI of the property as defined in Search Console. **Examples:** `http://www.example.com/` or `sc-domain:example.com`.
+        note: Pass the raw property URI; treg encodes it. **Examples:** `http://www.example.com/` or `sc-domain:example.com`.
 - id: google-search-console.x.webmasters-sites-add
   kind: account
   tier: extended
   platform: search-console
   method: PUT
   path: /webmasters/v3/sites/{siteUrl}
-  name: "Add a site property"
+  name: "Add a site to your Search Console"
   summary: sites.add — Adds a site to the set of the user's sites in Search Console.
   scope: own_account
   cost: *id001
@@ -91,14 +91,14 @@ endpoints:
       siteUrl:
         type: string
         required: true
-        note: The URL of the site to add.
+        note: Pass the raw site URL/property id; treg encodes it.
 - id: google-search-console.x.webmasters-sitemaps-delete
   kind: account
   tier: extended
   platform: search-console
   method: DELETE
   path: /webmasters/v3/sites/{siteUrl}/sitemaps/{feedpath}
-  name: "Delete a sitemap"
+  name: "Remove a sitemap from your Search Console report"
   summary: sitemaps.delete — Deletes a sitemap from the Sitemaps report. Does not stop Google from crawling this sitemap or the URLs that were previously crawled in the deleted sitemap.
   scope: own_account
   cost: *id001
@@ -112,13 +112,13 @@ endpoints:
       siteUrl:
         type: string
         required: true
-        note: 'The site''s URL, including protocol. For example: `http://www.example.com/`.'
+        note: 'Pass the raw property id; treg encodes it. For example: `http://www.example.com/` or `sc-domain:example.com`.'
 - id: google-search-console.x.webmasters-sitemaps-get
   tier: extended
   platform: search-console
   method: GET
   path: /webmasters/v3/sites/{siteUrl}/sitemaps/{feedpath}
-  name: "Get sitemap details"
+  name: "Sitemap details by site URL and feed path"
   summary: sitemaps.get — Retrieves information about a specific sitemap.
   scope: own_account
   cost: *id001
@@ -132,14 +132,14 @@ endpoints:
       siteUrl:
         type: string
         required: true
-        note: 'The site''s URL, including protocol. For example: `http://www.example.com/`.'
+        note: 'Pass the raw property id; treg encodes it. For example: `http://www.example.com/` or `sc-domain:example.com`.'
 - id: google-search-console.x.webmasters-sitemaps-submit
   kind: account
   tier: extended
   platform: search-console
   method: PUT
   path: /webmasters/v3/sites/{siteUrl}/sitemaps/{feedpath}
-  name: "Submit a sitemap"
+  name: "Submit a sitemap for your site to Google"
   summary: sitemaps.submit — Submits a sitemap for a site.
   scope: own_account
   cost: *id001
@@ -153,4 +153,4 @@ endpoints:
       siteUrl:
         type: string
         required: true
-        note: 'The site''s URL, including protocol. For example: `http://www.example.com/`.'
+        note: 'Pass the raw property id; treg encodes it. For example: `http://www.example.com/` or `sc-domain:example.com`.'

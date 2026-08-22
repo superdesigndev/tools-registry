@@ -1,0 +1,21 @@
+name: Catalog drift
+
+on:
+  schedule:
+    - cron: "15 2 * * *"  # daily, after providers' common UTC maintenance window
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  tikhub:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.13"
+      - name: Compare TikHub catalog with its public OpenAPI spec
+        run: uv run --frozen python scripts/catalog_drift.py tikhub

@@ -39,7 +39,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /people/match
-    name: "Enrich a person by email or LinkedIn"
+    name: "Enrich a person by email, LinkedIn URL or name + company"
     summary: "Enrich a person from an email, LinkedIn URL or name + company — title, contact details"
     input:
       queryParams:
@@ -78,7 +78,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /mixed_people/api_search
-    name: "Search contacts by title, company or location"
+    name: "Search people by title, seniority, company or location"
     summary: "Search Apollo's 200M+ contacts by title, seniority, company, location or tech (free)"
     input:
       queryParams:
@@ -105,7 +105,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /organizations/enrich
-    name: "Enrich a company by domain or name"
+    name: "Enrich a company by domain, name or LinkedIn URL"
     summary: "Enrich a company from domain, name or LinkedIn — industry, headcount, revenue, funding"
     input:
       queryParams:
@@ -134,8 +134,8 @@ endpoints:
     scope: any_account
     method: POST
     path: /mixed_companies/search
-    name: "Search companies by industry, size or tech"
-    summary: "Search Apollo's companies by industry, headcount, revenue, funding or technology"
+    name: "Search companies by industry or tech — headcount growth"
+    summary: "Search Apollo's companies by industry, headcount, revenue, funding or technology — hits carry 6/12/24-month headcount growth, the hiring/growth signal"
     input:
       queryParams:
         "q_organization_domains_list[]": {type: "array[string]", required: false, note: "restrict to these domains; max 1,000", example: ["apollo.io"]}
@@ -163,6 +163,75 @@ endpoints:
       note: 1 credit per PAGE returned (0 when there are no results) — not per company. Fewer, fuller pages therefore cost less than many small ones, the opposite of most providers in this catalog.
     docs_url: https://docs.apollo.io/reference/organization-search
 
+  - id: apollo.companies.jobs
+    domain: companies
+    capability: companies.jobs
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /organizations/{organization_id}/job_postings
+    name: "A company's job postings by Apollo id — hiring signal"
+    summary: "List a company's open job postings — title, location and posting dates — the direct hiring signal"
+    input:
+      pathParams:
+        organization_id: {type: string, required: true, note: "Apollo company id — resolve it first with apollo.companies.search (or the free apollo.people.search, whose hits carry organization_id)"}
+      queryParams:
+        page: {type: integer, required: false, example: 1}
+        per_page: {type: integer, required: false, note: "the charge is per PAGE, so a larger per_page is cheaper per posting", example: 25}
+      note: "two-step by design: this endpoint takes an Apollo id, not a name or domain — resolve the company first. Display limit 10,000 records; rate limit ~600 calls/hour (plan-dependent)"
+    test_request:
+      pathParams: {organization_id: "55694053736964214d541c00"}
+      queryParams: {per_page: 2}
+    cost:
+      type: per_call
+      value: 1
+      currency: credit
+      per: 1
+      unit: page
+      source: docs
+      source_url: https://www.apollo.io/pricing
+      checked: '2026-08-20'
+      confidence: documented
+      note: 1 credit per PAGE returned, same page rule as company search.
+    verified: 2026-08-20
+    example_response: examples/apollo.companies.jobs.json
+    docs_url: https://docs.apollo.io/reference/organization-jobs-postings
+
+  - id: apollo.companies.news
+    domain: companies
+    capability: companies.news
+    platform: companies
+    scope: any_account
+    method: POST
+    path: /news_articles/search
+    name: "News about a company by Apollo id — hires, funding"
+    summary: "Search news articles about specific companies — hires, funding and other signal categories"
+    input:
+      queryParams:
+        "organization_ids[]": {type: "array[string]", required: true, note: "Apollo company ids to search news for — resolve with apollo.companies.search first"}
+        "categories[]": {type: "array[string]", required: false, note: "event categories, e.g. hires, investment"}
+        "published_at[min]": {type: string, required: false, note: "YYYY-MM-DD", example: "2026-01-01"}
+        "published_at[max]": {type: string, required: false, note: "YYYY-MM-DD"}
+        page: {type: integer, required: false, example: 1}
+        per_page: {type: integer, required: false, note: "up to 25 per page; the charge is per PAGE", example: 25}
+      note: "query-string params on a POST, arrays in field[]=value form — the same parameter-location trap as the rest of this provider. A company with no coverage answers 200 with an empty news_articles page, not an error"
+    test_request:
+      queryParams: {"organization_ids[]": ["5d0a0fbff6512580bf33a120"], per_page: 2}
+    cost:
+      type: per_call
+      value: 1
+      currency: credit
+      per: 1
+      unit: page
+      source: docs
+      source_url: https://www.apollo.io/pricing
+      checked: '2026-08-20'
+      confidence: documented
+      note: 1 credit per PAGE returned, up to 25 articles per page.
+    verified: 2026-08-20
+    example_response: examples/apollo.companies.news.json
+    docs_url: https://docs.apollo.io/reference/news-articles-search
+
   - id: apollo.people.bulk_enrich
     domain: contacts
     capability: people.enrich
@@ -170,7 +239,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /people/bulk_match
-    name: "Enrich multiple people in one batch"
+    name: "Bulk-enrich up to 10 people by email, LinkedIn URL or name"
     summary: "Enrich up to 10 people in one call, using the same identifiers as single-person enrichment"
     input:
       bodyType: json

@@ -1,0 +1,4 @@
+{
+  "lists": [],
+  "_note": "the verification account had no saved lists; a populated response is {lists: [{id, name, created_at, updated_at, shared_with_team, is_owner}]}"
+}

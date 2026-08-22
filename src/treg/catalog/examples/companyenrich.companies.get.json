@@ -1,0 +1,34 @@
+{
+  "id": "0192577c-1d7a-715c-a5b7-1b9b530445e0",
+  "name": "Stripe",
+  "domain": "stripe.com",
+  "website": "https://stripe.com",
+  "type": "private",
+  "legalName": "Stripe, LLC",
+  "industry": "Finance",
+  "industries": [
+    "Finance/Credit Cards & Transaction Processing"
+  ],
+  "categories": [
+    "b2b",
+    "... 1 more items truncated"
+  ],
+  "employees": "5K-10K",
+  "reported_employees": "5K-10K",
+  "revenue": "over-1b",
+  "description": "Stripe provides financial infrastructure for businesses of all sizes. Its products support online and in-person payments, billing, invoicing, payouts, fraud prevention, identity verification, tax, car …[truncated]",
+  "keywords": [
+    "payment processing",
+    "... 45 more items truncated"
+  ],
+  "technologies": [
+    "Amazon AWS",
+    "... 18 more items truncated"
+  ],
+  "subsidiaries": null,
+  "founded_year": 2010,
+  "naics_codes": [
+    "522320"
+  ],
+  "_truncated": "7 more fields omitted"
+}

@@ -1,0 +1,14 @@
+{
+  "items": [
+    {
+      "id": 4845,
+      "name": "California",
+      "code": "CA",
+      "latitude": 36.77826,
+      "longitude": -119.41793
+    }
+  ],
+  "page": 1,
+  "totalPages": 1,
+  "totalItems": 1
+}

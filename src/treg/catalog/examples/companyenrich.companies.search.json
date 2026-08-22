@@ -1,0 +1,43 @@
+{
+  "items": [
+    {
+      "id": "01924eda-c165-79f9-9bbd-daa57c92b136",
+      "name": "TinyURL",
+      "domain": "tinyurl.com",
+      "website": "https://tinyurl.com",
+      "type": "private",
+      "legalName": null,
+      "industry": "Business Services",
+      "industries": [
+        "Business Services/Advertising & Marketing",
+        "... 3 more items truncated"
+      ],
+      "categories": [
+        "b2c",
+        "... 1 more items truncated"
+      ],
+      "employees": "51-200",
+      "reported_employees": "11-50",
+      "revenue": "under-1m",
+      "description": "TinyURL provides URL shortening and link management services for businesses, marketers, entrepreneurs, and influencers. Its offerings include branded short links, custom domains, QR codes, campaign mo …[truncated]",
+      "keywords": [
+        "URL shortening",
+        "... 20 more items truncated"
+      ],
+      "technologies": [
+        "Amazon-Cloudfront",
+        "... 9 more items truncated"
+      ],
+      "subsidiaries": null,
+      "founded_year": 2002,
+      "naics_codes": [
+        "519130",
+        "... 1 more items truncated"
+      ],
+      "_truncated": "7 more fields omitted"
+    }
+  ],
+  "page": 1,
+  "totalPages": 100,
+  "totalItems": 100
+}

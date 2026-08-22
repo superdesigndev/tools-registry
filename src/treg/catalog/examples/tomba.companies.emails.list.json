@@ -1,0 +1,46 @@
+{
+  "data": {
+    "organization": {
+      "website_url": "stripe.com",
+      "organization": "Stripe",
+      "location": "{…nested object truncated…}",
+      "social_links": "{…nested object truncated…}",
+      "disposable": false,
+      "webmail": false,
+      "phone_number": false,
+      "industries": "Information Technology and Services",
+      "founded": "2010",
+      "company_size": "5K-10K",
+      "company_type": "privately held",
+      "revenue": "$100M-$250M",
+      "accept_all": true,
+      "description": "stripe is a payment processing platform enabling businesses to accept payments and manage online transactions.",
+      "pattern": "{first}",
+      "total_similar": 37,
+      "keywords": [
+        "…truncated…"
+      ],
+      "ranking": 243,
+      "whois": "{…nested object truncated…}",
+      "last_updated": "2026-06-30T21:31:21+02:00"
+    },
+    "emails": [
+      "{…nested object truncated…}"
+    ]
+  },
+  "meta": {
+    "total": 5083,
+    "pageSize": 1,
+    "current": 1,
+    "total_pages": 5083,
+    "params": {
+      "domain": "stripe.com",
+      "company": "",
+      "page": 1,
+      "limit": 1,
+      "type": "all",
+      "live": false,
+      "enrich_mobile": false
+    }
+  }
+}

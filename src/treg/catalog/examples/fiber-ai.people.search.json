@@ -1,0 +1,264 @@
+{
+  "output": {
+    "data": [
+      {
+        "articles": [
+          {
+            "id": "33993866",
+            "title": "Introducing the Health Assurance Acquisition Corp.\n",
+            "date_published": "2020-11-17T00:00:00.000Z"
+          },
+          {
+            "id": "33993869",
+            "title": "Why Startups Are More Successful than Ever at Unbundling Incumbents",
+            "date_published": "2018-01-22T00:00:00.000Z"
+          },
+          "… 7 more item(s) truncated"
+        ],
+        "certifications": null,
+        "connection_count": 16455,
+        "courses": null,
+        "dob": "1981-01-01T00:00:00.000Z",
+        "education": [
+          {
+            "school_id": "1503",
+            "school_name": "Massachusetts Institute of Technology",
+            "field_of_study_id": null,
+            "field_of_study_name": "EECS",
+            "degree": "M.Eng.",
+            "grade": null,
+            "start_date": "1997-01-01T00:00:00.000Z",
+            "end_date": "1999-12-31T00:00:00.000Z",
+            "activities": null,
+            "notes": null
+          },
+          {
+            "school_id": "1501",
+            "school_name": "MIT Sloan School of Management",
+            "field_of_study_id": null,
+            "field_of_study_name": "Operations Research",
+            "degree": "S.M.",
+            "grade": null,
+            "start_date": "1997-01-01T00:00:00.000Z",
+            "end_date": "1999-12-31T00:00:00.000Z",
+            "activities": null,
+            "notes": null
+          },
+          "… 4 more item(s) truncated"
+        ],
+        "experiences": [
+          {
+            "linkedin_company_id": "2135371",
+            "is_current": true,
+            "company_name": "Stripe",
+            "locality": "San Francisco Bay Area",
+            "start_date": "2011-10-01T00:00:00.000Z",
+            "end_date": null,
+            "summary": null,
+            "title": "Investor (former Board Member)",
+            "seniority": "Executive",
+            "job_function": [
+              "Finance"
+            ],
+            "employment_type": null,
+            "academic_qualification": null,
+            "company_start_date": "2011-10-01T00:00:00.000Z",
+            "company_end_date": null
+          },
+          {
+            "linkedin_company_id": "108950465",
+            "is_current": true,
+            "company_name": "Percepta",
+            "locality": null,
+            "start_date": "2024-10-01T00:00:00.000Z",
+            "end_date": null,
+            "summary": null,
+            "title": "Founder and Executive Chairman",
+            "seniority": "Executive",
+            "job_function": [
+              "Management"
+            ],
+            "employment_type": null,
+            "academic_qualification": null,
+            "company_start_date": "2024-10-01T00:00:00.000Z",
+            "company_end_date": null
+          },
+          "… 9 more item(s) truncated"
+        ],
+        "first_name": "Hemant",
+        "follower_count": 100391,
+        "headline": "CEO, General Catalyst",
+        "industry_name": "Venture Capital & Private Equity",
+        "inferred_location": {
+          "street_address": null,
+          "neighborhood": null,
+          "city": "Palo Alto",
+          "state_name": "California",
+          "state_code": "US-CA",
+          "county": "Santa Clara County",
+          "postal_code": null,
+          "country_code": "USA",
+          "country_name": "United States",
+          "coordinates": {
+            "lat": 37.445908,
+            "lon": -122.16162
+          },
+          "timezone": "America/Los_Angeles",
+          "full_address": "Palo Alto, California, United States",
+          "formatted_address": "Palo Alto"
+        },
+        "interests": [
+          "Venture Capital",
+          "Social Entrepreneurship",
+          "… 18 more item(s) truncated"
+        ],
+        "last_name": "Taneja",
+        "locality": "Palo Alto, California, United States",
+        "name": "Hemant Taneja",
+        "patents": null,
+        "profile_pic": "https://fiber-ai-images.s3.us-east-1.amazonaws.com/profile/a307c02dd0f570622cb03ceb57c309ed.jpeg",
+        "projects": null,
+        "publications": [
+          {
+            "collaborators": null,
+            "date": null,
+            "id": null,
+            "publisher": null,
+            "summary": null,
+            "title": "Managing the Unintended Consequences of Your Innovations",
+            "url": null
+          },
+          {
+            "collaborators": null,
+            "date": null,
+            "id": null,
+            "publisher": null,
+            "summary": null,
+            "title": "UnHealthcare: A Manifesto for Health Assurance",
+            "url": null
+          },
+          "… 7 more item(s) truncated"
+        ],
+        "skills": [
+          "Venture Capital",
+          "Social Entrepreneurship",
+          "… 18 more item(s) truncated"
+        ],
+        "primary_slug": "hemanttaneja",
+        "slugs": [
+          "hemanttaneja",
+          "linkedin.com/in/hemanttaneja"
+        ],
+        "summary": "I am the CEO of General Catalyst. \n\nMy work centers on applied AI as the engine for abundance and resilience—modernizing the systems that matter most to society. I laid out my thesis for building resilient, abundant systems in my 2025 national bestseller: The Transformation Principles.\n\nI have architected GC’s strategy to drive global resilience through AI transformation in five critical industries: healthcare, defense, industrials, energy, and financial services. General Catalyst provides its p… [1378 chars total]",
+        "url": "https://www.linkedin.com/in/hemanttaneja",
+        "user_id": "30868",
+        "volunteering": null,
+        "tenures": [
+          {
+            "linkedin_company_id": "28902",
+            "company_name": "General Catalyst",
+            "date_range": {
+              "gte": "2002-01-01T00:00:00.000Z",
+              "lte": null
+            },
+            "range_length_days": null,
+            "titles": [
+              "Managing Director",
+              "CEO"
+            ],
+            "localities": [
+              "Palo Alto, California"
+            ]
+          },
+          {
+            "linkedin_company_id": "64700064",
+            "company_name": "Commure",
+            "date_range": {
+              "gte": "2017-01-01T00:00:00.000Z",
+              "lte": null
+            },
+            "range_length_days": null,
+            "titles": [
+              "Founder and Executive Chairman"
+            ],
+            "localities": []
+          },
+          "… 8 more item(s) truncated"
+        ],
+        "career_began_at": "2002-01-01T00:00:00.000Z",
+        "tags": [
+          "second-time-founder",
+          "major-tech-company-experience",
+          "… 8 more item(s) truncated"
+        ],
+        "entity_urn": "ACoAAAAAeJQBVGouWp3UmT3kg7ElDcaRQKgjrIM",
+        "open_to_work": false,
+        "premium": true,
+        "influencer": true,
+        "organizations": null,
+        "entity_urns": [
+          "ACoAAAAAeJQBVGouWp3UmT3kg7ElDcaRQKgjrIM"
+        ],
+        "is_hiring": false,
+        "websites": [
+          "https://hemant-taneja.com",
+          "http://generalcatalyst.com"
+        ],
+        "is_verified": true,
+        "verifications": {
+          "is_verified": true,
+          "joined_date": null,
+          "verification_types": null
+        },
+        "is_top_voice": false,
+        "current_job": {
+          "linkedin_company_id": "2135371",
+          "is_current": true,
+          "company_name": "Stripe",
+          "locality": "San Francisco Bay Area",
+          "start_date": "2011-10-01T00:00:00.000Z",
+          "end_date": null,
+          "summary": null,
+          "title": "Investor (former Board Member)",
+          "seniority": "Executive",
+          "job_function": [
+            "Finance"
+          ],
+          "employment_type": null,
+          "academic_qualification": null,
+          "company_start_date": "2011-10-01T00:00:00.000Z",
+          "company_end_date": null
+        },
+        "custom_data": null,
+        "relevance_score": 19.909027,
+        "last_sort_key": "gAAAAABqhncsmnzXJuDzqu-vlJxzlBYYiR8wYRCUati2TubGVwXyuWJlD070ijo1I1adlnoE8m6Rh_oDx6DNUBeC-nf2qnUHnbEVUe12QniN3Ao0ctp2uCM=",
+        "last_updated_at": "2026-08-18T10:02:15.899Z",
+        "languages": [
+          {
+            "name": "Hindi",
+            "proficiency_id": null,
+            "proficiency_name": null
+          }
+        ],
+        "detailed_education": null,
+        "detailed_work_experiences": null
+      }
+    ],
+    "estimatedCount": null,
+    "nextCursor": "gAAAAABqhncsmnzXJuDzqu-vlJxzlBYYiR8wYRCUati2TubGVwXyuWJlD070ijo1I1adlnoE8m6Rh_oDx6DNUBeC-nf2qnUHnbEVUe12QniN3Ao0ctp2uCM="
+  },
+  "chargeInfo": {
+    "method": "charged-now",
+    "creditsCharged": 1,
+    "lowCreditAlert": {
+      "getMoreCreditsUrl": "https://www.fiber.ai/app/subscription",
+      "message": "Your credits are running low. Consider topping up to avoid service interruption.",
+      "availableCredits": 485
+    }
+  },
+  "advice": [
+    "Your search returned 1 profiles. Use lite reveal to get verified emails at the lowest cost per contact on the market.",
+    "For emails + phone numbers, use standard reveal. For maximum coverage, try exhaustive reveal.",
+    "… 1 more item(s) truncated"
+  ]
+}

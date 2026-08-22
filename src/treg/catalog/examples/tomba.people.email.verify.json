@@ -1,0 +1,52 @@
+{
+  "data": {
+    "email": {
+      "email": "patrick@stripe.com",
+      "result": "deliverable",
+      "status": "valid",
+      "score": 99,
+      "smtp_provider": "Google Workspace",
+      "mx": {
+        "records": [
+          "aspmx.l.google.com",
+          "alt1.aspmx.l.google.com",
+          "…2 more items truncated for the catalog example"
+        ]
+      },
+      "mx_check": true,
+      "smtp_server": true,
+      "smtp_check": true,
+      "accept_all": true,
+      "greylisted": false,
+      "block": false,
+      "gibberish": false,
+      "disposable": false,
+      "webmail": false,
+      "regex": true,
+      "whois": {
+        "registrar_name": "safenames ltd.",
+        "referral_url": "http://www.safenames.net",
+        "created_date": "1995-09-12T06:00:00+02:00"
+      }
+    },
+    "sources": [
+      {
+        "uri": "https://hunter.io/api",
+        "website_url": "hunter.io",
+        "extracted_on": "2021-01-19T21:21:07+01:00",
+        "last_seen_on": "2021-01-19T21:21:07+01:00",
+        "still_on_page": true
+      },
+      {
+        "uri": "https://hunter.io/api/email-verifier",
+        "website_url": "hunter.io",
+        "extracted_on": "2021-01-19T21:21:08+01:00",
+        "last_seen_on": "2021-01-19T21:21:08+01:00",
+        "still_on_page": true
+      },
+      "…2 more items truncated for the catalog example"
+    ],
+    "phone_data": []
+  }
+}
+

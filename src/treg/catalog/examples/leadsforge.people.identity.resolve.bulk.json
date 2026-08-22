@@ -1,0 +1,15 @@
+{
+  "jobID": "af10f308-7b6e-4dfe-a1b3-ccdb18022f88",
+  "channel": "linkedin",
+  "status": "in_progress",
+  "total": 1,
+  "processed": 0,
+  "succeeded": 0,
+  "failed": 0,
+  "reservedCredits": 1,
+  "createdAt": "2026-08-20T00:47:18.984773Z",
+  "updatedAt": "2026-08-20T00:47:18.984773Z",
+  "clientRequestID": "treg-verify-2",
+  "statusURL": "/public/v1/enrichment/jobs/af10f308-7b6e-4dfe-a1b3-ccdb18022f88",
+  "resultsURL": "/public/v1/enrichment/jobs/af10f308-7b6e-4dfe-a1b3-ccdb18022f88/results"
+}

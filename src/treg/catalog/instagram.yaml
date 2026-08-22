@@ -32,7 +32,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /{ig_user_id}
-    name: "Get your account profile and followers"
+    name: "Your Instagram profile and follower counts"
     summary: "Get your Instagram professional account's profile and follower counts"
     input:
       pathParams:
@@ -54,7 +54,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /{ig_user_id}/media
-    name: "List your posts"
+    name: "Your Instagram posts — captions, likes, comments"
     summary: "List your Instagram posts with captions, permalinks and like/comment counts"
     input:
       pathParams:
@@ -79,7 +79,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /{ig_media_id}/comments
-    name: "List post comments"
+    name: "Comments on one of your Instagram posts"
     summary: "List the comments on one of your Instagram posts"
     input:
       pathParams:
@@ -102,7 +102,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /{ig_user_id}/insights
-    name: "Get account reach and audience metrics"
+    name: "Your Instagram account reach and audience metrics"
     summary: "Get reach, profile views and audience metrics for your Instagram account"
     input:
       pathParams:
@@ -128,7 +128,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /{ig_media_id}/insights
-    name: "Get engagement metrics for a post"
+    name: "Reach, saves and engagement for one Instagram post"
     summary: "Get reach, saves and engagement for a single one of your Instagram posts"
     input:
       pathParams:
@@ -167,7 +167,7 @@ endpoints:
     scope: own_account
     method: POST
     path: /{ig_user_id}/media
-    name: "Create a post media container"
+    name: "Stage an Instagram post — create its media container"
     summary: "Stage an Instagram post by creating the media container it will be published from"
     input:
       pathParams:
@@ -194,7 +194,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /{ig_container_id}
-    name: "Check media container processing status"
+    name: "Check Instagram media container status"
     summary: "Check whether a staged Instagram container has finished processing"
     input:
       pathParams:
@@ -213,7 +213,7 @@ endpoints:
     scope: own_account
     method: POST
     path: /{ig_user_id}/media_publish
-    name: "Publish a post"
+    name: "Publish a staged post to your Instagram account"
     summary: "Publish a post to your own Instagram business account"
     input:
       pathParams:

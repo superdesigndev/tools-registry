@@ -71,7 +71,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /backlinks/summary/live
-    name: "Get backlink summary for a domain"
+    name: "Backlink profile of a domain — counts, rank, spam score"
     summary: "Aggregate backlink profile of a domain or URL — counts, rank, spam score, breakdowns"
     input:
       bodyType: json
@@ -101,7 +101,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /backlinks/backlinks/live
-    name: "List backlinks for a domain"
+    name: "Backlinks pointing to a domain or URL — anchor, rank"
     summary: "Individual backlinks — source page, anchor, follow status, first seen, page/domain rank"
     input:
       bodyType: json
@@ -132,7 +132,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /backlinks/referring_domains/live
-    name: "List referring domains for a target"
+    name: "Referring domains for a domain or URL — counts, rank"
     summary: "Referring domains linking to a target, with backlink counts, rank and first/last seen"
     input:
       bodyType: json
@@ -163,7 +163,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /backlinks/anchors/live
-    name: "List anchor text distribution"
+    name: "Anchor text distribution of backlinks for a domain"
     summary: "Anchor-text distribution — backlink and referring-domain counts per anchor"
     input:
       bodyType: json
@@ -198,7 +198,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /backlinks/bulk_ranks/live
-    name: "Get bulk backlink rank scores"
+    name: "Backlink authority rank for up to 1000 domains or URLs"
     summary: "Backlink-derived authority rank (0-1000) for up to 1000 domains or pages per call"
     input:
       bodyType: json
@@ -222,7 +222,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /backlinks/competitors/live
-    name: "Find backlink competitors for a domain"
+    name: "Domains sharing backlink sources with a domain"
     summary: "Domains sharing referring domains with the target, ranked by overlap"
     input:
       bodyType: json
@@ -252,7 +252,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /serp/google/organic/live/regular
-    name: "Get live Google search results"
+    name: "Google organic search results for a keyword, live"
     summary: "Live Google organic results for a keyword — rank, title, URL, snippet — by location"
     input:
       bodyType: json
@@ -287,7 +287,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /keywords_data/google_ads/search_volume/live
-    name: "Get keyword search volume and CPC"
+    name: "Google search volume and CPC for up to 1000 keywords"
     summary: "Google Ads search volume, CPC, competition and 12-month trend for up to 1000 keywords"
     input:
       bodyType: json
@@ -317,7 +317,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /dataforseo_labs/google/related_keywords/live
-    name: "Get related keyword ideas"
+    name: "Related keyword ideas for a seed — volume, CPC, difficulty"
     summary: "Related keyword ideas from Google's related-searches graph, with volume, CPC, difficulty"
     input:
       bodyType: json
@@ -351,7 +351,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /dataforseo_labs/google/ranked_keywords/live
-    name: "List keywords a domain ranks for"
+    name: "Keywords a domain ranks for in Google — position, volume"
     summary: "Keywords a domain or URL ranks for in Google, with position, volume and SERP element"
     input:
       bodyType: json
@@ -384,7 +384,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /on_page/instant_pages
-    name: "Audit a single page on demand"
+    name: "Instant on-page audit of a URL — timings, meta, score"
     summary: "Crawl one URL on demand — status code, load timings, on-page score, meta and content"
     input:
       bodyType: json
@@ -418,7 +418,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /appendix/user_data
-    name: "Get account usage and limits"
+    name: "DataForSEO account balance and rate limits"
     summary: "Your own DataForSEO account — remaining balance, plan limits and per-API rate limits"
     input:
       note: "no parameters; GET with HTTP Basic auth only. Unlike every other endpoint here it is GET, takes no task array, and costs nothing (`cost: 0`)"

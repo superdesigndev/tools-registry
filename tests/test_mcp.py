@@ -130,6 +130,20 @@ async def test_search_says_so_when_nothing_matches(clients):
     assert out["count"] == 0
     assert "catalog_request" in out.get("hint", "")  # the empty result names the way to file the gap
 
+    # And the miss is the record (models.SearchMiss) — this tool reads the catalog in-process, so
+    # the HTTP route's logging never sees it; the tool must log its own.
+    from sqlmodel import select
+
+    from treg import audit
+    from treg.db import session_maker
+    from treg.models import SearchMiss
+
+    await audit.drain()
+    async with session_maker() as s:
+        (row,) = (await s.execute(select(SearchMiss))).scalars()
+    assert row.query == "zzzz-no-such-capability"
+    assert row.source == "mcp"
+
 
 async def test_catalog_request_files_the_gap_with_attribution(clients):
     """The zero-result hint's payoff: the agent can file the missing capability in the same session,
@@ -1009,3 +1023,278 @@ async def test_call_resolves_the_team_for_an_identity_token(clients):
         out = await _call_tool(c, "call", {"endpoint_id": "echo2/ping"}, token=identity)
     assert out.get("status") == 200, out
     assert "choose an org" not in json.dumps(out)
+
+
+# ---- the bug reports of 2026-08-17: a day of real calls, five things that cost the caller -------
+async def test_an_id_that_misses_by_one_segment_names_the_real_one(clients):
+    """`lusha.companies-signals` for `lusha.x.companies-signals` — what a model produces relaying an
+    id through a summary. It broke search → get → call at its FIRST step, and "use catalog_search"
+    sends the agent back to the step that produced the wrong id in the first place."""
+    token = (await clients.post("/users", json={"email": "nearmiss@superdesign.dev"})).json()["token"]
+    async with mcp_session(clients) as c:
+        got = await _call_tool(c, "catalog_get", {"endpoint_id": "lusha.companies-signals"}, token=token)
+        called = await _call_tool(c, "call", {"endpoint_id": "lusha.companies-signals"}, token=token)
+    assert got["did_you_mean"] == ["lusha.x.companies-signals"]
+    assert called["did_you_mean"] == ["lusha.x.companies-signals"]
+    assert "lusha.x.companies-signals" in called["hint"]
+
+
+async def test_a_boolean_query_param_goes_on_the_wire_as_a_boolean(clients):
+    """`str(True)` is `"True"`, which every upstream that documents a boolean rejects. It bit
+    hardest where it cost money: `simplified=true` is thecompaniesapi's FREE mode, so the mangled
+    flag pushed callers onto the paid path for a query they had asked to preview for nothing."""
+    from treg import mcp as _mcp
+    assert _mcp._qs_value(True) == "true"
+    assert _mcp._qs_value(False) == "false"
+    assert _mcp._qs_value(1) == "1" and _mcp._qs_value("x") == "x"
+    assert _mcp._qs_value({"a": 1}) == '{"a":1}'      # never Python's single-quoted repr
+
+
+async def test_catalog_query_arrays_use_the_endpoints_declared_wire_encoding(monkeypatch):
+    """A structured MCP list is not synonymous with repeated query keys.
+
+    Meta declares one compact JSON array value for every array on the endpoint, while an unmodelled
+    team tool keeps the longstanding repeated-key default. This goes through `call`, not only
+    `_query_values`: the first version stayed green if the MCP call site stopped using the helper.
+    """
+    from treg import catalog_store as cs
+    from treg import mcp as _mcp
+
+    cat = cs.load()
+    meta = cat.by_id["meta-ad-library.meta-ads.library.search"]
+    assert _mcp._query_values(meta, "ad_reached_countries", ["US"]) == ['["US"]']
+    assert _mcp._query_values(None, "tag", ["a", "b"]) == ["a", "b"]
+
+    captured = {}
+
+    class _Client:
+        headers: dict = {}
+
+        async def request(self, method, path, **kwargs):
+            import httpx
+            captured.update(method=method, path=path, **kwargs)
+            return httpx.Response(200, json={"ok": True}, request=httpx.Request(method, path))
+
+    from contextlib import asynccontextmanager
+
+    @asynccontextmanager
+    async def _api(_token):
+        yield _Client()
+
+    async def _org(_client):
+        return 1, "team", None
+
+    monkeypatch.setattr(_mcp, "_api", _api)
+    monkeypatch.setattr(_mcp, "_resolve_org", _org)
+    ctx = type("Ctx", (), {"headers": {"authorization": "Bearer test"}})()
+    await _mcp.call("meta-ad-library.meta-ads.library.search", params={
+        "ad_reached_countries": ["US"],
+    }, ctx=ctx)
+    assert captured["params"] == [("ad_reached_countries", '["US"]')]
+
+
+async def test_an_unset_query_param_is_omitted_rather_than_sent_as_None(clients):
+    """`None` means "no value", and `?limit=None` is not that — it is a string an upstream parses."""
+    assert (await clients.post("/tools", json={"name": "echo", "base_url": "http://upstream"})).status_code == 200
+    token = clients.headers.get("X-Treg-Token")
+    async with mcp_session(clients) as c:
+        out = await _call_tool(c, "call", {"endpoint_id": "echo/anything",
+                                           "params": {"kept": True, "off": False,
+                                                      "dropped": None}}, token=token)
+    sent = (out.get("body") or {}).get("query") or {}
+    assert sent == {"kept": "true", "off": "false"}
+
+
+async def test_search_survives_missing_a_few_words_of_an_agent_sentence(clients):
+    """Agents query in sentences, and demanding every word zeroed real ones (models.SearchMiss,
+    2026-08-19): "company job postings hiring open jobs linkedin" found nothing while three
+    endpoints matched 6 of its 7 words — the only miss was "linkedin" on rows shelved under
+    `companies`, or "open" on the one shelved under `linkedin`. A query may now miss one word in
+    three, and idf weighting keeps the order on the rare words rather than the filler."""
+    from treg import catalog_store as cs
+    cat = cs.load()
+    # the two logged SearchMiss queries, verbatim
+    rows, total = cs.search("company job postings hiring open jobs linkedin", cat, 8)
+    assert total > 0
+    assert {"apollo.companies.jobs", "apify.linkedin.search.jobs",
+            "leadmagic.x.jobs-search-v3"} <= {ep["id"] for ep, _ in rows}
+    # rank 1 must be the JOB (a companies.search row), never pinned to one provider — any newly
+    # added provider of the same capability may legitimately outscore the incumbents
+    rows, _ = cs.search("company search filter by location industry headcount growth", cat, 8)
+    assert rows and rows[0][0]["capability"] == "companies.search"
+    # the refinement property the old rule protected still holds: with one or two words there is no
+    # miss allowance, so "tiktok comments" must not return every tiktok endpoint
+    _, both = cs.search("tiktok comments", cat, 1)
+    _, all_tiktok = cs.search("tiktok", cat, 1)
+    assert 0 < both < all_tiktok
+    for ep, _ in cs.search("tiktok comments", cat, 10**6)[0]:
+        fields = cs._haystacks(ep, cat)
+        assert any("tiktok" in t for _, t in fields) and any("comment" in t for _, t in fields)
+    # aliases.yaml bridges the agent's word into the catalog's word at the same weight: the catalog
+    # says "crypto", nobody's endpoint text says "cryptocurrency", and substring containment only
+    # works in one direction
+    rows, total = cs.search("current price of a cryptocurrency", cat, 3)
+    assert total and rows[0][0]["id"].startswith("coingecko."), [ep["id"] for ep, _ in rows]
+    # function words are dropped before the miss allowance is computed, so they cannot crowd out
+    # the words that select ("on", "this" are not evidence about any endpoint)
+    rows, _ = cs.search("trending repositories on github this week", cat, 3)
+    assert rows and rows[0][0]["id"] == "scrapecreators.x.v1-github-trending-repositories"
+    # single letters can never select: "K&L" must not let k + l decide admission, and the company
+    # job ("enrich by name") must lead instead of 67 rows of noise (logged miss, 2026-08-20)
+    rows, total = cs.search("K&L Gates company lookup", cat, 8)
+    assert 0 < total < 30 and rows[0][0]["capability"].startswith("companies.")
+    # the jobs rows must survive an industry qualifier the catalog never says ("law firm"), via
+    # the openings->postings and firm->company aliases (logged miss, 2026-08-20)
+    rows, total = cs.search("law firm job openings hiring signal", cat, 8)
+    assert total and {"apollo.companies.jobs", "apify.linkedin.search.jobs"} <= {ep["id"] for ep, _ in rows}
+    # a zero-result answer names the rows just under the gate and the exact unmatched words
+    near = cs.near_misses("law firm dinosaur excavation permits", cat)
+    assert all(n["missing"] for n in near) if near else True
+    zero_q = "resolve company name to linkedin slug"
+    if cs.search(zero_q, cat, 1)[1] == 0:
+        assert cs.near_misses(zero_q, cat), "a zero result must surface its near-misses"
+
+
+async def test_search_breaks_ties_on_what_treg_has_MEASURED(clients):
+    """Token scoring ties by the dozen — every "ad library" match scores 6 — so with a default limit
+    of 8 the rows an agent saw were decided by file order: seven tikhub rows, one of them
+    uncallable, and the cheapest endpoint with a perfect record cut off below the fold."""
+    from treg import catalog_store as cs
+    cat = cs.load()
+    ranked, _, truncated = cs.rank_band("ad library", cat, 8)
+    assert not truncated, "24 matches sit well inside the band"
+    ids = [ep["id"] for ep, _ in ranked]
+    good, broken = "scrapecreators.x.v1-tiktok-ad-library-search", "tikhub.x.tiktok-ads-search-ads"
+    assert {good, broken} <= set(ids), "both are in the band before any evidence is applied"
+
+    stats = {good: {"samples": 16, "ok_rate": 1.0},
+             broken: {"samples": 12, "ok_rate": 0.0}}
+    reranked = cs.rerank(ranked, stats, cat)
+    out = [ep["id"] for ep, _ in reranked]
+    assert out[0] == good, "a perfect measured record wins its score group outright"
+    # …and the one that has never once answered sinks to the bottom of that group. Not to the bottom
+    # of the whole list: relevance still ranks above evidence, so a less relevant row stays below a
+    # broken-but-more-relevant one rather than being promoted past it by a failure count.
+    broken_score = next(s for ep, s in reranked if ep["id"] == broken)
+    assert [ep["id"] for ep, s in reranked if s == broken_score][-1] == broken
+
+
+async def test_balance_says_WHOSE_grant_and_which_team_by_name(clients):
+    """A slug alone cannot be sanity-checked: `superdesign-7` looks plausible to the agent and to
+    the human reading over its shoulder. The display name and the account that authorised the
+    connection are what make a wrong team legible before the spending is noticed."""
+    token = (await clients.post("/users", json={"email": "whose@superdesign.dev"})).json()["token"]
+    async with mcp_session(clients) as c:
+        out = await _call_tool(c, "balance", {}, token=token)
+    assert out["team"] and out["team_name"]
+    assert out["identity"] == "whose@superdesign.dev"
+    # This one is a HEADER token, whose team is baked in — so it is labelled, but not sent to
+    # `treg mcp grants`, which would list nothing for it. The OAuth half is asserted in
+    # test_mcp_oauth.py::test_balance_tells_an_oauth_caller_how_to_move_the_team.
+    assert "use-team" not in (out.get("hint") or "")
+
+
+async def test_the_tie_band_covers_the_WHOLE_equal_scoring_group(clients, monkeypatch):
+    """Reranking a slice that was already cut mid-tie cannot put back the row the cut dropped. The
+    band therefore keeps taking while the score stays equal — and when a query ties so broadly that
+    even the ceiling can't hold the group, it SAYS so rather than presenting an unranked tail as a
+    ranked answer."""
+    from treg import catalog_store as cs
+    cat = cs.load()
+    rows, total, truncated = cs.rank_band("ad library", cat, 8)
+    scores = [s for _, s in rows]
+    assert len(rows) > 8 and not truncated
+    everything, _ = cs.search("ad library", cat, 10**6)
+    assert scores.count(scores[-1]) == sum(1 for _, s in everything if s == scores[-1]), \
+        "the group straddling the cut is taken whole, or the cut is still arbitrary"
+
+    # The boundary the "observe, don't infer" fix exists for: a tie group that EXACTLY fills the
+    # ceiling is NOT truncated. Inferring it from `len(kept) >= RERANK_BAND` answered True here and
+    # told the caller to narrow a query that had in fact been ranked in full. "ad library" has a
+    # 17-row group at limit=8, so a ceiling of 17 sits exactly on it and 16 cuts it.
+    band_at = len(rows)
+    monkeypatch.setattr(cs, "RERANK_BAND", band_at)
+    assert cs.rank_band("ad library", cat, 8)[2] is False, "a group that exactly fills is not cut"
+    monkeypatch.setattr(cs, "RERANK_BAND", band_at - 1)
+    assert cs.rank_band("ad library", cat, 8)[2] is True, "one row short of the group IS a cut"
+    monkeypatch.undo()
+
+    # a single word ties across hundreds — bounded, and the bound is announced
+    wide, wide_total, wide_trunc = cs.rank_band("tiktok", cat, 8)
+    assert wide_total > cs.RERANK_BAND and wide_trunc
+    assert len(wide) <= cs.RERANK_BAND
+    token = (await clients.post("/users", json={"email": "wide@superdesign.dev"})).json()["token"]
+    async with mcp_session(clients) as c:
+        out = await _call_tool(c, "catalog_search", {"query": "tiktok", "limit": 8}, token=token)
+    assert "narrow" in (out.get("ranking_note") or ""), out.get("ranking_note")
+
+
+async def test_a_near_miss_never_suggests_a_DIFFERENT_provider(clients):
+    """A suggestion claims the caller mistyped. `apollo.people.email.find` is not a typo for
+    `hunter.people.email.find` — it is another vendor, another price and another credential, so on a
+    path that spends money that is provider routing wearing a spellcheck's clothes. treg compares
+    providers and the caller chooses."""
+    from treg import catalog_store as cs
+    cat = cs.load()
+    assert cs.near_ids("lusha.companies-signals", cat) == ["lusha.x.companies-signals"]
+    for crossing in ("apollo.people.email.find", "fake.companies-signals", "hunter.tiktok.video.comments"):
+        for suggested in cs.near_ids(crossing, cat):
+            assert cat.by_id[suggested]["provider"] == crossing.split(".")[0], suggested
+
+    # POSITIVE cases for the two id shapes the same-provider rule silently killed. Without these the
+    # assertion above is vacuous for them — "suggests nothing" trivially satisfies "suggests nothing
+    # cross-provider", which is how a fix that helped no hyphenated provider kept a green test.
+    hyphenated = next(e for e in cat.by_id if e.startswith("google-ads.x."))
+    assert cs.near_ids(hyphenated.replace(".x.", ".", 1), cat) == [hyphenated], \
+        "a provider whose name contains a hyphen must still resolve"
+    x_owned = next(e for e in cat.by_id if e.split(".")[0] == "x")
+    assert x_owned in cs.near_ids(x_owned, cat), \
+        "the provider literally named 'x' must not be erased by stripping the 'x' tier marker"
+
+
+def test_a_header_token_is_not_told_to_run_a_command_that_lists_nothing():
+    """`treg mcp grants` only has an answer for an OAuth grant. A header token already carries its
+    own team, so pointing it at that command sends it to an empty list."""
+    import asyncio
+    from treg import mcp as _mcp
+
+    class _Dead:
+        headers: dict = {}
+        async def get(self, *a, **k):
+            raise RuntimeError("no api here — the label must degrade, not gate")
+
+    plain = asyncio.run(_mcp._whose_grant(_Dead(), "superdesign", oauth=False))
+    granted = asyncio.run(_mcp._whose_grant(_Dead(), "superdesign", oauth=True))
+    assert "use-team" not in (plain.get("hint") or "")
+    assert "use-team" in granted["hint"]
+    assert plain["team"] == "superdesign", "and it still labels the team it does know"
+
+
+async def test_the_SEARCH_TOOL_itself_ranks_on_evidence_not_just_the_helper(clients):
+    """The helpers were tested; the wiring was not. `rerank()` could have been dropped from both
+    call sites and every ranking test would still have passed, because they call the helper
+    directly. This one goes through the MCP tool with real rows in the database."""
+    from treg import endpoint_stats
+    from treg.db import session_maker
+    from treg.models import CallRecord
+
+    broken = "apify.meta-ads.library.search"  # earlier in file order: rerank must move it
+    good = "tikhub.x.tiktok-ads-search-ads"
+    async with session_maker() as db:
+        for status in (200, 200, 200, 200, 503):
+            db.add(CallRecord(org_id=1, user_email="a@b.c", tool_name=good, method="GET", path="/x",
+                              status_code=status, endpoint_id=good, duration_ms=100))
+        for _ in range(5):      # the uncallable one, failing the way the report saw it
+            db.add(CallRecord(org_id=1, user_email="a@b.c", tool_name=broken, method="POST", path="/x",
+                              status_code=405, endpoint_id=broken, duration_ms=100))
+        await db.commit()
+    assert endpoint_stats.MIN_SAMPLES <= 5
+
+    token = (await clients.post("/users", json={"email": "ranker@superdesign.dev"})).json()["token"]
+    async with mcp_session(clients) as c:
+        out = await _call_tool(c, "catalog_search", {"query": "ad library", "limit": 25}, token=token)
+    ids = [r["endpoint_id"] for r in out["results"]]
+    assert ids.index(good) < ids.index(broken), ids
+    good_row = next(r for r in out["results"] if r["endpoint_id"] == good)
+    broken_row = next(r for r in out["results"] if r["endpoint_id"] == broken)
+    assert good_row["works"] == 0.8 and broken_row["works"] == 0.0

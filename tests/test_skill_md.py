@@ -14,7 +14,12 @@ async def test_skill_md_served_and_templated(clients):
     body = r.text
     assert body.startswith("---") and "name: treg" in body  # loadable skill frontmatter
     assert "{BASE}" not in body                                        # fully templated
-    assert "/call/https://api.intercom.io" in body                     # the passthrough teaching line
+    # The own-tools call is taught by TOOL NAME, not by prefixing an arbitrary upstream URL. Both
+    # resolve server-side, but "prefix any URL and we attach a credential" reads as an open
+    # credential proxy — which is how OpenAI's policy scan took it. Only registered tools resolve;
+    # say it that way.
+    assert "/call/<tool-name>/<path>" in body
+    assert "/call/https://" not in body
     assert "treg register" not in body                                 # the retired command must not resurface
 
 

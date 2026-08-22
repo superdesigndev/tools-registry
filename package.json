@@ -1,0 +1,34 @@
+{
+  "name": "treg-dsh",
+  "version": "0.12.0",
+  "type": "module",
+  "description": "OpenRouter for tools - 2,600 agent-friendly tools, pay for the usage, not subscription",
+  "main": "dsh/index.js",
+  "files": [
+    "dsh/index.js",
+    "dsh/cordis.patch.yml",
+    "dsh/skills"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./dsh/cordis.patch.yml"
+    }
+  },
+  "keywords": [
+    "dsh-plugin",
+    "deepseek-harness",
+    "tools",
+    "api",
+    "mcp",
+    "seo",
+    "enrichment",
+    "scraping"
+  ],
+  "homepage": "https://treg.to",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/superdesigndev/treg.git"
+  },
+  "author": "Superdesign dev, Inc. <jason@superdesign.dev> (https://treg.to)",
+  "license": "Apache-2.0"
+}

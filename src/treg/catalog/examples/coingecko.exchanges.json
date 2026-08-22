@@ -1,0 +1,41 @@
+[
+  {
+    "id": "binance",
+    "name": "Binance",
+    "year_established": 2017,
+    "country": "Cayman Islands",
+    "description": "One of the world’s largest cryptocurrency exchanges by trading volume, offering a wide range of services including spot, futures, and staking options.",
+    "url": "https://www.binance.com/",
+    "image": "https://coin-images.coingecko.com/markets/images/52/small/binance.jpg?1706864274",
+    "has_trading_incentive": false,
+    "trust_score": 10,
+    "trust_score_rank": 1,
+    "trade_volume_24h_btc": 68025.27099682813
+  },
+  {
+    "id": "gdax",
+    "name": "Coinbase Exchange",
+    "year_established": 2012,
+    "country": "United States",
+    "description": "A leading U.S.-based exchange known for its regulatory compliance, user-friendly interface, and support for fiat-to-crypto transactions.",
+    "url": "https://www.coinbase.com/",
+    "image": "https://coin-images.coingecko.com/markets/images/23/small/Coinbase_Coin_Primary.png?1706864258",
+    "has_trading_incentive": false,
+    "trust_score": 10,
+    "trust_score_rank": 2,
+    "trade_volume_24h_btc": 10892.763695730315
+  },
+  {
+    "id": "kraken",
+    "name": "Kraken",
+    "year_established": 2011,
+    "country": "United States",
+    "description": "Kraken is a San Francisco-based cryptocurrency exchange, offering a wide range of trading services for various cryptocurrencies and known for its robust security and regulatory compliance efforts.\n",
+    "url": "https://www.kraken.com/",
+    "image": "https://coin-images.coingecko.com/markets/images/29/small/kraken.jpg?1706864265",
+    "has_trading_incentive": false,
+    "trust_score": 10,
+    "trust_score_rank": 3,
+    "trade_volume_24h_btc": 8690.421663089672
+  }
+]

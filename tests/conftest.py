@@ -14,7 +14,12 @@ import os
 # TREG_TEST_DB_URL (not TREG_DATABASE_URL — a stray production URL in a shell must never become the
 # test target) lets two suites run side by side: `reset_db()` DROPS tables, so two concurrent runs
 # against the same sqlite file tear down each other's schema mid-test.
-os.environ["TREG_DATABASE_URL"] = os.environ.get("TREG_TEST_DB_URL", "sqlite+aiosqlite:///./treg-test.db")
+# Under pytest-xdist each worker process gets its OWN file (gw0, gw1, …) — twelve workers against
+# one sqlite file drop each other's tables mid-test (1,022 errors on the first parallel run). An
+# explicit TREG_TEST_DB_URL wins untouched, for single-process runs against something specific.
+_worker = os.environ.get("PYTEST_XDIST_WORKER", "")
+_default = f"sqlite+aiosqlite:///./treg-test{'-' + _worker if _worker else ''}.db"
+os.environ["TREG_DATABASE_URL"] = os.environ.get("TREG_TEST_DB_URL", _default)
 os.environ["TREG_EMAIL_DEV_MODE"] = "true"  # tests need the returned OTP code (prod default is now False)
 os.environ["TREG_RESEND_API_KEY"] = ""  # never fire a real Resend send from the test suite (send_otp/send_invite skip when empty)
 os.environ["TREG_RUN_ALLOWED_BINS"] = "sh,echo,true,false,cat,sleep,treg-nonexistent-bin-xyz"  # allow the test CLIs for --server run tests
@@ -67,6 +72,51 @@ def make_upstream(hook_hits: list | None = None) -> FastAPI:
             "siteEntry": [
                 {"siteUrl": "sc-domain:example.com", "displayName": "Example (production)"},
                 {"siteUrl": "https://staging.example/", "displayName": "Example (staging)"},
+            ]
+        }
+
+    @up.post("/v25.0/oauth/access_token")
+    @up.get("/v25.0/oauth/access_token")
+    async def meta_token() -> dict:
+        # Meta's token endpoint, serving both the code exchange (POST) and the long-lived
+        # fb_exchange_token swap (GET). The ASGI transport routes every host here, so the real
+        # graph.facebook.com path must exist for a registry-mode Meta connect to complete.
+        return {"access_token": "META-TOKEN", "token_type": "bearer", "expires_in": 5183944}
+
+    @up.get("/me/accounts")
+    async def meta_pages() -> dict:
+        # Meta's primary Page listing: what the user manages through a PERSONAL Page role. One row
+        # carries both the facebook shape (id/name) and the instagram shape (nested professional
+        # account), so both Meta providers can discover against the same stand-in.
+        return {
+            "data": [
+                {"id": "PAGE-DIRECT", "name": "Directly Managed Page",
+                 "instagram_business_account": {"id": "IG-DIRECT", "username": "direct_ig"}},
+            ]
+        }
+
+    @up.get("/me/businesses")
+    async def meta_businesses(request: Request):
+        # Meta's Business walk (needs business_management): each business row nests owned_pages /
+        # client_pages whose entries are shaped like /me/accounts rows. PAGE-DIRECT reappears here
+        # (a personal-role Page is usually also Business-owned) to exercise dedup, and the
+        # agency-owned Page without a linked Instagram account must drop out of the IG picker.
+        # A token containing "noscope" emulates a connection that consented before
+        # business_management was in our scopes.
+        if "noscope" in request.headers.get("authorization", ""):
+            return JSONResponse(
+                {"error": {"message": "(#100) Missing Permission", "code": 100}}, status_code=400)
+        return {
+            "data": [
+                {"id": "BIZ-1", "owned_pages": {"data": [
+                    {"id": "PAGE-DIRECT", "name": "Directly Managed Page",
+                     "instagram_business_account": {"id": "IG-DIRECT", "username": "direct_ig"}},
+                    {"id": "PAGE-NO-IG", "name": "Business Page Without Instagram"},
+                ]}},
+                {"id": "BIZ-2", "client_pages": {"data": [
+                    {"id": "PAGE-CLIENT", "name": "Agency Client Page",
+                     "instagram_business_account": {"id": "IG-CLIENT", "username": "client_ig"}},
+                ]}},
             ]
         }
 

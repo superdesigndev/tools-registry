@@ -1,0 +1,4 @@
+{
+  "status": "not_found",
+  "_note": "an unknown hash answers HTTP 200 with status=not_found; a live job returns status/progress/total_jobs/processed_jobs/pending_jobs/failed_jobs"
+}

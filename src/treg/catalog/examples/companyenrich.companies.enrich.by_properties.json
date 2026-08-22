@@ -1,0 +1,36 @@
+{
+  "id": "01925daf-4d65-7b71-b410-c66b43867984",
+  "name": "Anthropic",
+  "domain": "anthropic.com",
+  "website": "https://anthropic.com",
+  "type": "private",
+  "legalName": "Anthropic PBC",
+  "industry": "Business Services",
+  "industries": [
+    "Software",
+    "... 3 more items truncated"
+  ],
+  "categories": [
+    "b2b",
+    "... 2 more items truncated"
+  ],
+  "employees": "1K-5K",
+  "reported_employees": "501-1K",
+  "revenue": "50m-100m",
+  "description": "Anthropic is an AI safety and research company developing reliable, interpretable, and steerable artificial intelligence systems. The company conducts frontier AI research across areas including inter …[truncated]",
+  "keywords": [
+    "ai safety research",
+    "... 38 more items truncated"
+  ],
+  "technologies": [
+    "Cloudflare DNS",
+    "... 5 more items truncated"
+  ],
+  "subsidiaries": null,
+  "founded_year": 2021,
+  "naics_codes": [
+    "513210",
+    "... 1 more items truncated"
+  ],
+  "_truncated": "7 more fields omitted"
+}

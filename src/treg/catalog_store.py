@@ -16,7 +16,9 @@ serving no endpoints is a worse product, not a broken server.
 from __future__ import annotations
 
 import json
+import math
 import re
+import shlex
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -26,6 +28,7 @@ CATALOG_DIR = Path(__file__).parent / "catalog"
 EXAMPLES_DIRNAME = "examples"
 CAPABILITIES_FILE = "capabilities.yaml"
 FX_FILE = "fx.yaml"
+ALIASES_FILE = "aliases.yaml"
 
 # What an endpoint IS, so the marketplace can browse the useful surface and tuck the plumbing away:
 #   data    — fetch/scrape/enrich a resource (the DEFAULT when `kind:` is absent).
@@ -53,7 +56,9 @@ COST_SOURCES = ("rate_card_api", "docs", "observed", "vendor_email", "inferred")
 # its own meter and `unit` names that meter (see `Catalog.cost_view`).
 COST_UNITS = ("call", "result", "row", "record", "keyword", "page", "character", "review",
               "section", "employee", "GB", "ad", "month", "line", "target", "domain", "item",
-              "api_unit", "analysis_unit", "retrieval_unit", "index_item_unit", "quota_row")
+              "post", "user",
+              "api_unit", "analysis_unit", "retrieval_unit", "index_item_unit", "quota_row",
+              "verifier_credit")
 # A platform key spends OUR money on a caller's behalf, so it is allowed only where the price is
 # machine-computable and provenanced. `account`-kind routes are the provider's own bookkeeping —
 # never worth spending on — and `own_account` scope needs the caller's own credential by definition.
@@ -73,6 +78,11 @@ class Catalog:
     # this is. The rate itself still lives in `credit_rates` like any other — pricing machinery
     # neither knows nor cares that the rate is ours.
     shared_plans: dict[str, dict] = field(default_factory=dict)
+    # service -> calls/team/day for rates treg set to ZERO (fx.yaml `kind: treg_trial`): a capped
+    # free taste served on treg's own free-tier key. The allowance lives beside the zero because at
+    # $0 the price gives no brake — the cap is the only congestion control, so an entry without one
+    # is invalid (check_fx). api._enforce_trial_allowance reads this.
+    trial_pools: dict[str, int] = field(default_factory=dict)
     # provider service -> meter name -> USD per one unit of that meter (fx.yaml `unit_rates_usd`).
     # Providers that bill in a proprietary meter (Semrush API units, Majestic's three pools, Moz's
     # row quota) get one rate per meter — a provider can have several, and they do not convert
@@ -81,6 +91,10 @@ class Catalog:
     platforms: dict[str, dict] = field(default_factory=dict)     # slug -> {label, category}
     capabilities: dict[str, str] = field(default_factory=dict)   # id -> description
     endpoints: list[dict] = field(default_factory=list)          # normalized endpoint dicts
+    # query word -> catalog words that mean the same thing (aliases.yaml) — search-time only
+    aliases: dict[str, list[str]] = field(default_factory=dict)
+    # lazy per-instance search index (see _search_fields) — never part of identity or repr
+    _search_fields: list | None = field(default=None, init=False, repr=False, compare=False)
     by_id: dict[str, dict] = field(default_factory=dict)
     provider_meta: dict[str, dict] = field(default_factory=dict)  # service -> {limits, pricing_url, docs}
 
@@ -123,7 +137,12 @@ class Catalog:
         # zero would turn a real charge into "free" for anything reading `usd` as money.
         usd = (round(value * rate / per, 9)
                if isinstance(value, (int, float)) and rate is not None and per > 0 else None)
-        return {**cost, "usd": usd}
+        out = {**cost, "usd": usd}
+        # A $0 trial price travels with its allowance, so every surface showing the price can also
+        # say how much of it a team gets — a bare $0.00 would read as unlimited.
+        if provider in self.trial_pools and usd == 0:
+            out["trial_calls_per_team_day"] = self.trial_pools[provider]
+        return out
 
     def platform_eligible(self, endpoint: dict) -> bool:
         """May treg serve this endpoint with a PLATFORM key, billed to the caller's balance?
@@ -138,6 +157,15 @@ class Catalog:
         unbilled under per_success/per_result, and the fail-closed daily cap bounds the rest —
         coverage beats caution now that the ladder and settle logic are proven.
         """
+        # A marked row is retained only to explain a cached id and point at its replacement. It is
+        # never an offer treg may spend against, even if its historical price remains complete.
+        if endpoint.get("status"):
+            return False
+        # Blocked on treg's own plan: the route works, the price is real, and the shared key
+        # still cannot serve it — a documented upstream "your subscription does not include this
+        # endpoint". Discovery keeps the row (a caller's own key may serve it); the offer doesn't.
+        if endpoint.get("platform_blocked"):
+            return False
         cost = self.cost_view(endpoint.get("cost"), endpoint.get("provider"))
         if not cost or cost.get("usd") is None:
             return False
@@ -193,7 +221,7 @@ def _parse(directory: Path) -> Catalog:
     # `<service>.yaml`, and both land under the same provider (curation splits a provider's
     # core operations from the long tail across two files).
     for path in sorted(directory.glob("*.yaml")):
-        if path.name in (CAPABILITIES_FILE, FX_FILE):
+        if path.name in (CAPABILITIES_FILE, FX_FILE, ALIASES_FILE):
             continue
         doc = _read_yaml(path)
         provider = doc.get("provider") or path.name.split(".")[0]
@@ -217,10 +245,19 @@ def _parse(directory: Path) -> Catalog:
             if ep["id"] in by_id:  # first file wins; ids are unique by validator contract
                 continue
             by_id[ep["id"]] = ep
-            endpoints.append(ep)
+            # Marked endpoints stay addressable by id so a caller holding yesterday's id gets the
+            # provider's retirement story and replacement. Browse/search/census all read
+            # `endpoints`, so omitting the row here removes it from every discovery surface without
+            # turning a known retirement into an unexplained 404.
+            if not ep["status"]:
+                endpoints.append(ep)
 
     for ep in endpoints:  # a platform seen only in provider files still deserves a label
         platforms.setdefault(ep["platform"], {"label": ep["platform"], "category": "Other"})
+    aliases = {
+        str(k).lower(): [str(v).lower() for v in (vals if isinstance(vals, list) else [vals])]
+        for k, vals in (_read_yaml(directory / ALIASES_FILE).get("aliases") or {}).items()
+    }
     fx_doc = _read_yaml(directory / FX_FILE) or {}
     fx = dict(fx_doc.get("rates_to_usd") or {"USD": 1.0})
     # Each entry is a {usd, basis, source, checked} block; only the rate is served, and `usd: null`
@@ -234,6 +271,11 @@ def _parse(directory: Path) -> Catalog:
         for service, v in (fx_doc.get("credit_rates_usd") or {}).items()
         if isinstance(v, dict) and v.get("kind") == "treg_shared_plan"
     }
+    trial_pools = {
+        str(service): int(v.get("trial_calls_per_team_day") or 0)
+        for service, v in (fx_doc.get("credit_rates_usd") or {}).items()
+        if isinstance(v, dict) and v.get("kind") == "treg_trial"
+    }
     # Same shape one level deeper: service -> meter -> {usd, basis, source, checked}. A provider
     # bills in several meters at once (Majestic has three), so the meter name is part of the key.
     unit_rates = {
@@ -242,9 +284,9 @@ def _parse(directory: Path) -> Catalog:
         for service, meters in (fx_doc.get("unit_rates_usd") or {}).items()
     }
     return Catalog(fx=fx, credit_rates=credit_rates, unit_rates=unit_rates,
-                   shared_plans=shared_plans, platforms=platforms,
+                   shared_plans=shared_plans, trial_pools=trial_pools, platforms=platforms,
                    capabilities=capabilities, endpoints=endpoints, by_id=by_id,
-                   provider_meta=provider_meta)
+                   provider_meta=provider_meta, aliases=aliases)
 
 
 # The subject an endpoint is ABOUT, within its platform — the section a platform page files it
@@ -378,6 +420,16 @@ def _normalize(raw: dict, provider: str, directory: Path) -> dict:
         # 404s a person it has no record of). Only endpoints with evidenced miss semantics carry
         # it; for everything else an error status means what it says.
         "miss": raw.get("miss") or None,
+        # A provider can retire/move a route after an agent has cached its id. Keep that id in
+        # `by_id`, but remove it from discovery and return the migration story on direct lookup.
+        "status": str(raw.get("status") or "").strip().lower(),
+        "status_note": str(raw.get("status_note") or "").strip(),
+        # A route that WORKS upstream but that treg's own plan/subscription cannot serve (a
+        # provider tier the shared key lacks). Unlike `status` it stays in discovery — a team's
+        # own key may well serve it — but it is never a platform offer, and the reason rides on
+        # the row so an agent learns "bring your own key" BEFORE the 403, not from it.
+        "platform_blocked": str(raw.get("platform_blocked") or "").strip(),
+        "superseded_by": str(raw.get("superseded_by") or "").strip(),
         "docs_url": raw.get("docs_url") or "",
         "example_file": _example_file(raw, directory),
     }
@@ -435,9 +487,16 @@ def endpoint_view(ep: dict, provider_display: str, cat: Catalog | None = None) -
         # a fact about the row that decides whether the caller needs a credential at all, so it
         # rides on the row rather than being re-derived per client (see `Catalog.platform_eligible`)
         "platform_eligible": cat.platform_eligible(ep) if cat else None,
+        # WHY the platform can't serve an otherwise-working route (plan/tier gap on treg's own
+        # subscription) — so "bring your own key" is said up front instead of discovered via a 403.
+        "platform_blocked": ep.get("platform_blocked") or None,
         # "no match" semantics, when the endpoint has them — an agent that reads `miss` stops
         # treating an expected empty answer as a failed call (and stops retrying it).
         "miss": ep.get("miss"),
+        # Only direct-id lookups can return a marked row; discovery surfaces never include one.
+        "status": ep.get("status") or None,
+        "status_note": ep.get("status_note") or None,
+        "superseded_by": ep.get("superseded_by") or None,
         "verified": ep["verified"],
         "docs_url": ep["docs_url"],
         "has_example": bool(ep["example_file"]),
@@ -519,6 +578,87 @@ def domain_rows(pairs: list[tuple[dict, dict]], capabilities: dict[str, str]) ->
     return [{"domain": d, "rows": sections[d]} for d in order]
 
 
+# ---- near misses -----------------------------------------------------------------------------
+def _id_shape(endpoint_id: str) -> tuple[str, list[str]]:
+    """`(provider, comparable tokens)` for an endpoint id.
+
+    The provider is the FIRST DOT-DELIMITED SEGMENT, kept whole — not the first word of a
+    tokenisation. Ten providers are hyphenated (`google-ads`, `meta-ad-library`,
+    `google-search-console`, …), and splitting on non-alphanumerics turned `google-ads` into
+    `google`, which matches no provider, so every near miss under those ten silently returned
+    nothing at all.
+
+    The `x` tier marker is then stripped only where it can BE a tier marker — the second segment —
+    instead of everywhere. Dropping the token `x` globally erased the name of the provider that is
+    literally called `x` (X/Twitter, 173 endpoints), so even a correct `x.*` id resolved to nothing.
+    Both bugs made the report-#1 fix quietly inert across ~17% of the catalog while its test, which
+    only used single-word providers, went on passing.
+    """
+    head, _, rest = endpoint_id.strip().lower().partition(".")
+    if rest.startswith("x."):
+        rest = rest[2:]
+    return head, [t for t in _SPLIT.split(rest) if t]
+
+
+def near_ids(endpoint_id: str, cat: Catalog, limit: int = 3) -> list[str]:
+    """Real ids close to one that doesn't exist — for the answer to an unknown id.
+
+    An id is not free text: an agent that has one and is told only "no endpoint 'x'" has hit a dead
+    end mid-plan, and the usual next move is to invent another id and fail again. Almost every real
+    miss is one of three shapes — a dropped tier segment (`lusha.companies-signals` for
+    `lusha.x.companies-signals`, which is what a model does when it relays an id through a summary),
+    a singular/plural slip, or a stale id we retired — and all three are one comparison away from
+    the right answer.
+
+    Deliberately cheap and predictable, in this order: same provider and the same remaining segments
+    ignoring the tier marker, then a shared-token overlap ranked by how much of the id matched. No
+    edit-distance library, no fuzzy threshold to tune.
+    """
+    provider, want = _id_shape(endpoint_id)
+    if not want:
+        return []
+    want_set = set(want)
+    # SAME PROVIDER ONLY. Two reasons, and the second is the load-bearing one. A suggestion is a
+    # claim that the caller mistyped, and `apollo.people.email.find` is not a typo for
+    # `hunter.people.email.find` — it is a different vendor, a different price and a different
+    # credential. On a path that spends money, "did you mean <competitor>?" is provider routing
+    # wearing a spellcheck's clothes, which is exactly what the charter says treg does not do:
+    # treg compares providers side by side and the CALLER chooses. (The first cut of this scored
+    # cross-provider matches and merely preferred the same provider — via `r[2] != provider`, which
+    # compared a full id against a bare provider token and was therefore true every time, so even
+    # that preference never applied. `fake.companies-signals` confidently answered
+    # `lusha.x.companies-signals`.)
+    if provider not in cat.provider_meta:
+        return []
+    exact, scored = [], []
+    for eid, ep in cat.by_id.items():
+        if ep.get("provider") != provider:
+            continue
+        _, have = _id_shape(eid)
+        if not have:
+            continue
+        if have == want:      # the same id but for a tier marker — collect ALL, don't return the
+            exact.append(eid)  # first: ids that normalise identically are equally good answers
+            continue
+        overlap = len(want_set & set(have))
+        if not overlap or overlap < len(want_set) - 1:
+            continue
+        scored.append((-overlap, len(set(have) - want_set), eid))
+    if exact:
+        return sorted(exact)[:limit]
+    scored.sort()
+    return [eid for _, _, eid in scored[:limit]]
+
+
+def unknown_id_hint(endpoint_id: str, cat: Catalog) -> str:
+    """The one-line "so what do I do now" for an id that isn't in the catalog."""
+    near = near_ids(endpoint_id, cat)
+    if near:
+        return "did you mean " + ", ".join(near) + "?"
+    tail = endpoint_id.split(".")[-1].replace("-", " ").replace("_", " ")
+    return f"search for it instead: treg catalog search {tail!r}"
+
+
 # ---- search ----------------------------------------------------------------------------------
 # Deliberately plain: token containment over a few weighted fields. The catalog is ~2k endpoints of
 # curated English, so an embedding index would add a dependency and a build step to beat "tiktok
@@ -536,47 +676,250 @@ def _tokens(text: str) -> list[str]:
     return [t for t in _SPLIT.split(text.lower()) if t]
 
 
+# Pure function words. They carry no meaning about WHICH endpoint, but each one inflates the query's
+# token count — and with it the number of real words a row must match to be admitted. "trending
+# repositories on github this week" is a 3-word query wearing 6 tokens; dropping these makes the
+# miss allowance apply to the words that matter. Never words that select ("open", "search", "list").
+_STOPWORDS = frozenset("""a an and are as at be by can do does for from how i in is it its me my
+    of on or that the this to was what when where which who will with you your""".split())
+
+
 def _haystacks(ep: dict, cat: Catalog) -> list[tuple[int, str]]:
     plat = cat.platforms.get(ep["platform"], {})
     return [
         (W_CAPABILITY, " ".join((ep["capability"], cat.capabilities.get(ep["capability"], ""),
                                  plat.get("label", ""), ep["platform"])).lower()),
-        (W_SUMMARY, ep["summary"].lower()),
+        # `name` is OURS to word (summary stays the provider's, verbatim) — it is the one
+        # per-endpoint field curation may write search vocabulary into, so it must be searched
+        (W_SUMMARY, " ".join((ep.get("name") or "", ep["summary"])).lower()),
         (W_PATH, " ".join((ep["id"], ep["path"], ep["provider"])).lower()),
     ]
 
 
-def search(query: str, cat: Catalog, limit: int = 25) -> tuple[list[tuple[dict, int]], int]:
+def _search_fields(cat: Catalog) -> list[tuple[dict, list[tuple[int, str]]]]:
+    """Every endpoint's weighted haystacks, built once per Catalog instance — search runs two
+    passes (document frequency, then scoring) and rebuilding the joined strings per query per
+    pass was the only real cost in either."""
+    cached = cat._search_fields
+    if cached is None:
+        cached = [(ep, _haystacks(ep, cat)) for ep in cat.endpoints]
+        object.__setattr__(cat, "_search_fields", cached)  # frozen dataclass, deliberate
+    return cached
+
+
+# A token matching more than this share of the catalog selects nothing — it may still add score
+# where it matches, but a row is never punished for missing it. Statistical stopwords: "data" (33%),
+# "api" (50%), "get" (40%) are corpus filler no hand list would keep up with, while "search" (22%)
+# and "tiktok" (19%) stay required. Measured 2026-08-20 over 2,791 endpoints.
+SOFT_DF_SHARE = 0.25
+
+
+def _match(query: str, cat: Catalog):
+    """The shared matching pass behind `search` and `near_misses`: tokens, per-row best-field
+    weights, idf, and the admission gate (which tokens are required, and how many must hit)."""
+    raw = _tokens(query)
+    # single letters can never select ("K&L" tokenizes to k + l, df 2,039 and 2,512) — they only
+    # inflated the number of matches a row needed elsewhere
+    tokens = [t for t in raw if t not in _STOPWORDS and len(t) > 1] or raw
+    if not tokens:
+        return None
+    variants = [[tok, *cat.aliases.get(tok, ())] for tok in tokens]
+    # A token that IS a platform slug ("tiktok", "linkedin") is the caller's hard filter, but idf
+    # prices it low — half the catalog serves the big platforms — so rows matching a rarer facet
+    # word ("followers") outranked rows matching the asked-for platform. Double the weight where a
+    # platform token matches: same-pattern rows still sum identical floats, ties survive.
+    boost = [2 if tok in cat.platforms else 1 for tok in tokens]
+    rows = _search_fields(cat)
+    total = len(rows)
+    best: list[list[int]] = []
+    df = [0] * len(tokens)
+    for _, fields in rows:
+        per_tok = [b * max((w for w, text in fields if any(v in text for v in vs)), default=0)
+                   for vs, b in zip(variants, boost)]
+        best.append(per_tok)
+        for i, w in enumerate(per_tok):
+            if w:
+                df[i] += 1
+    idf = [math.log(1 + (total - d + 0.5) / (d + 0.5)) for d in df]
+    required = [i for i, d in enumerate(df) if d <= SOFT_DF_SHARE * total] \
+        or list(range(len(tokens)))
+    need = len(required) - len(required) // 3
+    return tokens, rows, best, idf, required, need
+
+
+def search(query: str, cat: Catalog, limit: int = 25) -> tuple[list[tuple[dict, float]], int]:
     """`(ranked [(endpoint, score)], total_matches)` for a free-text query.
 
-    EVERY token must match somewhere (AND, not OR): a query is a refinement, so "tiktok comments"
-    must not return every tiktok endpoint. Score sums each token's best field weight; ties break to
-    core-before-extended, then verified-before-not, then id — so the ordering is total and stable.
+    MOST tokens must match — a query is a refinement, so "tiktok comments" must not return every
+    tiktok endpoint, but agents write sentences, and demanding every word zeroed real queries on
+    their filler: "company job postings hiring open jobs linkedin" found nothing while three
+    endpoints matched 6 of its 7 words (see models.SearchMiss — the log this rule was read from).
+    A query may miss one token in every three (2 words → both required, unchanged; 7 → 5 must hit).
+
+    Each matched token scores its best field weight times its BM25 idf, so a word that matches half
+    the catalog ("by": 558 endpoints) is worth almost nothing and a rare one ("postings": 4) decides
+    the order — which is also what keeps the miss allowance safe: dropping a rare token costs more
+    score than dropping filler, so a 7-of-7 fluff match cannot outrank a 6-of-7 match on substance.
+    Rows matching the same tokens in the same fields still tie EXACTLY (same floats from the same
+    sums), which `rank_band`'s tie sweep and the evidence rerank both depend on. Remaining ties
+    break to core-before-extended, then verified-before-not, then id — total and stable.
     """
-    tokens = _tokens(query)
-    if not tokens:
+    m = _match(query, cat)
+    if m is None:
         return [], 0
-    scored: list[tuple[dict, int]] = []
-    for ep in cat.endpoints:
-        fields = _haystacks(ep, cat)
-        score = 0
-        for tok in tokens:
-            best = max((w for w, text in fields if tok in text), default=0)
-            if not best:
-                break
-            score += best
-        else:
-            scored.append((ep, score))
+    tokens, rows, best, idf, required, need = m
+    scored: list[tuple[dict, float]] = []
+    for (ep, _), per_tok in zip(rows, best):
+        if sum(1 for i in required if per_tok[i]) < need:
+            continue
+        scored.append((ep, round(sum(w * idf[i] for i, w in enumerate(per_tok)), 4)))
     scored.sort(key=lambda row: (-row[1], row[0]["tier"] != "core", not row[0]["verified"], row[0]["id"]))
     return scored[:max(limit, 0)], len(scored)
 
 
+def near_misses(query: str, cat: Catalog, limit: int = 3) -> list[dict]:
+    """The rows just under the admission gate, and WHICH words they miss — for zero-result answers.
+
+    A zero-result search already computed which endpoints matched everything but one or two words;
+    throwing that away and answering with prose was the least useful thing the data allowed. The
+    caller is usually an LLM: told "apollo.companies.jobs matches job, hiring, signal; misses law,
+    firm", it re-queries correctly on the next call. Only meaningful when `search` returned 0."""
+    m = _match(query, cat)
+    if m is None:
+        return []
+    tokens, rows, best, idf, required, need = m
+    cand = []
+    for (ep, _), per_tok in zip(rows, best):
+        got = sum(1 for i in required if per_tok[i])
+        if 0 < got < need:
+            mass = sum(idf[i] * w for i, w in enumerate(per_tok))
+            cand.append((mass, ep, per_tok))
+    cand.sort(key=lambda c: (-c[0], c[1]["tier"] != "core", c[1]["id"]))
+    return [{
+        "endpoint_id": ep["id"],
+        "matches": [tokens[i] for i, w in enumerate(per_tok) if w],
+        "missing": [tokens[i] for i in required if not per_tok[i]],
+    } for _, ep, per_tok in cand[:max(limit, 0)]]
+
+
+# The ceiling on how many equal-scoring rows the evidence sort may consider. Scoring is token
+# containment over three fields, so ties are the NORM, not the exception: "ad library" scores every
+# one of its 24 matches a 6, and the answer to "which 8 do I show?" was then file order.
+#
+# Sized against the real catalog rather than guessed. The tie group straddling a default limit of 8
+# is 17 rows for "ad library", 24 for "email", 88 for "company", 127 for "backlinks" — but 523 for
+# the bare word "tiktok". Taking the whole group unconditionally would put a 523-id `IN` clause
+# behind every search on an OPEN, unauthenticated route, so the group is taken whole up to this
+# ceiling and the caller is TOLD when it was not (see `rank_band`) — a bounded cut that announces
+# itself, rather than the silent one this fix set out to remove.
+RERANK_BAND = 250
+
+
+def rank_band(query: str, cat: Catalog, limit: int) -> tuple[list[tuple[dict, float]], int, bool]:
+    """`(rows, total_matches, tie_truncated)` — the candidates the evidence sort gets to reorder.
+
+    Takes `limit` rows, then keeps taking while the score stays equal to the last one kept: a cut
+    made *inside* a group of equally relevant rows is the arbitrary cut, and reranking a slice that
+    already dropped the best-measured row cannot put it back. `tie_truncated` is true when the group
+    ran past `RERANK_BAND` and the evidence therefore did not get to see all of it.
+    """
+    rows, total = search(query, cat, max(limit, 0))
+    if not rows or len(rows) >= total:
+        return rows, total, False
+    # One row PAST the ceiling, so "was the group actually cut?" is observed rather than inferred.
+    # Inferring it from `len(kept) >= RERANK_BAND` cried truncation whenever the group happened to
+    # fill the ceiling exactly — telling the caller to narrow a query that had in fact been ranked
+    # in full.
+    # The ceiling bounds the EXTRA rows the tie sweep pulls in; it must never return fewer than the
+    # caller asked for. (Shipped surfaces clamp to 100 and 25, so this was unreachable in
+    # production — but a helper that silently under-delivers is a trap for the next call site.)
+    ceiling = max(limit, RERANK_BAND)
+    wider, _ = search(query, cat, ceiling + 1)
+    edge = rows[-1][1]
+    group = [r for r in wider if r[1] >= edge]
+    kept = group[:ceiling]
+    return kept, total, len(group) > len(kept)
+
+
+def rerank(rows: list[tuple[dict, float]], stats: dict[str, dict],
+           cat: Catalog | None = None) -> list[tuple[dict, float]]:
+    """Re-order equal-scoring rows by what treg has MEASURED, then by price.
+
+    Relevance still decides first — a cheap reliable endpoint that doesn't do the job is not the
+    answer. But below that, treg is the only party that can rank on evidence, and until this existed
+    it collected WORKS/SPEED/COST and then spent none of it at the step where the agent actually
+    chooses. `catalog_search "ad library"` returned seven tikhub rows — one of them uncallable — and
+    dropped `scrapecreators…ad-library-search`, which is cheaper and had answered 16 of 16.
+
+    Buckets, not a formula: an ok_rate and a price are different units, and a weighted sum of the two
+    is a number nobody can predict or argue with. Unmeasured sits ABOVE measured-poor and below
+    measured-good — a new endpoint is an unknown, not a suspect.
+    """
+    def bucket(ep: dict) -> int:
+        rate = (stats.get(ep["id"]) or {}).get("ok_rate")
+        if rate is None:
+            return 1        # no evidence either way (or too few samples to publish one)
+        # `ok_rate` is computed from DECIDED samples only — 2xx against 5xx, with 4xx excluded as
+        # the caller's fault — so a 0 here means the provider failed every call that was its to
+        # answer. Reading "never worked" off anything wider (an earlier revision used a
+        # sample-count-based `any_ok`) demotes a healthy endpoint the moment one agent sends bad
+        # parameters, which is the failure `endpoint_stats`' 4xx rule exists to prevent.
+        if rate == 0:
+            return 3
+        return 0 if rate >= 0.9 else 2
+
+    def price(ep: dict) -> float:
+        cost = (cat.cost_view(ep.get("cost"), ep.get("provider")) if cat else ep.get("cost")) or {}
+        usd = cost.get("usd")
+        return float(usd) if isinstance(usd, (int, float)) else float("inf")
+
+    # Evidence outranks curation — a core row that has never once answered is not the better
+    # suggestion — but curation outranks PRICE. `core` is the hand-picked route for a job and
+    # `extended` the bulk-ingested long tail, so letting a tenth of a cent promote the long tail
+    # over the curated answer trades relevance for change: "tiktok comments" would lead with
+    # douyin danmaku because it is cheap.
+    return sorted(rows, key=lambda row: (
+        -row[1], bucket(row[0]), row[0]["tier"] != "core", price(row[0]),
+        not row[0]["verified"], row[0]["id"]))
+
+
 # ---- call template ---------------------------------------------------------------------------
-def _placeholder(spec: dict) -> str:
+def _placeholder(spec: dict):
     example = spec.get("example")
     if example not in (None, ""):
-        return str(example)
+        # Keep structured examples structured until the wire encoder sees them. Stringifying a
+        # list here produced Python repr (`['US']`) before the JSON/comma metadata had any chance
+        # to choose its representation; booleans likewise became capitalized Python `True`.
+        return example
     return f"<{spec.get('type') or 'value'}>"
+
+
+def wire_value(value) -> str:
+    """One scalar query value in its canonical HTTP spelling, shared by MCP and command hints."""
+    if isinstance(value, bool):      # before int — bool IS an int in Python
+        return "true" if value else "false"
+    if isinstance(value, (dict, list, tuple)):
+        return json.dumps(value, separators=(",", ":"), ensure_ascii=False)
+    return str(value)
+
+
+def query_values(ep: dict | None, name: str, value) -> list[str]:
+    """Encode one structured query value according to the endpoint's declared wire contract.
+
+    A Python/MCP list does not identify an HTTP representation: Meta expects one JSON array, while
+    ordinary repeated keys remain useful for team tools and catalog endpoints. An endpoint may
+    declare one exceptional encoding when all its array parameters share that contract; absence
+    preserves the established repeated-key behavior.
+    """
+    if not isinstance(value, (list, tuple)):
+        return [wire_value(value)]
+    inp = (ep or {}).get("input") or {}
+    encoding = inp.get("queryArrayEncoding") or "repeated"
+    if encoding == "json":
+        return [wire_value(value)]
+    if encoding == "comma":
+        return [",".join(wire_value(item) for item in value if item is not None)]
+    return [wire_value(item) for item in value if item is not None]
 
 
 def _required_examples(params) -> dict:
@@ -606,14 +949,23 @@ def call_template(ep: dict) -> str:
         parts += ["--method", ep["method"]]
     # Path params first (the server folds them into the path), then query params proper.
     for name, value in {**_required_examples(inp.get("pathParams")), **(test.get("pathParams") or {})}.items():
-        parts += ["--query", f"{name}={value}"]
+        parts += ["--query", shlex.quote(f"{name}={wire_value(value)}")]
     for name, value in {**_required_examples(inp.get("queryParams")), **(test.get("queryParams") or {})}.items():
-        parts += ["--query", f"{name}={value}"]
+        for encoded in query_values(ep, name, value):
+            # Quote the COMPLETE argv token, not just its value. `name=['US']` lost its inner
+            # quotes after shell parsing and became either an unmatched glob (zsh) or `[US]`;
+            # `name=two words` split into two arguments. shlex.quote makes the printed command the
+            # same request the structured MCP path sends.
+            parts += ["--query", shlex.quote(f"{name}={encoded}")]
 
     body = test.get("body") if test.get("body") is not None else (_required_examples(inp.get("body")) or None)
-    if body:
-        # single-quoted so the JSON's own quotes survive a paste into any POSIX shell
-        parts += ["--data", "'" + json.dumps(body, separators=(",", ":"), ensure_ascii=False) + "'"]
+    # `is not None`, not truthiness: `body: {}` is a real stored test request — a POST that takes no
+    # arguments but still requires a JSON body — and dropping `--data '{}'` from the line hands the
+    # reader a command that differs from the one that was tested, on handlers that reject an empty
+    # body outright.
+    if body is not None and (body or ep["method"] != "GET"):
+        parts += ["--data", shlex.quote(json.dumps(
+            body, separators=(",", ":"), ensure_ascii=False))]
     return " ".join(parts)
 
 

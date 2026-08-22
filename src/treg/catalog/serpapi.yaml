@@ -55,7 +55,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /search
-    name: "Get Google organic search results"
+    name: "Google organic search results for a query"
     summary: "Live Google organic results for a keyword — position, title, URL, snippet, by location"
     input:
       queryParams:
@@ -107,7 +107,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /search
-    name: "List a Google advertiser's running ads"
+    name: "Google advertiser's running ads — Ads Transparency Center"
     summary: "Ads a Google advertiser is running now, from the Ads Transparency Center"
     input:
       queryParams:
@@ -146,7 +146,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /search
-    name: "Search YouTube videos by keyword"
+    name: "YouTube video search for a query — views, channels"
     summary: "Search YouTube videos by keyword and get titles, channels, view counts and links"
     input:
       queryParams:
@@ -179,7 +179,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /search
-    name: "Search App Store apps by keyword"
+    name: "Apple App Store app search by keyword — ratings, prices"
     summary: "Search App Store apps by keyword — titles, developers, ratings and prices"
     input:
       queryParams:
@@ -220,7 +220,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /search
-    name: "Search Google Play apps or charts"
+    name: "Google Play app search by keyword, or store charts"
     summary: "Search apps on Google Play by keyword, or pull a store chart without a keyword"
     input:
       queryParams:
@@ -264,7 +264,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /search
-    name: "Get Google autocomplete keyword ideas"
+    name: "Google Autocomplete keyword suggestions for a seed term"
     summary: "Get the keyword suggestions Google autocompletes for a seed term, with relevance scores"
     input:
       queryParams:
@@ -306,7 +306,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /account.json
-    name: "Get account plan and search usage"
+    name: "SerpApi plan and monthly search usage"
     summary: "Check the calling account's plan, searches used this month and searches remaining"
     input:
       note: |

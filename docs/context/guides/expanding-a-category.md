@@ -12,8 +12,12 @@ related:
 
 # Expanding a marketplace category (adding providers)
 
-How we grew **SEO**, **Enrichment** and **Advertising** from a handful of entries to ten each. This is the
-repeatable process — follow it whenever a category needs more providers.
+How we grew **SEO**, **Enrichment** and **Advertising** from a handful of entries to ten each — and then
+Enrichment again by eight providers in one pass (2026-08-20: companyenrich, oceanio, tomba, predictleads,
+findymail, branddev, icypeas, leadsforge). This is the repeatable process — follow it whenever a
+category needs more providers. Creator/influencer data (influencers.club, 2026-08-21) was the first
+provider added under the vendor-listing skill end to end: registry + 15-endpoint catalog, every price
+reconciled against the provider's own credit meter.
 
 Everything lives in **`oauth_providers.py`** (the `REGISTRY` of `OAuthProvider` entries). Connecting,
 verifying and auto-provisioning a pasted-key provider is **`connect_with_token`** (`POST /connections/token`)
@@ -70,6 +74,12 @@ this fragment is the *process*, not the mechanics reference.
 | 200 on a bad key; an error object present = invalid | `token_reject_field` | Serpstat `error` |
 | 200 on a bad key; an `ERROR …` text body | handled automatically (text-error guard) | Semrush |
 | No free probe; valid key 400s on empty body, invalid 401s | `probe_reject_statuses=(401,403)` | Coresignal |
+| The provider's OWN "test my auth" endpoint answers 200 with prose for a bad key | probe a DATA endpoint instead | Tiingo `/api/test` (2026-08-14; `/tiingo/daily/aapl` 403s cleanly) |
+| Bad key 302-redirects to an HTML login page (a Laravel app that only speaks JSON when asked) | `probe_reject_statuses=(302, 401, 403)` **plus** `token_verify_field` on a body field the redirect lacks | Findymail `/credits` → `email` (2026-08-20) |
+| TWO header credentials, both per-user, and a free probe answers the key alone | `extra_credential_label`/`extra_credential_header` with `extra_credential_setting` EMPTY (user binds the second half via `POST /connections/{id}/extra-credential`); probe the key-only route | Tomba `X-Tomba-Key` + `X-Tomba-Secret`, probe `/v1/usage` (2026-08-20) |
+| TWO credentials but the API also takes standard HTTP Basic `a:b` | one pasted `key:token` pair, `token_format="Basic {secret}"` + `token_encode="base64"` — no second slot needed | PredictLeads `api_key:api_token` (2026-08-20) |
+| A second host that answers 200 to anything (demo/free tier) | pin the host that rejects | CoinGecko demo host (2026-08-14) |
+| Accepts ANY key on every endpoint, even premium ones | DROP — cannot ship | Alpha Vantage (2026-08-14: `apikey=bogus123` returned real quote data) |
 | Ongoing tool health check | `probe_path` (a cheap GET on `base_url`) | most |
 
 The connect verify already parses JSON only when the response *is* JSON (so a CSV/text body doesn't error), and
@@ -88,6 +98,17 @@ rejects on HTTP status by default.
 - **API accepts ANY key** (returns success for garbage). You cannot validate at connect — **drop it**; don't
   ship a provider whose key can't be checked. ScrapeCreators.
 - **Cheapest check is off-host** → `probe_url`. Semrush, Diffbot.
+- **A gateway 504 that still bills.** influencers.club (2026-08-21) fronts slow enrichment with an nginx
+  60s cutoff: the first call for a handle took 54–61s, several came back as a 504 HTML page, and the
+  backend finished anyway — two of those 504s were charged, one was not. Record it in the catalog
+  file's header (retry once, warm answers in 2–5s) rather than stamping the route `unverified`; and
+  give `catalog_verify.py` a second pass for the routes that timed out instead of widening its timeout.
+- **Django trailing slash.** influencers.club's slash-less paths 301 with the body dropped; the Akta
+  fix (slash IN `probe_path`) applies to every catalog `path` too.
+- **A cross-platform provider needs its own platform slug.** influencers.club enriches a handle on any
+  of 11 networks through a `platform` body field, so no single social slug is honest; it got a
+  `creators` platform on the Enrichment shelf (2026-08-21). Platforms cannot be proposed from a
+  provider file — add the slug to `capabilities.yaml` and propose only the capabilities.
 
 ## Selection heuristics (what makes a provider worth adding)
 - **Self-serve API-key first** — sign up, get a key, no sales call. That is the entire speed advantage; anything
@@ -112,7 +133,13 @@ rejects on HTTP status by default.
    count; it activates when the credentials are set.
 4. **Quirks** (all snapshotted onto `PendingOAuth`): `extra_credential_*` for a second header (Google Ads /
    Microsoft Ads `DeveloperToken`), `auth_params={}` for non-Google providers that reject `access_type`,
-   `client_id_param` (TikTok's `app_id`/`client_key`), `scope_separator`, `pkce`, `long_lived_exchange`.
+   `client_id_param` (TikTok's `app_id`/`client_key`), `scope_separator`, `pkce`, `long_lived_exchange`,
+   `token_endpoint_auth_method="client_secret_basic"` (X, Pinterest — ALSO persisted into the token blob
+   so refresh speaks the same dialect), `extra_tools` for a vendor that splits one product across hosts
+   (GA4's admin/data split — each extra host provisions a companion Tool on the same secret; the
+   generic `_backfill_provider_extra_tools` startup pass gives existing connections newly-added
+   companions automatically), and
+   `resource_example` to stamp a ready-made call onto the tool once the user picks their resource.
 5. **NON-STANDARD OAuth is not free.** TikTok Ads (`app_id`/`auth_code`, JSON-body token exchange, `code==0`
    envelope, `Access-Token` header instead of `Authorization: Bearer`) does NOT work with the standard
    `oauth.py` flow or the Bearer auto-provision binding. Add it as a **flagged placeholder** — it needs real

@@ -16,13 +16,14 @@ covers (frontmatter `sources:`). Regenerate this index with
 
 | Fragment | Status | Covers |
 |---|---|---|
+| [Google Ads conversion tracking — capture, outbox, upload](architecture/ads-conversions.md) | shipped | adsconv.py, adtrack.js |
 | [Auth & secrets — injectors, encryption, OAuth freshness, health](architecture/auth-secrets.md) | shipped | injectors.py, crypto.py, oauth.py, oauth_providers.py, … |
-| [Endpoint catalog — what you can DO with a connected key, and which provider should do it](architecture/catalog.md) | shipped | catalog_store.py, endpoint_stats.py |
-| [Data model — the registry tables, async DB, audit writer](architecture/data-model.md) | shipped | models.py, db.py, audit.py, analytics.py, … |
+| [Endpoint catalog — what you can DO with a connected key, and which provider should do it](architecture/catalog.md) | shipped | catalog-drift.yml, catalog_drift.py, catalog_validate.py, aliases.yaml, … |
+| [Data model — the registry tables, async DB, audit writer](architecture/data-model.md) | shipped | models.py, db.py, referrals.py, audit.py, … |
 | [Local proxy — catch a program's own outgoing calls (`treg <command>`)](architecture/local-proxy.md) | shipped | localproxy.py, server.js |
 | [Local CLI runs — run a vendor CLI as a dedicated user with a server-held credential (`treg run`)](architecture/local-run.md) | shipped | localrun.py, egress.py, fsjail.py |
 | [MCP — the front door for assistants, and treg as an OAuth authorization server](architecture/mcp-oauth.md) | shipped | mcp.py, mcp_oauth.py, connect-demo.html |
-| [Money — prepaid balance, the ledger, Stripe, and the reports that check it](architecture/money.md) | shipped | ledger.py, billing.py, reconcile.py, api.py |
+| [Money — prepaid balance, the ledger, Stripe, and the reports that check it](architecture/money.md) | shipped | ledger.py, models.py, billing.py, reconcile.py, … |
 | [Multi-tenancy — orgs, memberships, invites, per-org scoping](architecture/multi-tenancy.md) | shipped | models.py, api.py, db.py |
 | [The proxy — faithful credential-injecting relay + tool resolution](architecture/proxy-model.md) | shipped | proxy.py, api.py |
 | [Super-admin — cross-tenant read + control](architecture/super-admin.md) | shipped | api.py, config.py |
@@ -34,12 +35,13 @@ covers (frontmatter `sources:`). Regenerate this index with
 | [The API — the only brain (FastAPI)](interface/api.md) | shipped | api.py, catalog_store.py, email.py, runner.py, … |
 | [catalog-review-proposal](interface/catalog-review-proposal.md) | ? | — |
 | [The CLI (treg) + skill scaffolding](interface/cli.md) | shipped | cli.py, convert.py, agents.py |
-| [The web dashboard (Ledger, served from FastAPI)](interface/dashboard.md) | shipped | index.html, tutorial.js, tutorial.html, tour.js, … |
+| [The web dashboard (Ledger, served from FastAPI)](interface/dashboard.md) | shipped | index.html, README.md, vue-3.5.41.global.prod.js, tutorial.js, … |
 | [Import — scan a .env AND/OR a skills dir, auto-register as tools + bundles](interface/env-import.md) | in-progress | providers.py, skills.py |
 | [Landing sandbox studio — anonymous try-it, hosted skills, CLI installer](interface/landing-sandbox.md) | shipped | sandbox.py, pubfeed.py, api.py, index.html, … |
 | [Onboarding — the first-run demo team (dashboard + CLI)](interface/onboarding.md) | shipped | demo.py, cli.py, index.html |
+| [Search surfaces — robots, sitemap, the crawlable catalog, and the social card](interface/seo.md) | shipped | api.py, agent_pages.py, robots.txt, catalog.css, … |
 | [Shell mode (treg shell) — transparent CLI interception](interface/shell.md) | shipped | shell.py, cli.py |
-| [The shippable tools-registry skill (3 personas)](interface/skill.md) | shipped | skill.md |
+| [The shippable tools-registry skill (3 personas)](interface/skill.md) | shipped | skill.md, mcp_install.py, build_plugin.py, plugin.json, … |
 
 ## Ops (deploy, scale)
 

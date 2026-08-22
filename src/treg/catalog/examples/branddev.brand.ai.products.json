@@ -1,0 +1,40 @@
+{
+ "products": [
+  {
+   "name": "Pay as you go",
+   "description": "Only pay for what you use, with no recurring fees. Best for low or unpredictable volume. Charges 0.7% of Billing volume including Billing transactions processed on and off Stripe, excluding one-off invoices.",
+   "price": 0.7,
+   "currency": "USD",
+   "billing_frequency": null,
+   "pricing_model": "flat",
+   "category": "Billing",
+   "features": ["No recurring fees", "Charges 0.7% of Billing volume", "… 2 more (truncated for the catalog example)"],
+   "target_audience": ["Businesses with low or unpredictable volume"],
+   "tags": ["billing", "pay-as-you-go", "… 1 more (truncated for the catalog example)"],
+   "url": "https://stripe.com/billing/pricing",
+   "image_url": null,
+   "sku": null
+  },
+  {
+   "name": "Pay monthly plan - Up to $100,000 Billing volume",
+   "description": "Annual subscription paid monthly with up to $100,000 Billing volume per month. Includes 0.67% fee for additional Billing volume. Save 11%.",
+   "price": 620,
+   "currency": "USD",
+   "billing_frequency": "monthly",
+   "pricing_model": "tiered",
+   "category": "Billing",
+   "features": [
+    "Annual subscription paid monthly",
+    "Up to $100,000 Billing volume per month",
+    "… 2 more (truncated for the catalog example)"
+   ],
+   "target_audience": ["Businesses with predictable monthly billing volume up to $100,000"],
+   "tags": ["billing", "subscription", "… 2 more (truncated for the catalog example)"],
+   "url": "https://stripe.com/billing/pricing",
+   "image_url": null,
+   "sku": null
+  },
+  "… 3 more (truncated for the catalog example)"
+ ],
+ "key_metadata": {"credits_consumed": 10, "credits_remaining": 294}
+}

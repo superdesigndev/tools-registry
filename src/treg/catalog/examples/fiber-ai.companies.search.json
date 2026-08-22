@@ -1,0 +1,813 @@
+{
+  "output": {
+    "data": [
+      {
+        "linkedin_id": "2135371",
+        "accelerator_statuses": [
+          "active"
+        ],
+        "accelerators": [
+          {
+            "id": "ycombin…",
+            "slug": "stripe",
+            "tags": [
+              "Banking…",
+              "Fintech",
+              "… 5 mor…"
+            ],
+            "year": 2009,
+            "batch": "Summer …",
+            "founders": [
+              {
+                "full_name": "Patrick…",
+                "bio": null,
+                "job_title": "Founder…",
+                "is_active": true,
+                "twitter_handle": "patrick…",
+                "linkedin_slug": "patrick…"
+              },
+              {
+                "full_name": "John Co…",
+                "bio": null,
+                "job_title": "Founder…",
+                "is_active": true,
+                "twitter_handle": "collisi…",
+                "linkedin_slug": "johnbco…"
+              }
+            ],
+            "description": "Launche…",
+            "one_liner": "Economi…",
+            "company_name": "Stripe",
+            "company_domain": "stripe.…",
+            "accelerator_name": "ycombin…",
+            "accelerator_domain": "https:/…"
+          }
+        ],
+        "blog_urls": [],
+        "custom_data": null,
+        "domains": [
+          "stripe.…"
+        ],
+        "emails": [
+          "privacy…",
+          "sales@s…",
+          "… 4 mor…"
+        ],
+        "phone_numbers": [
+          "1888926…",
+          "1800952…"
+        ],
+        "employee_count_consensus": {
+          "gte": 17187,
+          "lte": 17187
+        },
+        "facebook_urls": [
+          "www.fac…",
+          "https:/…",
+          "… 1 mor…"
+        ],
+        "fortune_rankings": null,
+        "founded_on_consensus": "2010-01…",
+        "github_usernames": [
+          "stripe",
+          "stripe-…"
+        ],
+        "instagram_handles": [],
+        "latest_funding_consensus": null,
+        "linkedin_slugs": [
+          "stripe"
+        ],
+        "linkedin_primary_slug": "stripe",
+        "li_org_id": "2135371",
+        "li_category": "C",
+        "li_job_posts_stats": {
+          "total_count": 6671,
+          "seniority_stats": {
+            "Associate": {
+              "count": 35,
+              "fraction": 0.005246589716684155
+            },
+            "Director": {
+              "count": 394,
+              "fraction": 0.05906160995353021
+            },
+            "Entry level": {
+              "count": 46,
+              "fraction": 0.006895517913356318
+            },
+            "Executive": {
+              "count": 332,
+              "fraction": 0.04976765102683256
+            },
+            "Internship": {
+              "count": 88,
+              "fraction": 0.013191425573377305
+            },
+            "Mid-Senior level": {
+              "count": 5771,
+              "fraction": 0.8650876929995502
+            }
+          },
+          "employment_type_stats": {
+            "Contract": {
+              "count": 81,
+              "fraction": 0.012142107630040474
+            },
+            "Full-time": {
+              "count": 6545,
+              "fraction": 0.9811122770199371
+            },
+            "Internship": {
+              "count": 40,
+              "fraction": 0.00599610253335332
+            }
+          },
+          "country_location_stats": {
+            "ARE": {
+              "count": 7,
+              "fraction": 0.001049317943336831
+            },
+            "AUS": {
+              "count": 174,
+              "fraction": 0.026083046020086945
+            },
+            "BRA": {
+              "count": 12,
+              "fraction": 0.001798830760005996
+            },
+            "CAN": {
+              "count": 704,
+              "fraction": 0.10553140458701844
+            },
+            "DEU": {
+              "count": 101,
+              "fraction": 0.015140158896717134
+            },
+            "ESP": {
+              "count": 54,
+              "fraction": 0.008094738420026983
+            },
+            "FRA": {
+              "count": 47,
+              "fraction": 0.007045420476690151
+            },
+            "GBR": {
+              "count": 360,
+              "fraction": 0.053964922800179886
+            },
+            "HKG": {
+              "count": 2,
+              "fraction": 0.00029980512666766604
+            },
+            "IND": {
+              "count": 488,
+              "fraction": 0.07315245090691051
+            },
+            "IRL": {
+              "count": 448,
+              "fraction": 0.06715634837355719
+            },
+            "ISR": {
+              "count": 2,
+              "fraction": 0.00029980512666766604
+            },
+            "JPN": {
+              "count": 64,
+              "fraction": 0.009593764053365313
+            },
+            "LUX": {
+              "count": 6,
+              "fraction": 0.000899415380002998
+            },
+            "MEX": {
+              "count": 122,
+              "fraction": 0.018288112726727628
+            },
+            "NLD": {
+              "count": 23,
+              "fraction": 0.003447758956678159
+            },
+            "NZL": {
+              "count": 4,
+              "fraction": 0.0005996102533353321
+            },
+            "POL": {
+              "count": 8,
+              "fraction": 0.0011992205066706642
+            },
+            "ROU": {
+              "count": 29,
+              "fraction": 0.0043471743366811574
+            },
+            "SGP": {
+              "count": 253,
+              "fraction": 0.03792534852345975
+            },
+            "SWE": {
+              "count": 2,
+              "fraction": 0.00029980512666766604
+            },
+            "THA": {
+              "count": 6,
+              "fraction": 0.000899415380002998
+            },
+            "TWN": {
+              "count": 2,
+              "fraction": 0.00029980512666766604
+            },
+            "USA": {
+              "count": 3752,
+              "fraction": 0.5624344176285414
+            }
+          },
+          "puree_job_functions_stats": {
+            "Accounting": {
+              "count": 179,
+              "fraction": 0.026832558836756108
+            },
+            "Administrative": {
+              "count": 21,
+              "fraction": 0.0031479538300104933
+            },
+            "Analyst": {
+              "count": 35,
+              "fraction": 0.005246589716684155
+            },
+            "Art / Creative": {
+              "count": 222,
+              "fraction": 0.033278369060110925
+            },
+            "Business Development": {
+              "count": 1355,
+              "fraction": 0.20311797331734371
+            },
+            "Consulting": {
+              "count": 78,
+              "fraction": 0.011692399940038975
+            },
+            "Design": {
+              "count": 222,
+              "fraction": 0.033278369060110925
+            },
+            "Education": {
+              "count": 4,
+              "fraction": 0.0005996102533353321
+            },
+            "Engineering": {
+              "count": 1553,
+              "fraction": 0.23279868085744265
+            },
+            "Finance": {
+              "count": 424,
+              "fraction": 0.0635586868535452
+            },
+            "General Business": {
+              "count": 29,
+              "fraction": 0.0043471743366811574
+            },
+            "Human Resources": {
+              "count": 197,
+              "fraction": 0.029530804976765104
+            },
+            "Information Technology": {
+              "count": 2716,
+              "fraction": 0.40713536201469047
+            },
+            "Legal": {
+              "count": 160,
+              "fraction": 0.02398441013341328
+            },
+            "Management": {
+              "count": 527,
+              "fraction": 0.07899865087692999
+            },
+            "Manufacturing": {
+              "count": 477,
+              "fraction": 0.07150352271023834
+            },
+            "Marketing": {
+              "count": 1013,
+              "fraction": 0.15185129665717284
+            },
+            "Product Management": {
+              "count": 511,
+              "fraction": 0.07660020986358866
+            },
+            "Project Management": {
+              "count": 381,
+              "fraction": 0.05711287663019038
+            },
+            "Public Relations": {
+              "count": 73,
+              "fraction": 0.01094288712336981
+            },
+            "Purchasing": {
+              "count": 28,
+              "fraction": 0.004197271773347324
+            },
+            "Quality Assurance": {
+              "count": 8,
+              "fraction": 0.0011992205066706642
+            },
+            "Research": {
+              "count": 35,
+              "fraction": 0.005246589716684155
+            },
+            "Sales": {
+              "count": 2082,
+              "fraction": 0.31209713686104035
+            },
+            "Supply Chain": {
+              "count": 28,
+              "fraction": 0.004197271773347324
+            },
+            "Training": {
+              "count": 4,
+              "fraction": 0.0005996102533353321
+            },
+            "Writing / Editing": {
+              "count": 73,
+              "fraction": 0.01094288712336981
+            }
+          },
+          "standard_industries_stats": {
+            "Finance": {
+              "count": 6655,
+              "fraction": 0.9976015589866587
+            },
+            "Government": {
+              "count": 8,
+              "fraction": 0.0011992205066706642
+            },
+            "Healthcare": {
+              "count": 8,
+              "fraction": 0.0011992205066706642
+            },
+            "Information Technology": {
+              "count": 6656,
+              "fraction": 0.9977514615499925
+            },
+            "Nonprofit": {
+              "count": 8,
+              "fraction": 0.0011992205066706642
+            },
+            "Security": {
+              "count": 1,
+              "fraction": 0.00014990256333383302
+            },
+            "Software": {
+              "count": 6649,
+              "fraction": 0.9967021436066557
+            }
+          },
+          "job_location_type_stats": {
+            "Hybrid": {
+              "count": 996,
+              "fraction": 0.14930295308049768
+            },
+            "On-site": {
+              "count": 2037,
+              "fraction": 0.30535152151101785
+            },
+            "Remote": {
+              "count": 1175,
+              "fraction": 0.1761355119172538
+            }
+          }
+        },
+        "li_description": "Stripe …",
+        "li_follower_count": 1193228,
+        "li_headline": "Help in…",
+        "li_industries": [
+          {
+            "id": "4",
+            "name": "Softwar…"
+          }
+        ],
+        "li_locations": null,
+        "li_specialties": [
+          "Payment…",
+          "Softwar…",
+          "… 1 mor…"
+        ],
+        "location_consensus": {
+          "street_address": "354 Oys…",
+          "neighborhood": null,
+          "city": "South S…",
+          "state_name": "Califor…",
+          "state_code": "CA",
+          "county": null,
+          "postal_code": "94080",
+          "country_code": "USA",
+          "country_name": "United …",
+          "coordinates": {
+            "lat": 37.655181,
+            "lon": -122.410124
+          },
+          "timezone": null,
+          "full_address": "South S…",
+          "formatted_address": "South S…"
+        },
+        "locations_stats": {
+          "AUS": 1,
+          "BRA": 1,
+          "FRA": 1,
+          "GBR": 1,
+          "IND": 1,
+          "IRL": 1,
+          "JPN": 1,
+          "MEX": 1,
+          "NLD": 1,
+          "SGP": 1,
+          "USA": 4,
+          "X-AMERICAS": 6,
+          "X-ANGLOSPHERE": 8,
+          "X-APAC": 4,
+          "X-ASIA": 3,
+          "X-BENELUX": 1,
+          "X-BRICS": 2,
+          "X-CENTRAL_AMERICA": 1,
+          "X-EAST_ASIA": 1,
+          "X-EMEA": 4,
+          "X-EUROPE": 4,
+          "X-EUROPEAN_UNION": 3,
+          "X-G20": 11,
+          "X-LATAM": 2,
+          "X-NORTH_AMERICA": 4,
+          "X-OCEANIA": 1,
+          "X-OECD": 11,
+          "X-PACIFIC": 1,
+          "X-SOUTH_AMERICA": 1,
+          "X-SOUTH_ASIA": 1,
+          "X-SOUTH_EAST_ASIA": 1,
+          "X-WESTERN_EUROPE": 4
+        },
+        "market_cap_usd": null,
+        "naics_codes": [
+          "513210",
+          "522320"
+        ],
+        "names": [
+          "Stripe,…",
+          "Stripe",
+          "… 1 mor…"
+        ],
+        "preferred_name": "Stripe",
+        "preferred_name_word_count": 1,
+        "revenue_estimate": {
+          "sources": [],
+          "fiscal_year": 2024,
+          "value_usd": {
+            "gte": 5100000000,
+            "lte": 5100000000
+          }
+        },
+        "standard_industries": [
+          "Finance",
+          "Retail",
+          "… 4 mor…"
+        ],
+        "status_consensus": "active",
+        "stock_info_consensus": null,
+        "tags": [
+          "venture…",
+          "raised-…"
+        ],
+        "total_funding_consensus": 9440247725,
+        "twitter_handles": [
+          "stripe"
+        ],
+        "websites": [
+          "stripe.…"
+        ],
+        "wellfound_slugs": [
+          "stripe"
+        ],
+        "youtube_urls": [],
+        "role_count_matches": null,
+        "num_matching_locations": null,
+        "linkedin_ids": [
+          "2135371"
+        ],
+        "last_sort_key": "gAAAAAB…",
+        "relevance_score": 6.0767236,
+        "technology_spend_usd": 38743,
+        "historical_headcount": {
+          "latest_snapshot_date": "2025-12…",
+          "snapshots": [
+            {
+              "date": "2022-12…",
+              "employees": 7756
+            },
+            {
+              "date": "2023-01…",
+              "employees": 7654
+            },
+            "… 35 mo…"
+          ],
+          "growth": {
+            "1m": {
+              "percent": 0.00076,
+              "quantity": 8
+            },
+            "2m": {
+              "percent": 0.00778,
+              "quantity": 81
+            },
+            "3m": {
+              "percent": 0.0141,
+              "quantity": 146
+            },
+            "6m": {
+              "percent": 0.05211,
+              "quantity": 520
+            },
+            "12m": {
+              "percent": 0.14071,
+              "quantity": 1295
+            },
+            "18m": {
+              "percent": 0.22927,
+              "quantity": 1958
+            },
+            "24m": {
+              "percent": 0.35949,
+              "quantity": 2776
+            },
+            "36m": {
+              "percent": 0.35353,
+              "quantity": 2742
+            }
+          }
+        },
+        "cik_numbers": [
+          "1870181"
+        ],
+        "cage_codes": [
+          "7hf68"
+        ],
+        "duns_numbers": [
+          "11-681-…"
+        ],
+        "num_li_locations": 14,
+        "location_name": "South S…",
+        "crunchbase_slug": "stripe",
+        "primary_role": "company",
+        "roles": [
+          "company",
+          "investo…"
+        ],
+        "short_description": "Stripe …",
+        "long_description": "Stripe …",
+        "is_subsidiary": false,
+        "parent": null,
+        "num_funding_rounds": 23,
+        "funding_rounds": [
+          {
+            "round_type": "seconda…",
+            "announced_on_date": "2017-03…",
+            "raised_amount_usd": null,
+            "post_money_valuation_usd": null
+          },
+          {
+            "round_type": "seconda…",
+            "announced_on_date": "2021-06…",
+            "raised_amount_usd": 1000000000,
+            "post_money_valuation_usd": null
+          },
+          "… 24 mo…"
+        ],
+        "num_exits": 7,
+        "investors": [
+          {
+            "logo_url": null,
+            "entity_type": "organiz…",
+            "investor_name": "Abstrac…",
+            "linkedin_slug": "abstrac…",
+            "investor_types": [
+              "venture…"
+            ]
+          },
+          {
+            "logo_url": "https:/…",
+            "entity_type": "organiz…",
+            "investor_name": "Robinho…",
+            "linkedin_slug": null,
+            "investor_types": [
+              "corpora…"
+            ]
+          },
+          "… 73 mo…"
+        ],
+        "acquisitions": [
+          {
+            "price_usd": null,
+            "acquiree_name": "OpenRou…",
+            "acquisition_date": "2026-08…"
+          },
+          {
+            "price_usd": null,
+            "acquiree_name": "PartyDA…",
+            "acquisition_date": "2026-02…"
+          },
+          "… 20 mo…"
+        ],
+        "best_funding_round": {
+          "round_type": "series_…",
+          "announced_on_date": "2024-03…",
+          "raised_amount_usd": null,
+          "post_money_valuation_usd": 32414537281
+        },
+        "funding_stage": "series_…",
+        "alt_industries": [
+          "informa…",
+          "interne…",
+          "… 1 mor…"
+        ],
+        "alt_keywords": [
+          "payment…",
+          "develop…",
+          "… 95 mo…"
+        ],
+        "alt_description": "Stripe …",
+        "employee_trends": null,
+        "logo_url": "https:/…",
+        "similar_companies": [
+          {
+            "name": "BluePay…",
+            "industries": [
+              "financi…"
+            ],
+            "employee_count": 92,
+            "revenue": 28500000,
+            "logo_url": "https:/…"
+          },
+          {
+            "name": "CardCon…",
+            "industries": [
+              "financi…"
+            ],
+            "employee_count": 340,
+            "revenue": 750000000,
+            "logo_url": "https:/…"
+          },
+          "… 3 mor…"
+        ],
+        "full_funding_rounds": [
+          {
+            "investors": [
+              {
+                "is_lead": false,
+                "investor_name": "Y Combi…",
+                "investor_type": "organiz…",
+                "investor_domain": "ycombin…",
+                "investor_categories": [
+                  "acceler…"
+                ],
+                "investor_linkedin_url": "https:/…",
+                "investor_linkedin_org_id": "167872"
+              }
+            ],
+            "round_city": "South S…",
+            "round_date": "2009-08…",
+            "round_type": "pre_see…",
+            "round_state": "Califor…",
+            "investor_count": 1,
+            "round_raised_usd": null,
+            "round_country_code": "USA",
+            "round_valuation_usd": 21991784
+          },
+          {
+            "investors": [
+              {
+                "is_lead": true,
+                "investor_name": "Y Combi…",
+                "investor_type": "organiz…",
+                "investor_domain": "ycombin…",
+                "investor_categories": [
+                  "acceler…"
+                ],
+                "investor_linkedin_url": "https:/…",
+                "investor_linkedin_org_id": "167872"
+              }
+            ],
+            "round_city": "South S…",
+            "round_date": "2010-08…",
+            "round_type": "pre_see…",
+            "round_state": "Califor…",
+            "investor_count": 1,
+            "round_raised_usd": null,
+            "round_country_code": "USA",
+            "round_valuation_usd": 54145017
+          },
+          "… 24 mo…"
+        ],
+        "funding_round_stats": {
+          "round_count": 26,
+          "total_raised_usd": 10440247725,
+          "peak_valuation_usd": 159000000000,
+          "unique_investor_count": 75,
+          "individual_investor_stats": [
+            {
+              "investor_name": "Sequoia…",
+              "investor_type": "organiz…",
+              "investor_domain": "sequoia…",
+              "investment_count": 12,
+              "participated_round_types": [
+                "seconda…",
+                "seed",
+                "… 7 mor…"
+              ]
+            },
+            {
+              "investor_name": "General…",
+              "investor_type": "organiz…",
+              "investor_domain": "general…",
+              "investment_count": 7,
+              "participated_round_types": [
+                "series_…",
+                "series_…",
+                "… 4 mor…"
+              ]
+            },
+            "… 74 mo…"
+          ],
+          "unique_personal_investor_count": 12,
+          "unique_organizational_investor_count": 63
+        },
+        "investment_stats": {
+          "investments_by_stage": [
+            {
+              "stage": "seed",
+              "lead_rate": 0.4483,
+              "lead_count": 13,
+              "total_count": 29,
+              "share_of_portfolio": 0.299,
+              "last_investment_date": "2026-02…"
+            },
+            {
+              "stage": "series_…",
+              "lead_rate": 0.4211,
+              "lead_count": 8,
+              "total_count": 19,
+              "share_of_portfolio": 0.1959,
+              "last_investment_date": "2026-04…"
+            },
+            "… 14 mo…"
+          ],
+          "lead_investment_rate": 0.3711,
+          "lead_investment_count": 36,
+          "total_investment_count": 97,
+          "last_investment_date": "2026-06…"
+        },
+        "is_investor": true,
+        "investor_type": "organiz…",
+        "investor_categories": null,
+        "technologies_used": [
+          {
+            "name": "hubspot"
+          },
+          {
+            "name": "postman"
+          },
+          "… 2 mor…"
+        ],
+        "platforms": {
+          "ecommerce": null,
+          "cms": [
+            "Atlassi…",
+            "Content…",
+            "… 2 mor…"
+          ],
+          "crm": [
+            "Salesfo…"
+          ],
+          "marketing": [
+            "Clearbi…"
+          ],
+          "payment": [
+            "Afterpa…",
+            "America…",
+            "… 8 mor…"
+          ]
+        }
+      }
+    ],
+    "estimatedCount": null,
+    "nextCursor": "gAAAAAB…"
+  },
+  "chargeInfo": {
+    "method": "charged…",
+    "creditsCharged": 1,
+    "lowCreditAlert": {
+      "getMoreCreditsUrl": "https:/…",
+      "message": "Your cr…",
+      "availableCredits": 486
+    }
+  },
+  "advice": [
+    "Your se…",
+    "Use exc…",
+    "… 1 mor…"
+  ]
+}

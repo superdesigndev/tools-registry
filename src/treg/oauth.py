@@ -68,16 +68,36 @@ async def refresh(blob: dict, client: httpx.AsyncClient) -> dict:
     # TikTok's token endpoint reads `client_key`; the blob records that at exchange time so a
     # refresh months later still speaks the dialect the grant was minted with.
     cid_param = blob.get("client_id_param") or "client_id"
-    resp = await client.post(
-        blob.get("token_uri", _DEFAULT_TOKEN_URI),
-        data={"grant_type": "refresh_token", "refresh_token": rt, cid_param: cid, "client_secret": csec},
-    )
+    token_uri = blob.get("token_uri", _DEFAULT_TOKEN_URI)
+    data = {"grant_type": "refresh_token", "refresh_token": rt, cid_param: cid}
+
+    # Client authentication must match what the provider demands, same as exchange_code: X and
+    # Pinterest REQUIRE HTTP Basic and reject a secret in the body. This bit the connect path first
+    # and was fixed there — then every X connection died ~2h later anyway, because the REFRESH
+    # still posted the secret in the body (the provider answered 401, surfaced to callers as
+    # `502 oauth refresh failed`). The method is recorded in the blob at exchange time; blobs
+    # minted before that field existed fall back to body auth, then RETRY once with Basic on a
+    # 4xx — and stamp the method that worked so the next refresh skips the dance.
+    method = blob.get("token_endpoint_auth_method")
+    async def _post(basic: bool) -> httpx.Response:
+        if basic:
+            return await client.post(token_uri, data=data, auth=(cid, csec))
+        return await client.post(token_uri, data={**data, "client_secret": csec})
+
+    tried_basic = method == "client_secret_basic"
+    resp = await _post(basic=tried_basic)
+    if resp.status_code in (400, 401) and method is None:
+        retry = await _post(basic=True)
+        if retry.is_success:
+            resp, tried_basic = retry, True
     resp.raise_for_status()
     tok = resp.json()
     access = tok.get("access_token")
     if not access:  # a 200 with an error-shaped body ({"error":"invalid_grant"}) — surface it clearly
         raise ValueError(f"token endpoint returned no access_token: {tok.get('error') or tok}")
     new = dict(blob)
+    if tried_basic and method is None:  # learned by the retry — remember it for the next refresh
+        new["token_endpoint_auth_method"] = "client_secret_basic"
     new["access_token"] = new["token"] = access  # update both common key names
     # Always stamp an expiry (fallback 1h). A provider that omits/nulls expires_in would otherwise
     # leave the token perpetually "unknown expiry" → is_stale True → a live refresh on EVERY call.
@@ -154,6 +174,11 @@ async def exchange_code(p: PendingOAuth, code: str, client: httpx.AsyncClient) -
     }
     if cid_param != "client_id":  # TikTok — refresh must post client_key, not client_id
         blob["client_id_param"] = cid_param
+    if p.token_endpoint_auth_method and p.token_endpoint_auth_method != "client_secret_post":
+        # X / Pinterest demand HTTP Basic at the token endpoint. refresh() has no PendingOAuth to
+        # ask months from now, so the blob itself must remember — omitting this is exactly the bug
+        # where connect succeeded and every refresh 401'd.
+        blob["token_endpoint_auth_method"] = p.token_endpoint_auth_method
     if getattr(p, "long_lived_exchange", False):
         blob = await _extend_meta_token(blob, client)
     return blob

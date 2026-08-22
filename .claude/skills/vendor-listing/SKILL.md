@@ -126,6 +126,35 @@ If the vendor publishes a stable OpenAPI spec with example parameter values, add
 ABOUT; normalise platform slugs across providers. Bulk-verify with
 `catalog_verify_extended.py --dry-run` first, then with an explicit `--budget`.
 
+## Reviewing a vendor-RAISED PR (they wrote the files; you verify)
+
+The same pipeline, entered from the other end. Every vendor claim is **untrusted input** — one
+vendor PR was outright malicious (#92), and an honest one shipped a docs-transcribed price 5×
+under the real charge (#141, GitHub→LinkedIn: claimed 1 credit, metered 5). The order:
+
+1. **Gate on the required PR evidence** (per `docs/VENDORS.md` items 8–9): the self-verification
+   ledger (per-endpoint status + claimed vs metered cost, dated) and the full-surface map.
+   Missing → ask for it before spending review time. A ledger that contradicts its own YAML
+   bounces the PR unreviewed.
+2. **Diff hygiene first**: expected files only (registry entry, catalog YAML, logo, two test
+   lists, fx row), data-only changes, no credential values, no `verified:` stamps or committed
+   examples (those are yours to add).
+3. **Merge it onto current main locally** before verifying — catalog PRs staleness-conflict in
+   the shared test lists and REGISTRY tuple within days.
+4. **Independently verify with a key YOU control** (steps 5–7 above): watch the bogus-key
+   rejection yourself and quote the real wire body, run `catalog_verify.py` over every
+   test_request, and reconcile every cost block against the meter (charge field / rate-card
+   endpoint / balance delta) — the vendor's ledger is a cross-check, never the source of truth.
+   Where a price disagrees, fix it from the observed charge (`source: observed`,
+   `confidence: verified`) and tell the vendor their docs are stale.
+5. **Audit the curation against their surface map**: are the free count/pre-flight routes and
+   cheapest operation tiers in? Deliberate-miss test_requests labeled, with the hit price
+   observed once? per_success semantics actually observed (a miss settling at 0)?
+6. **Finish the maintainer half they can't**: front-door counts (llms.txt, skill.md, README) +
+   `scripts/build_plugin.py`, docs drift, and — if their prices are verified/documented — the
+   optional tier-4 key slot. Land your verified version (a maintainer branch superseding their
+   PR is fine); close their PR with credit and the findings.
+
 ## Step 9 — done means
 
 - Validator exits 0; suite green; bogus-key rejection observed live

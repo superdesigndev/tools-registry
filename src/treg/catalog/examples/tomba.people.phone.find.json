@@ -1,0 +1,22 @@
+{
+  "data": {
+    "email": "patrick@stripe.com",
+    "domain": "stripe.com",
+    "valid": true,
+    "local_format": "(415) 555-0142",
+    "intl_format": "+1 415-555-0142",
+    "e164_format": "+14155550142",
+    "rfc3966_format": "tel:+1-415-555-0142",
+    "country_code": "US",
+    "line_type": "MOBILE",
+    "carrier": "EXAMPLE WIRELESS CARRIER",
+    "region": {
+      "name": "Maryland",
+      "code": "MD"
+    },
+    "timezones": [
+      "America/New_York"
+    ]
+  }
+}
+

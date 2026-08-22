@@ -1,0 +1,24 @@
+{
+  "companies": [
+    {
+      "domain": "paypal.com",
+      "name": "PayPal",
+      "website": "https://paypal.com",
+      "industry": "Finance",
+      "keywords": [
+        "digital payments",
+        "digital wallet",
+        "online checkout",
+        "payment processing",
+        "money transfers",
+        "peer-to-peer payments",
+        "…"
+      ],
+      "description": "PayPal is a global digital payments and financial services company. It provides digital wallets, online checkout, money transfers, payment cards, buy now pay later, invoicing, payment links, and business payment processing. PayPal serves consumers, small businesses, enterprises, platforms, marketpla…",
+      "logo": "https://api.leadsforge.ai/images/0k1Dx3_NV95TN0UrbUbL5IsoqAGWUIyyvWUl33K8q6L9iJAidHB1S0zYmpMmtj4oap7z8EpB2g4BfO2AAhyv7XGDyW0TIKPykGFo7WJXGR1JQBAay8yBRhbftOFBMMDJGqpaJh6h3MMFaFn7CA"
+    }
+  ],
+  "totalCount": 10000,
+  "page": 1,
+  "totalPages": 10000
+}

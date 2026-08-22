@@ -1,0 +1,20 @@
+{
+  "data": [
+    {
+      "id": "1142445",
+      "type": "startup_platform_post",
+      "attributes": {
+        "published_at": "2026-08-19T04:25:47.000+02:00",
+        "post_type": "show_hn",
+        "post_url": "https://news.ycombinator.com/item?id=49355834",
+        "company_domain": "warpdd.com",
+        "company_name": "Warp Dd",
+        "fuzzy_match": false
+      }
+    }
+  ],
+  "meta": {
+    "schema_version": "3.0",
+    "record_state": "active"
+  }
+}
