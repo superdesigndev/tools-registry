@@ -1163,6 +1163,35 @@ SCRAPECREATORS = OAuthProvider(
     token_verify_field="creditCount",
 )
 
+ZERNIO = OAuthProvider(
+    service="zernio",
+    display_name="Zernio",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your Zernio API key",
+    # token_header / token_format default to Authorization: Bearer {secret}
+    setup_url="https://zernio.com/dashboard/api-keys",
+    setup_action_label="Get your Zernio API key",
+    setup_steps=(
+        "Sign in to Zernio and open Dashboard → API Keys.",
+        "Create a key and copy it.",
+    ),
+    setup_note="API calls are included with the subscription (first 2 connected social accounts "
+    "free); the credential check is free.",
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Social media",
+    summary="Schedule and publish posts to your own accounts on 16 social platforms from one API "
+    "— plus cross-platform analytics, best-time data and account health.",
+    base_url="https://zernio.com/api",
+    docs_url="https://docs.zernio.com",
+    # Purpose-built credential check: validates the bearer key without reading any data.
+    # Free, no side effects; a bad key gets HTTP 401 {"error":"Unauthorized"} (verified live
+    # 2026-08-21), a valid one 200 {"valid":true,...}.
+    probe_path="/v1/auth/verify",
+)
+
 # ---- SEO API-key providers -------------------------------------------------------------------
 
 DATAFORSEO = OAuthProvider(
@@ -2249,7 +2278,7 @@ REGISTRY: dict[str, OAuthProvider] = {
         LINKEDIN, SLACK, X, TIKTOK, FACEBOOK, INSTAGRAM, META_ADS,
         # API-key providers
         APOLLO, PDL, AKTA, HUNTER, CRUNCHBASE, TIKHUB, BRIGHTDATA, SEMRUSH, JUSTONEAPI,
-        SCRAPECREATORS,
+        SCRAPECREATORS, ZERNIO,
         # SEO API-key providers
         DATAFORSEO, SERANKING, MOZ, MAJESTIC, SERPSTAT,
         # more Enrichment API-key providers

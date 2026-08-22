@@ -1,0 +1,341 @@
+# unverified — vendor-submitted listing; maintainer verification pending (test credential to be
+# arranged via the contact email in the listing PR). Transcribed from the vendor's own OpenAPI spec
+# (https://zernio.com/openapi.yaml) 2026-08-21.
+#
+# Zernio is a scheduler API reached with the caller's OWN API key: one POST /v1/posts call
+# publishes or schedules the same post to any of 16 social platforms (X/Twitter, Instagram,
+# Facebook, LinkedIn, TikTok, YouTube, Pinterest, Reddit, Bluesky, Threads, Google Business,
+# Telegram, Snapchat, Discord, Slack, WhatsApp) on the social accounts the user connected in the
+# Zernio dashboard. Every endpoint below is scope own_account — this is the team's own social
+# presence, not a scraper.
+#
+# Conventions that shape the entries:
+#   1. API calls are FREE: Zernio bills per connected social account per month (first 2 free),
+#      not per request. The one pass-through exception is X/Twitter, whose upstream API costs are
+#      metered per request ($0.005–$0.200/req) and noted on the affected endpoint.
+#   2. Bad keys get a clean HTTP 401 {"error":"Unauthorized"}; /v1/auth/verify exists purely to
+#      validate a credential without reading data.
+#   3. Rate limits ride on every response as X-RateLimit-Limit/Remaining/Reset headers.
+#   4. Caller-specific ids (profileId, accountId, postId) come from the list endpoints
+#      (/v1/profiles, /v1/accounts, /v1/posts); no spec can supply them, so the endpoints that
+#      require one carry no test_request — same convention as the first-party OAuth providers.
+provider: zernio
+source:
+  docs: https://docs.zernio.com
+  openapi: https://zernio.com/openapi.yaml
+  curated: 2026-08-21
+limits: "60–1,200 requests/minute by plan tier (sliding window); per-account daily publish caps (25–250/day by platform) plus a 25 posts/hour per-account velocity cap"
+pricing_url: https://zernio.com/pricing  # machine-readable summary at https://zernio.com/pricing.md
+
+proposed_capabilities:
+  social-publishing.post.create: "Schedule or publish a post to your accounts across social networks"
+  social-publishing.post.list: "List your scheduled and published posts"
+  social-publishing.post.get: "Get one post's status and platform URLs"
+  social-publishing.post.delete: "Delete a draft or scheduled post"
+  social-publishing.post.validate: "Pre-flight a post against each platform's rules"
+  social-publishing.accounts.list: "List your connected social accounts"
+  social-publishing.accounts.health: "Check your connected accounts' token health"
+  social-publishing.media.upload: "Get an upload URL for post media"
+  social-publishing.analytics.posts: "Engagement analytics across your published posts"
+  social-publishing.analytics.best_time: "Best times to post from historical engagement"
+  social-publishing.followers.stats: "Follower counts and growth across your accounts"
+  social-publishing.queue.next_slot: "Preview the next available queue slot"
+  social-publishing.profiles.list: "List the profiles (workspaces) in your scheduler"
+
+endpoints:
+  - id: zernio.social-publishing.post.create
+    kind: action
+    capability: social-publishing.post.create
+    platform: social-publishing
+    scope: own_account
+    method: POST
+    path: /v1/posts
+    name: "Schedule a post to many social networks in one call"
+    summary: "Create and optionally publish a post. Immediate posts (publishNow: true) include platformPostUrl in the response."
+    input:
+      body:
+        content: {type: string, required: false, note: "post caption/text; optional when media is attached or every platform has customContent", example: "Hello from the Zernio API!"}
+        platforms: {type: array, required: false, note: "target platforms: [{platform, accountId, customContent?, platformSpecificData?}]. accountId comes from /v1/accounts. Required for non-draft posts; drafts can omit it", example: [{platform: "twitter", accountId: "<from /v1/accounts>"}]}
+        mediaItems: {type: array, required: false, note: "[{type: image|video|gif|document, url, altText?, thumbnail?}] — public URLs, or publicUrl from /v1/media/presign"}
+        scheduledFor: {type: string, required: false, note: "ISO 8601 time to schedule for; omit with publishNow: true for immediate publish", example: "2026-09-01T10:00:00Z"}
+        publishNow: {type: boolean, required: false, note: "publish immediately instead of scheduling"}
+        isDraft: {type: boolean, required: false, note: "save as draft. Also the default when none of scheduledFor / publishNow / queuedFromProfile is sent"}
+        queuedFromProfile: {type: string, required: false, note: "profile id (from /v1/profiles) to auto-assign the next queue slot — do NOT pre-read /v1/queue/next-slot and copy its time into scheduledFor"}
+        timezone: {type: string, required: false, example: "Europe/Madrid"}
+      bodyType: json
+      note: "supports an optional x-request-id header for idempotent retry; duplicate-content protection also applies server-side. Platform-specific options (TikTok privacy, YouTube title, first comment, …) ride in each platform entry's platformSpecificData"
+    test_request:
+      body: {content: "Draft created by treg listing verification — safe to delete", isDraft: true}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'included with the Zernio subscription (billed per connected social account per month, first 2 free). Exception: publishing to X/Twitter passes through X API costs at X''s exact rates, $0.015/post ($0.200 when the post contains a URL) — see https://zernio.com/pricing.md. Per-account daily publish caps and a 25 posts/hour velocity cap apply'}
+    docs_url: https://docs.zernio.com
+
+  - id: zernio.social-publishing.post.list
+    capability: social-publishing.post.list
+    platform: social-publishing
+    scope: own_account
+    method: GET
+    path: /v1/posts
+    name: "List your scheduled, draft and published posts"
+    summary: "Returns a paginated list of posts. Published posts include platformPostUrl with the public URL on each platform."
+    input:
+      queryParams:
+        limit: {type: integer, required: false, note: "page size; values above the maximum return 400 rather than being clamped", example: 10}
+        status: {type: string, required: false, note: "one of draft | scheduled | published | failed", example: "scheduled"}
+        platform: {type: string, required: false, example: "twitter"}
+        profileId: {type: string, required: false, note: "filter to one profile (24-char hex id); omit or send `all` for every profile"}
+        source: {type: string, required: false, note: "zernio (default, posts authored through the API) | external (historical posts synced from the platforms)"}
+        dateFrom: {type: string, required: false, note: "YYYY-MM-DD or full ISO 8601", example: "2026-08-01"}
+        dateTo: {type: string, required: false, note: "YYYY-MM-DD or full ISO 8601"}
+        search: {type: string, required: false, note: "search posts by text content"}
+        sortBy: {type: string, required: false, note: "scheduled-desc (default) | scheduled-asc | created-desc | created-asc | status | platform"}
+    test_request:
+      queryParams: {limit: 1}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the Zernio subscription; rate limit rides on the X-RateLimit response headers}
+    docs_url: https://docs.zernio.com
+
+  - id: zernio.social-publishing.post.get
+    capability: social-publishing.post.get
+    platform: social-publishing
+    scope: own_account
+    method: GET
+    path: /v1/posts/{postId}
+    name: "Post status and platform URLs by post id"
+    summary: "Fetch a single post by ID. For published posts, this returns platformPostUrl for each platform."
+    input:
+      pathParams:
+        postId: {type: string, required: true, note: "post id from POST /v1/posts or the list endpoint"}
+    # no test_request: postId is caller-specific — harvest one from GET /v1/posts first
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the Zernio subscription}
+    docs_url: https://docs.zernio.com
+
+  - id: zernio.social-publishing.post.delete
+    kind: action
+    capability: social-publishing.post.delete
+    platform: social-publishing
+    scope: own_account
+    method: DELETE
+    path: /v1/posts/{postId}
+    name: "Delete a draft or scheduled post by id"
+    summary: "Delete a draft or scheduled post from Zernio. Published posts cannot be deleted; use the Unpublish endpoint instead. Upload quota is automatically refunded."
+    input:
+      pathParams:
+        postId: {type: string, required: true}
+    # no test_request: postId is caller-specific — pairs naturally with the post.create draft test
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the Zernio subscription}
+    docs_url: https://docs.zernio.com
+
+  - id: zernio.social-publishing.post.validate
+    kind: utility
+    capability: social-publishing.post.validate
+    platform: social-publishing
+    scope: own_account
+    method: POST
+    path: /v1/tools/validate/post
+    name: "Pre-flight a post against platform rules — free dry-run"
+    summary: "Dry-run the full post validation pipeline without publishing. Catches issues like missing media for Instagram/TikTok/YouTube, hashtag limits, invalid thread formats, Facebook Reel requirements, and character limit violations."
+    input:
+      body:
+        content: {type: string, required: false, example: "Check out this video!"}
+        platforms: {type: array, required: true, note: "same format as POST /v1/posts; accountId optional here", example: [{platform: "youtube"}, {platform: "twitter"}]}
+        mediaItems: {type: array, required: false}
+      bodyType: json
+      note: "accepts the same body as POST /v1/posts; nothing is published, no media is processed and no usage is tracked — the cheapest way for an agent to size a post before spending a publish. Findings come back as HTTP 200 {valid: false, errors: [{platform, error}]}"
+    test_request:
+      body: {content: "Check out this video!", platforms: [{platform: "youtube"}, {platform: "twitter"}]}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: free dry-run; included with the Zernio subscription}
+    docs_url: https://docs.zernio.com
+
+  - id: zernio.social-publishing.accounts.list
+    capability: social-publishing.accounts.list
+    platform: social-publishing
+    scope: own_account
+    method: GET
+    path: /v1/accounts
+    name: "List your connected social accounts across platforms"
+    summary: "Returns connected social accounts. Only includes accounts within the plan limit by default. Follower data requires analytics add-on."
+    input:
+      queryParams:
+        platform: {type: string, required: false, note: "filter by platform", example: "instagram"}
+        profileId: {type: string, required: false, note: "filter by profile id"}
+        status: {type: string, required: false, note: "connected | disconnected (accounts needing reconnection)"}
+        page: {type: integer, required: false, note: "1-based; must be sent together with limit, else 400. Omit both for the full list"}
+        limit: {type: integer, required: false, note: "page size; must be sent together with page"}
+      note: "this is where accountId values for POST /v1/posts come from"
+    test_request:
+      queryParams: {}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the Zernio subscription}
+    docs_url: https://docs.zernio.com
+
+  - id: zernio.social-publishing.accounts.health
+    capability: social-publishing.accounts.health
+    platform: social-publishing
+    scope: own_account
+    method: GET
+    path: /v1/accounts/health
+    name: "Token health of your connected social accounts"
+    summary: "Returns health status of all connected accounts including token validity, permissions, and issues needing attention."
+    input:
+      queryParams:
+        platform: {type: string, required: false, note: "one of the 16 posting platforms", example: "instagram"}
+        profileId: {type: string, required: false}
+        status: {type: string, required: false, note: "healthy | warning | error"}
+    test_request:
+      queryParams: {}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the Zernio subscription}
+    docs_url: https://docs.zernio.com
+
+  - id: zernio.social-publishing.media.upload
+    kind: utility
+    capability: social-publishing.media.upload
+    platform: social-publishing
+    scope: own_account
+    method: POST
+    path: /v1/media/presign
+    name: "Get an upload URL for post media up to 5GB"
+    summary: "Get a presigned URL to upload files directly to cloud storage (up to 5GB). Returns an uploadUrl and publicUrl. PUT your file to the uploadUrl, then use the publicUrl in your posts."
+    input:
+      body:
+        filename: {type: string, required: true, example: "my-video.mp4"}
+        contentType: {type: string, required: true, note: "MIME type: common image/video/audio types plus application/pdf", example: "video/mp4"}
+        size: {type: integer, required: false, note: "file size in bytes for pre-validation (max 5GB)", example: 15234567}
+      bodyType: json
+    test_request:
+      body: {filename: "treg-verify.jpg", contentType: "image/jpeg", size: 1024}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the Zernio subscription; storage quota applies per plan and is refunded when a post is deleted}
+    docs_url: https://docs.zernio.com
+
+  - id: zernio.social-publishing.analytics.posts
+    capability: social-publishing.analytics.posts
+    platform: social-publishing
+    scope: own_account
+    method: GET
+    path: /v1/analytics
+    name: "Engagement analytics across your posts, all platforms"
+    summary: "Returns analytics for posts. With postId, returns a single post. Without it, returns a paginated list with overview stats."
+    input:
+      queryParams:
+        postId: {type: string, required: false, note: "single-post mode; accepts Zernio and external post ids (auto-resolved). May answer 202 (sync pending) or 424 (all platforms failed)"}
+        platform: {type: string, required: false, example: "instagram"}
+        profileId: {type: string, required: false}
+        accountId: {type: string, required: false}
+        fromDate: {type: string, required: false, note: "YYYY-MM-DD, defaults to 90 days ago; max range 366 days"}
+        toDate: {type: string, required: false, note: "YYYY-MM-DD, defaults to today"}
+        limit: {type: integer, required: false, example: 1}
+        page: {type: integer, required: false}
+        sortBy: {type: string, required: false, note: "date (default) | engagement | impressions | reach | likes | comments | shares | saves | clicks | views | follows"}
+      note: "requires the Analytics add-on on the Zernio account — without it, a structured 402 {code: analytics_addon_required} (observed live 2026-08-21)"
+    test_request:
+      queryParams: {limit: 1}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the Zernio subscription (Analytics add-on)}
+    docs_url: https://docs.zernio.com
+
+  - id: zernio.social-publishing.analytics.best-time
+    capability: social-publishing.analytics.best_time
+    platform: social-publishing
+    scope: own_account
+    method: GET
+    path: /v1/analytics/best-time
+    name: "Best times to post from your engagement history"
+    summary: "Returns the best times to post based on historical engagement data. Groups all published posts by day of week and hour (UTC), calculating average engagement per slot."
+    input:
+      queryParams:
+        platform: {type: string, required: false, note: "omit for all platforms", example: "instagram"}
+        profileId: {type: string, required: false}
+        accountId: {type: string, required: false}
+      note: "requires the Analytics add-on on the Zernio account — 403 {requiresAddon: true} without it (observed live 2026-08-21)"
+    test_request:
+      queryParams: {}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the Zernio subscription (Analytics add-on)}
+    docs_url: https://docs.zernio.com
+
+  - id: zernio.social-publishing.followers.stats
+    capability: social-publishing.followers.stats
+    platform: social-publishing
+    scope: own_account
+    method: GET
+    path: /v1/accounts/follower-stats
+    name: "Follower counts and growth across your accounts"
+    summary: "Returns follower count history and growth metrics for connected social accounts. Follower counts are refreshed once per day."
+    input:
+      queryParams:
+        accountIds: {type: string, required: false, note: "comma-separated account ids; defaults to all"}
+        profileId: {type: string, required: false}
+        fromDate: {type: string, required: false, note: "YYYY-MM-DD, defaults to 30 days ago"}
+        toDate: {type: string, required: false, note: "YYYY-MM-DD, defaults to today"}
+        granularity: {type: string, required: false, note: "daily (default) | weekly | monthly"}
+      note: "requires the Analytics add-on on the Zernio account — 403 {requiresAddon: true} without it (observed live 2026-08-21)"
+    test_request:
+      queryParams: {}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the Zernio subscription (Analytics add-on)}
+    docs_url: https://docs.zernio.com
+
+  - id: zernio.social-publishing.queue.next-slot
+    capability: social-publishing.queue.next_slot
+    platform: social-publishing
+    scope: own_account
+    method: GET
+    path: /v1/queue/next-slot
+    name: "Next free queue slot for a profile"
+    summary: "Returns the next available queue slot for preview purposes. To create a queue post, use POST /v1/posts with queuedFromProfile instead of scheduledFor."
+    input:
+      queryParams:
+        profileId: {type: string, required: true, note: "profile id from /v1/profiles"}
+        queueId: {type: string, required: false, note: "specific queue; defaults to the profile's default queue"}
+      note: "preview only — copying this time into scheduledFor bypasses queue bookkeeping; let queuedFromProfile assign the slot. Answers 404 when the profile has no queue schedule configured yet (observed live 2026-08-21)"
+    # no test_request: profileId is caller-specific — harvest one from GET /v1/profiles first
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the Zernio subscription}
+    docs_url: https://docs.zernio.com
+
+  - id: zernio.social-publishing.profiles.list
+    kind: account
+    capability: social-publishing.profiles.list
+    platform: social-publishing
+    scope: own_account
+    method: GET
+    path: /v1/profiles
+    name: "List your Zernio profiles (workspaces)"
+    summary: "Returns profiles sorted default-first, then by creation date."
+    input:
+      queryParams:
+        name: {type: string, required: false, note: "exact-match filter on the profile name"}
+        limit: {type: integer, required: false, example: 10}
+        skip: {type: integer, required: false}
+      note: "profiles group connected accounts (one per client/brand); this is where profileId values come from"
+    test_request:
+      queryParams: {limit: 1}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the Zernio subscription}
+    docs_url: https://docs.zernio.com
+
+  - id: zernio.account.usage
+    kind: account
+    capability: account.usage
+    platform: account
+    scope: own_account
+    method: GET
+    path: /v1/usage
+    name: "Your Zernio plan, quota and usage"
+    summary: "The plan / quota / payment-status snapshot: current plan name, billing period, plan limits, usage counts, and access state."
+    input:
+      queryParams:
+        range: {type: string, required: false, note: "with granularity, switches to the billed-spend-by-product view"}
+      note: "bare call returns the plan snapshot; the statement view (balance, credits, caps) lives at GET /v1/billing"
+    test_request:
+      queryParams: {}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the Zernio subscription}
+    docs_url: https://docs.zernio.com
+
+  - id: zernio.account.identity
+    kind: utility
+    capability: account.identity
+    platform: account
+    scope: own_account
+    method: GET
+    path: /v1/auth/verify
+    name: "Check the connected Zernio credential is valid"
+    summary: "Checks whether the bearer credential on this request is valid, without reading any data."
+    input:
+      note: "takes no parameters. Returns valid, userId and authType; a bad key gets HTTP 401 {\"error\":\"Unauthorized\"}. This is the connect-time probe"
+    test_request:
+      queryParams: {}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: free; built for credential verification}
+    docs_url: https://docs.zernio.com
