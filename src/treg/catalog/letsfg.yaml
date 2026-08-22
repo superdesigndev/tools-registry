@@ -1,0 +1,475 @@
+provider: letsfg
+source:
+  docs: https://letsfg.co/developers/docs
+  openapi: https://letsfg.co/developers/api/openapi.json
+  curated: 2026-08-20
+# LetsFG fills the catalog's TRAVEL gap. Nothing here books or prices a trip today: `tripadvisor`
+# returns hotel *reviews*, and the SERP providers return travel *pages*. This is live inventory —
+# real flight offers with booking links, and hotel rates that are actually reservable.
+#
+# One key, two verticals, one prepaid USD balance. Auth is `X-API-Key: <key>`. Registration is
+# self-serve and instant (POST /agents/register, email only, no card, no sales call); a card is
+# attached later, only when moving off the free sandbox.
+#
+# ---------------------------------------------------------------------------------------------
+# TWO WAYS IN, AND THIS ENTRY IS THE PAID ONE. LetsFG sells the same flight engine through two
+# separate credentials. Everything catalogued below is the DEVELOPER API. The other lane is free
+# and is described here so you can choose deliberately rather than discover it by accident.
+#
+#   1. DEVELOPER API  (this entry)  https://letsfg.co/developers/api/v1   X-API-Key: <key>
+#      Paid per search on a monthly ladder, prepaid USD balance, no published per-key rate limit.
+#      Register with an email and get a key instantly. This is the lane to use from treg: the key
+#      pastes in, the price is published and meterable, and GET /agents/me is a free probe.
+#
+#   2. FREE AGENT LANE, "PFS"       https://letsfg.co/api                 Authorization: Bearer <token>
+#      Search costs nothing. It powers LetsFG's own MCP server, CLI and the PyPI/npm packages.
+#      Enrol at POST /api/agent-access/request (answer with a card via Stripe setup-mode, which is
+#      a zero-amount authorisation and never charges, or pay $0.01 once over MPP), then
+#      POST /api/agent-access/verify to receive a token valid 90 days. The lane is three
+#      endpoints: POST /api/search, GET /api/results/{search_id}, POST /api/agent-book.
+#      Docs: https://letsfg.co/for-agents
+#
+# WHY THE FREE LANE IS NOT CATALOGUED AS CALLABLE ENDPOINTS. Three reasons, all structural:
+#   - It is on a DIFFERENT HOST than this provider's base_url (letsfg.co/api, not
+#     letsfg.co/developers/api/v1) and treg resolves every endpoint path against base_url, so those
+#     routes could be written down here but could not be called through the proxy.
+#   - It has no free probe endpoint. There is no /agents/me equivalent on that lane; the cheapest
+#     call is POST /api/search, which is the expensive operation itself.
+#   - Its 401 does not discriminate. A bad token and a MISSING token both answer
+#     `401 {"error":"Unauthorized","code":"NO_SESSION"}` byte-for-byte (checked 2026-08-20), so a
+#     probe cannot tell "this team's token expired" from "no credential was attached" -- which is
+#     exactly the distinction a marketplace has to show its user.
+#
+# AND ONE CAVEAT WORTH MORE THAN THE OTHERS: letsfg.co/for-agents advertises free-lane search as
+# "FREE, unlimited". It is free, but it is NOT unlimited -- the token store enforces 3 searches per
+# 10 minutes, 10 per hour and 25 per 24 hours per token. An agent that fans out will meet a 429
+# quickly. The paid lane catalogued below has no such per-key cap, which is the practical reason to
+# prefer it for anything doing real work.
+#
+# So: use the free lane for a personal CLI, an MCP server on one machine, or trying the engine out;
+# use this entry for an agent doing work on a schedule.
+# ---------------------------------------------------------------------------------------------
+#
+# BILLING — read this before trusting a `cost` block below. LetsFG's own docs speak in "credits",
+# but a credit has no fixed price: flight search is billed on a MONTHLY VOLUME LADDER, $0.50 per
+# search for the first 10 each calendar month, $0.20 for searches 11-1,000, and $0.10 from 1,001
+# up (the rate is fixed per band, not retroactive; the counter resets on the 1st of each UTC
+# month). Because a credit is not a currency, every priced entry below is denominated directly in
+# USD at the FIRST-BAND rate — $0.50 — which is the catalog's usual entry-tier upper-bound
+# convention. Sustained volume costs 2.5x to 5x less than these blocks claim. There is
+# deliberately NO `credit_rates_usd.letsfg` row in fx.yaml: a single credit->USD constant would be
+# wrong in every band.
+#
+# Hotels are metered on a completely different model — LOOK-TO-BOOK, not monthly. Hotel search is
+# free up to 1,000 searches since your last successful booking; past that, searches are sold in
+# blocks of 1,000 for $5.00 ($0.005 each) drawn from the same prepaid balance, charged the moment
+# the allowance is crossed, and the next booking resets the allowance. So a caller with a normal
+# search-to-book ratio pays nothing for hotel search at all, and the $0.005 recorded below is the
+# marginal overage rate, not the expected one.
+#
+# LIVE MEASUREMENT 2026-08-20. Every test_request below was executed against a real developer
+# account registered through the public self-serve route. "Charged" is read off the account's own
+# prepaid balance immediately before and after each call, not from documentation:
+#
+#   letsfg.account.usage          200   1.0s    0c   profile + balance
+#   letsfg.flights.parse-query    200   3.8s    0c   free, resolved the query correctly
+#   letsfg.flights.providers      200   0.6s    0c   provider list returned
+#   letsfg.flights.results        200   1.1s    0c   free polling, chained off a paid async search
+#   letsfg.flights.locations      200   5.9s    0c   WAW + WMI for "Warsaw"
+#   letsfg.flights.discover       200   6.4s   50c   4 destinations, ONE charge, real prices
+#   letsfg.flights.multi-search   200   2.9s   50c   billed per destination as documented
+#   letsfg.flights.search.async   200   1.0s   50c   charged once on completion, as documented
+#   letsfg.flights.search         200  22.6s   50c   5 offers WAW->LIS; 16.9s / 5 offers LON->BCN
+#   letsfg.hotels.destinations    200   1.6s    0c   real TBO ids ("Warsaw, Poland" = 148614)
+#   letsfg.hotels.search          200  53.1s    0c   real bookable rates, inside the free allowance
+#   letsfg.hotels.booking.status  402   0.5s    -    needs a real booking_job_id; untestable by design
+#
+# The pricing ladder reconciles exactly: the account reports price_per_search_cents: 50 on the
+# starter band, and every paid call debited exactly 50c.
+#
+# Two endpoints are NOT independently runnable and are labelled as such rather than given a
+# fabricated green row: /flights/results/{search_id} needs an id from a paid async search (chained,
+# and it verified), and /hotels/booking/{booking_job_id} needs an id from POST /hotels/book, which
+# is deliberately excluded from this catalog.
+#
+# WHAT IS DELIBERATELY NOT CATALOGUED. Fifteen of the API's 27 documented operations are excluded,
+# and the exclusions are the point rather than an omission — see the PR description for the full
+# table. Two groups matter here:
+#   - MONEY-MOVING AND ACCOUNT-MUTATING routes (POST /hotels/book, POST /hotels/cancel,
+#     POST /agents/top-up, POST /agents/rotate-key, POST /agents/setup-payment, the two
+#     hosted-checkout routes, POST /agents/billing-portal, POST /agents/billing-settings,
+#     POST /agents/register). A catalogued `test_request` is a standing instruction to whoever
+#     validates the entry, so shipping /hotels/book would mean a validation run makes a real
+#     reservation and pays a real non-refundable fee, and shipping /agents/rotate-key would mean a
+#     validation run invalidates the caller's own live key. Neither belongs behind a shared
+#     platform key.
+#   - The five /sandbox/* routes. They are free and they mirror the live request/response schema
+#     exactly, which makes them excellent for building an integration — but they return FAKE data,
+#     so an agent calling them through treg would get plausible offers for flights that do not
+#     exist. They are documented in `input.note` on their live twins instead.
+limits: "no published per-key rate limit on the developer API; flight search itself takes 60-90s per call, which is the practical ceiling. Hotel search allowance is 1,000 per booking (see billing note above)"
+pricing_url: https://letsfg.co/en/developers
+endpoints:
+  # ---------------------------------------------------------------- flights: search
+  - id: letsfg.flights.search
+    domain: flights
+    kind: data
+    capability: flights.search
+    platform: flights
+    scope: any_account
+    method: POST
+    path: /flights/search
+    name: "Search flights"
+    summary: "Search live, bookable flight offers for a route and date across a 180+ airline and OTA connector fleet"
+    input:
+      body:
+        origin: {type: string, required: true, note: "IATA departure code — airport or city", example: "WAW"}
+        destination: {type: string, required: true, note: "IATA arrival code", example: "LIS"}
+        date_from: {type: string, required: true, note: "outbound date, YYYY-MM-DD — must be in the future", example: "2026-11-15"}
+        date_to: {type: string, required: false, note: "widens the outbound search to a date RANGE from date_from to date_to"}
+        return_from: {type: string, required: false, note: "omit entirely for a one-way. Setting it equal to date_from triggers same-day round-trip mode"}
+        return_to: {type: string, required: false, note: "widens the return search to a range"}
+        adults: {type: integer, required: false, note: "default 1", example: 1}
+        children: {type: integer, required: false, note: "default 0"}
+        infants: {type: integer, required: false, note: "default 0"}
+        cabin_class: {type: string, required: false, note: "economy | premium_economy | business | first; default is any"}
+        max_stopovers: {type: integer, required: false, note: "default 2; 0 for non-stop only"}
+        currency: {type: string, required: false, note: "ISO 4217, default EUR", example: "EUR"}
+        locale: {type: string, required: false, note: "default en"}
+        limit: {type: integer, required: false, note: "max offers returned, default 50 — the response-size dial, NOT a price dial: the search costs the same at limit 1 and limit 50", example: 1}
+        sort: {type: string, required: false, note: "default price"}
+        departure_time_from: {type: string, required: false, note: "earliest outbound departure, HH:MM"}
+        departure_time_to: {type: string, required: false, note: "latest outbound departure, HH:MM"}
+        provider_filters: {type: object, required: false, note: "restrict which providers run; see GET /flights/providers for the visible set"}
+        min_hours_at_destination: {type: integer, required: false, note: "same-day round trip only — minimum hours on the ground before the return departs"}
+        max_return_hour: {type: integer, required: false, note: "same-day round trip only — latest local hour the return may land the next day"}
+      note: "BLOCKING and slow by design — the full connector fleet runs before it answers. The docs say budget 60-90 seconds; measured 16.9-22.6s on 2026-08-20, so set a client timeout well above the measured figure rather than at it. For a loading state use POST /flights/search/async instead; for ranking many destinations cheaply use POST /flights/discover. Each offer is NESTED: `outbound` (and `inbound` on a round trip) is a route object carrying the segments, with `airlines` as a LIST of every carrier in the itinerary and `owner_airline` as the validating carrier — there is no top-level `airline` or `stops` field. Do not confuse this with letsfg.co's own website endpoint, which returns a flat offer with a singular `airline`; they are different surfaces. Offers arrive already sorted by the provider's blended score, so read rank off the array position rather than re-sorting on price. Free identical-schema twin for integration work: POST /sandbox/flights/search."
+    test_request:
+      body: {origin: "WAW", destination: "LIS", date_from: "2026-11-15", limit: 1}
+    cost:
+      type: per_call
+      value: 0.50
+      currency: USD
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://letsfg.co/en/developers
+      checked: '2026-08-20'
+      confidence: documented
+      note: "first-band rate and therefore an UPPER BOUND — $0.50 covers only the first 10 searches in a UTC calendar month; searches 11-1,000 are $0.20 and 1,001+ are $0.10. Charged per call regardless of how many offers come back, including zero. `limit` does not change the price."
+    docs_url: https://letsfg.co/developers/docs/api-search
+
+  # ---------------------------------------------------------------- flights: async search
+  - id: letsfg.flights.search.async
+    domain: flights
+    kind: data
+    capability: flights.search.async
+    platform: flights
+    scope: any_account
+    method: POST
+    path: /flights/search/async
+    name: "Start a flight search in the background"
+    summary: "Kick off a flight search without blocking and get back a search_id to poll — same fleet, same billing as the blocking search"
+    input:
+      body:
+        origin: {type: string, required: true, note: "IATA departure code", example: "WAW"}
+        destination: {type: string, required: true, note: "IATA arrival code", example: "LIS"}
+        date_from: {type: string, required: true, note: "outbound date, YYYY-MM-DD", example: "2026-11-15"}
+        return_from: {type: string, required: false, note: "omit for a one-way"}
+        adults: {type: integer, required: false, note: "default 1"}
+        cabin_class: {type: string, required: false}
+        max_stopovers: {type: integer, required: false, note: "default 2"}
+        currency: {type: string, required: false, note: "default EUR"}
+        limit: {type: integer, required: false, note: "default 50", example: 1}
+      note: "takes the SAME body as POST /flights/search (every field on that entry is accepted here) but returns in under a second with a search_id. Poll GET /flights/results/{search_id} every 5-10s until `status` leaves `pending` for `complete` or `error`. Billing is identical to the blocking search and is charged once, on completion — polling is free, so this route costs the same as /flights/search and merely moves the wait client-side."
+    test_request:
+      body: {origin: "WAW", destination: "LIS", date_from: "2026-11-15", limit: 1}
+    cost:
+      type: per_call
+      value: 0.50
+      currency: USD
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://letsfg.co/en/developers
+      checked: '2026-08-20'
+      confidence: documented
+      note: "same monthly volume ladder as /flights/search ($0.50 first 10/month, $0.20 to 1,000, $0.10 beyond); charged once on completion, not per poll. Upper bound."
+    docs_url: https://letsfg.co/developers/docs/api-polling
+
+  # ---------------------------------------------------------------- flights: poll results
+  - id: letsfg.flights.results
+    domain: flights
+    kind: data
+    capability: flights.results.poll
+    platform: flights
+    scope: own_account
+    method: GET
+    path: /flights/results/{search_id}
+    name: "Poll background flight search results"
+    summary: "Fetch the status and, once ready, the offers for a search started with the async endpoint"
+    input:
+      pathParams:
+        search_id: {type: string, required: true, note: "the search_id returned by POST /flights/search/async"}
+      note: "free to poll and safe to call repeatedly — the charge belongs to the async search that created the id, not to this read. `status` is `pending` while connectors are still running, `complete` once offers are ready, `error` if the search failed. Poll every 5-10 seconds. A search_id belongs to the key that created it, so this cannot be used to read another account's search."
+    test_request:
+      pathParams: {search_id: "REPLACE_WITH_SEARCH_ID_FROM_ASYNC_SEARCH"}
+      note: "not independently runnable — needs a live search_id from POST /flights/search/async, which is a paid call. Chain the two when validating."
+    cost: {type: free, value: 0, currency: USD, unit: call, note: "polling is free; the parent async search carries the charge"}
+    docs_url: https://letsfg.co/developers/docs/api-polling
+
+  # ---------------------------------------------------------------- flights: discover
+  - id: letsfg.flights.discover
+    domain: flights
+    kind: data
+    capability: flights.price.discover
+    platform: flights
+    scope: any_account
+    method: POST
+    path: /flights/discover
+    name: "Compare prices across many destinations"
+    summary: "Price-check up to 100 destinations from one origin in a few seconds for a single flat charge — the cheap way to rank where to go"
+    input:
+      body:
+        origin: {type: string, required: true, note: "departure IATA code", example: "WAW"}
+        destinations: {type: array, required: true, note: "1-100 destination IATA codes in default mode; same_day mode is capped lower", example: ["LIS", "BCN"]}
+        date_from: {type: string, required: true, note: "outbound date, YYYY-MM-DD", example: "2026-11-15"}
+        return_from: {type: string, required: false, note: "default mode only — return date for a round-trip indicative price; omit for one-way"}
+        currency: {type: string, required: false, note: "default EUR"}
+        same_day: {type: boolean, required: false, note: "false/omitted (default) = fast indicative prices. true = a REAL same-day round-trip search per destination, with bookable offers — much slower and priced per destination like a full search"}
+        min_hours_at_destination: {type: integer, required: false, note: "same_day mode only"}
+        max_return_hour: {type: integer, required: false, note: "same_day mode only — latest local hour the return may land the next day"}
+        max_total_price: {type: number, required: false, note: "same_day mode only — drop destinations above this round-trip total"}
+        adults: {type: integer, required: false, note: "same_day mode only; default 1"}
+        departure_time_from: {type: string, required: false, note: "earliest outbound departure HH:MM"}
+        departure_time_to: {type: string, required: false, note: "latest outbound departure HH:MM"}
+      note: "TWO MODES WITH DIFFERENT PRICES, selected by `same_day`. Default mode returns `price`/`found` ONLY — no offer detail and no booking_url — from a fast lightweight source in ~2-5 seconds, and the whole batch is one flat charge however many destinations you pass. Treat those numbers as a RANKING SIGNAL, not a bookable fare: confirm the winner with POST /flights/search before showing a price as final. Setting `same_day: true` switches to a real per-destination search and the cost block below no longer applies. Free identical-schema twin: POST /sandbox/flights/discover."
+    test_request:
+      body: {origin: "WAW", destinations: ["LIS"], date_from: "2026-11-15"}
+    cost:
+      type: per_call
+      value: 0.50
+      currency: USD
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://letsfg.co/en/developers
+      checked: '2026-08-20'
+      confidence: documented
+      note: "DEFAULT MODE ONLY: one charge for the entire batch, so 100 destinations cost the same as 1 — by far the cheapest per-destination price signal in this file. Same monthly ladder as /flights/search, so $0.50 is the first-band upper bound. `same_day: true` is billed per destination instead, like /flights/multi-search. NOTE a documentation discrepancy: the endpoint description caps the batch at 100 destinations in one sentence and cites '1 credit for 20 destinations' in another; the 1-charge-per-batch rule is consistent across both."
+    docs_url: https://letsfg.co/developers/docs/api-search
+
+  # ---------------------------------------------------------------- flights: multi-search
+  - id: letsfg.flights.multi-search
+    domain: flights
+    kind: data
+    capability: flights.search.multi
+    platform: flights
+    scope: any_account
+    method: POST
+    path: /flights/multi-search
+    name: "Search several destinations at once"
+    summary: "Run a full connector search for each of up to 10 destinations in parallel and get every result in one response"
+    input:
+      body:
+        origin: {type: string, required: true, note: "departure IATA code", example: "WAW"}
+        destinations: {type: array, required: true, note: "1-10 destination IATA codes — each runs a FULL search and is billed as one", example: ["LIS"]}
+        date_from: {type: string, required: true, note: "outbound date, YYYY-MM-DD", example: "2026-11-15"}
+        return_from: {type: string, required: false, note: "omit for one-way"}
+        adults: {type: integer, required: false, note: "default 1"}
+        currency: {type: string, required: false, note: "default EUR"}
+        cabin_class: {type: string, required: false}
+        max_stopovers: {type: integer, required: false, note: "default 2"}
+        departure_time_from: {type: string, required: false, note: "earliest outbound departure HH:MM"}
+        departure_time_to: {type: string, required: false, note: "latest outbound departure HH:MM"}
+      note: "the parallel equivalent of calling POST /flights/search once per destination, and priced exactly that way — there is NO batch discount. Use it for latency (one round trip instead of N sequential 60-90s searches), not to save money. If you only need to rank destinations by price, POST /flights/discover does up to 100 for a single flat charge. Free identical-schema twin: POST /sandbox/flights/multi-search."
+    test_request:
+      body: {origin: "WAW", destinations: ["LIS"], date_from: "2026-11-15"}
+    cost:
+      type: per_call
+      value: 0.50
+      currency: USD
+      per: 1
+      unit: target
+      source: docs
+      source_url: https://letsfg.co/en/developers
+      checked: '2026-08-20'
+      confidence: documented
+      note: "billed PER DESTINATION, not per call — `unit: target` is one entry in `destinations`. A 10-destination request is 10 charges. Same monthly ladder, so $0.50 is the first-band upper bound per destination."
+    docs_url: https://letsfg.co/developers/docs/api-search
+
+  # ---------------------------------------------------------------- flights: parse query
+  - id: letsfg.flights.parse-query
+    domain: flights
+    kind: utility
+    capability: flights.query.parse
+    platform: flights
+    scope: any_account
+    method: POST
+    path: /flights/parse-query
+    name: "Parse a natural-language flight query"
+    summary: "Turn a sentence like 'cheap flight to Lisbon next Friday for two' into IATA codes, dates and passenger counts — free"
+    input:
+      body:
+        query: {type: string, required: true, note: "the natural-language trip request", example: "one way from Warsaw to Lisbon on 15 November"}
+        today: {type: string, required: false, note: "override the server's idea of today, YYYY-MM-DD — set this when resolving relative dates ('next Friday') against a user's own timezone"}
+        mode: {type: string, required: false, note: "`full` (default) parses everything; `clarify` returns only the fields still missing"}
+      note: "the natural front door to the rest of this file: it returns resolved IATA codes, dates, passenger count and time preferences PLUS a list of fields still missing, so an agent can ask one follow-up question instead of guessing. Feed the result straight into POST /flights/search or POST /flights/discover. Free, so there is no reason to hand-roll date parsing. Free stub twin: POST /sandbox/flights/parse-query."
+    test_request:
+      body: {query: "one way from Warsaw to Lisbon on 15 November 2026"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: "explicitly free — the endpoint description states 'Free — no credit charge'. No prepaid balance is required."}
+    docs_url: https://letsfg.co/developers/docs/api-guide
+
+  # ---------------------------------------------------------------- flights: locations
+  - id: letsfg.flights.locations
+    domain: flights
+    kind: utility
+    capability: flights.locations.resolve
+    platform: flights
+    scope: any_account
+    method: GET
+    path: /flights/locations/{query}
+    name: "Resolve a place to IATA codes"
+    summary: "Turn a city or airport name into the IATA codes the search endpoints expect"
+    input:
+      pathParams:
+        query: {type: string, required: true, note: "city name, airport name, or a partial IATA code", example: "Warsaw"}
+      note: "every flights endpoint here takes IATA codes, not place names — this is how you get them. A city query can resolve to several airports (Warsaw -> WAW and WMI), so pick deliberately rather than taking the first hit. URL-encode multi-word queries."
+    test_request:
+      pathParams: {query: "Warsaw"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: "resolver route; no charge against the prepaid balance"}
+    docs_url: https://letsfg.co/developers/docs/api-guide
+
+  # ---------------------------------------------------------------- flights: providers
+  - id: letsfg.flights.providers
+    domain: flights
+    kind: utility
+    capability: flights.providers.list
+    platform: flights
+    scope: any_account
+    method: GET
+    path: /flights/providers
+    name: "List available flight providers"
+    summary: "The airlines and OTAs a flight search can draw on, and the ids `provider_filters` accepts"
+    input:
+      note: "no parameters. Read this before setting `provider_filters` on POST /flights/search — it is the authoritative list of ids that filter will accept, and it changes as connectors are added or retired."
+    test_request: {}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: "metadata route; no charge"}
+    docs_url: https://letsfg.co/developers/docs/api-guide
+
+  # ---------------------------------------------------------------- hotels: destinations
+  - id: letsfg.hotels.destinations
+    domain: hotels
+    kind: utility
+    capability: hotels.destinations.resolve
+    platform: hotels
+    scope: any_account
+    method: POST
+    path: /hotels/destinations
+    name: "Resolve a place to a hotel city id"
+    summary: "Turn a place name into the numeric city id that hotel search requires"
+    input:
+      body:
+        text: {type: string, required: true, note: "place name to resolve", example: "Warsaw"}
+      note: "POST /hotels/search will not accept a place name — it needs the numeric `city_id` this returns, together with the matching `city_name`, so this call is a mandatory first step. Free, and NOT counted against the look-to-book search allowance. Like every hotel route it still requires a payment method on file, so it will fail on a key that has never attached a card even though it costs nothing."
+    test_request:
+      body: {text: "Warsaw"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: "free and outside the look-to-book allowance, per the endpoint description. Requires a payment method on file regardless."}
+    docs_url: https://letsfg.co/developers/docs/hotels
+
+  # ---------------------------------------------------------------- hotels: search
+  - id: letsfg.hotels.search
+    domain: hotels
+    kind: data
+    capability: hotels.search
+    platform: hotels
+    scope: any_account
+    method: POST
+    path: /hotels/search
+    name: "Search bookable hotel rates"
+    summary: "Real, reservable hotel rates for a city and date range — free-cancellation, pay-later rates only, at the price the guest actually pays"
+    input:
+      body:
+        city_id: {type: integer, required: true, note: "numeric city id from POST /hotels/destinations", example: 148614}
+        city_name: {type: string, required: true, note: "the city_name returned alongside city_id — send both", example: "Warsaw, Poland"}
+        check_in: {type: string, required: true, note: "YYYY-MM-DD", example: "2026-11-15"}
+        check_out: {type: string, required: true, note: "YYYY-MM-DD, after check_in", example: "2026-11-16"}
+        adults: {type: integer, required: false, note: "default 2"}
+        children: {type: integer, required: false, note: "default 0"}
+        child_ages: {type: array, required: false, note: "one age per child; required when children > 0"}
+        nationality: {type: string, required: false, note: "ISO country code, default PL — affects which rates the guest is ELIGIBLE for, so set it to the real guest nationality rather than leaving the default"}
+        limit: {type: integer, required: false, note: "max properties returned, default 40", example: 1}
+        with_images: {type: boolean, required: false, note: "default true; false returns a much smaller payload"}
+      note: "only free-cancellation, pay-later rates are returned, so every result is bookable on the terms shown. `price` is what the guest pays END TO END — the hotel cost plus a flat 5% reservation fee already included — so it can be displayed as-is with nothing added at checkout. There is no separate wholesale figure. Requires a payment method on file even while the search itself is free."
+    test_request:
+      body: {city_id: 148614, city_name: "Warsaw, Poland", check_in: "2026-11-15", check_out: "2026-11-16", limit: 1}
+      note: "148614 is Warsaw, Poland, read from a live POST /hotels/destinations on 2026-08-20. Resolve the id rather than hardcoding it — they are supplier-assigned and not stable across suppliers."
+    cost:
+      type: per_call
+      value: 0.005
+      currency: USD
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://letsfg.co/en/developers
+      checked: '2026-08-20'
+      confidence: documented
+      note: "MARGINAL OVERAGE RATE, and most callers never reach it. Hotel search is look-to-book, not monthly: free for the first 1,000 searches since your last successful booking, after which searches are sold in blocks of 1,000 for $5.00 ($0.005 each) charged the moment the allowance is crossed. A booking resets the allowance to 1,000. A caller booking at anything near a 1,000:1 ratio pays $0 for search."
+    docs_url: https://letsfg.co/developers/docs/hotels
+
+  # ---------------------------------------------------------------- hotels: booking status
+  - id: letsfg.hotels.booking.status
+    domain: hotels
+    kind: data
+    capability: hotels.booking.status
+    platform: hotels
+    scope: own_account
+    method: GET
+    path: /hotels/booking/{booking_job_id}
+    name: "Check a hotel booking's status"
+    summary: "Poll a booking started elsewhere until the supplier confirms it, fails it, or declines the card"
+    input:
+      pathParams:
+        booking_job_id: {type: string, required: true, note: "the booking_job_id returned by POST /hotels/book"}
+      note: "read-only status poll, free and safe to repeat — it does not create, modify or cancel anything. A real booking takes minutes while the rate is re-blocked and every price and date re-checked, so this is the only correct way to learn the outcome. NOTE that POST /hotels/book, which produces the id, is deliberately NOT in this catalog: it charges a real non-refundable 5% reservation fee and creates a real reservation, so it must not sit behind a shared platform key. This entry is here so an agent that booked through LetsFG's own surface can still track the result."
+    test_request:
+      pathParams: {booking_job_id: "REPLACE_WITH_BOOKING_JOB_ID"}
+      note: "not independently runnable — a valid id can only come from POST /hotels/book, which is excluded from this catalog by design. Expect a 404 for any synthetic id."
+    cost: {type: free, value: 0, currency: USD, unit: call, note: "status poll; no charge. The 5% reservation fee belongs to the excluded POST /hotels/book."}
+    docs_url: https://letsfg.co/developers/docs/hotels
+
+  # ---------------------------------------------------------------- account
+  - id: letsfg.account.usage
+    domain: account
+    kind: account
+    capability: account.usage
+    platform: account
+    scope: own_account
+    method: GET
+    path: /agents/me
+    name: "Get account balance and usage"
+    summary: "Your LetsFG developer profile, prepaid balance and search counters (free)"
+    input:
+      note: "no parameters — the key rides in the X-API-Key header. This is the registry's health probe: free, side-effect-free, and it distinguishes a bad key from a broke one, which the paid routes do not. Read the prepaid balance here before a run of flight searches rather than discovering an empty balance mid-flow, and read the monthly search counter to know which pricing band the next search lands in."
+    test_request: {}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: "free — no charge against the prepaid balance; this is the registry's health probe"}
+    docs_url: https://letsfg.co/developers/docs/api-onboarding
+
+proposed_capabilities:
+  # Travel is a new vertical for this taxonomy — there is no existing capability for live flight or
+  # hotel inventory. `tripadvisor.hotel.detail` is the nearest thing and it is a REVIEWS capability:
+  # it describes a property, it does not price or reserve one. Two new platforms are proposed with
+  # these (`flights`, `hotels`, both category "Travel") — added directly to capabilities.yaml in
+  # this PR, since `platform` has no proposed-* escape hatch in catalog_validate.py the way
+  # `capability` does. `account.usage` already exists and is reused unchanged for GET /agents/me.
+  flights.search: "Search live flight offers for a route and date"
+  flights.search.async: "Start a flight search in the background and get an id to poll"
+  flights.results.poll: "Poll a background flight search for its offers"
+  flights.price.discover: "Compare indicative prices across many destinations at once"
+  flights.search.multi: "Run full flight searches for several destinations in parallel"
+  flights.query.parse: "Turn a natural-language trip request into structured search parameters"
+  flights.locations.resolve: "Resolve a city or airport name to IATA codes"
+  flights.providers.list: "List the airlines and OTAs a flight search can draw on"
+  hotels.destinations.resolve: "Resolve a place name to a bookable city id"
+  hotels.search: "Search bookable hotel rates for a city and date range"
+  hotels.booking.status: "Check whether a hotel booking has been confirmed"

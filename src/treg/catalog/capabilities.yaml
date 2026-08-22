@@ -118,6 +118,12 @@ platforms:
   crypto: {label: "Crypto Market Data", category: "Market data", featured: 1, summary: "Live and historical prices, market caps, trends and exchanges across 17,000+ coins."}
   stocks: {label: "Stock Market Data", category: "Market data", featured: 2, summary: "End-of-day and intraday stock prices, tickers, splits and dividends across global exchanges."}
 
+  # --- Travel: live flight & hotel inventory ----------------------------------------------------
+  # A new category. The closest existing platform is `tripadvisor` (Reviews & Apps), which returns
+  # what people SAID about a hotel; these two return what it COSTS and whether it can be booked.
+  flights: {label: "Flights", category: "Travel", featured: 1, summary: "Live flight offers, prices and booking links across a 180+ airline and OTA connector fleet."}
+  hotels: {label: "Hotels", category: "Travel", featured: 2, summary: "Bookable, free-cancellation hotel rates at the price the guest actually pays."}
+
 capabilities:
   # --- SEO / search -----------------------------------------------------------------------------
   google.serp.organic: "Get organic search results for a keyword"

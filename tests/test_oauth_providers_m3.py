@@ -52,6 +52,7 @@ def test_every_provider_is_registered():
         "spyfu", "apify", "meta-ad-library", "serpapi",
         "coingecko", "polygon", "finnhub", "twelvedata", "fmp", "eodhd", "marketstack", "tiingo",
         "microsoft-ads", "snapchat-ads", "tiktok-ads", "pinterest-ads",
+        "letsfg",
     }
 
 

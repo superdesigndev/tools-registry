@@ -2242,6 +2242,45 @@ PINTEREST_ADS = OAuthProvider(
     probe_path="/user_account",  # cheap token check once configured; auto-provisions a Bearer tool
 )
 
+LETSFG = OAuthProvider(
+    service="letsfg",
+    display_name="LetsFG",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your LetsFG developer API key",
+    token_header="X-API-Key",
+    token_format="{secret}",
+    setup_url="https://letsfg.co/developers",
+    setup_action_label="Get your LetsFG API key",
+    setup_steps=(
+        "Open letsfg.co/developers and register with your email — the key is issued instantly, "
+        "no card and no sales call.",
+        "Copy the developer key shown on that page.",
+        "Attach a card and top up (minimum $5) only when you want live results; the sandbox "
+        "routes and the free endpoints work on a bare key.",
+    ),
+    setup_note=(
+        "Flight search is billed per call on a monthly ladder ($0.50 for the first 10 searches "
+        "each month, $0.20 to 1,000, $0.10 beyond). Parsing, location lookup, provider listing "
+        "and the account check are free; hotel search is free up to 1,000 searches per booking. "
+        "LetsFG also runs a FREE agent lane on a different host and credential "
+        "(letsfg.co/api with a Bearer token, enrol at letsfg.co/for-agents) which powers their "
+        "own MCP server and CLI — it is not reachable through this connection, and it is "
+        "capped at 3 searches per 10 minutes / 25 per day, so it suits a personal CLI rather "
+        "than an agent doing scheduled work."
+    ),
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Travel",
+    summary="Search live flight offers and bookable hotel rates, and turn a plain-English trip request into a search.",
+    base_url="https://letsfg.co/developers/api/v1",
+    docs_url="https://letsfg.co/developers/docs",
+    # free, side-effect-free, and it separates a BAD key from a BROKE one — the paid search routes
+    # answer 402 for both. Returns 401 with a distinct JSON body on an invalid key.
+    probe_path="/agents/me",
+)
+
 REGISTRY: dict[str, OAuthProvider] = {
     p.service: p
     for p in (
@@ -2261,6 +2300,8 @@ REGISTRY: dict[str, OAuthProvider] = {
         # Advertising: API-key ad intelligence + unconfigured OAuth ad platforms
         SPYFU, APIFY, META_AD_LIBRARY, SERPAPI,
         MICROSOFT_ADS, SNAPCHAT_ADS, TIKTOK_ADS, PINTEREST_ADS,
+        # Travel API-key providers
+        LETSFG,
     )
 }
 
@@ -2268,7 +2309,8 @@ DEFAULT_CAPABILITY = "read"
 
 # Shelf order in the marketplace. Anything carrying a category not named here sorts last, so a
 # provider added without one is visible rather than lost between the shelves.
-CATEGORY_ORDER = ("SEO", "Advertising", "Social media", "Enrichment", "Market data", "Community", "Other")
+CATEGORY_ORDER = ("SEO", "Advertising", "Social media", "Enrichment", "Market data", "Travel",
+                  "Community", "Other")
 
 
 def get(service: str) -> OAuthProvider | None:
