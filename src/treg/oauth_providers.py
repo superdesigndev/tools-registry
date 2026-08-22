@@ -886,6 +886,36 @@ META_ADS = OAuthProvider(
 # key" copy. A key provider needs nothing from treg, so it is always offerable (is_configured=True).
 # No `scopes`: there is no consent screen to size, so the marketplace card leans on `summary`.
 
+PARALLEL = OAuthProvider(
+    service="parallel",
+    display_name="Parallel",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your Parallel API key",
+    token_header="x-api-key",
+    token_format="{secret}",
+    setup_url="https://platform.parallel.ai",
+    setup_action_label="Get your Parallel API key",
+    setup_steps=(
+        "Sign in to the Parallel platform.",
+        "Create or copy an API key and paste it here.",
+    ),
+    setup_note=(
+        "Search, extraction, research tasks and monitor executions use your Parallel account; "
+        "the monitor-list health check does not start work."
+    ),
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Other",
+    summary="Search and extract the live web, run cited research tasks, and monitor for changes.",
+    base_url="https://api.parallel.ai",
+    docs_url="https://docs.parallel.ai",
+    # Authenticated and non-mutating. Live checked 2026-08-12: valid key -> 200; bad key -> 401
+    # {"code":16,"message":"Invalid API key (C.1)"}. Monitor billing is per execution, not list read.
+    probe_path="/v1/monitors?limit=1",
+)
+
 APOLLO = OAuthProvider(
     service="apollo",
     display_name="Apollo.io",
@@ -2258,8 +2288,11 @@ REGISTRY: dict[str, OAuthProvider] = {
         INFLUENCERSCLUB,
         # Market data API-key providers
         COINGECKO, POLYGON, FINNHUB, TWELVEDATA, FMP, EODHD, MARKETSTACK, TIINGO,
-        # Advertising: API-key ad intelligence + unconfigured OAuth ad platforms
+        # Advertising: API-key ad intelligence
         SPYFU, APIFY, META_AD_LIBRARY, SERPAPI,
+        # Other API-key providers
+        PARALLEL,
+        # Advertising: unconfigured OAuth ad platforms
         MICROSOFT_ADS, SNAPCHAT_ADS, TIKTOK_ADS, PINTEREST_ADS,
     )
 }
