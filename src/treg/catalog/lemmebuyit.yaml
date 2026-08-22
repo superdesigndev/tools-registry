@@ -1,0 +1,191 @@
+provider: lemmebuyit
+source:
+  docs: https://www.lemmebuyit.com/docs
+  openapi: https://api.lemmebuyit.com/openapi.yaml
+  curated: 2026-08-12
+limits: "Free: 50,000 requests/month and one API key; higher request allowances are available on paid plans."
+pricing_url: https://www.lemmebuyit.com/pricing
+proposed_capabilities:
+  walmart.retailers.list: "List the retailers available to an API key"
+  walmart.shopping.search.products: "Search shopping-safe Walmart product listings by keyword or identifier"
+  walmart.shopping.product.detail: "Get a shopping-safe Walmart product listing by retailer SKU"
+  walmart.categories.list: "List a retailer's product-category hierarchy"
+  walmart.promotions.list: "List active promotions for a retailer"
+  walmart.product.price_history: "Get weekly price history for a retailer product"
+  amazon.product.price_history: "Get weekly Amazon price history by ASIN"
+endpoints:
+  - id: lemmebuyit.walmart.retailers.list
+    capability: walmart.retailers.list
+    platform: walmart
+    scope: own_account
+    kind: account
+    method: GET
+    path: /retailers
+    name: "List available retailers"
+    summary: "Retrieves the retailers that the authenticated API key can access."
+    input:
+      note: "No parameters. The result is scoped to the API key's retailer permissions."
+    test_request: {queryParams: {}}
+    cost: &unknown_cost
+      type: per_call
+      value: null
+      currency: USD
+      unit: call
+      source: docs
+      checked: '2026-08-12'
+      confidence: unknown
+      note: "Pricing is a monthly request allowance; no per-endpoint rate is published."
+    docs_url: https://api.lemmebuyit.com/openapi.yaml
+
+  - id: lemmebuyit.walmart.search.products
+    capability: walmart.search.products
+    platform: walmart
+    scope: any_account
+    method: GET
+    path: /retailers/{retailer_id}/products
+    name: "Search Walmart products"
+    summary: "Searches and filters products for a retailer with cursor pagination."
+    input:
+      pathParams:
+        retailer_id: {type: string, required: true, example: "walmart"}
+      queryParams:
+        search_query: {type: string, required: false, note: "Text, SKU, UPC, EAN, GTIN, or MPN query.", example: "Nike socks"}
+        limit: {type: integer, required: false, note: "1–1000; use the smallest value for a cheap request.", example: 1}
+      note: "Use lookup_type=text or gtin only to override automatic detection."
+    test_request:
+      pathParams: {retailer_id: "walmart"}
+      queryParams: {search_query: "Nike socks", limit: 1}
+    cost: *unknown_cost
+    docs_url: https://api.lemmebuyit.com/openapi.yaml
+
+  - id: lemmebuyit.walmart.product.detail
+    capability: walmart.product.detail
+    platform: walmart
+    scope: any_account
+    method: GET
+    path: /retailers/{retailer_id}/products/{product_id}
+    name: "Get Walmart product details"
+    summary: "Retrieves detailed product information by retailer SKU."
+    input:
+      pathParams:
+        retailer_id: {type: string, required: true, example: "walmart"}
+        product_id: {type: string, required: true, note: "Retailer-native SKU.", example: "226595547"}
+    test_request:
+      pathParams: {retailer_id: "walmart", product_id: "226595547"}
+    cost: *unknown_cost
+    docs_url: https://api.lemmebuyit.com/openapi.yaml
+
+  - id: lemmebuyit.walmart.shopping.search.products
+    capability: walmart.shopping.search.products
+    platform: walmart
+    scope: any_account
+    method: GET
+    path: /retailers/{retailer_id}/shopping/products
+    name: "Search shopping products"
+    summary: "Searches shopping-safe retailer products that include a destination URL."
+    input:
+      pathParams:
+        retailer_id: {type: string, required: true, example: "walmart"}
+      queryParams:
+        search_query: {type: string, required: false, note: "Text, SKU, UPC, EAN, GTIN, or MPN query.", example: "Nike socks"}
+        limit: {type: integer, required: false, note: "1–100.", example: 1}
+      note: "Shopping endpoints reject asin, sales-rank filters, and top_seller_rank_asc sorting."
+    test_request:
+      pathParams: {retailer_id: "walmart"}
+      queryParams: {search_query: "Nike socks", limit: 1}
+    cost: *unknown_cost
+    docs_url: https://api.lemmebuyit.com/openapi.yaml
+
+  - id: lemmebuyit.walmart.shopping.product.detail
+    capability: walmart.shopping.product.detail
+    platform: walmart
+    scope: any_account
+    method: GET
+    path: /retailers/{retailer_id}/shopping/products/{product_id}
+    name: "Get shopping product details"
+    summary: "Retrieves a shopping-safe product by retailer SKU, including its destination URL."
+    input:
+      pathParams:
+        retailer_id: {type: string, required: true, example: "walmart"}
+        product_id: {type: string, required: true, note: "Retailer-native SKU.", example: "226595547"}
+    test_request:
+      pathParams: {retailer_id: "walmart", product_id: "226595547"}
+    cost: *unknown_cost
+    docs_url: https://api.lemmebuyit.com/openapi.yaml
+
+  - id: lemmebuyit.walmart.categories.list
+    capability: walmart.categories.list
+    platform: walmart
+    scope: any_account
+    method: GET
+    path: /retailers/{retailer_id}/categories
+    name: "List Walmart categories"
+    summary: "Retrieves a retailer's distinct hierarchical product categories."
+    input:
+      pathParams:
+        retailer_id: {type: string, required: true, example: "walmart"}
+    test_request:
+      pathParams: {retailer_id: "walmart"}
+      queryParams: {}
+    cost: *unknown_cost
+    docs_url: https://api.lemmebuyit.com/openapi.yaml
+
+  - id: lemmebuyit.walmart.promotions.list
+    capability: walmart.promotions.list
+    platform: walmart
+    scope: any_account
+    method: GET
+    path: /retailers/{retailer_id}/promotions
+    name: "List Walmart promotions"
+    summary: "Lists cursor-paginated promotions for a retailer."
+    input:
+      pathParams:
+        retailer_id: {type: string, required: true, example: "walmart"}
+      queryParams:
+        search_query: {type: string, required: false, example: "Nike"}
+        active: {type: boolean, required: false, note: "Defaults to true.", example: true}
+        limit: {type: integer, required: false, note: "1–1000.", example: 1}
+    test_request:
+      pathParams: {retailer_id: "walmart"}
+      queryParams: {search_query: "Nike", active: true, limit: 1}
+    cost: *unknown_cost
+    docs_url: https://api.lemmebuyit.com/openapi.yaml
+
+  - id: lemmebuyit.walmart.product.price_history
+    capability: walmart.product.price_history
+    platform: walmart
+    scope: any_account
+    method: GET
+    path: /retailers/{retailer_id}/products/{product_id}/price-history
+    name: "Get Walmart price history"
+    summary: "Returns chart-ready weekly price history for a retailer product."
+    input:
+      pathParams:
+        retailer_id: {type: string, required: true, example: "walmart"}
+        product_id: {type: string, required: true, example: "100000867"}
+      queryParams:
+        weeks: {type: integer, required: false, note: "1–104; defaults to 52.", example: 1}
+    test_request:
+      pathParams: {retailer_id: "walmart", product_id: "100000867"}
+      queryParams: {weeks: 1}
+    cost: *unknown_cost
+    docs_url: https://api.lemmebuyit.com/openapi.yaml
+
+  - id: lemmebuyit.amazon.product.price_history
+    capability: amazon.product.price_history
+    platform: amazon
+    scope: any_account
+    method: GET
+    path: /amazon/asins/{asin}/price-history
+    name: "Get Amazon price history"
+    summary: "Returns chart-ready weekly Amazon price history by ASIN."
+    input:
+      pathParams:
+        asin: {type: string, required: true, example: "B082H4RKQQ"}
+      queryParams:
+        weeks: {type: integer, required: false, note: "1–104; defaults to 52.", example: 1}
+    test_request:
+      pathParams: {asin: "B082H4RKQQ"}
+      queryParams: {weeks: 1}
+    cost: *unknown_cost
+    docs_url: https://api.lemmebuyit.com/openapi.yaml

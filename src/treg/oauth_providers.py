@@ -996,6 +996,31 @@ HUNTER = OAuthProvider(
     probe_path="/account",  # free — consumes no search/verification/enrichment credits
 )
 
+LEMMEBUYIT = OAuthProvider(
+    service="lemmebuyit",
+    display_name="LemMeBuyIt",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your LemMeBuyIt API key",
+    token_header="X-API-Key",
+    token_format="{secret}",
+    setup_url="https://www.lemmebuyit.com/sign-up",
+    setup_action_label="Get your free LemMeBuyIt API key",
+    setup_steps=(
+        "Sign up for the free LemMeBuyIt plan.",
+        "Open Settings → API Keys and copy your key.",
+    ),
+    setup_note="The free plan includes one API key and 50,000 requests per month.",
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Other",
+    summary="Search retail products, shopping listings, categories, promotions and price history across supported retailers.",
+    base_url="https://api.lemmebuyit.com/v1",
+    docs_url="https://api.lemmebuyit.com/openapi.yaml",
+    probe_path="/retailers/walmart/shopping/products?search_query=Nike%20socks&limit=1",
+)
+
 TIKHUB = OAuthProvider(
     service="tikhub",
     display_name="TikHub",
@@ -2248,7 +2273,7 @@ REGISTRY: dict[str, OAuthProvider] = {
         GOOGLE_SEARCH_CONSOLE, GOOGLE_ANALYTICS, GOOGLE_BUSINESS_PROFILE, GOOGLE_ADS, YOUTUBE,
         LINKEDIN, SLACK, X, TIKTOK, FACEBOOK, INSTAGRAM, META_ADS,
         # API-key providers
-        APOLLO, PDL, AKTA, HUNTER, CRUNCHBASE, TIKHUB, BRIGHTDATA, SEMRUSH, JUSTONEAPI,
+        APOLLO, PDL, AKTA, HUNTER, LEMMEBUYIT, CRUNCHBASE, TIKHUB, BRIGHTDATA, SEMRUSH, JUSTONEAPI,
         SCRAPECREATORS,
         # SEO API-key providers
         DATAFORSEO, SERANKING, MOZ, MAJESTIC, SERPSTAT,
