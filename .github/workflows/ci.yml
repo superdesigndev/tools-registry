@@ -24,7 +24,7 @@ jobs:
     # healthier machine.
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 2  # the docs-only check diffs HEAD against its parent
       - name: Detect a docs-only push
